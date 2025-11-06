@@ -8,6 +8,17 @@
 
 ---
 
+## Repository Layout & Command Conventions
+- The workspace contains a meta-repo at `/home/ert/code/gcc-dev` (tracked on branch `main`) plus the upstream GCC repo rooted in `/home/ert/code/gcc-dev/gcc`. Always run Git commands with `git -C gcc …` when touching upstream sources, and plain `git …` from the workspace root for meta tasks (e.g., docs, reproducer harnesses).
+- Builds live in `/home/ert/code/gcc-dev/gcc-build`; invoke the in-tree toolchain via `gcc-build/gcc/gfortran -B gcc-build/gcc …` so compiler and runtime come from the same build.
+- Tests and reproducers under `bugs/` compile with that same custom driver; use the provided Makefile targets or explicit `gfortran` commands with `-Wa,--noexecstack -Wl,-z,noexecstack`.
+- When generating patches for upstream, work in `gcc/`, rebase against `origin/master`, and create topic branches named `pr<bug>-<short-desc>`.
+- Top-level documentation (e.g., this CLAUDE.md) should describe meta-process changes; upstream-facing ChangeLogs stay inside `gcc/gcc/…`.
+- **Do not edit GCC ChangeLog files in this environment.** Leave them untouched; upstream maintainers regenerate ChangeLogs from commit metadata.
+- **Never push the `gcc/` repository.** Keep those branches local and export patches instead; only the wrapper repo (`/home/ert/code/gcc-dev`) gets pushed to GitHub.
+
+---
+
 ## Mandatory Agent Policy Update
 - Every time GCC sources are modified, run `./gcc/contrib/check_GNU_style.sh` on each touched file before reporting completion.
 
