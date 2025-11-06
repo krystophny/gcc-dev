@@ -1,0 +1,242 @@
+__attribute__((fn spec (". w ")))
+void __deallocate_minimal_bug_Nested_t (struct array01_nested_t & restrict arg)
+{
+  {
+    integer(kind=8) D.4738;
+    integer(kind=8) D.4739;
+    integer(kind=8) D.4740;
+    integer(kind=8) S.0;
+    integer(kind=8) D.4742;
+    integer(kind=8) D.4743;
+    struct array01_nested_t cdesc.1;
+
+    if ((struct nested_t[0:] * restrict) arg->data != 0B)
+      {
+        D.4738 = (arg->dim[0].ubound - arg->dim[0].lbound) + 1;
+        D.4739 = arg->dim[0].stride * D.4738;
+        D.4740 = D.4739 + -1;
+        S.0 = 0;
+        while (1)
+          {
+            if (S.0 > D.4740) goto L.1;
+            if ((struct nested_t[0:] * restrict) ((struct nested_t *) arg->data + (sizetype) (S.0 * 80))->children.data != 0B)
+              {
+                D.4742 = (((struct nested_t *) arg->data + (sizetype) (S.0 * 80))->children.dim[0].ubound - ((struct nested_t *) arg->data + (sizetype) (S.0 * 80))->children.dim[0].lbound) + 1;
+                D.4743 = NON_LVALUE_EXPR <D.4742>;
+                cdesc.1.dtype = {.elem_len=80, .version=0, .rank=1, .type=5};
+                cdesc.1.dim[0].lbound = 1;
+                cdesc.1.dim[0].stride = 1;
+                cdesc.1.dim[0].ubound = D.4743;
+                cdesc.1.data = ((struct nested_t *) arg->data + (sizetype) (S.0 * 80))->children.data;
+                __vtab_minimal_bug_Nested_t._deallocate (&cdesc.1);
+              }
+            S.0 = S.0 + 1;
+          }
+        L.1:;
+      }
+    if ((struct nested_t[0:] * restrict) arg->data == 0B)
+      {
+        _gfortran_runtime_error_at (&"At line 1 of file 121628.f90"[1]{lb: 1 sz: 1}, &"Attempt to DEALLOCATE unallocated \'%s\'"[1]{lb: 1 sz: 1}, &"arg"[1]{lb: 1 sz: 1});
+      }
+    else
+      {
+        __builtin_free ((void *) arg->data);
+        (struct nested_t[0:] * restrict) arg->data = 0B;
+      }
+  }
+}
+
+
+__attribute__((fn spec (". w w w ")))
+integer(kind=4) __final_minimal_bug_Nested_t (struct array15_nested_t & restrict array, integer(kind=8) byte_stride, logical(kind=1) fini_coarray)
+{
+  void * restrict D.4819;
+  void * restrict D.4823;
+  integer(kind=8) idx;
+  integer(kind=8) idx2;
+  integer(kind=4) ignore;
+  logical(kind=4) is_contiguous;
+  integer(kind=8) nelem;
+  integer(kind=8) offset;
+  struct nested_t * ptr2;
+  integer(kind=8) ubound.2;
+  integer(kind=8) size.3;
+  integer(kind=8)[0:D.4820] * restrict sizes;
+  integer(kind=8) ubound.4;
+  integer(kind=8) size.5;
+  integer(kind=8)[0:D.4816] * restrict strides;
+  integer(kind=4) __result___final_minimal_bug_;
+  integer(kind=8) D.4816;
+  bitsizetype D.4817;
+  sizetype D.4818;
+  integer(kind=8) D.4820;
+  bitsizetype D.4821;
+  sizetype D.4822;
+
+  try
+    {
+      ubound.2 = (integer(kind=8)) array->dtype.rank;
+      size.3 = ubound.2 + 1;
+      size.3 = MAX_EXPR <size.3, 0>;
+      D.4820 = size.3 + -1;
+      D.4821 = (bitsizetype) (sizetype) NON_LVALUE_EXPR <size.3> * 64;
+      D.4822 = (sizetype) NON_LVALUE_EXPR <size.3> * 8;
+      D.4823 = (void * restrict) __builtin_malloc (MAX_EXPR <(unsigned long) (size.3 * 8), 1>);
+      sizes = (integer(kind=8)[0:D.4820] * restrict) D.4823;
+      ubound.4 = (integer(kind=8)) array->dtype.rank;
+      size.5 = NON_LVALUE_EXPR <ubound.4>;
+      size.5 = MAX_EXPR <size.5, 0>;
+      D.4816 = size.5 + -1;
+      D.4817 = (bitsizetype) (sizetype) NON_LVALUE_EXPR <size.5> * 64;
+      D.4818 = (sizetype) NON_LVALUE_EXPR <size.5> * 8;
+      D.4819 = (void * restrict) __builtin_malloc (MAX_EXPR <(unsigned long) (size.5 * 8), 1>);
+      strides = (integer(kind=8)[0:D.4816] * restrict) D.4819;
+      __result___final_minimal_bug_ = 0;
+      is_contiguous = 1;
+      (*sizes)[0] = 1;
+      {
+        integer(kind=8) D.4779;
+
+        D.4779 = (integer(kind=8)) array->dtype.rank;
+        idx = 1;
+        while (1)
+          {
+            {
+              logical(kind=4) D.4782;
+
+              D.4782 = idx > D.4779;
+              if (D.4782) goto L.3;
+              (*strides)[NON_LVALUE_EXPR <idx> + -1] = array->dim[idx + -1].stride;
+              (*sizes)[idx] = (*sizes)[idx + -1] * ((signed char) (idx + -1) == array->dtype.rank + -1 && array->dim[idx + -1].ubound == -1 ? -1 : MAX_EXPR <(array->dim[idx + -1].ubound - array->dim[idx + -1].lbound) + 1, 0>);
+              if ((*strides)[NON_LVALUE_EXPR <idx> + -1] != (*sizes)[idx + -1])
+                {
+                  is_contiguous = 0;
+                }
+              L.4:;
+              L.2:;
+              idx = idx + 1;
+            }
+          }
+        L.3:;
+      }
+      nelem = (*sizes)[(integer(kind=8)) array->dtype.rank] + -1;
+      {
+        integer(kind=8) D.4784;
+
+        D.4784 = nelem;
+        idx = 0;
+        while (1)
+          {
+            {
+              logical(kind=4) D.4787;
+
+              D.4787 = idx > D.4784;
+              if (D.4787) goto L.6;
+              {
+                integer(kind=8) D.4792;
+                void * D.4793;
+                void * D.4794;
+                static integer(kind=8) C.4795 = 0;
+                integer(kind=8) D.4796;
+                integer(kind=8) D.4797;
+                integer(kind=8) transfer.6;
+
+                offset = 0;
+                {
+                  integer(kind=8) D.4788;
+
+                  D.4788 = (integer(kind=8)) array->dtype.rank;
+                  idx2 = 1;
+                  while (1)
+                    {
+                      {
+                        logical(kind=4) D.4791;
+
+                        D.4791 = idx2 > D.4788;
+                        if (D.4791) goto L.8;
+                        offset = ((idx % (*sizes)[idx2]) / (*sizes)[idx2 + -1]) * (*strides)[NON_LVALUE_EXPR <idx2> + -1] + offset;
+                        L.7:;
+                        idx2 = idx2 + 1;
+                      }
+                    }
+                  L.8:;
+                }
+                offset = offset * byte_stride;
+                D.4793 = (void *) array->data;
+                D.4794 = D.4793;
+                D.4792 = 8;
+                D.4796 = 8;
+                __builtin_memcpy ((void *) &transfer.6, (void *) &D.4794, (unsigned long) MAX_EXPR <MIN_EXPR <D.4796, D.4792>, 0>);
+                ptr2 = (struct nested_t *) (transfer.6 + offset);
+                if (ptr2 != 0B)
+                  {
+                    {
+                      integer(kind=4) stat.7;
+
+                      {
+                        integer(kind=8) D.4803;
+                        integer(kind=8) D.4804;
+                        integer(kind=8) D.4805;
+                        integer(kind=8) S.8;
+                        integer(kind=8) D.4807;
+                        integer(kind=8) D.4808;
+                        struct array01_nested_t cdesc.9;
+
+                        if ((struct nested_t[0:] * restrict) ptr2->children.data != 0B)
+                          {
+                            D.4803 = (ptr2->children.dim[0].ubound - ptr2->children.dim[0].lbound) + 1;
+                            D.4804 = NON_LVALUE_EXPR <D.4803>;
+                            D.4805 = D.4804 + -1;
+                            S.8 = 0;
+                            while (1)
+                              {
+                                if (S.8 > D.4805) goto L.12;
+                                if ((struct nested_t[0:] * restrict) ((struct nested_t *) (ptr2->children.data + (sizetype) (S.8 * 80)))->children.data != 0B)
+                                  {
+                                    D.4807 = (((struct nested_t *) (ptr2->children.data + (sizetype) (S.8 * 80)))->children.dim[0].ubound - ((struct nested_t *) (ptr2->children.data + (sizetype) (S.8 * 80)))->children.dim[0].lbound) + 1;
+                                    D.4808 = NON_LVALUE_EXPR <D.4807>;
+                                    cdesc.9.dtype = {.elem_len=80, .version=0, .rank=1, .type=5};
+                                    cdesc.9.dim[0].lbound = 1;
+                                    cdesc.9.dim[0].stride = 1;
+                                    cdesc.9.dim[0].ubound = D.4808;
+                                    cdesc.9.data = ((struct nested_t *) (ptr2->children.data + (sizetype) (S.8 * 80)))->children.data;
+                                    __vtab_minimal_bug_Nested_t._deallocate (&cdesc.9);
+                                  }
+                                S.8 = S.8 + 1;
+                              }
+                            L.12:;
+                          }
+                        if ((struct nested_t[0:] * restrict) ptr2->children.data == 0B)
+                          {
+                            stat.7 = 1;
+                          }
+                        else
+                          {
+                            __builtin_free (ptr2->children.data);
+                            (struct nested_t[0:] * restrict) ptr2->children.data = 0B;
+                            stat.7 = 0;
+                          }
+                        if (stat.7 != 0) goto L.10;
+                      }
+                      L.10:;
+                      ignore = stat.7;
+                    }
+                  }
+                L.9:;
+              }
+              L.5:;
+              idx = idx + 1;
+            }
+          }
+        L.6:;
+      }
+      return __result___final_minimal_bug_;
+    }
+  finally
+    {
+      __builtin_free ((void *) strides);
+      __builtin_free ((void *) sizes);
+    }
+}
+
+

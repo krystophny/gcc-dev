@@ -1,0 +1,1106 @@
+__attribute__((fn spec (". w ")))
+void __deallocate_deepcopy_Nested_t (struct array01_nested_t & restrict arg)
+{
+  {
+    integer(kind=8) D.4743;
+    integer(kind=8) D.4744;
+    integer(kind=8) D.4745;
+    integer(kind=8) S.0;
+    integer(kind=8) D.4747;
+    integer(kind=8) D.4748;
+    struct array01_nested_t cdesc.1;
+
+    if ((struct nested_t[0:] * restrict) arg->data != 0B)
+      {
+        D.4743 = (arg->dim[0].ubound - arg->dim[0].lbound) + 1;
+        D.4744 = arg->dim[0].stride * D.4743;
+        D.4745 = D.4744 + -1;
+        S.0 = 0;
+        while (1)
+          {
+            if (S.0 > D.4745) goto L.1;
+            if ((real(kind=8)[0:] * restrict) ((struct nested_t *) arg->data + (sizetype) (S.0 * 144))->values.data != 0B)
+              {
+                __builtin_free ((void *) ((struct nested_t *) arg->data + (sizetype) (S.0 * 144))->values.data);
+                (real(kind=8)[0:] * restrict) ((struct nested_t *) arg->data + (sizetype) (S.0 * 144))->values.data = 0B;
+              }
+            if ((struct nested_t[0:] * restrict) ((struct nested_t *) arg->data + (sizetype) (S.0 * 144))->children.data != 0B)
+              {
+                D.4747 = (((struct nested_t *) arg->data + (sizetype) (S.0 * 144))->children.dim[0].ubound - ((struct nested_t *) arg->data + (sizetype) (S.0 * 144))->children.dim[0].lbound) + 1;
+                D.4748 = NON_LVALUE_EXPR <D.4747>;
+                cdesc.1.dtype = {.elem_len=144, .version=0, .rank=1, .type=5};
+                cdesc.1.dim[0].lbound = 1;
+                cdesc.1.dim[0].stride = 1;
+                cdesc.1.dim[0].ubound = D.4748;
+                cdesc.1.data = ((struct nested_t *) arg->data + (sizetype) (S.0 * 144))->children.data;
+                __vtab_deepcopy_Nested_t._deallocate (&cdesc.1);
+              }
+            S.0 = S.0 + 1;
+          }
+        L.1:;
+      }
+    if ((struct nested_t[0:] * restrict) arg->data == 0B)
+      {
+        _gfortran_runtime_error_at (&"At line 1 of file deepcopy.f90"[1]{lb: 1 sz: 1}, &"Attempt to DEALLOCATE unallocated \'%s\'"[1]{lb: 1 sz: 1}, &"arg"[1]{lb: 1 sz: 1});
+      }
+    else
+      {
+        __builtin_free ((void *) arg->data);
+        (struct nested_t[0:] * restrict) arg->data = 0B;
+      }
+  }
+}
+
+
+__attribute__((fn spec (". w w w ")))
+integer(kind=4) __final_deepcopy_Nested_t (struct array15_nested_t & restrict array, integer(kind=8) byte_stride, logical(kind=1) fini_coarray)
+{
+  void * restrict D.4836;
+  void * restrict D.4840;
+  integer(kind=8) idx;
+  integer(kind=8) idx2;
+  integer(kind=4) ignore;
+  logical(kind=4) is_contiguous;
+  integer(kind=8) nelem;
+  integer(kind=8) offset;
+  struct nested_t * ptr2;
+  integer(kind=8) ubound.2;
+  integer(kind=8) size.3;
+  integer(kind=8)[0:D.4837] * restrict sizes;
+  integer(kind=8) ubound.4;
+  integer(kind=8) size.5;
+  integer(kind=8)[0:D.4833] * restrict strides;
+  integer(kind=4) __result___final_deepcopy_Nes;
+  integer(kind=8) D.4833;
+  bitsizetype D.4834;
+  sizetype D.4835;
+  integer(kind=8) D.4837;
+  bitsizetype D.4838;
+  sizetype D.4839;
+
+  try
+    {
+      ubound.2 = (integer(kind=8)) array->dtype.rank;
+      size.3 = ubound.2 + 1;
+      size.3 = MAX_EXPR <size.3, 0>;
+      D.4837 = size.3 + -1;
+      D.4838 = (bitsizetype) (sizetype) NON_LVALUE_EXPR <size.3> * 64;
+      D.4839 = (sizetype) NON_LVALUE_EXPR <size.3> * 8;
+      D.4840 = (void * restrict) __builtin_malloc (MAX_EXPR <(unsigned long) (size.3 * 8), 1>);
+      sizes = (integer(kind=8)[0:D.4837] * restrict) D.4840;
+      ubound.4 = (integer(kind=8)) array->dtype.rank;
+      size.5 = NON_LVALUE_EXPR <ubound.4>;
+      size.5 = MAX_EXPR <size.5, 0>;
+      D.4833 = size.5 + -1;
+      D.4834 = (bitsizetype) (sizetype) NON_LVALUE_EXPR <size.5> * 64;
+      D.4835 = (sizetype) NON_LVALUE_EXPR <size.5> * 8;
+      D.4836 = (void * restrict) __builtin_malloc (MAX_EXPR <(unsigned long) (size.5 * 8), 1>);
+      strides = (integer(kind=8)[0:D.4833] * restrict) D.4836;
+      __result___final_deepcopy_Nes = 0;
+      is_contiguous = 1;
+      (*sizes)[0] = 1;
+      {
+        integer(kind=8) D.4792;
+
+        D.4792 = (integer(kind=8)) array->dtype.rank;
+        idx = 1;
+        while (1)
+          {
+            {
+              logical(kind=4) D.4795;
+
+              D.4795 = idx > D.4792;
+              if (D.4795) goto L.3;
+              (*strides)[NON_LVALUE_EXPR <idx> + -1] = array->dim[idx + -1].stride;
+              (*sizes)[idx] = (*sizes)[idx + -1] * ((signed char) (idx + -1) == array->dtype.rank + -1 && array->dim[idx + -1].ubound == -1 ? -1 : MAX_EXPR <(array->dim[idx + -1].ubound - array->dim[idx + -1].lbound) + 1, 0>);
+              if ((*strides)[NON_LVALUE_EXPR <idx> + -1] != (*sizes)[idx + -1])
+                {
+                  is_contiguous = 0;
+                }
+              L.4:;
+              L.2:;
+              idx = idx + 1;
+            }
+          }
+        L.3:;
+      }
+      nelem = (*sizes)[(integer(kind=8)) array->dtype.rank] + -1;
+      {
+        integer(kind=8) D.4797;
+
+        D.4797 = nelem;
+        idx = 0;
+        while (1)
+          {
+            {
+              logical(kind=4) D.4800;
+
+              D.4800 = idx > D.4797;
+              if (D.4800) goto L.6;
+              {
+                integer(kind=8) D.4805;
+                void * D.4806;
+                void * D.4807;
+                static integer(kind=8) C.4808 = 0;
+                integer(kind=8) D.4809;
+                integer(kind=8) D.4810;
+                integer(kind=8) transfer.6;
+
+                offset = 0;
+                {
+                  integer(kind=8) D.4801;
+
+                  D.4801 = (integer(kind=8)) array->dtype.rank;
+                  idx2 = 1;
+                  while (1)
+                    {
+                      {
+                        logical(kind=4) D.4804;
+
+                        D.4804 = idx2 > D.4801;
+                        if (D.4804) goto L.8;
+                        offset = ((idx % (*sizes)[idx2]) / (*sizes)[idx2 + -1]) * (*strides)[NON_LVALUE_EXPR <idx2> + -1] + offset;
+                        L.7:;
+                        idx2 = idx2 + 1;
+                      }
+                    }
+                  L.8:;
+                }
+                offset = offset * byte_stride;
+                D.4806 = (void *) array->data;
+                D.4807 = D.4806;
+                D.4805 = 8;
+                D.4809 = 8;
+                __builtin_memcpy ((void *) &transfer.6, (void *) &D.4807, (unsigned long) MAX_EXPR <MIN_EXPR <D.4809, D.4805>, 0>);
+                ptr2 = (struct nested_t *) (transfer.6 + offset);
+                if (ptr2 != 0B)
+                  {
+                    {
+                      integer(kind=4) stat.7;
+
+                      if ((real(kind=8)[0:] * restrict) ptr2->values.data == 0B)
+                        {
+                          stat.7 = 1;
+                        }
+                      else
+                        {
+                          __builtin_free (ptr2->values.data);
+                          (real(kind=8)[0:] * restrict) ptr2->values.data = 0B;
+                          stat.7 = 0;
+                        }
+                      if (stat.7 != 0) goto L.10;
+                      L.10:;
+                      ignore = stat.7;
+                    }
+                  }
+                L.9:;
+                if (ptr2 != 0B)
+                  {
+                    {
+                      integer(kind=4) stat.8;
+
+                      {
+                        integer(kind=8) D.4820;
+                        integer(kind=8) D.4821;
+                        integer(kind=8) D.4822;
+                        integer(kind=8) S.9;
+                        integer(kind=8) D.4824;
+                        integer(kind=8) D.4825;
+                        struct array01_nested_t cdesc.10;
+
+                        if ((struct nested_t[0:] * restrict) ptr2->children.data != 0B)
+                          {
+                            D.4820 = (ptr2->children.dim[0].ubound - ptr2->children.dim[0].lbound) + 1;
+                            D.4821 = NON_LVALUE_EXPR <D.4820>;
+                            D.4822 = D.4821 + -1;
+                            S.9 = 0;
+                            while (1)
+                              {
+                                if (S.9 > D.4822) goto L.15;
+                                if ((real(kind=8)[0:] * restrict) ((struct nested_t *) (ptr2->children.data + (sizetype) (S.9 * 144)))->values.data != 0B)
+                                  {
+                                    __builtin_free ((void *) ((struct nested_t *) (ptr2->children.data + (sizetype) (S.9 * 144)))->values.data);
+                                    (real(kind=8)[0:] * restrict) ((struct nested_t *) (ptr2->children.data + (sizetype) (S.9 * 144)))->values.data = 0B;
+                                  }
+                                if ((struct nested_t[0:] * restrict) ((struct nested_t *) (ptr2->children.data + (sizetype) (S.9 * 144)))->children.data != 0B)
+                                  {
+                                    D.4824 = (((struct nested_t *) (ptr2->children.data + (sizetype) (S.9 * 144)))->children.dim[0].ubound - ((struct nested_t *) (ptr2->children.data + (sizetype) (S.9 * 144)))->children.dim[0].lbound) + 1;
+                                    D.4825 = NON_LVALUE_EXPR <D.4824>;
+                                    cdesc.10.dtype = {.elem_len=144, .version=0, .rank=1, .type=5};
+                                    cdesc.10.dim[0].lbound = 1;
+                                    cdesc.10.dim[0].stride = 1;
+                                    cdesc.10.dim[0].ubound = D.4825;
+                                    cdesc.10.data = ((struct nested_t *) (ptr2->children.data + (sizetype) (S.9 * 144)))->children.data;
+                                    __vtab_deepcopy_Nested_t._deallocate (&cdesc.10);
+                                  }
+                                S.9 = S.9 + 1;
+                              }
+                            L.15:;
+                          }
+                        if ((struct nested_t[0:] * restrict) ptr2->children.data == 0B)
+                          {
+                            stat.8 = 1;
+                          }
+                        else
+                          {
+                            __builtin_free (ptr2->children.data);
+                            (struct nested_t[0:] * restrict) ptr2->children.data = 0B;
+                            stat.8 = 0;
+                          }
+                        if (stat.8 != 0) goto L.13;
+                      }
+                      L.13:;
+                      ignore = stat.8;
+                    }
+                  }
+                L.12:;
+              }
+              L.5:;
+              idx = idx + 1;
+            }
+          }
+        L.6:;
+      }
+      return __result___final_deepcopy_Nes;
+    }
+  finally
+    {
+      __builtin_free ((void *) strides);
+      __builtin_free ((void *) sizes);
+    }
+}
+
+
+__attribute__((fn spec (". r w ")))
+void __copy_deepcopy_Nested_t (struct nested_t & restrict src, struct nested_t & restrict dst)
+{
+  {
+    logical(kind=4) D.4841;
+    integer(kind=8) D.4842;
+    integer(kind=8) D.4843;
+    void * restrict D.4844;
+
+    D.4841 = (struct nested_t *) dst == (struct nested_t *) src;
+    *dst = *src;
+    if (D.4841)
+      {
+        (void) 0;
+      }
+    else
+      {
+        if ((void *) src->values.data != 0B)
+          {
+            D.4842 = (src->values.dim[0].ubound - src->values.dim[0].lbound) + 1;
+            D.4843 = NON_LVALUE_EXPR <D.4842>;
+            D.4844 = (void * restrict) __builtin_malloc (MAX_EXPR <(unsigned long) (D.4843 * 8), 1>);
+            dst->values.data = D.4844;
+            __builtin_memcpy ((real(kind=8)[0:] * restrict) dst->values.data, (real(kind=8)[0:] * restrict) src->values.data, (unsigned long) (D.4843 * 8));
+          }
+        else
+          {
+            dst->values.data = 0B;
+          }
+      }
+  }
+}
+
+
+__attribute__((fn spec (". ")))
+void deepcopy ()
+{
+  static void __deallocate_deepcopy_Nested_t (struct array01_nested_t & restrict);
+  static integer(kind=4) __final_deepcopy_Nested_t (struct array15_nested_t & restrict, integer(kind=8), logical(kind=1));
+  static void __copy_deepcopy_Nested_t (struct nested_t & restrict, struct nested_t & restrict);
+  static struct __vtype_deepcopy_Nested_t __vtab_deepcopy_Nested_t = {._hash=61899626, ._size=144, ._extends=0B, ._def_init=&__def_init_deepcopy_Nested_t, ._copy=__copy_deepcopy_Nested_t, ._final=__final_deepcopy_Nested_t, ._deallocate=__deallocate_deepcopy_Nested_t};
+  static struct nested_t __def_init_deepcopy_Nested_t = {};
+  static struct nested_t a = {};
+  static struct nested_t b = {};
+
+  {
+    struct nested_t nested_t.50;
+
+    nested_t.50.values.data = 0B;
+    nested_t.50.children.data = 0B;
+    a = nested_t.50;
+  }
+  {
+    struct nested_t nested_t.49;
+
+    nested_t.49.values.data = 0B;
+    nested_t.49.children.data = 0B;
+    b = nested_t.49;
+  }
+  {
+    integer(kind=4) overflow.12;
+    logical(kind=4) not_prev_allocated.13;
+    integer(kind=4) overflow.16;
+    logical(kind=4) not_prev_allocated.17;
+    integer(kind=4) overflow.20;
+    logical(kind=4) not_prev_allocated.21;
+    integer(kind=4) overflow.24;
+    logical(kind=4) not_prev_allocated.25;
+    integer(kind=4) overflow.28;
+    logical(kind=4) not_prev_allocated.29;
+    integer(kind=4) overflow.32;
+    logical(kind=4) not_prev_allocated.33;
+
+    {
+      struct __st_parameter_dt dt_parm.11;
+
+      dt_parm.11.common.filename = &"deepcopy.f90"[1]{lb: 1 sz: 1};
+      dt_parm.11.common.line = 13;
+      dt_parm.11.common.flags = 128;
+      dt_parm.11.common.unit = 6;
+      _gfortran_st_write (&dt_parm.11);
+      _gfortran_transfer_character_write (&dt_parm.11, &"Building nested structure in b..."[1]{lb: 1 sz: 1}, 33);
+      _gfortran_st_write_done (&dt_parm.11);
+    }
+    __builtin_memmove ((void *) &b.name, (void *) &"root"[1]{lb: 1 sz: 1}, 4);
+    __builtin_memset ((void *) &b.name + 4, 32, 6);
+    b.values.dtype = {.elem_len=8, .version=0, .rank=1, .type=3};
+    overflow.12 = 0;
+    not_prev_allocated.13 = b.values.data == 0B;
+    if (overflow.12 != 0)
+      {
+        _gfortran_runtime_error (&"Integer overflow when calculating the amount of memory to allocate"[1]{lb: 1 sz: 1});
+      }
+    else
+      {
+        if (b.values.data != 0B)
+          {
+            _gfortran_runtime_error_at (&"At line 15 of file deepcopy.f90"[1]{lb: 1 sz: 1}, &"Attempting to allocate already allocated variable \'%s\'"[1]{lb: 1 sz: 1}, &"b"[1]{lb: 1 sz: 1});
+          }
+        else
+          {
+            b.values.data = (void * restrict) __builtin_malloc (24);
+            if (b.values.data == 0B)
+              {
+                _gfortran_os_error_at (&"In file \'deepcopy.f90\', around line 15"[1]{lb: 1 sz: 1}, &"Error allocating %lu bytes"[1]{lb: 1 sz: 1}, 24);
+              }
+          }
+      }
+    b.values.dim[0].lbound = 1;
+    b.values.dim[0].ubound = 3;
+    b.values.dim[0].stride = 1;
+    b.values.offset = -1;
+    b.values.span = 8;
+    {
+      static real(kind=8) A.14[3] = {1.0e+0, 2.0e+0, 3.0e+0};
+      real(kind=8)[0:] * restrict D.4855;
+      integer(kind=8) D.4856;
+      integer(kind=8) D.4857;
+      integer(kind=8) D.4858;
+      integer(kind=8) D.4859;
+
+      {
+        integer(kind=8) S.15;
+
+        {
+          logical(kind=4) D.4854;
+
+          D.4854 = (real(kind=8)[0:] * restrict) b.values.data == 0B;
+          if (D.4854) goto L.16;
+          if (b.values.dim[0].lbound + 2 != b.values.dim[0].ubound) goto L.16;
+          goto L.17;
+          L.16:;
+          b.values.dim[0].lbound = 1;
+          b.values.dim[0].ubound = 3;
+          b.values.dim[0].stride = 1;
+          b.values.offset = -NON_LVALUE_EXPR <b.values.dim[0].lbound>;
+          b.values.span = 8;
+          if (D.4854)
+            {
+              b.values.data = (void * restrict) __builtin_malloc (24);
+              b.values.dtype = {.elem_len=8, .version=0, .rank=1, .type=3};
+            }
+          else
+            {
+              b.values.data = (void * restrict) __builtin_realloc ((void *) b.values.data, 24);
+            }
+          L.17:;
+        }
+        D.4855 = (real(kind=8)[0:] * restrict) b.values.data;
+        D.4856 = b.values.offset;
+        D.4857 = b.values.dim[0].lbound;
+        D.4858 = b.values.dim[0].ubound;
+        D.4859 = NON_LVALUE_EXPR <b.values.dim[0].lbound>;
+        S.15 = 0;
+        while (1)
+          {
+            if (S.15 > 2) goto L.18;
+            (*D.4855)[(S.15 + D.4859) + D.4856] = A.14[S.15];
+            S.15 = S.15 + 1;
+          }
+        L.18:;
+      }
+    }
+    b.children.dtype = {.elem_len=144, .version=0, .rank=1, .type=5};
+    overflow.16 = 0;
+    not_prev_allocated.17 = b.children.data == 0B;
+    if (overflow.16 != 0)
+      {
+        _gfortran_runtime_error (&"Integer overflow when calculating the amount of memory to allocate"[1]{lb: 1 sz: 1});
+      }
+    else
+      {
+        if (b.children.data != 0B)
+          {
+            _gfortran_runtime_error_at (&"At line 17 of file deepcopy.f90"[1]{lb: 1 sz: 1}, &"Attempting to allocate already allocated variable \'%s\'"[1]{lb: 1 sz: 1}, &"b"[1]{lb: 1 sz: 1});
+          }
+        else
+          {
+            b.children.data = __builtin_malloc (288);
+            if (b.children.data == 0B)
+              {
+                _gfortran_os_error_at (&"In file \'deepcopy.f90\', around line 17"[1]{lb: 1 sz: 1}, &"Error allocating %lu bytes"[1]{lb: 1 sz: 1}, 288);
+              }
+          }
+      }
+    b.children.dim[0].lbound = 1;
+    b.children.dim[0].ubound = 2;
+    b.children.dim[0].stride = 1;
+    b.children.offset = -1;
+    b.children.span = 144;
+    {
+      struct nested_t[0:] * restrict D.4864;
+      integer(kind=8) D.4865;
+      integer(kind=8) D.4866;
+      integer(kind=8) D.4867;
+      struct nested_t nested_t.18;
+      struct nested_t D.4869;
+
+      D.4864 = (struct nested_t[0:] * restrict) b.children.data;
+      D.4865 = b.children.offset;
+      D.4866 = b.children.dim[0].lbound;
+      D.4867 = b.children.dim[0].ubound;
+      nested_t.18.values.data = 0B;
+      nested_t.18.children.data = 0B;
+      D.4869 = nested_t.18;
+      {
+        integer(kind=8) S.19;
+
+        S.19 = D.4866;
+        while (1)
+          {
+            if (S.19 > D.4867) goto L.19;
+            {
+              logical(kind=4) D.4871;
+              integer(kind=8) D.4872;
+              integer(kind=8) D.4873;
+              void * restrict D.4874;
+
+              D.4871 = &(*D.4864)[S.19 + D.4865] == &D.4869;
+              (*D.4864)[S.19 + D.4865] = D.4869;
+              if (D.4871)
+                {
+                  (void) 0;
+                }
+              else
+                {
+                  if ((void *) D.4869.values.data != 0B)
+                    {
+                      D.4872 = (D.4869.values.dim[0].ubound - D.4869.values.dim[0].lbound) + 1;
+                      D.4873 = NON_LVALUE_EXPR <D.4872>;
+                      D.4874 = (void * restrict) __builtin_malloc (MAX_EXPR <(unsigned long) (D.4873 * 8), 1>);
+                      (*D.4864)[S.19 + D.4865].values.data = D.4874;
+                      __builtin_memcpy ((real(kind=8)[0:] * restrict) (*D.4864)[S.19 + D.4865].values.data, (real(kind=8)[0:] * restrict) D.4869.values.data, (unsigned long) (D.4873 * 8));
+                    }
+                  else
+                    {
+                      (*D.4864)[S.19 + D.4865].values.data = 0B;
+                    }
+                }
+            }
+            S.19 = S.19 + 1;
+          }
+        L.19:;
+      }
+    }
+    __builtin_memmove ((void *) &(*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].name, (void *) &"child1"[1]{lb: 1 sz: 1}, 6);
+    __builtin_memset ((void *) &(*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].name + 6, 32, 4);
+    (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].values.dtype = {.elem_len=8, .version=0, .rank=1, .type=3};
+    overflow.20 = 0;
+    not_prev_allocated.21 = (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].values.data == 0B;
+    if (overflow.20 != 0)
+      {
+        _gfortran_runtime_error (&"Integer overflow when calculating the amount of memory to allocate"[1]{lb: 1 sz: 1});
+      }
+    else
+      {
+        if ((*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].values.data != 0B)
+          {
+            _gfortran_runtime_error_at (&"At line 19 of file deepcopy.f90"[1]{lb: 1 sz: 1}, &"Attempting to allocate already allocated variable \'%s\'"[1]{lb: 1 sz: 1}, &"b"[1]{lb: 1 sz: 1});
+          }
+        else
+          {
+            (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].values.data = (void * restrict) __builtin_malloc (16);
+            if ((*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].values.data == 0B)
+              {
+                _gfortran_os_error_at (&"In file \'deepcopy.f90\', around line 19"[1]{lb: 1 sz: 1}, &"Error allocating %lu bytes"[1]{lb: 1 sz: 1}, 16);
+              }
+          }
+      }
+    (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].values.dim[0].lbound = 1;
+    (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].values.dim[0].ubound = 2;
+    (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].values.dim[0].stride = 1;
+    (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].values.offset = -1;
+    (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].values.span = 8;
+    {
+      static real(kind=8) A.22[2] = {1.0e+1, 2.0e+1};
+      real(kind=8)[0:] * restrict D.4883;
+      integer(kind=8) D.4884;
+      integer(kind=8) D.4885;
+      integer(kind=8) D.4886;
+      integer(kind=8) D.4887;
+
+      {
+        integer(kind=8) S.23;
+
+        {
+          logical(kind=4) D.4882;
+
+          D.4882 = (real(kind=8)[0:] * restrict) (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].values.data == 0B;
+          if (D.4882) goto L.20;
+          if ((*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].values.dim[0].lbound + 1 != (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].values.dim[0].ubound) goto L.20;
+          goto L.21;
+          L.20:;
+          (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].values.dim[0].lbound = 1;
+          (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].values.dim[0].ubound = 2;
+          (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].values.dim[0].stride = 1;
+          (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].values.offset = -NON_LVALUE_EXPR <(*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].values.dim[0].lbound>;
+          (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].values.span = 8;
+          if (D.4882)
+            {
+              (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].values.data = (void * restrict) __builtin_malloc (16);
+              (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].values.dtype = {.elem_len=8, .version=0, .rank=1, .type=3};
+            }
+          else
+            {
+              (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].values.data = (void * restrict) __builtin_realloc ((void *) (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].values.data, 16);
+            }
+          L.21:;
+        }
+        D.4883 = (real(kind=8)[0:] * restrict) (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].values.data;
+        D.4884 = (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].values.offset;
+        D.4885 = (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].values.dim[0].lbound;
+        D.4886 = (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].values.dim[0].ubound;
+        D.4887 = NON_LVALUE_EXPR <(*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].values.dim[0].lbound>;
+        S.23 = 0;
+        while (1)
+          {
+            if (S.23 > 1) goto L.22;
+            (*D.4883)[(S.23 + D.4887) + D.4884] = A.22[S.23];
+            S.23 = S.23 + 1;
+          }
+        L.22:;
+      }
+    }
+    __builtin_memmove ((void *) &(*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 2].name, (void *) &"child2"[1]{lb: 1 sz: 1}, 6);
+    __builtin_memset ((void *) &(*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 2].name + 6, 32, 4);
+    (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 2].values.dtype = {.elem_len=8, .version=0, .rank=1, .type=3};
+    overflow.24 = 0;
+    not_prev_allocated.25 = (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 2].values.data == 0B;
+    if (overflow.24 != 0)
+      {
+        _gfortran_runtime_error (&"Integer overflow when calculating the amount of memory to allocate"[1]{lb: 1 sz: 1});
+      }
+    else
+      {
+        if ((*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 2].values.data != 0B)
+          {
+            _gfortran_runtime_error_at (&"At line 22 of file deepcopy.f90"[1]{lb: 1 sz: 1}, &"Attempting to allocate already allocated variable \'%s\'"[1]{lb: 1 sz: 1}, &"b"[1]{lb: 1 sz: 1});
+          }
+        else
+          {
+            (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 2].values.data = (void * restrict) __builtin_malloc (24);
+            if ((*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 2].values.data == 0B)
+              {
+                _gfortran_os_error_at (&"In file \'deepcopy.f90\', around line 22"[1]{lb: 1 sz: 1}, &"Error allocating %lu bytes"[1]{lb: 1 sz: 1}, 24);
+              }
+          }
+      }
+    (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 2].values.dim[0].lbound = 1;
+    (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 2].values.dim[0].ubound = 3;
+    (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 2].values.dim[0].stride = 1;
+    (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 2].values.offset = -1;
+    (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 2].values.span = 8;
+    {
+      static real(kind=8) A.26[3] = {1.0e+2, 2.0e+2, 3.0e+2};
+      real(kind=8)[0:] * restrict D.4897;
+      integer(kind=8) D.4898;
+      integer(kind=8) D.4899;
+      integer(kind=8) D.4900;
+      integer(kind=8) D.4901;
+
+      {
+        integer(kind=8) S.27;
+
+        {
+          logical(kind=4) D.4896;
+
+          D.4896 = (real(kind=8)[0:] * restrict) (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 2].values.data == 0B;
+          if (D.4896) goto L.23;
+          if ((*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 2].values.dim[0].lbound + 2 != (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 2].values.dim[0].ubound) goto L.23;
+          goto L.24;
+          L.23:;
+          (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 2].values.dim[0].lbound = 1;
+          (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 2].values.dim[0].ubound = 3;
+          (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 2].values.dim[0].stride = 1;
+          (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 2].values.offset = -NON_LVALUE_EXPR <(*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 2].values.dim[0].lbound>;
+          (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 2].values.span = 8;
+          if (D.4896)
+            {
+              (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 2].values.data = (void * restrict) __builtin_malloc (24);
+              (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 2].values.dtype = {.elem_len=8, .version=0, .rank=1, .type=3};
+            }
+          else
+            {
+              (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 2].values.data = (void * restrict) __builtin_realloc ((void *) (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 2].values.data, 24);
+            }
+          L.24:;
+        }
+        D.4897 = (real(kind=8)[0:] * restrict) (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 2].values.data;
+        D.4898 = (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 2].values.offset;
+        D.4899 = (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 2].values.dim[0].lbound;
+        D.4900 = (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 2].values.dim[0].ubound;
+        D.4901 = NON_LVALUE_EXPR <(*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 2].values.dim[0].lbound>;
+        S.27 = 0;
+        while (1)
+          {
+            if (S.27 > 2) goto L.25;
+            (*D.4897)[(S.27 + D.4901) + D.4898] = A.26[S.27];
+            S.27 = S.27 + 1;
+          }
+        L.25:;
+      }
+    }
+    (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.dtype = {.elem_len=144, .version=0, .rank=1, .type=5};
+    overflow.28 = 0;
+    not_prev_allocated.29 = (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.data == 0B;
+    if (overflow.28 != 0)
+      {
+        _gfortran_runtime_error (&"Integer overflow when calculating the amount of memory to allocate"[1]{lb: 1 sz: 1});
+      }
+    else
+      {
+        if ((*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.data != 0B)
+          {
+            _gfortran_runtime_error_at (&"At line 24 of file deepcopy.f90"[1]{lb: 1 sz: 1}, &"Attempting to allocate already allocated variable \'%s\'"[1]{lb: 1 sz: 1}, &"b"[1]{lb: 1 sz: 1});
+          }
+        else
+          {
+            (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.data = __builtin_malloc (144);
+            if ((*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.data == 0B)
+              {
+                _gfortran_os_error_at (&"In file \'deepcopy.f90\', around line 24"[1]{lb: 1 sz: 1}, &"Error allocating %lu bytes"[1]{lb: 1 sz: 1}, 144);
+              }
+          }
+      }
+    (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.dim[0].lbound = 1;
+    (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.dim[0].ubound = 1;
+    (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.dim[0].stride = 1;
+    (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.offset = -1;
+    (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.span = 144;
+    {
+      struct nested_t[0:] * restrict D.4906;
+      integer(kind=8) D.4907;
+      integer(kind=8) D.4908;
+      integer(kind=8) D.4909;
+      struct nested_t nested_t.30;
+      struct nested_t D.4911;
+
+      D.4906 = (struct nested_t[0:] * restrict) (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.data;
+      D.4907 = (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.offset;
+      D.4908 = (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.dim[0].lbound;
+      D.4909 = (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.dim[0].ubound;
+      nested_t.30.values.data = 0B;
+      nested_t.30.children.data = 0B;
+      D.4911 = nested_t.30;
+      {
+        integer(kind=8) S.31;
+
+        S.31 = D.4908;
+        while (1)
+          {
+            if (S.31 > D.4909) goto L.26;
+            {
+              logical(kind=4) D.4913;
+              integer(kind=8) D.4914;
+              integer(kind=8) D.4915;
+              void * restrict D.4916;
+
+              D.4913 = &(*D.4906)[S.31 + D.4907] == &D.4911;
+              (*D.4906)[S.31 + D.4907] = D.4911;
+              if (D.4913)
+                {
+                  (void) 0;
+                }
+              else
+                {
+                  if ((void *) D.4911.values.data != 0B)
+                    {
+                      D.4914 = (D.4911.values.dim[0].ubound - D.4911.values.dim[0].lbound) + 1;
+                      D.4915 = NON_LVALUE_EXPR <D.4914>;
+                      D.4916 = (void * restrict) __builtin_malloc (MAX_EXPR <(unsigned long) (D.4915 * 8), 1>);
+                      (*D.4906)[S.31 + D.4907].values.data = D.4916;
+                      __builtin_memcpy ((real(kind=8)[0:] * restrict) (*D.4906)[S.31 + D.4907].values.data, (real(kind=8)[0:] * restrict) D.4911.values.data, (unsigned long) (D.4915 * 8));
+                    }
+                  else
+                    {
+                      (*D.4906)[S.31 + D.4907].values.data = 0B;
+                    }
+                }
+            }
+            S.31 = S.31 + 1;
+          }
+        L.26:;
+      }
+    }
+    __builtin_memmove ((void *) &(*(struct nested_t[0:] * restrict) (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.data)[(*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.offset + 1].name, (void *) &"grandchild"[1]{lb: 1 sz: 1}, 10);
+    (*(struct nested_t[0:] * restrict) (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.data)[(*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.offset + 1].values.dtype = {.elem_len=8, .version=0, .rank=1, .type=3};
+    overflow.32 = 0;
+    not_prev_allocated.33 = (*(struct nested_t[0:] * restrict) (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.data)[(*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.offset + 1].values.data == 0B;
+    if (overflow.32 != 0)
+      {
+        _gfortran_runtime_error (&"Integer overflow when calculating the amount of memory to allocate"[1]{lb: 1 sz: 1});
+      }
+    else
+      {
+        if ((*(struct nested_t[0:] * restrict) (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.data)[(*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.offset + 1].values.data != 0B)
+          {
+            _gfortran_runtime_error_at (&"At line 26 of file deepcopy.f90"[1]{lb: 1 sz: 1}, &"Attempting to allocate already allocated variable \'%s\'"[1]{lb: 1 sz: 1}, &"b"[1]{lb: 1 sz: 1});
+          }
+        else
+          {
+            (*(struct nested_t[0:] * restrict) (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.data)[(*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.offset + 1].values.data = (void * restrict) __builtin_malloc (8);
+            if ((*(struct nested_t[0:] * restrict) (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.data)[(*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.offset + 1].values.data == 0B)
+              {
+                _gfortran_os_error_at (&"In file \'deepcopy.f90\', around line 26"[1]{lb: 1 sz: 1}, &"Error allocating %lu bytes"[1]{lb: 1 sz: 1}, 8);
+              }
+          }
+      }
+    (*(struct nested_t[0:] * restrict) (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.data)[(*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.offset + 1].values.dim[0].lbound = 1;
+    (*(struct nested_t[0:] * restrict) (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.data)[(*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.offset + 1].values.dim[0].ubound = 1;
+    (*(struct nested_t[0:] * restrict) (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.data)[(*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.offset + 1].values.dim[0].stride = 1;
+    (*(struct nested_t[0:] * restrict) (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.data)[(*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.offset + 1].values.offset = -1;
+    (*(struct nested_t[0:] * restrict) (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.data)[(*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.offset + 1].values.span = 8;
+    (*(real(kind=8)[0:] * restrict) (*(struct nested_t[0:] * restrict) (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.data)[(*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.offset + 1].values.data)[(*(struct nested_t[0:] * restrict) (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.data)[(*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.offset + 1].values.offset + 1] = 9.99e+2;
+    {
+      struct __st_parameter_dt dt_parm.34;
+
+      dt_parm.34.common.filename = &"deepcopy.f90"[1]{lb: 1 sz: 1};
+      dt_parm.34.common.line = 29;
+      dt_parm.34.common.flags = 128;
+      dt_parm.34.common.unit = 6;
+      _gfortran_st_write (&dt_parm.34);
+      _gfortran_transfer_character_write (&dt_parm.34, &"Deep copy: a = b"[1]{lb: 1 sz: 1}, 16);
+      _gfortran_st_write_done (&dt_parm.34);
+    }
+    {
+      logical(kind=4) D.4921;
+      struct nested_t D.4922;
+      integer(kind=8) D.4923;
+      integer(kind=8) D.4924;
+      struct array01_nested_t cdesc.35;
+      integer(kind=8) D.4931;
+      integer(kind=8) D.4932;
+      void * restrict D.4933;
+
+      D.4921 = &a == &b;
+      D.4922 = a;
+      a = b;
+      if (D.4921)
+        {
+          (void) 0;
+        }
+      else
+        {
+          if ((void *) b.values.data != 0B)
+            {
+              D.4931 = (b.values.dim[0].ubound - b.values.dim[0].lbound) + 1;
+              D.4932 = NON_LVALUE_EXPR <D.4931>;
+              D.4933 = (void * restrict) __builtin_malloc (MAX_EXPR <(unsigned long) (D.4932 * 8), 1>);
+              a.values.data = D.4933;
+              __builtin_memcpy ((real(kind=8)[0:] * restrict) a.values.data, (real(kind=8)[0:] * restrict) b.values.data, (unsigned long) (D.4932 * 8));
+            }
+          else
+            {
+              a.values.data = 0B;
+            }
+        }
+      if (D.4921)
+        {
+          (void) 0;
+        }
+      else
+        {
+          if ((real(kind=8)[0:] * restrict) D.4922.values.data != 0B)
+            {
+              __builtin_free ((void *) D.4922.values.data);
+              (real(kind=8)[0:] * restrict) D.4922.values.data = 0B;
+            }
+          if ((struct nested_t[0:] * restrict) D.4922.children.data != 0B)
+            {
+              D.4923 = (D.4922.children.dim[0].ubound - D.4922.children.dim[0].lbound) + 1;
+              D.4924 = NON_LVALUE_EXPR <D.4923>;
+              cdesc.35.dtype = {.elem_len=144, .version=0, .rank=1, .type=5};
+              cdesc.35.dim[0].lbound = 1;
+              cdesc.35.dim[0].stride = 1;
+              cdesc.35.dim[0].ubound = D.4924;
+              cdesc.35.data = D.4922.children.data;
+              __vtab_deepcopy_Nested_t._deallocate (&cdesc.35);
+            }
+        }
+    }
+    {
+      struct __st_parameter_dt dt_parm.36;
+
+      dt_parm.36.common.filename = &"deepcopy.f90"[1]{lb: 1 sz: 1};
+      dt_parm.36.common.line = 32;
+      dt_parm.36.common.flags = 128;
+      dt_parm.36.common.unit = 6;
+      _gfortran_st_write (&dt_parm.36);
+      _gfortran_transfer_character_write (&dt_parm.36, &"Verify allocations after copy..."[1]{lb: 1 sz: 1}, 32);
+      _gfortran_st_write_done (&dt_parm.36);
+    }
+    if ((real(kind=8)[0:] * restrict) a.values.data == 0B)
+      {
+        _gfortran_error_stop_string (&"a%values not allocated"[1]{lb: 1 sz: 1}, 22, 0);
+      }
+    L.27:;
+    if ((struct nested_t[0:] * restrict) a.children.data == 0B)
+      {
+        _gfortran_error_stop_string (&"a%children not allocated"[1]{lb: 1 sz: 1}, 24, 0);
+      }
+    L.28:;
+    if ((real(kind=8)[0:] * restrict) (*(struct nested_t[0:] * restrict) a.children.data)[a.children.offset + 1].values.data == 0B)
+      {
+        _gfortran_error_stop_string (&"a%children(1)%values not allocated"[1]{lb: 1 sz: 1}, 34, 0);
+      }
+    L.29:;
+    if ((real(kind=8)[0:] * restrict) (*(struct nested_t[0:] * restrict) a.children.data)[a.children.offset + 2].values.data == 0B)
+      {
+        _gfortran_error_stop_string (&"a%children(2)%values not allocated"[1]{lb: 1 sz: 1}, 34, 0);
+      }
+    L.30:;
+    if ((struct nested_t[0:] * restrict) (*(struct nested_t[0:] * restrict) a.children.data)[a.children.offset + 1].children.data == 0B)
+      {
+        _gfortran_error_stop_string (&"a%children(1)%children not allocated"[1]{lb: 1 sz: 1}, 36, 0);
+      }
+    L.31:;
+    {
+      struct array01_nested_t D.4941;
+
+      D.4941 = (*(struct nested_t[0:] * restrict) a.children.data)[a.children.offset + 1].children;
+      if ((real(kind=8)[0:] * restrict) (*(struct nested_t[0:] * restrict) D.4941.data)[D.4941.offset + 1].values.data == 0B)
+        {
+          _gfortran_error_stop_string (&"a%children(1)%children(1)%values not allocated"[1]{lb: 1 sz: 1}, 46, 0);
+        }
+    }
+    L.32:;
+    {
+      struct __st_parameter_dt dt_parm.37;
+
+      dt_parm.37.common.filename = &"deepcopy.f90"[1]{lb: 1 sz: 1};
+      dt_parm.37.common.line = 41;
+      dt_parm.37.common.flags = 128;
+      dt_parm.37.common.unit = 6;
+      _gfortran_st_write (&dt_parm.37);
+      _gfortran_transfer_character_write (&dt_parm.37, &"Verify data integrity..."[1]{lb: 1 sz: 1}, 24);
+      _gfortran_st_write_done (&dt_parm.37);
+    }
+    if (_gfortran_compare_string (10, &a.name, 4, &"root"[1]{lb: 1 sz: 1}) != 0)
+      {
+        _gfortran_error_stop_string (&"a%name incorrect"[1]{lb: 1 sz: 1}, 16, 0);
+      }
+    L.33:;
+    {
+      logical(kind=4) test.38;
+      real(kind=8)[0:] * restrict D.4947;
+      integer(kind=8) D.4948;
+      integer(kind=8) D.4949;
+      integer(kind=8) D.4950;
+      static real(kind=8) A.39[3] = {1.0e+0, 2.0e+0, 3.0e+0};
+      integer(kind=8) D.4953;
+
+      test.38 = 0;
+      D.4947 = (real(kind=8)[0:] * restrict) a.values.data;
+      D.4948 = a.values.offset;
+      D.4949 = a.values.dim[0].lbound;
+      D.4950 = a.values.dim[0].ubound;
+      D.4953 = NON_LVALUE_EXPR <D.4949>;
+      {
+        integer(kind=8) S.40;
+
+        S.40 = 0;
+        while (1)
+          {
+            if (S.40 > 2) goto L.36;
+            if (ABS_EXPR <(*D.4947)[(S.40 + D.4953) + D.4948] - A.39[S.40]> > 9.99999999999999979886647629255615367252843506129522666015e-13)
+              {
+                test.38 = 1;
+                goto L.35;
+              }
+            S.40 = S.40 + 1;
+          }
+        L.36:;
+      }
+      L.35:;
+      if (test.38)
+        {
+          _gfortran_error_stop_string (&"a%values incorrect"[1]{lb: 1 sz: 1}, 18, 0);
+        }
+    }
+    L.34:;
+    if (_gfortran_compare_string (10, &(*(struct nested_t[0:] * restrict) a.children.data)[a.children.offset + 1].name, 6, &"child1"[1]{lb: 1 sz: 1}) != 0)
+      {
+        _gfortran_error_stop_string (&"a%children(1)%name incorrect"[1]{lb: 1 sz: 1}, 28, 0);
+      }
+    L.37:;
+    {
+      logical(kind=4) test.41;
+      real(kind=8)[0:] * restrict D.4960;
+      integer(kind=8) D.4961;
+      integer(kind=8) D.4962;
+      integer(kind=8) D.4963;
+      static real(kind=8) A.42[2] = {1.0e+1, 2.0e+1};
+      integer(kind=8) D.4966;
+
+      test.41 = 0;
+      D.4960 = (real(kind=8)[0:] * restrict) (*(struct nested_t[0:] * restrict) a.children.data)[a.children.offset + 1].values.data;
+      D.4961 = (*(struct nested_t[0:] * restrict) a.children.data)[a.children.offset + 1].values.offset;
+      D.4962 = (*(struct nested_t[0:] * restrict) a.children.data)[a.children.offset + 1].values.dim[0].lbound;
+      D.4963 = (*(struct nested_t[0:] * restrict) a.children.data)[a.children.offset + 1].values.dim[0].ubound;
+      D.4966 = NON_LVALUE_EXPR <D.4962>;
+      {
+        integer(kind=8) S.43;
+
+        S.43 = 0;
+        while (1)
+          {
+            if (S.43 > 1) goto L.40;
+            if (ABS_EXPR <(*D.4960)[(S.43 + D.4966) + D.4961] - A.42[S.43]> > 9.99999999999999979886647629255615367252843506129522666015e-13)
+              {
+                test.41 = 1;
+                goto L.39;
+              }
+            S.43 = S.43 + 1;
+          }
+        L.40:;
+      }
+      L.39:;
+      if (test.41)
+        {
+          _gfortran_error_stop_string (&"a%children(1)%values incorrect"[1]{lb: 1 sz: 1}, 30, 0);
+        }
+    }
+    L.38:;
+    if (_gfortran_compare_string (10, &(*(struct nested_t[0:] * restrict) a.children.data)[a.children.offset + 2].name, 6, &"child2"[1]{lb: 1 sz: 1}) != 0)
+      {
+        _gfortran_error_stop_string (&"a%children(2)%name incorrect"[1]{lb: 1 sz: 1}, 28, 0);
+      }
+    L.41:;
+    {
+      logical(kind=4) test.44;
+      real(kind=8)[0:] * restrict D.4973;
+      integer(kind=8) D.4974;
+      integer(kind=8) D.4975;
+      integer(kind=8) D.4976;
+      static real(kind=8) A.45[3] = {1.0e+2, 2.0e+2, 3.0e+2};
+      integer(kind=8) D.4979;
+
+      test.44 = 0;
+      D.4973 = (real(kind=8)[0:] * restrict) (*(struct nested_t[0:] * restrict) a.children.data)[a.children.offset + 2].values.data;
+      D.4974 = (*(struct nested_t[0:] * restrict) a.children.data)[a.children.offset + 2].values.offset;
+      D.4975 = (*(struct nested_t[0:] * restrict) a.children.data)[a.children.offset + 2].values.dim[0].lbound;
+      D.4976 = (*(struct nested_t[0:] * restrict) a.children.data)[a.children.offset + 2].values.dim[0].ubound;
+      D.4979 = NON_LVALUE_EXPR <D.4975>;
+      {
+        integer(kind=8) S.46;
+
+        S.46 = 0;
+        while (1)
+          {
+            if (S.46 > 2) goto L.44;
+            if (ABS_EXPR <(*D.4973)[(S.46 + D.4979) + D.4974] - A.45[S.46]> > 9.99999999999999979886647629255615367252843506129522666015e-13)
+              {
+                test.44 = 1;
+                goto L.43;
+              }
+            S.46 = S.46 + 1;
+          }
+        L.44:;
+      }
+      L.43:;
+      if (test.44)
+        {
+          _gfortran_error_stop_string (&"a%children(2)%values incorrect"[1]{lb: 1 sz: 1}, 30, 0);
+        }
+    }
+    L.42:;
+    if (__builtin_memcmp ((void *) &(*(struct nested_t[0:] * restrict) (*(struct nested_t[0:] * restrict) a.children.data)[a.children.offset + 1].children.data)[(*(struct nested_t[0:] * restrict) a.children.data)[a.children.offset + 1].children.offset + 1].name, (void *) &"grandchild"[1]{lb: 1 sz: 1}, 10) != 0)
+      {
+        _gfortran_error_stop_string (&"a%children(1)%children(1)%name incorrect"[1]{lb: 1 sz: 1}, 40, 0);
+      }
+    L.45:;
+    if (ABS_EXPR <(*(real(kind=8)[0:] * restrict) (*(struct nested_t[0:] * restrict) (*(struct nested_t[0:] * restrict) a.children.data)[a.children.offset + 1].children.data)[(*(struct nested_t[0:] * restrict) a.children.data)[a.children.offset + 1].children.offset + 1].values.data)[(*(struct nested_t[0:] * restrict) (*(struct nested_t[0:] * restrict) a.children.data)[a.children.offset + 1].children.data)[(*(struct nested_t[0:] * restrict) a.children.data)[a.children.offset + 1].children.offset + 1].values.offset + 1] - 9.99e+2> > 9.99999999999999979886647629255615367252843506129522666015e-13)
+      {
+        _gfortran_error_stop_string (&"a%children(1)%children(1)%values incorrect"[1]{lb: 1 sz: 1}, 42, 0);
+      }
+    L.46:;
+    {
+      struct __st_parameter_dt dt_parm.47;
+
+      dt_parm.47.common.filename = &"deepcopy.f90"[1]{lb: 1 sz: 1};
+      dt_parm.47.common.line = 56;
+      dt_parm.47.common.flags = 128;
+      dt_parm.47.common.unit = 6;
+      _gfortran_st_write (&dt_parm.47);
+      _gfortran_transfer_character_write (&dt_parm.47, &"Verify deep copy (modify a, check b unchanged)..."[1]{lb: 1 sz: 1}, 49);
+      _gfortran_st_write_done (&dt_parm.47);
+    }
+    (*(real(kind=8)[0:] * restrict) a.values.data)[a.values.offset + 1] = -1.0e+0;
+    (*(real(kind=8)[0:] * restrict) (*(struct nested_t[0:] * restrict) a.children.data)[a.children.offset + 1].values.data)[(*(struct nested_t[0:] * restrict) a.children.data)[a.children.offset + 1].values.offset + 1] = -1.0e+1;
+    (*(real(kind=8)[0:] * restrict) (*(struct nested_t[0:] * restrict) (*(struct nested_t[0:] * restrict) a.children.data)[a.children.offset + 1].children.data)[(*(struct nested_t[0:] * restrict) a.children.data)[a.children.offset + 1].children.offset + 1].values.data)[(*(struct nested_t[0:] * restrict) (*(struct nested_t[0:] * restrict) a.children.data)[a.children.offset + 1].children.data)[(*(struct nested_t[0:] * restrict) a.children.data)[a.children.offset + 1].children.offset + 1].values.offset + 1] = -9.99e+2;
+    if (ABS_EXPR <(*(real(kind=8)[0:] * restrict) b.values.data)[b.values.offset + 1] - 1.0e+0> > 9.99999999999999979886647629255615367252843506129522666015e-13)
+      {
+        _gfortran_error_stop_string (&"SHALLOW COPY: b%values(1) was modified when a was changed"[1]{lb: 1 sz: 1}, 57, 0);
+      }
+    L.47:;
+    if (ABS_EXPR <(*(real(kind=8)[0:] * restrict) (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].values.data)[(*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].values.offset + 1] - 1.0e+1> > 9.99999999999999979886647629255615367252843506129522666015e-13)
+      {
+        _gfortran_error_stop_string (&"SHALLOW COPY: b%children(1)%values(1) was modified when a was changed"[1]{lb: 1 sz: 1}, 69, 0);
+      }
+    L.48:;
+    if (ABS_EXPR <(*(real(kind=8)[0:] * restrict) (*(struct nested_t[0:] * restrict) (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.data)[(*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.offset + 1].values.data)[(*(struct nested_t[0:] * restrict) (*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.data)[(*(struct nested_t[0:] * restrict) b.children.data)[b.children.offset + 1].children.offset + 1].values.offset + 1] - 9.99e+2> > 9.99999999999999979886647629255615367252843506129522666015e-13)
+      {
+        _gfortran_error_stop_string (&"SHALLOW COPY: b%children(1)%children(1)%values(1) was modified when a was changed"[1]{lb: 1 sz: 1}, 81, 0);
+      }
+    L.49:;
+    {
+      struct __st_parameter_dt dt_parm.48;
+
+      dt_parm.48.common.filename = &"deepcopy.f90"[1]{lb: 1 sz: 1};
+      dt_parm.48.common.line = 68;
+      dt_parm.48.common.flags = 128;
+      dt_parm.48.common.unit = 6;
+      _gfortran_st_write (&dt_parm.48);
+      _gfortran_transfer_character_write (&dt_parm.48, &"All checks passed!"[1]{lb: 1 sz: 1}, 18);
+      _gfortran_st_write_done (&dt_parm.48);
+    }
+  }
+}
+
+
+__attribute__((externally_visible))
+integer(kind=4) main (integer(kind=4) argc, character(kind=1) * * argv)
+{
+  static integer(kind=4) options.51[7] = {10308, 16383, 0, 1, 1, 0, 31};
+
+  _gfortran_set_args (argc, argv);
+  _gfortran_set_options (7, &options.51[0]);
+  deepcopy ();
+  return 0;
+}
+
+

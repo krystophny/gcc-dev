@@ -8,6 +8,11 @@
 
 ---
 
+## Mandatory Agent Policy Update
+- Every time GCC sources are modified, run `./gcc/contrib/check_GNU_style.sh` on each touched file before reporting completion.
+
+---
+
 ## Analysis Methodology
 
 ### Phase 1: Initial Review

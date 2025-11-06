@@ -1,0 +1,28 @@
+# Generated build directories
+/gcc/
+/gcc-build/
+
+# Compiled artifacts
+*.o
+*.obj
+*.mod
+*.s
+*.out
+*.exe
+*.x
+*.a
+*.so
+*.d
+*.dll
+
+# Test logs
+*.log
+*.sum
+
+# Python cache
+__pycache__/
+.pytest_cache/
+
+# Temporary files
+*.tmp
+*~
