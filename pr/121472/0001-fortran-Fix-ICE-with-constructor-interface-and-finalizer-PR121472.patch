@@ -1,4 +1,4 @@
-From 92b1b3beb7ff9f0a1950cc2b91fbcc1b57f61a2b Mon Sep 17 00:00:00 2001
+From 88d2bc11231e1b674ac710807525f73616e0f153 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Fri, 7 Nov 2025 15:52:59 +0100
 Subject: [PATCH] fortran: Fix ICE with constructor interface and finalizer
@@ -32,9 +32,9 @@ gcc/testsuite/ChangeLog:
 	PR fortran/121472
 	* gfortran.dg/finalize_constructor_1.f90: New test.
 ---
- gcc/fortran/trans.cc                          | 50 ++++++++++++++-
- .../gfortran.dg/finalize_constructor_1.f90    | 63 +++++++++++++++++++
- 2 files changed, 111 insertions(+), 2 deletions(-)
+ gcc/fortran/trans.cc                          | 50 +++++++++++++-
+ .../gfortran.dg/finalize_constructor_1.f90    | 66 +++++++++++++++++++
+ 2 files changed, 114 insertions(+), 2 deletions(-)
  create mode 100644 gcc/testsuite/gfortran.dg/finalize_constructor_1.f90
 
 diff --git a/gcc/fortran/trans.cc b/gcc/fortran/trans.cc
@@ -121,20 +121,23 @@ index 47396c3cbab..4bce4aee062 100644
  	      tmp = gfc_copy_alloc_comp_no_fini (derived, se->expr, desc, rank, 0);
 diff --git a/gcc/testsuite/gfortran.dg/finalize_constructor_1.f90 b/gcc/testsuite/gfortran.dg/finalize_constructor_1.f90
 new file mode 100644
-index 00000000000..53037825746
+index 00000000000..052fa2fd552
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/finalize_constructor_1.f90
-@@ -0,0 +1,63 @@
+@@ -0,0 +1,66 @@
 +! { dg-do run }
 +! { dg-output "constructor: *1(\n|\r\n|\r)" }
-+! { dg-output "finalizer: *1(\n|\r\n|\r)" }
++! { dg-output "finalizer: *(1|2)(\n|\r\n|\r)" }
 +! PR fortran/121472
 +! Test that derived types with finalizers and constructor interfaces compile
 +! without ICE when assigned from constructor calls.
 +!
-+! Per Fortran 2008 Corrigendum 1 and Fortran 2018, structure constructors
-+! create values not variables, so only the variable obj should be finalized,
-+! not the constructor result. This test verifies correct behavior.
++! Per Fortran 2018 standard, function results (including function constructors)
++! should be finalized after assignment. Full standard-compliant behavior:
++!   - 1 constructor call (creates function result)
++!   - 2 finalizer calls (function result after assignment, obj at scope exit)
++! Current gfortran only finalizes obj (1 call), which is incomplete but acceptable
++! as an implementation limitation. Test accepts both 1 or 2 finalizer calls.
 +!
 +! This used to trigger an internal compiler error in gimplify_expr because
 +! finalization was attempted on unevaluated CALL_EXPR nodes for types with
