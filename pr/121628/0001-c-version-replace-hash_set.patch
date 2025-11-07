@@ -1,0 +1,109 @@
+From b388149f1d9fb9396926866425672696fe18707f Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Fri, 7 Nov 2025 19:41:57 +0100
+Subject: [PATCH] fortran: Replace hash_set with C-style linked list in
+ trans-array.cc
+
+Replace the C++ hash_set<gfc_symbol *> with a simple C-style linked list
+for tracking seen derived types during recursive type processing.
+
+This change:
+- Removes C++ hash_set dependency
+- Adds struct seen_type_node for linked list nodes
+- Adds seen_type_list_contains() helper function
+- Replaces .add(), .contains(), and .remove() with C operations
+
+gcc/fortran/ChangeLog:
+
+	* trans-array.cc (seen_type_node): New struct for linked list.
+	(seen_type_list_contains): New helper function.
+	(structure_alloc_comps): Replace hash_set with linked list.
+---
+ gcc/fortran/trans-array.cc | 42 +++++++++++++++++++++++++++++++++-----
+ 1 file changed, 37 insertions(+), 5 deletions(-)
+
+diff --git a/gcc/fortran/trans-array.cc b/gcc/fortran/trans-array.cc
+index 1bfc0ce46b8..a313b965d48 100644
+--- a/gcc/fortran/trans-array.cc
++++ b/gcc/fortran/trans-array.cc
+@@ -10144,6 +10144,25 @@ generate_element_copy_wrapper (gfc_symbol *der_type, tree comp_type,
+   return build1 (ADDR_EXPR, get_copy_helper_pointer_type (), fndecl);
+ }
+ 
++/* Simple linked list node for tracking seen derived types.  */
++struct seen_type_node
++{
++  gfc_symbol *sym;
++  struct seen_type_node *next;
++};
++
++/* Check if a symbol is in the seen_derived_types list.  */
++static bool
++seen_type_list_contains (struct seen_type_node *list, gfc_symbol *sym)
++{
++  for (struct seen_type_node *node = list; node; node = node->next)
++    {
++      if (node->sym == sym)
++	return true;
++    }
++  return false;
++}
++
+ static tree
+ structure_alloc_comps (gfc_symbol * der_type, tree decl, tree dest,
+ 		       int rank, int purpose, int caf_mode,
+@@ -10173,7 +10192,7 @@ structure_alloc_comps (gfc_symbol * der_type, tree decl, tree dest,
+   int caf_dereg_mode;
+   symbol_attribute *attr;
+   bool deallocate_called;
+-  static hash_set<gfc_symbol *> seen_derived_types;
++  static struct seen_type_node *seen_derived_types = NULL;
+ 
+   gfc_init_block (&fnblock);
+ 
+@@ -10296,7 +10315,13 @@ structure_alloc_comps (gfc_symbol * der_type, tree decl, tree dest,
+     }
+   /* Otherwise, act on the components or recursively call self to
+      act on a chain of components.  */
+-  seen_derived_types.add (der_type);
++  /* Add der_type to the seen list.  */
++  struct seen_type_node *new_node
++    = XNEW (struct seen_type_node);
++  new_node->sym = der_type;
++  new_node->next = seen_derived_types;
++  seen_derived_types = new_node;
++
+   for (c = der_type->components; c; c = c->next)
+     {
+       bool cmp_has_alloc_comps = (c->ts.type == BT_DERIVED
+@@ -10304,9 +10329,10 @@ structure_alloc_comps (gfc_symbol * der_type, tree decl, tree dest,
+ 				    && c->ts.u.derived->attr.alloc_comp;
+       bool same_type
+ 	= (c->ts.type == BT_DERIVED
+-	   && seen_derived_types.contains (c->ts.u.derived))
++	   && seen_type_list_contains (seen_derived_types, c->ts.u.derived))
+ 	  || (c->ts.type == BT_CLASS
+-	      && seen_derived_types.contains (CLASS_DATA (c)->ts.u.derived));
++	      && seen_type_list_contains (seen_derived_types,
++					  CLASS_DATA (c)->ts.u.derived));
+       bool inside_wrapper = generating_copy_helper;
+ 
+       bool is_pdt_type = c->ts.type == BT_DERIVED
+@@ -11397,7 +11423,13 @@ structure_alloc_comps (gfc_symbol * der_type, tree decl, tree dest,
+ 	  break;
+ 	}
+     }
+-  seen_derived_types.remove (der_type);
++  /* Remove der_type from the seen list (it's at the head).  */
++  if (seen_derived_types && seen_derived_types->sym == der_type)
++    {
++      struct seen_type_node *tmp = seen_derived_types;
++      seen_derived_types = seen_derived_types->next;
++      free (tmp);
++    }
+ 
+   return gfc_finish_block (&fnblock);
+ }
+-- 
+2.51.2
+
