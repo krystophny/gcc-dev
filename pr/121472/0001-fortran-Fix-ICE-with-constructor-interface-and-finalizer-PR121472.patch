@@ -1,4 +1,4 @@
-From 326bc6f9ecdb7e8a1ac6fdc607b985baf7f161f4 Mon Sep 17 00:00:00 2001
+From 1622a3291d5ba9e4df273dd40957b8752031b31d Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Fri, 7 Nov 2025 15:52:59 +0100
 Subject: [PATCH] fortran: Fix ICE with constructor interface and finalizer
@@ -32,9 +32,9 @@ gcc/testsuite/ChangeLog:
 	PR fortran/121472
 	* gfortran.dg/finalize_constructor_1.f90: New test.
 ---
- gcc/fortran/trans.cc                          | 50 ++++++++++++++++++-
- .../gfortran.dg/finalize_constructor_1.f90    | 49 ++++++++++++++++++
- 2 files changed, 97 insertions(+), 2 deletions(-)
+ gcc/fortran/trans.cc                          | 50 +++++++++++++-
+ .../gfortran.dg/finalize_constructor_1.f90    | 67 +++++++++++++++++++
+ 2 files changed, 115 insertions(+), 2 deletions(-)
  create mode 100644 gcc/testsuite/gfortran.dg/finalize_constructor_1.f90
 
 diff --git a/gcc/fortran/trans.cc b/gcc/fortran/trans.cc
@@ -121,14 +121,14 @@ index 47396c3cbab..4bce4aee062 100644
  	      tmp = gfc_copy_alloc_comp_no_fini (derived, se->expr, desc, rank, 0);
 diff --git a/gcc/testsuite/gfortran.dg/finalize_constructor_1.f90 b/gcc/testsuite/gfortran.dg/finalize_constructor_1.f90
 new file mode 100644
-index 00000000000..0b0d88800c9
+index 00000000000..c63b8ad14e3
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/finalize_constructor_1.f90
-@@ -0,0 +1,49 @@
-+! { dg-do compile }
+@@ -0,0 +1,67 @@
++! { dg-do run }
 +! PR fortran/121472
-+! Test that derived types with finalizers and constructor interfaces compile
-+! without ICE when assigned from constructor calls.
++! Test that derived types with finalizers and constructor interfaces execute
++! correctly when assigned from constructor calls.
 +!
 +! This used to trigger an internal compiler error in gimplify_expr because
 +! finalization was attempted on unevaluated CALL_EXPR nodes for types with
@@ -138,6 +138,9 @@ index 00000000000..0b0d88800c9
 +
 +module pr121472_m
 +  implicit none
++
++  integer :: finalize_count = 0
++  integer :: constructor_count = 0
 +
 +  type :: base_t
 +  end type base_t
@@ -156,10 +159,12 @@ index 00000000000..0b0d88800c9
 +
 +  subroutine container_finalize(this)
 +    type(container_t), intent(inout) :: this
++    finalize_count = finalize_count + 1
 +  end subroutine container_finalize
 +
 +  function container_constructor() result(res)
 +    type(container_t) :: res
++    constructor_count = constructor_count + 1
 +  end function container_constructor
 +
 +end module pr121472_m
@@ -172,6 +177,19 @@ index 00000000000..0b0d88800c9
 +
 +  ! This assignment from constructor used to cause ICE
 +  obj = container_t()
++
++  ! Verify constructor was called
++  if (constructor_count /= 1) then
++    error stop "Constructor not called exactly once"
++  end if
++
++  ! Test multiple assignments
++  obj = container_t()
++  obj = container_t()
++
++  if (constructor_count /= 3) then
++    error stop "Constructor count incorrect"
++  end if
 +
 +end program test_finalize_constructor
 -- 
