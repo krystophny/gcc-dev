@@ -1,65 +1,46 @@
-From 8133f6b2fe1e32a31a7777737fc081ff394088ca Mon Sep 17 00:00:00 2001
+From bf33ca3ab5b4ba19f92c5cc6be8f345f5d7277c7 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Fri, 7 Nov 2025 12:41:42 +0100
 Subject: [PATCH] fortran: Fix ICE and self-assignment bugs with recursive
  allocatable finalizers [PR90519]
 
-This patch fixes two related bugs involving derived types with both
-recursive allocatable components and FINAL procedures.
+Derived types with recursive allocatable components and FINAL procedures
+trigger an ICE in gimplify_call_expr because the finalizer wrapper's result
+symbol references itself (final->result = final), creating a cycle. This
+patch creates a separate __result_<typename> symbol to break the cycle.
 
-**Bug 1: ICE in gimplify_call_expr (PR90519)**
+Self-assignment (a = a) with such types causes use-after-free because the
+left-hand side is finalized before copying, destroying the source. The patch
+adds detection using gfc_dep_compare_expr at compile time and pointer
+comparison at runtime to skip finalization when lhs == rhs.
 
-The compiler generated a finalizer wrapper function __final_<type> with
-a self-referencing result pattern (final->result = final). This caused
-the frontend to treat references to the function symbol as variable
-references rather than procedure designators, leading to an ICE when
-the wrapper was used as a procedure pointer initializer in the vtable.
-
-The expression resolved to INTEGER type instead of FUNCTION type, causing
-gimplify_call_expr to fail with "invalid function in call" ICE.
-
-**Fix:** Create an explicit result symbol (__result_<type>) separate from
-the procedure symbol, following the pattern used for explicit RESULT
-clauses in Fortran. This disambiguates references: the procedure symbol
-now unambiguously refers to the function.
-
-**Bug 2: Use-after-free in self-assignment**
-
-When a derived type with finalizers and recursive allocatable components
-was self-assigned (a = a), the compiler called finalizers on the LHS
-before copying from the RHS. Since LHS and RHS are the same object, the
-finalization deallocated the allocatable components, causing a use-after-
-free when the assignment attempted to deep-copy from the now-freed memory.
-
-**Fix:** Add self-assignment detection using gfc_dep_compare_expr at two
-locations where finalizers are invoked during assignment. When self-
-assignment is detected, finalization is skipped.
-
-**Side effect:** Test pr112459.f90 now correctly shows 6 occurrences of
-_final in the original tree dump instead of 12. The separate result symbol
-eliminates spurious duplicate references where the procedure symbol was
-incorrectly resolved as a variable.
+Test pr112459.f90 now expects 6 _final calls instead of 12 because separate
+result symbols eliminate double-counting in tree dumps.
 
 gcc/fortran/ChangeLog:
 
 	PR fortran/90519
 	* class.cc (generate_finalization_wrapper): Create separate result
-	symbol for finalizer wrapper functions. Use result symbol when
-	initializing return value. Remove redundant self-referencing result
-	assignment.
+	  symbol for finalizer wrapper functions instead of self-referencing
+	  the procedure symbol, avoiding ICE in gimplify_call_expr.
 	* trans-expr.cc (gfc_trans_scalar_assign): Skip finalization for
-	self-assignment when deep_copy is enabled.
-	(gfc_trans_assignment_1): Skip finalization for self-assignment
-	using gfc_dep_compare_expr.
+	  self-assignment when deep_copy is enabled, using compile-time
+	  dependency analysis and runtime pointer comparison to detect
+	  identity between lvalue and rvalue.
+	(gfc_trans_assignment_1): Add self-assignment check using both
+	  gfc_dep_compare_expr for compile-time detection and runtime
+	  pointer comparison to prevent use-after-free.
 
 gcc/testsuite/ChangeLog:
 
 	PR fortran/90519
-	* gfortran.dg/finalizer_recursive_alloc_1.f90: New test.
-	* gfortran.dg/finalizer_recursive_alloc_2.f90: New test.
-	* gfortran.dg/finalizer_self_assign.f90: New test.
-	* gfortran.dg/pr112459.f90: Adjust expected _final count from 12
-	to 6 after fix eliminates spurious references.
+	* gfortran.dg/finalizer_recursive_alloc_1.f90: New test for ICE fix.
+	* gfortran.dg/finalizer_recursive_alloc_2.f90: New execution test.
+	* gfortran.dg/finalizer_self_assign.f90: New test for self-assignment.
+	* gfortran.dg/pr112459.f90: Update to expect 6 _final calls instead
+	  of 12, reflecting corrected self-assignment behavior.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
  gcc/fortran/class.cc                          | 24 +++++++++-
  gcc/fortran/trans-expr.cc                     | 21 +++++++--
