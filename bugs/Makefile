@@ -12,7 +12,7 @@ IFLAGS = -warn all -stand f18
 
 INTEL_SETVARS = /opt/intel/oneapi/setvars.sh
 
-BUG_DIRS = pr121628 finalizer-ice
+BUG_DIRS = pr121628 90519
 SOURCES = $(foreach dir,$(BUG_DIRS),$(wildcard $(dir)/*.f90))
 TARGETS = $(SOURCES:.f90=.x)
 INTEL_TARGETS = $(SOURCES:.f90=.intel.x)

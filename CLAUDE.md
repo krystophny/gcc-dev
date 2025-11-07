@@ -24,6 +24,44 @@
 
 ---
 
+## Test Suite Execution Protocol
+
+### Running GCC Fortran Test Suite
+**CRITICAL: Always use proper background shell execution for test suites**
+
+**CORRECT way to run full gfortran test suite:**
+```bash
+cd gcc-build/gcc && make -j32 check-gfortran > /tmp/test-output.log 2>&1
+```
+Use the Bash tool with `run_in_background: true` parameter.
+
+**Common mistakes to AVOID:**
+1. ❌ Running `make check-gfortran` from build root (no such target at top level)
+2. ❌ Using shell backgrounding operators (`&`) within Bash tool commands
+3. ❌ Running from wrong directory (must be in `gcc-build/gcc/`)
+4. ❌ Not redirecting output properly to a log file
+5. ❌ Forgetting to check if test suite completed before reading results
+
+**Proper workflow:**
+1. Rebuild: `cd gcc-build && make -j32`
+2. Launch test suite: `cd gcc && make -j32 check-gfortran > /tmp/test.log 2>&1` (with `run_in_background: true`)
+3. Monitor: Use BashOutput tool to check status
+4. Wait for completion: Check shell status until it shows "completed"
+5. Read summary: Extract results from `gcc-build/gcc/testsuite/gfortran/gfortran.sum`
+
+**Key test suite files:**
+- `.sum` files: Summary of pass/fail results
+- `.log` files: Detailed test execution logs
+- Look for: `# of expected passes`, `# of unexpected failures`
+
+**Verification checklist:**
+- ✅ Zero unexpected failures
+- ✅ All new tests passing
+- ✅ No regressions in existing tests
+- ✅ Expected failure counts match baseline
+
+---
+
 ## Analysis Methodology
 
 ### Phase 1: Initial Review
