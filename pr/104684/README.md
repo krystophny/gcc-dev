@@ -31,8 +31,9 @@ from other derived types in coarray contexts.
 - Status: PASS
 - Compiles with -fcoarray=single without errors
 
-### Intel ifx
-- Status: SKIP (not installed)
+### Intel ifx 2025.2.1
+- Status: FAIL (expected - different coarray implementation)
+- Intel ifx does not support `-fcoarray=single` the same way as gfortran
 
 ## Reproducer
 

@@ -54,10 +54,10 @@ test-ifx:
 	@echo "=========================================="
 	@echo "Testing with Intel ifx"
 	@echo "=========================================="
-	@if which ifx > /dev/null 2>&1; then \
-		$(MAKE) test-compiler FC="$(FC_INTEL)" FFLAGS="$(FFLAGS_INTEL)" SUFFIX="intel"; \
+	@if [ -f "$(INTEL_SETVARS)" ]; then \
+		bash -c "source $(INTEL_SETVARS) > /dev/null 2>&1 && $(MAKE) test-compiler FC=\"$(FC_INTEL)\" FFLAGS=\"$(FFLAGS_INTEL)\" SUFFIX=\"intel\""; \
 	else \
-		echo "Intel ifx not found - SKIP"; \
+		echo "Intel oneAPI setvars not found at $(INTEL_SETVARS) - SKIP"; \
 	fi
 
 test-all:

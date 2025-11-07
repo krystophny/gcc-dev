@@ -31,8 +31,9 @@ be correctly tracked and finalized only when truly out of scope.
 - Status: PASS
 - Compiles and links without errors
 
-### Intel ifx
-- Status: SKIP (not installed)
+### Intel ifx 2025.2.1
+- Status: PASS
+- Compiles and links without errors
 
 ## Reproducer
 

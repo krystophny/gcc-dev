@@ -29,8 +29,9 @@ Code with elemental finalizers should compile cleanly across module boundaries.
 - Status: PASS
 - Compiles without errors
 
-### Intel ifx
-- Status: SKIP (not installed)
+### Intel ifx 2025.2.1
+- Status: PASS
+- Compiles without errors
 
 ## Reproducer
 

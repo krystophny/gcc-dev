@@ -30,8 +30,9 @@ PDTs with nested parameters should allocate cleanly without compiler crashes.
 - Status: PASS
 - Compiles and links without errors
 
-### Intel ifx
-- Status: SKIP (not installed)
+### Intel ifx 2025.2.1
+- Status: PASS
+- Compiles and links without errors
 
 ## Reproducer
 

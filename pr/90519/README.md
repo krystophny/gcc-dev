@@ -7,6 +7,12 @@ an internal compiler error when a derived type has
 1. a recursive allocatable component of the same type, and
 2. a FINAL procedure (either directly or via a non-allocatable component).
 
+## Test Results
+
+### Intel ifx 2025.2.1
+- Status: PASS
+- Compiles without errors
+
 ## Reproducing
 
 1. Build the in-tree compiler once (`../gcc/configure … && make`).

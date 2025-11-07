@@ -30,8 +30,9 @@ Code using constructors and finalizers together should compile cleanly.
 - Status: ICE
 - Internal compiler error in gimplify_expr at gimplify.cc:21278
 
-### Intel ifx
-- Status: SKIP (not installed)
+### Intel ifx 2025.2.1
+- Status: PASS
+- Compiles without errors
 
 ## Reproducer
 
