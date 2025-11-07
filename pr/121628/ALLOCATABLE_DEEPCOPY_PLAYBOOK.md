@@ -16,7 +16,7 @@ Retain all historical insights that used to live in `AGENTS.md`, `README.md`, `F
 - Recursive derived types with allocatable components rely on these rules: `ALLOCATE(dest, SOURCE=src)` produces a full deep copy of every allocated allocatable ultimate component.
 
 ## 3. Repository Layout and Toolchain
-- **Project root:** `/home/ert/code/gcc-dev/bugs` (all commands run here).
+- **Project root:** `/home/ert/code/gcc-dev/pr` (all commands run here).
 - **Custom gfortran under test:** `../gcc-build/gcc/gfortran` (GCC 16.0.0 experimental) invoked with `-B../gcc-build/gcc`.
 - **Reference compiler:** Intel ifx (oneAPI 2025) from `/opt/intel/oneapi`; source `setvars.sh` before use.
 - **Make targets:**

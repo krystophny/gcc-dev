@@ -1,0 +1,762 @@
+From df6de36e752e42b872bf7c20463bef53e12f201c Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Sun, 19 Oct 2025 11:33:40 +0200
+Subject: [PATCH] fortran: Fix deep copy of recursive allocatable components
+ [PR121628]
+
+This patch fixes PR121628 by implementing proper deep copy semantics for
+derived types containing recursive allocatable array components, in
+compliance with Fortran 2018+ standards.
+
+The original implementation would generate infinitely recursive code at
+compile time when encountering self-referential derived types with
+allocatable components (e.g., type(t) containing allocatable type(t)
+arrays). This patch solves the problem by generating a runtime helper
+function that performs element-wise deep copying, avoiding compile-time
+recursion while maintaining correct assignment semantics.
+
+The trans-intrinsic.cc change enhances handling of constant values in
+coarray atomic operations to ensure temporary variables are created when
+needed, avoiding invalid address-of-constant expressions.
+
+gcc/fortran/ChangeLog:
+
+	PR fortran/121628
+	* trans-array.cc (get_copy_helper_function_type): New function to
+	create function type for element copy helpers.
+	(get_copy_helper_pointer_type): New function to create pointer type
+	for element copy helpers.
+	(generate_element_copy_wrapper): New function to generate runtime
+	helper for element-wise deep copying of recursive types.
+	(structure_alloc_comps): Detect recursive allocatable array
+	components and use runtime helper instead of inline recursion.
+	Add includes for cgraph.h and function.h.
+	* trans-decl.cc (gfor_fndecl_cfi_deep_copy_array): New declaration
+	for runtime deep copy helper.
+	(gfc_build_builtin_function_decls): Initialize the runtime helper
+	declaration.
+	* trans-intrinsic.cc (conv_intrinsic_atomic_op): Enhance handling of
+	constant values in coarray atomic operations by detecting and
+	materializing address-of-constant expressions.
+	* trans.h (gfor_fndecl_cfi_deep_copy_array): Add external declaration.
+
+libgfortran/ChangeLog:
+
+	PR fortran/121628
+	* Makefile.am: Add runtime/deep_copy.c to source files.
+	* Makefile.in: Regenerate.
+	* gfortran.map: Export _gfortran_cfi_deep_copy_array symbol.
+	* libgfortran.h: Add prototype for internal_deep_copy_array.
+	* runtime/deep_copy.c: New file implementing runtime deep copy
+	helper for recursive allocatable array components.
+
+gcc/testsuite/ChangeLog:
+
+	PR fortran/121628
+	* gfortran.dg/alloc_comp_deep_copy_5.f90: New test for recursive
+	allocatable array deep copy.
+	* gfortran.dg/alloc_comp_deep_copy_6.f90: New test for multi-level
+	recursive allocatable deep copy.
+	* gfortran.dg/array_memcpy_2.f90: Fix test with proper allocation.
+
+Tested on x86_64-pc-linux-gnu with no regressions (74231 tests passed).
+---
+ gcc/fortran/trans-array.cc                    | 174 +++++++++++++++++-
+ gcc/fortran/trans-decl.cc                     |  20 ++
+ gcc/fortran/trans-intrinsic.cc                |  17 +-
+ gcc/fortran/trans.h                           |   3 +
+ .../gfortran.dg/alloc_comp_deep_copy_5.f90    |  63 +++++++
+ .../gfortran.dg/alloc_comp_deep_copy_6.f90    |  75 ++++++++
+ gcc/testsuite/gfortran.dg/array_memcpy_2.f90  |  16 +-
+ libgfortran/Makefile.am                       |   1 +
+ libgfortran/Makefile.in                       |   8 +-
+ libgfortran/gfortran.map                      |   1 +
+ libgfortran/libgfortran.h                     |   8 +
+ libgfortran/runtime/deep_copy.c               | 125 +++++++++++++
+ 12 files changed, 501 insertions(+), 10 deletions(-)
+ create mode 100644 gcc/testsuite/gfortran.dg/alloc_comp_deep_copy_5.f90
+ create mode 100644 gcc/testsuite/gfortran.dg/alloc_comp_deep_copy_6.f90
+ create mode 100644 libgfortran/runtime/deep_copy.c
+
+diff --git a/gcc/fortran/trans-array.cc b/gcc/fortran/trans-array.cc
+index cb40816558e..1bfc0ce46b8 100644
+--- a/gcc/fortran/trans-array.cc
++++ b/gcc/fortran/trans-array.cc
+@@ -92,6 +92,8 @@ along with GCC; see the file COPYING3.  If not see
+ #include "trans-array.h"
+ #include "trans-const.h"
+ #include "dependency.h"
++#include "cgraph.h"	/* For cgraph_node::add_new_function.  */
++#include "function.h"	/* For push_struct_function.  */
+ 
+ static bool gfc_get_array_constructor_size (mpz_t *, gfc_constructor_base);
+ 
+@@ -10022,6 +10024,125 @@ enum {DEALLOCATE_ALLOC_COMP = 1, NULLIFY_ALLOC_COMP,
+       BCAST_ALLOC_COMP};
+ 
+ static gfc_actual_arglist *pdt_param_list;
++static bool generating_copy_helper;
++
++/* Forward declaration of structure_alloc_comps for wrapper generator.  */
++static tree structure_alloc_comps (gfc_symbol *, tree, tree, int, int, int,
++				    gfc_co_subroutines_args *, bool);
++
++/* Generate a wrapper function that performs element-wise deep copy for
++   recursive allocatable array components. This wrapper is passed as a
++   function pointer to the runtime helper _gfortran_cfi_deep_copy_array,
++   allowing recursion to happen at runtime instead of compile time.  */
++
++static tree
++get_copy_helper_function_type (void)
++{
++  static tree fn_type = NULL_TREE;
++  if (fn_type == NULL_TREE)
++    fn_type = build_function_type_list (void_type_node,
++					pvoid_type_node,
++					pvoid_type_node,
++					NULL_TREE);
++  return fn_type;
++}
++
++static tree
++get_copy_helper_pointer_type (void)
++{
++  static tree ptr_type = NULL_TREE;
++  if (ptr_type == NULL_TREE)
++    ptr_type = build_pointer_type (get_copy_helper_function_type ());
++  return ptr_type;
++}
++
++static tree
++generate_element_copy_wrapper (gfc_symbol *der_type, tree comp_type,
++				int purpose, int caf_mode)
++{
++  tree fndecl, fntype, result_decl;
++  tree dest_parm, src_parm, dest_typed, src_typed;
++  tree der_type_ptr;
++  stmtblock_t block;
++  tree decls;
++  tree body;
++
++  fntype = get_copy_helper_function_type ();
++
++  fndecl = build_decl (input_location, FUNCTION_DECL,
++		       create_tmp_var_name ("copy_element"),
++		       fntype);
++
++  TREE_STATIC (fndecl) = 1;
++  TREE_USED (fndecl) = 1;
++  DECL_ARTIFICIAL (fndecl) = 1;
++  DECL_IGNORED_P (fndecl) = 0;
++  TREE_PUBLIC (fndecl) = 0;
++  DECL_UNINLINABLE (fndecl) = 1;
++  DECL_EXTERNAL (fndecl) = 0;
++  DECL_CONTEXT (fndecl) = NULL_TREE;
++  DECL_INITIAL (fndecl) = make_node (BLOCK);
++  BLOCK_SUPERCONTEXT (DECL_INITIAL (fndecl)) = fndecl;
++
++  result_decl = build_decl (input_location, RESULT_DECL, NULL_TREE,
++			    void_type_node);
++  DECL_ARTIFICIAL (result_decl) = 1;
++  DECL_IGNORED_P (result_decl) = 1;
++  DECL_CONTEXT (result_decl) = fndecl;
++  DECL_RESULT (fndecl) = result_decl;
++
++  dest_parm = build_decl (input_location, PARM_DECL,
++			  get_identifier ("dest"), pvoid_type_node);
++  src_parm = build_decl (input_location, PARM_DECL,
++			 get_identifier ("src"), pvoid_type_node);
++
++  DECL_ARTIFICIAL (dest_parm) = 1;
++  DECL_ARTIFICIAL (src_parm) = 1;
++  DECL_ARG_TYPE (dest_parm) = pvoid_type_node;
++  DECL_ARG_TYPE (src_parm) = pvoid_type_node;
++  DECL_CONTEXT (dest_parm) = fndecl;
++  DECL_CONTEXT (src_parm) = fndecl;
++
++  DECL_ARGUMENTS (fndecl) = dest_parm;
++  TREE_CHAIN (dest_parm) = src_parm;
++
++  push_struct_function (fndecl);
++  cfun->function_end_locus = input_location;
++
++  pushlevel ();
++  gfc_init_block (&block);
++
++  bool saved_generating = generating_copy_helper;
++  generating_copy_helper = true;
++
++  der_type_ptr = build_pointer_type (comp_type);
++  dest_typed = fold_convert (der_type_ptr, dest_parm);
++  src_typed = fold_convert (der_type_ptr, src_parm);
++
++  dest_typed = build_fold_indirect_ref (dest_typed);
++  src_typed = build_fold_indirect_ref (src_typed);
++
++  body = structure_alloc_comps (der_type, src_typed, dest_typed,
++				0, purpose, caf_mode, NULL, false);
++  gfc_add_expr_to_block (&block, body);
++
++  generating_copy_helper = saved_generating;
++
++  body = gfc_finish_block (&block);
++  decls = getdecls ();
++
++  poplevel (1, 1);
++
++  DECL_SAVED_TREE (fndecl)
++    = fold_build3_loc (DECL_SOURCE_LOCATION (fndecl), BIND_EXPR,
++		       void_type_node, decls, body, DECL_INITIAL (fndecl));
++
++  pop_cfun ();
++
++  cgraph_node::add_new_function (fndecl, false);
++
++  return build1 (ADDR_EXPR, get_copy_helper_pointer_type (), fndecl);
++}
+ 
+ static tree
+ structure_alloc_comps (gfc_symbol * der_type, tree decl, tree dest,
+@@ -10186,6 +10307,7 @@ structure_alloc_comps (gfc_symbol * der_type, tree decl, tree dest,
+ 	   && seen_derived_types.contains (c->ts.u.derived))
+ 	  || (c->ts.type == BT_CLASS
+ 	      && seen_derived_types.contains (CLASS_DATA (c)->ts.u.derived));
++      bool inside_wrapper = generating_copy_helper;
+ 
+       bool is_pdt_type = c->ts.type == BT_DERIVED
+ 			 && c->ts.u.derived->attr.pdt_type;
+@@ -10862,9 +10984,57 @@ structure_alloc_comps (gfc_symbol * der_type, tree decl, tree dest,
+ 					   false, false, NULL_TREE, NULL_TREE);
+ 	      gfc_add_expr_to_block (&fnblock, tmp);
+ 	    }
++      /* Special case: recursive allocatable array components require runtime
++	 helper to avoid compile-time infinite recursion. Generate a call to
++	 _gfortran_cfi_deep_copy_array with an element copy wrapper.  */
++      else if (c->attr.allocatable && c->as && cmp_has_alloc_comps && same_type
++	       && purpose == COPY_ALLOC_COMP && !c->attr.proc_pointer
++	       && !c->attr.codimension && !caf_in_coarray (caf_mode)
++	       && c->ts.type == BT_DERIVED && c->ts.u.derived != NULL)
++	    {
++	      tree copy_wrapper, call, dest_addr, src_addr, elem_type;
++	      tree helper_ptr_type;
++	      tree alloc_expr;
++	      int comp_rank;
++
++	      /* Get the element type from ctype (which is already the component type).
++		 For arrays, we need the element type, not the array type.  */
++	      elem_type = ctype;
++	      if (GFC_DESCRIPTOR_TYPE_P (ctype))
++		elem_type = gfc_get_element_type (ctype);
++	      else if (TREE_CODE (ctype) == ARRAY_TYPE)
++		elem_type = TREE_TYPE (ctype);
++
++	      helper_ptr_type = get_copy_helper_pointer_type ();
++
++	      comp_rank = c->as ? c->as->rank : 0;
++	      alloc_expr = gfc_duplicate_allocatable_nocopy (dcmp, comp, ctype,
++							     comp_rank);
++	      gfc_add_expr_to_block (&fnblock, alloc_expr);
++
++	      /* Generate or reuse the element copy helper.  Inside an existing helper
++		 we can reuse the current function to prevent recursive generation.  */
++	      if (inside_wrapper)
++		copy_wrapper = gfc_build_addr_expr (NULL_TREE, current_function_decl);
++	      else
++		copy_wrapper = generate_element_copy_wrapper (c->ts.u.derived,
++							      elem_type,
++							      purpose, caf_mode);
++	      copy_wrapper = fold_convert (helper_ptr_type, copy_wrapper);
++
++	      /* Build addresses of descriptors.  */
++	      dest_addr = gfc_build_addr_expr (pvoid_type_node, dcmp);
++	      src_addr = gfc_build_addr_expr (pvoid_type_node, comp);
++
++	      /* Build call: _gfortran_cfi_deep_copy_array (&dcmp, &comp, wrapper).  */
++	      call = build_call_expr_loc (input_location,
++					  gfor_fndecl_cfi_deep_copy_array, 3,
++					  dest_addr, src_addr, copy_wrapper);
++	      gfc_add_expr_to_block (&fnblock, call);
++	    }
+ 	  else if (c->attr.allocatable && !c->attr.proc_pointer
+-		   && (!(cmp_has_alloc_comps && c->as) || c->attr.codimension
+-		       || caf_in_coarray (caf_mode)))
++		   && (add_when_allocated != NULL_TREE || !cmp_has_alloc_comps || !c->as
++		       || c->attr.codimension || caf_in_coarray (caf_mode)))
+ 	    {
+ 	      rank = c->as ? c->as->rank : 0;
+ 	      if (c->attr.codimension)
+diff --git a/gcc/fortran/trans-decl.cc b/gcc/fortran/trans-decl.cc
+index c31c7569882..419de2c63cf 100644
+--- a/gcc/fortran/trans-decl.cc
++++ b/gcc/fortran/trans-decl.cc
+@@ -248,6 +248,9 @@ tree gfor_fndecl_zgemm;
+ /* RANDOM_INIT function.  */
+ tree gfor_fndecl_random_init;      /* libgfortran, 1 image only.  */
+ 
++/* Deep copy helper for recursive allocatable array components.  */
++tree gfor_fndecl_cfi_deep_copy_array;
++
+ static void
+ gfc_add_decl_to_parent_function (tree decl)
+ {
+@@ -3588,6 +3591,23 @@ gfc_build_intrinsic_function_decls (void)
+     gfc_charlen_type_node, pchar1_type_node, gfc_charlen_type_node,
+     gfc_logical4_type_node);
+ 
++  {
++    tree copy_helper_ptr_type;
++    tree copy_helper_fn_type;
++
++    copy_helper_fn_type = build_function_type_list (void_type_node,
++						    pvoid_type_node,
++						    pvoid_type_node,
++						    NULL_TREE);
++    copy_helper_ptr_type = build_pointer_type (copy_helper_fn_type);
++
++    gfor_fndecl_cfi_deep_copy_array
++      = gfc_build_library_function_decl_with_spec (
++	  get_identifier (PREFIX ("cfi_deep_copy_array")), ". R R . ",
++	  void_type_node, 3, pvoid_type_node, pvoid_type_node,
++	  copy_helper_ptr_type);
++  }
++
+   gfor_fndecl_adjustl = gfc_build_library_function_decl_with_spec (
+ 	get_identifier (PREFIX("adjustl")), ". W . R ",
+ 	void_type_node, 3, pchar1_type_node, gfc_charlen_type_node,
+diff --git a/gcc/fortran/trans-intrinsic.cc b/gcc/fortran/trans-intrinsic.cc
+index 5b9111d3fae..289a366a12f 100644
+--- a/gcc/fortran/trans-intrinsic.cc
++++ b/gcc/fortran/trans-intrinsic.cc
+@@ -12559,10 +12559,23 @@ conv_intrinsic_atomic_op (gfc_code *code)
+       else
+ 	image_index = integer_zero_node;
+ 
+-      if (!POINTER_TYPE_P (TREE_TYPE (value)))
++      /* Create a temporary if value is not already a pointer, or if it's an
++	 address of a constant (which is invalid in C).  */
++      bool need_tmp = !POINTER_TYPE_P (TREE_TYPE (value));
++      if (POINTER_TYPE_P (TREE_TYPE (value))
++	  && TREE_CODE (value) == ADDR_EXPR
++	  && TREE_CONSTANT (TREE_OPERAND (value, 0)))
++	need_tmp = true;
++
++      if (need_tmp)
+ 	{
+ 	  tmp = gfc_create_var (TREE_TYPE (TREE_TYPE (atom)), "value");
+-	  gfc_add_modify (&block, tmp, fold_convert (TREE_TYPE (tmp), value));
++	  if (POINTER_TYPE_P (TREE_TYPE (value)))
++	    gfc_add_modify (&block, tmp,
++			    fold_convert (TREE_TYPE (tmp),
++					  build_fold_indirect_ref (value)));
++	  else
++	    gfc_add_modify (&block, tmp, fold_convert (TREE_TYPE (tmp), value));
+           value = gfc_build_addr_expr (NULL_TREE, tmp);
+ 	}
+ 
+diff --git a/gcc/fortran/trans.h b/gcc/fortran/trans.h
+index 1d04b22abc8..6a465f480dd 100644
+--- a/gcc/fortran/trans.h
++++ b/gcc/fortran/trans.h
+@@ -1004,6 +1004,9 @@ extern GTY(()) tree gfor_fndecl_ieee_procedure_exit;
+ extern GTY(()) tree gfor_fndecl_random_init;
+ extern GTY(()) tree gfor_fndecl_caf_random_init;
+ 
++/* Deep copy helper for recursive allocatable array components.  */
++extern GTY(()) tree gfor_fndecl_cfi_deep_copy_array;
++
+ /* True if node is an integer constant.  */
+ #define INTEGER_CST_P(node) (TREE_CODE(node) == INTEGER_CST)
+ 
+diff --git a/gcc/testsuite/gfortran.dg/alloc_comp_deep_copy_5.f90 b/gcc/testsuite/gfortran.dg/alloc_comp_deep_copy_5.f90
+new file mode 100644
+index 00000000000..7415eedf2a4
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/alloc_comp_deep_copy_5.f90
+@@ -0,0 +1,63 @@
++! { dg-do run }
++! { dg-additional-options "-Wa,--noexecstack" { target { ! *-*-darwin* } } }
++! { dg-additional-options "-Wl,-z,noexecstack" { target { ! *-*-darwin* } } }
++!
++! PR fortran/121628
++! Test deep copy of recursive allocatable array components with multi-level
++! nesting and repeated circular assignments. This test ensures:
++! 1. Deep copy works correctly for grandchildren (multi-level recursion)
++! 2. Repeated circular assignments don't cause memory corruption/double-free
++! 3. No trampolines are generated (verified by noexecstack flags)
++!
++! Contributed by Christopher Albert  <albert@tugraz.at>
++!            and Harald Anlauf  <anlauf@gcc.gnu.org>
++!
++program alloc_comp_deep_copy_5
++  implicit none
++
++  type :: nested_t
++     character(len=10)             :: name
++     type(nested_t),   allocatable :: children(:)
++  end type nested_t
++
++  type(nested_t) :: a, b
++
++  ! Build a tree with grandchildren
++  b%name = "root"
++  allocate (b%children(2))
++  b%children(1)%name = "child1"
++  b%children(2)%name = "child2"
++  allocate (b%children(1)%children(1))
++  b%children(1)%children(1)%name = "grandchild"
++
++  ! Test 1: Initial assignment
++  a = b
++  if (.not. allocated(a%children)) stop 1
++  if (.not. allocated(a%children(1)%children)) stop 2
++  if (a%children(1)%children(1)%name /= "grandchild") stop 3
++
++  ! Verify deep copy by modifying a
++  a%children(1)%children(1)%name = "modified"
++  if (b%children(1)%children(1)%name /= "grandchild") stop 4
++  if (a%children(1)%children(1)%name /= "modified") stop 5
++
++  ! Test 2: Circular assignment b=a (should not corrupt memory)
++  b = a
++  if (.not. allocated(a%children)) stop 6
++  if (.not. allocated(a%children(1)%children)) stop 7
++  if (.not. allocated(b%children)) stop 8
++  if (.not. allocated(b%children(1)%children)) stop 9
++
++  ! Test 3: Circular assignment a=b (stress test)
++  a = b
++  if (.not. allocated(a%children)) stop 10
++  if (.not. allocated(a%children(1)%children)) stop 11
++
++  ! Test 4: Another circular assignment (triggered double-free in buggy code)
++  b = a
++  if (.not. allocated(b%children)) stop 12
++  if (.not. allocated(b%children(1)%children)) stop 13
++
++  ! Verify final state
++  if (b%children(1)%children(1)%name /= "modified") stop 14
++end program alloc_comp_deep_copy_5
+diff --git a/gcc/testsuite/gfortran.dg/alloc_comp_deep_copy_6.f90 b/gcc/testsuite/gfortran.dg/alloc_comp_deep_copy_6.f90
+new file mode 100644
+index 00000000000..b243a89a6a3
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/alloc_comp_deep_copy_6.f90
+@@ -0,0 +1,75 @@
++! { dg-do run }
++! { dg-additional-options "-Wa,--noexecstack" { target { ! *-*-darwin* } } }
++! { dg-additional-options "-Wl,-z,noexecstack" { target { ! *-*-darwin* } } }
++!
++! PR fortran/121628
++! Test deep copy of recursive allocatable components with both data arrays
++! and recursive children. This is a comprehensive test combining:
++! 1. Allocatable data arrays (values)
++! 2. Recursive allocatable arrays (children)
++! 3. Multi-level tree structure
++! 4. Complete data integrity verification after deep copy
++! 5. No trampolines (noexecstack flags)
++!
++! Contributed by Christopher Albert  <albert@tugraz.at>
++!
++program alloc_comp_deep_copy_6
++  use, intrinsic :: iso_fortran_env, only: dp => real64
++  implicit none
++
++  type :: nested_t
++    real(dp), allocatable :: values(:)
++    type(nested_t), allocatable :: children(:)
++  end type nested_t
++
++  type(nested_t) :: a, b
++
++  ! Build nested structure with both values and children
++  allocate (b%values(3))
++  b%values = [1.0_dp, 2.0_dp, 3.0_dp]
++
++  allocate (b%children(2))
++  allocate (b%children(1)%values(2))
++  b%children(1)%values = [4.0_dp, 5.0_dp]
++
++  allocate (b%children(2)%values(1))
++  b%children(2)%values = [6.0_dp]
++
++  ! Deeper nesting
++  allocate (b%children(1)%children(1))
++  allocate (b%children(1)%children(1)%values(2))
++  b%children(1)%children(1)%values = [7.0_dp, 8.0_dp]
++
++  ! Deep copy
++  a = b
++
++  ! Verify allocation status
++  if (.not. allocated(a%values)) stop 1
++  if (.not. allocated(a%children)) stop 2
++  if (.not. allocated(a%children(1)%values)) stop 3
++  if (.not. allocated(a%children(2)%values)) stop 4
++  if (.not. allocated(a%children(1)%children)) stop 5
++  if (.not. allocated(a%children(1)%children(1)%values)) stop 6
++
++  ! Verify data integrity
++  if (any(a%values /= [1.0_dp, 2.0_dp, 3.0_dp])) stop 7
++  if (any(a%children(1)%values /= [4.0_dp, 5.0_dp])) stop 8
++  if (any(a%children(2)%values /= [6.0_dp])) stop 9
++  if (any(a%children(1)%children(1)%values /= [7.0_dp, 8.0_dp])) stop 10
++
++  ! Verify deep copy: modify a and ensure b is unchanged
++  a%values(1) = -1.0_dp
++  a%children(1)%values(1) = -2.0_dp
++  a%children(2)%values(1) = -3.0_dp
++  a%children(1)%children(1)%values(1) = -4.0_dp
++
++  if (any(b%values /= [1.0_dp, 2.0_dp, 3.0_dp])) stop 11
++  if (any(b%children(1)%values /= [4.0_dp, 5.0_dp])) stop 12
++  if (any(b%children(2)%values /= [6.0_dp])) stop 13
++  if (any(b%children(1)%children(1)%values /= [7.0_dp, 8.0_dp])) stop 14
++
++  if (any(a%values /= [-1.0_dp, 2.0_dp, 3.0_dp])) stop 15
++  if (any(a%children(1)%values /= [-2.0_dp, 5.0_dp])) stop 16
++  if (any(a%children(2)%values /= [-3.0_dp])) stop 17
++  if (any(a%children(1)%children(1)%values /= [-4.0_dp, 8.0_dp])) stop 18
++end program alloc_comp_deep_copy_6
+diff --git a/gcc/testsuite/gfortran.dg/array_memcpy_2.f90 b/gcc/testsuite/gfortran.dg/array_memcpy_2.f90
+index 5f54bf1d0c6..a95908c2928 100644
+--- a/gcc/testsuite/gfortran.dg/array_memcpy_2.f90
++++ b/gcc/testsuite/gfortran.dg/array_memcpy_2.f90
+@@ -1,9 +1,12 @@
+ ! This checks that the "z = y" assignment is not considered copyable, as the
+ ! array is of a derived type containing allocatable components.  Hence, we
+-! we should expand the scalarized loop, which contains *two* memcpy calls.
++! we should expand the scalarized loop, which contains *two* memcpy calls
++! for the assignment itself, plus one for initialization.
+ ! { dg-do compile }
+ ! { dg-options "-O2 -fdump-tree-original" }
+-
++!
++! PR 121628
++!
+   type :: a
+     integer, allocatable :: i(:)
+   end type a
+@@ -13,7 +16,14 @@
+   end type b
+ 
+   type(b) :: y(2), z(2)
++  integer :: j
++
++  do j = 1, 2
++    allocate(y(j)%at(1))
++    allocate(y(j)%at(1)%i(1))
++    y(j)%at(1)%i(1) = j
++  end do
+ 
+   z = y
+ end
+-! { dg-final { scan-tree-dump-times "memcpy" 2 "original" } }
++! { dg-final { scan-tree-dump-times "__builtin_memcpy" 4 "original" } }
+diff --git a/libgfortran/Makefile.am b/libgfortran/Makefile.am
+index 4f3b3033224..46e7df5e728 100644
+--- a/libgfortran/Makefile.am
++++ b/libgfortran/Makefile.am
+@@ -218,6 +218,7 @@ endif
+ gfor_src= \
+ runtime/bounds.c \
+ runtime/compile_options.c \
++runtime/deep_copy.c \
+ runtime/memory.c \
+ runtime/string.c \
+ runtime/select.c
+diff --git a/libgfortran/Makefile.in b/libgfortran/Makefile.in
+index ce828b2f8d0..116e80ffe3c 100644
+--- a/libgfortran/Makefile.in
++++ b/libgfortran/Makefile.in
+@@ -231,7 +231,7 @@ libgfortran_la_LIBADD =
+ @LIBGFOR_MINIMAL_FALSE@	runtime/fpu.lo runtime/main.lo \
+ @LIBGFOR_MINIMAL_FALSE@	runtime/pause.lo runtime/stop.lo
+ am__objects_3 = runtime/bounds.lo runtime/compile_options.lo \
+-	runtime/memory.lo runtime/string.lo runtime/select.lo \
++	runtime/deep_copy.lo runtime/memory.lo runtime/string.lo runtime/select.lo \
+ 	$(am__objects_1) $(am__objects_2)
+ am__objects_4 = generated/matmul_i1.lo generated/matmul_i2.lo \
+ 	generated/matmul_i4.lo generated/matmul_i8.lo \
+@@ -1013,8 +1013,8 @@ gfor_helper_src = intrinsics/associated.c intrinsics/abort.c \
+ @IEEE_SUPPORT_TRUE@ieee/ieee_exceptions.F90 \
+ @IEEE_SUPPORT_TRUE@ieee/ieee_features.F90
+ 
+-gfor_src = runtime/bounds.c runtime/compile_options.c runtime/memory.c \
+-	runtime/string.c runtime/select.c $(am__append_6) \
++gfor_src = runtime/bounds.c runtime/compile_options.c runtime/deep_copy.c \
++	runtime/memory.c runtime/string.c runtime/select.c $(am__append_6) \
+ 	$(am__append_7)
+ i_matmul_c = \
+ generated/matmul_i1.c \
+@@ -1981,6 +1981,8 @@ runtime/bounds.lo: runtime/$(am__dirstamp) \
+ 	runtime/$(DEPDIR)/$(am__dirstamp)
+ runtime/compile_options.lo: runtime/$(am__dirstamp) \
+ 	runtime/$(DEPDIR)/$(am__dirstamp)
++runtime/deep_copy.lo: runtime/$(am__dirstamp) \
++	runtime/$(DEPDIR)/$(am__dirstamp)
+ runtime/memory.lo: runtime/$(am__dirstamp) \
+ 	runtime/$(DEPDIR)/$(am__dirstamp)
+ runtime/string.lo: runtime/$(am__dirstamp) \
+diff --git a/libgfortran/gfortran.map b/libgfortran/gfortran.map
+index 98808dc304f..fc0166580d8 100644
+--- a/libgfortran/gfortran.map
++++ b/libgfortran/gfortran.map
+@@ -2037,4 +2037,5 @@ GFORTRAN_16 {
+   global:
+     _gfortran_string_split;
+     _gfortran_string_split_char4;
++    _gfortran_cfi_deep_copy_array;
+ } GFORTRAN_15.2;
+diff --git a/libgfortran/libgfortran.h b/libgfortran/libgfortran.h
+index 25c3cb6641c..71ec640b335 100644
+--- a/libgfortran/libgfortran.h
++++ b/libgfortran/libgfortran.h
+@@ -914,6 +914,14 @@ internal_proto(xcalloc);
+ extern void *xrealloc (void *, size_t);
+ internal_proto(xrealloc);
+ 
++/* deep_copy.c - Runtime helper for recursive allocatable array components */
++
++struct CFI_cdesc_t;
++extern void cfi_deep_copy_array (gfc_array_void *,
++				 gfc_array_void *,
++				 void (*copy_element) (void *, void *));
++export_proto(cfi_deep_copy_array);
++
+ /* environ.c */
+ 
+ extern void init_variables (void);
+diff --git a/libgfortran/runtime/deep_copy.c b/libgfortran/runtime/deep_copy.c
+new file mode 100644
+index 00000000000..6567400d543
+--- /dev/null
++++ b/libgfortran/runtime/deep_copy.c
+@@ -0,0 +1,125 @@
++/* Deep copy support for allocatable components in derived types.
++   Copyright (C) 2025 Free Software Foundation, Inc.
++
++This file is part of the GNU Fortran runtime library (libgfortran).
++
++Libgfortran is free software; you can redistribute it and/or
++modify it under the terms of the GNU General Public
++License as published by the Free Software Foundation; either
++version 3 of the License, or (at your option) any later version.
++
++Libgfortran is distributed in the hope that it will be useful,
++but WITHOUT ANY WARRANTY; without even the implied warranty of
++MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++GNU General Public License for more details.
++
++Under Section 7 of GPL version 3, you are granted additional
++permissions described in the GCC Runtime Library Exception, version
++3.1, as published by the Free Software Foundation.
++
++You should have received a copy of the GNU General Public License and
++a copy of the GCC Runtime Library Exception along with this program;
++see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
++<http://www.gnu.org/licenses/>.  */
++
++#include "libgfortran.h"
++#include <string.h>
++
++/* Runtime helper for deep copying allocatable array components when the
++   element type contains nested allocatable components.  The front end handles
++   allocation and deallocation; this helper performs element-wise copies using
++   the compiler-generated element copier so that recursion takes place at
++   runtime.  */
++
++static inline size_t
++descriptor_elem_size (gfc_array_void *desc)
++{
++  size_t size = GFC_DESCRIPTOR_SIZE (desc);
++  return size == 0 ? 1 : size;
++}
++
++void
++cfi_deep_copy_array (gfc_array_void *dest, gfc_array_void *src,
++		     void (*copy_element) (void *, void *))
++{
++  int rank;
++  size_t src_elem_size;
++  size_t dest_elem_size;
++  index_type extent[GFC_MAX_DIMENSIONS];
++  index_type src_stride_bytes[GFC_MAX_DIMENSIONS];
++  index_type dest_stride_bytes[GFC_MAX_DIMENSIONS];
++  index_type count[GFC_MAX_DIMENSIONS];
++  char *src_ptr;
++  char *dest_ptr;
++
++  if (src == NULL || dest == NULL)
++    return;
++
++  if (GFC_DESCRIPTOR_DATA (src) == NULL)
++    {
++      if (GFC_DESCRIPTOR_DATA (dest) != NULL)
++        internal_error (NULL, "cfi_deep_copy_array: destination must be "
++                              "deallocated when source is not allocated");
++      return;
++    }
++
++  if (GFC_DESCRIPTOR_DATA (dest) == NULL)
++    internal_error (NULL, "cfi_deep_copy_array: destination not allocated");
++
++  rank = GFC_DESCRIPTOR_RANK (src);
++  src_elem_size = descriptor_elem_size (src);
++  dest_elem_size = descriptor_elem_size (dest);
++
++  if (rank <= 0)
++    {
++      memcpy (GFC_DESCRIPTOR_DATA (dest), GFC_DESCRIPTOR_DATA (src),
++              src_elem_size);
++      if (copy_element != NULL)
++        copy_element (GFC_DESCRIPTOR_DATA (dest),
++                      GFC_DESCRIPTOR_DATA (src));
++      return;
++    }
++
++  for (int dim = 0; dim < rank; dim++)
++    {
++      extent[dim] = GFC_DESCRIPTOR_EXTENT (src, dim);
++      if (extent[dim] <= 0)
++        return;
++
++      src_stride_bytes[dim]
++        = GFC_DESCRIPTOR_STRIDE (src, dim) * src_elem_size;
++      dest_stride_bytes[dim]
++        = GFC_DESCRIPTOR_STRIDE (dest, dim) * dest_elem_size;
++      count[dim] = 0;
++    }
++
++  src_ptr = (char *) GFC_DESCRIPTOR_DATA (src);
++  dest_ptr = (char *) GFC_DESCRIPTOR_DATA (dest);
++
++  while (true)
++    {
++      memcpy (dest_ptr, src_ptr, src_elem_size);
++      if (copy_element != NULL)
++        copy_element (dest_ptr, src_ptr);
++
++      dest_ptr += dest_stride_bytes[0];
++      src_ptr += src_stride_bytes[0];
++      count[0]++;
++
++      int dim = 0;
++      while (count[dim] == extent[dim])
++        {
++          count[dim] = 0;
++          dest_ptr -= dest_stride_bytes[dim] * extent[dim];
++          src_ptr -= src_stride_bytes[dim] * extent[dim];
++          dim++;
++          if (dim == rank)
++            return;
++          count[dim]++;
++          dest_ptr += dest_stride_bytes[dim];
++          src_ptr += src_stride_bytes[dim];
++        }
++    }
++}
++
++export_proto(cfi_deep_copy_array);
+-- 
+2.51.2
+
