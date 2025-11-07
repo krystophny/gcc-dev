@@ -1,0 +1,179 @@
+From 326bc6f9ecdb7e8a1ac6fdc607b985baf7f161f4 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Fri, 7 Nov 2025 15:52:59 +0100
+Subject: [PATCH] fortran: Fix ICE with constructor interface and finalizer
+ [PR121472]
+
+Derived types with finalizers and constructor interfaces trigger an ICE in
+gimplify_expr when the type has non-allocatable components but is marked
+with alloc_comp due to transitive attribute inheritance. The finalization
+code attempts to process the CALL_EXPR before it's evaluated, generating
+invalid tree structures.
+
+This patch skips finalization for unevaluated function/constructor results,
+as they are already properly initialized and will be finalized via the
+assignment path if needed. Additionally, a helper function is added to
+distinguish types that actually need deep copying from those with only
+transitive alloc_comp marking, preventing unnecessary tree code generation.
+
+gcc/fortran/ChangeLog:
+
+	PR fortran/121472
+	* trans.cc (gfc_derived_needs_copy): New helper function to check
+	if a derived type actually has allocatable components requiring
+	deep copy, handling transitive alloc_comp inheritance correctly.
+	(gfc_finalize_tree_expr): Skip finalization for unevaluated
+	CALL_EXPR nodes representing constructor/function results. Use
+	gfc_derived_needs_copy to avoid processing types without actual
+	allocatable components.
+
+gcc/testsuite/ChangeLog:
+
+	PR fortran/121472
+	* gfortran.dg/finalize_constructor_1.f90: New test.
+---
+ gcc/fortran/trans.cc                          | 50 ++++++++++++++++++-
+ .../gfortran.dg/finalize_constructor_1.f90    | 49 ++++++++++++++++++
+ 2 files changed, 97 insertions(+), 2 deletions(-)
+ create mode 100644 gcc/testsuite/gfortran.dg/finalize_constructor_1.f90
+
+diff --git a/gcc/fortran/trans.cc b/gcc/fortran/trans.cc
+index 47396c3cbab..4bce4aee062 100644
+--- a/gcc/fortran/trans.cc
++++ b/gcc/fortran/trans.cc
+@@ -1602,6 +1602,41 @@ gfc_assignment_finalizer_call (gfc_se *lse, gfc_expr *expr1, bool init_flag)
+ }
+ 
+ 
++/* Check whether a derived type actually has allocatable components that
++   require deep copying. The attr.alloc_comp attribute can be set even when
++   there are no truly allocatable components (e.g., for types with only
++   non-allocatable components), which can lead to unnecessary tree code
++   generation.  */
++
++static bool
++gfc_derived_needs_copy (gfc_symbol *derived)
++{
++  gfc_component *c;
++
++  if (!derived || !derived->components)
++    return false;
++
++  for (c = derived->components; c; c = c->next)
++    {
++      /* Direct allocatable component.  */
++      if (c->attr.allocatable)
++	return true;
++
++      /* Recursively check derived type components.  */
++      if (c->ts.type == BT_DERIVED
++	  && gfc_derived_needs_copy (c->ts.u.derived))
++	return true;
++
++      /* Class components with allocatable data.  */
++      if (c->ts.type == BT_CLASS
++	  && CLASS_DATA (c)->attr.allocatable)
++	return true;
++    }
++
++  return false;
++}
++
++
+ /* Finalize a TREE expression using the finalizer wrapper. The result is
+    fixed in order to prevent repeated calls.  */
+ 
+@@ -1618,6 +1653,17 @@ gfc_finalize_tree_expr (gfc_se *se, gfc_symbol *derived,
+   if (attr.pointer)
+     return;
+ 
++  /* Skip finalization for unevaluated function/constructor call results.
++     When se->expr is a CALL_EXPR at this point, it represents a constructor
++     or function result being assigned. These results are already properly
++     initialized and will be finalized via the assignment path if needed.
++     Attempting to finalize them here causes ICEs during gimplification when
++     the type has non-allocatable components but is marked with alloc_comp
++     due to transitive attribute inheritance from nested derived types.
++     PR121472  */
++  if (se->expr && TREE_CODE (se->expr) == CALL_EXPR)
++    return;
++
+   /* Derived type function results with components that have defined
+      assignements are handled in resolve.cc(generate_component_assignments)  */
+   if (derived && (derived->attr.is_c_interop
+@@ -1648,7 +1694,7 @@ gfc_finalize_tree_expr (gfc_se *se, gfc_symbol *derived,
+       else if (se->direct_byref)
+ 	{
+ 	  desc = gfc_evaluate_now (se->expr, &se->finalblock);
+-	  if (derived->attr.alloc_comp)
++	  if (derived->attr.alloc_comp && gfc_derived_needs_copy (derived))
+ 	    {
+ 	      /* Need to copy allocated components and not finalize.  */
+ 	      tmp = gfc_copy_alloc_comp_no_fini (derived, se->expr, desc, rank, 0);
+@@ -1659,7 +1705,7 @@ gfc_finalize_tree_expr (gfc_se *se, gfc_symbol *derived,
+ 	{
+ 	  desc = gfc_evaluate_now (se->expr, &se->pre);
+ 	  se->expr = gfc_evaluate_now (desc, &se->pre);
+-	  if (derived->attr.alloc_comp)
++	  if (derived->attr.alloc_comp && gfc_derived_needs_copy (derived))
+ 	    {
+ 	      /* Need to copy allocated components and not finalize.  */
+ 	      tmp = gfc_copy_alloc_comp_no_fini (derived, se->expr, desc, rank, 0);
+diff --git a/gcc/testsuite/gfortran.dg/finalize_constructor_1.f90 b/gcc/testsuite/gfortran.dg/finalize_constructor_1.f90
+new file mode 100644
+index 00000000000..0b0d88800c9
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/finalize_constructor_1.f90
+@@ -0,0 +1,49 @@
++! { dg-do compile }
++! PR fortran/121472
++! Test that derived types with finalizers and constructor interfaces compile
++! without ICE when assigned from constructor calls.
++!
++! This used to trigger an internal compiler error in gimplify_expr because
++! finalization was attempted on unevaluated CALL_EXPR nodes for types with
++! non-allocatable components but transitive alloc_comp marking.
++!
++! Contributed by Andrew Benson
++
++module pr121472_m
++  implicit none
++
++  type :: base_t
++  end type base_t
++
++  type :: container_t
++    type(base_t) :: component
++  contains
++    final :: container_finalize
++  end type container_t
++
++  interface container_t
++    module procedure container_constructor
++  end interface container_t
++
++contains
++
++  subroutine container_finalize(this)
++    type(container_t), intent(inout) :: this
++  end subroutine container_finalize
++
++  function container_constructor() result(res)
++    type(container_t) :: res
++  end function container_constructor
++
++end module pr121472_m
++
++program test_finalize_constructor
++  use pr121472_m
++  implicit none
++
++  type(container_t) :: obj
++
++  ! This assignment from constructor used to cause ICE
++  obj = container_t()
++
++end program test_finalize_constructor
+-- 
+2.51.2
+
