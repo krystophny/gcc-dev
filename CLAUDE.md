@@ -80,13 +80,24 @@ gcc-build/gcc/gfortran -B gcc-build/gcc <file.f90>
    - LLVM-based Fortran compiler
    - Use for cross-compiler validation
 
-3. **Intel ifx**
-   - Source: `/opt/intel/oneapi/setvars.sh` (if installed)
-   - Use when available for Intel compiler behavior
+3. **Intel ifx (IFX 2025.2.1)**
+   ```bash
+   # Source environment first:
+   source /opt/intel/oneapi/setvars.sh
 
-4. **NVIDIA nvfortran**
-   - Check `/opt` for installation
-   - Use when available for HPC/GPU Fortran validation
+   # Then compile:
+   /opt/intel/oneapi/compiler/2025.2/bin/ifx <file.f90>
+   ```
+   - Intel oneAPI Fortran compiler
+   - Use for Intel-specific behavior and optimization validation
+
+4. **NVIDIA nvfortran (25.9-0)**
+   ```bash
+   /opt/nvidia/hpc_sdk/Linux_x86_64/25.9/compilers/bin/nvfortran <file.f90>
+   ```
+   - NVIDIA HPC SDK Fortran compiler
+   - Use for HPC/GPU Fortran validation
+   - Excellent for standards compliance testing
 
 5. **LFortran**
    - **NOT currently installed**
@@ -177,25 +188,38 @@ Each PR directory (`pr/<number>/`) contains:
 - Custom gfortran: `../gcc-build/gcc/gfortran -B ../gcc-build/gcc`
 - System gfortran: `/usr/bin/gfortran`
 - LLVM Flang: `/usr/bin/flang-new`
-- Intel ifx: Source `/opt/intel/oneapi/setvars.sh` first (if available)
-- NVIDIA nvfortran: Check `/opt` (if available)
+- Intel ifx: `/opt/intel/oneapi/compiler/2025.2/bin/ifx` (source setvars.sh first)
+- NVIDIA nvfortran: `/opt/nvidia/hpc_sdk/Linux_x86_64/25.9/compilers/bin/nvfortran`
 
 **Example Makefile pattern:**
 ```makefile
-FC_CUSTOM = ../gcc-build/gcc/gfortran -B ../gcc-build/gcc
+FC_CUSTOM = ../../gcc-build/gcc/gfortran -B ../../gcc-build/gcc
 FC_SYSTEM = /usr/bin/gfortran
-FC_FLANG = /usr/bin/flang-new
+FC_FLANG  = /usr/bin/flang-new
+FC_IFX    = /opt/intel/oneapi/compiler/2025.2/bin/ifx
+FC_NVHPC  = /opt/nvidia/hpc_sdk/Linux_x86_64/25.9/compilers/bin/nvfortran
 
-all: test-custom test-system test-flang
+FFLAGS = -Wa,--noexecstack -Wl,-z,noexecstack
+
+all: test-custom test-system test-flang test-ifx test-nvhpc
 
 test-custom:
-	$(FC_CUSTOM) reproducer.f90 -o reproducer-custom.x
+	$(FC_CUSTOM) $(FFLAGS) reproducer.f90 -o reproducer-custom.x
 
 test-system:
-	$(FC_SYSTEM) reproducer.f90 -o reproducer-system.x
+	$(FC_SYSTEM) $(FFLAGS) reproducer.f90 -o reproducer-system.x
 
 test-flang:
 	$(FC_FLANG) reproducer.f90 -o reproducer-flang.x
+
+test-ifx:
+	bash -c "source /opt/intel/oneapi/setvars.sh && $(FC_IFX) reproducer.f90 -o reproducer-ifx.x"
+
+test-nvhpc:
+	$(FC_NVHPC) reproducer.f90 -o reproducer-nvhpc.x
+
+clean:
+	rm -f *.x *.o *.mod
 ```
 
 ## Test Suite Execution Details
