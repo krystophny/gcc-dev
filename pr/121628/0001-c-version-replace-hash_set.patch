@@ -1,6 +1,6 @@
-From e52c45d2db6ceaacdc27a23b029fc31b732884f4 Mon Sep 17 00:00:00 2001
+From d27a1fe9486207706cbfa5a29a5724c620c93767 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
-Date: Fri, 7 Nov 2025 19:41:57 +0100
+Date: Fri, 7 Nov 2025 20:36:08 +0100
 Subject: [PATCH] fortran: Replace hash_set with C-style linked list in
  trans-array.cc
 
