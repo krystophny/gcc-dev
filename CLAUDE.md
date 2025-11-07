@@ -25,14 +25,25 @@ make -j32
 ```
 
 ### Running Test Suite
-**CRITICAL: Always use background shell execution for test suites**
+**CRITICAL: Test suite MUST be run from `gcc-build/gcc/` directory**
 
 **Correct workflow:**
 ```bash
-cd gcc-build/gcc
+# From meta-repo root:
+cd /home/ert/code/gcc-dev/gcc-build/gcc
+
+# Run test suite in background:
 make -j32 check-gfortran > /tmp/test-output.log 2>&1 &
+
+# Alternative: use -k flag to continue on errors:
+make -j32 -k check-gfortran > /tmp/test-output.log 2>&1 &
 ```
-Use Bash tool with `run_in_background: true` parameter.
+
+**WRONG - Do NOT run from these locations:**
+- ❌ `/home/ert/code/gcc-dev/` (meta-repo root - no target)
+- ❌ `/home/ert/code/gcc-dev/gcc-build/` (build root - no target)
+- ❌ `/home/ert/code/gcc-dev/gcc/` (source tree - no target)
+- ✅ `/home/ert/code/gcc-dev/gcc-build/gcc/` (CORRECT location)
 
 **Test results location:**
 - Summary: `gcc-build/gcc/testsuite/gfortran/gfortran.sum`
@@ -40,7 +51,7 @@ Use Bash tool with `run_in_background: true` parameter.
 - Look for: `# of expected passes`, `# of unexpected failures`
 
 **Verification checklist:**
-- Zero unexpected failures
+- Zero unexpected failures required for merge
 - All new tests passing
 - No regressions in existing tests
 
@@ -48,6 +59,19 @@ Use Bash tool with `run_in_background: true` parameter.
 ```bash
 gcc-build/gcc/gfortran -B gcc-build/gcc <file.f90>
 ```
+
+### Reference Compilers for Behavior Validation
+
+**System gfortran (GCC 15.2.1):**
+```bash
+/usr/bin/gfortran <file.f90>
+```
+
+**Intel ifx and NVIDIA nvfortran:**
+- **NOT currently installed** in this environment
+- User mentioned they should be in `/opt`, but they are not present
+- For behavioral comparisons, use system gfortran 15.2.1 as reference
+- System gfortran has been validated to show correct F2018+ finalization behavior
 
 ### Reproducer Testing
 PR-specific reproducers in `pr/<number>/`:
@@ -77,7 +101,36 @@ git -C gcc fetch origin
 git -C gcc rebase origin/master
 ```
 
-## Code Quality Checks
+## Coding Standards for GCC Development
+
+### CRITICAL: C vs C++ Language Choice
+
+**GCC IS TRANSITIONING FROM C++ TO C - FOLLOW THIS POLICY STRICTLY:**
+
+1. **PREFER C (NOT C++) FOR ALL NEW CODE**
+   - GCC codebase is moving away from C++ back to C
+   - Use pure ISO C for new implementations
+   - Avoid C++ STL containers (vector, map, hash_set, etc.)
+   - Avoid C++ features (auto, lambdas, templates, classes, etc.)
+
+2. **ONLY use C++ when:**
+   - Modifying existing heavily C++ code where C would be inconsistent
+   - The surrounding file/module is already predominantly C++
+   - Converting C++ to C would require massive refactoring
+
+3. **For data structures:**
+   - ✅ Use C-style linked lists, arrays, hash tables
+   - ✅ Keep it SIMPLE (KISS principle)
+   - ❌ Do NOT implement complex hash maps in C
+   - ❌ Do NOT use C++ STL containers
+   - Example: Use simple stack-based linked list instead of `hash_set`
+
+4. **When in doubt:**
+   - Check what the surrounding code uses
+   - If file is mixed, prefer C
+   - If converting C++ to C, keep it simple and equivalent
+
+### Code Quality Checks
 
 **Mandatory before completion:**
 ```bash
@@ -101,18 +154,32 @@ Each PR directory (`pr/<number>/`) contains:
 ## Test Suite Execution Details
 
 ### Common Mistakes to Avoid
-1. Running `make check-gfortran` from build root (no such target)
-2. Using shell `&` operator within Bash commands
-3. Running from wrong directory (must be in `gcc-build/gcc/`)
-4. Not redirecting output to log file
-5. Not waiting for completion before reading results
+1. ❌ **WRONG**: Running from `gcc-build/` (no such target exists there)
+2. ❌ **WRONG**: Running from `gcc/` source directory
+3. ❌ **WRONG**: Running from meta-repo root
+4. ✅ **CORRECT**: Running from `gcc-build/gcc/` ONLY
+5. Not redirecting output to log file
+6. Not waiting for completion before reading results
 
 ### Proper Execution Flow
-1. Rebuild: `cd gcc-build && make -j32`
-2. Launch tests: `cd gcc && make -j32 check-gfortran > /tmp/test.log 2>&1` (background shell)
-3. Monitor: Use BashOutput tool to check status
-4. Wait: Check shell status until "completed"
-5. Results: `grep "# of" gcc-build/gcc/testsuite/gfortran/gfortran.sum`
+1. Rebuild: `cd /home/ert/code/gcc-dev/gcc-build && make -j32`
+2. Change to test directory: `cd /home/ert/code/gcc-dev/gcc-build/gcc`
+3. Launch tests: `make -j32 -k check-gfortran > /tmp/test.log 2>&1 &`
+4. Monitor: Check `/tmp/test.log` or use BashOutput tool
+5. Wait: Test suite takes ~20-30 minutes to complete
+6. Results: `grep "# of" /home/ert/code/gcc-dev/gcc-build/gcc/testsuite/gfortran/gfortran.sum`
+
+### Quick Test Commands
+```bash
+# Full test suite from correct directory:
+cd /home/ert/code/gcc-dev/gcc-build/gcc && make -j32 -k check-gfortran
+
+# Single test:
+cd /home/ert/code/gcc-dev/gcc-build/gcc && make check-gfortran RUNTESTFLAGS="finalize_45.f90"
+
+# Specific test group:
+cd /home/ert/code/gcc-dev/gcc-build/gcc && make check-gfortran RUNTESTFLAGS="dg.exp=finalize*.f90"
+```
 
 ## Fortran Standards Compliance
 
