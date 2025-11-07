@@ -62,16 +62,42 @@ gcc-build/gcc/gfortran -B gcc-build/gcc <file.f90>
 
 ### Reference Compilers for Behavior Validation
 
-**System gfortran (GCC 15.2.1):**
-```bash
-/usr/bin/gfortran <file.f90>
-```
+**ALWAYS test bug reproducers and fixes against multiple compilers to validate behavior:**
 
-**Intel ifx and NVIDIA nvfortran:**
-- **NOT currently installed** in this environment
-- User mentioned they should be in `/opt`, but they are not present
-- For behavioral comparisons, use system gfortran 15.2.1 as reference
-- System gfortran has been validated to show correct F2018+ finalization behavior
+**Available Compilers:**
+
+1. **System gfortran (GCC 15.2.1)**
+   ```bash
+   /usr/bin/gfortran <file.f90>
+   ```
+   - Primary reference for correct F2018+ behavior
+   - Validated for finalization semantics
+
+2. **LLVM Flang (flang-new 21.1.5)**
+   ```bash
+   /usr/bin/flang-new <file.f90>
+   ```
+   - LLVM-based Fortran compiler
+   - Use for cross-compiler validation
+
+3. **Intel ifx**
+   - Source: `/opt/intel/oneapi/setvars.sh` (if installed)
+   - Use when available for Intel compiler behavior
+
+4. **NVIDIA nvfortran**
+   - Check `/opt` for installation
+   - Use when available for HPC/GPU Fortran validation
+
+5. **LFortran**
+   - **NOT currently installed**
+   - Interactive Fortran compiler
+   - Install if needed for additional validation
+
+**Testing Protocol:**
+- Always test reproducers with at least 2-3 compilers
+- Document which compilers show the bug
+- Document which compilers show correct behavior
+- Compare output for semantic correctness
 
 ### Reproducer Testing
 PR-specific reproducers in `pr/<number>/`:
@@ -145,11 +171,32 @@ Each PR directory (`pr/<number>/`) contains:
 - Reproducer programs (`.f90` files)
 - Generated patches (`.patch` files)
 - Documentation (`README.md`, analysis files)
-- Makefile for building reproducers
+- Makefile for building reproducers with multiple compilers
 
-**Reference compilers:**
+**Compiler Testing in PR Makefiles:**
 - Custom gfortran: `../gcc-build/gcc/gfortran -B ../gcc-build/gcc`
-- Intel ifx: Source `/opt/intel/oneapi/setvars.sh` first
+- System gfortran: `/usr/bin/gfortran`
+- LLVM Flang: `/usr/bin/flang-new`
+- Intel ifx: Source `/opt/intel/oneapi/setvars.sh` first (if available)
+- NVIDIA nvfortran: Check `/opt` (if available)
+
+**Example Makefile pattern:**
+```makefile
+FC_CUSTOM = ../gcc-build/gcc/gfortran -B ../gcc-build/gcc
+FC_SYSTEM = /usr/bin/gfortran
+FC_FLANG = /usr/bin/flang-new
+
+all: test-custom test-system test-flang
+
+test-custom:
+	$(FC_CUSTOM) reproducer.f90 -o reproducer-custom.x
+
+test-system:
+	$(FC_SYSTEM) reproducer.f90 -o reproducer-system.x
+
+test-flang:
+	$(FC_FLANG) reproducer.f90 -o reproducer-flang.x
+```
 
 ## Test Suite Execution Details
 
