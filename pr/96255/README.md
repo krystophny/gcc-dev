@@ -4,7 +4,7 @@
 
 **Commits:**
 - d11074121b3 - Jerry DeLisle's base implementation
-- a91797f65e2 - Resolution fixes and code quality improvements
+- b06716ac489 - Shadow variable walker and resolution fixes
 
 ---
 
@@ -20,8 +20,8 @@ end do
 
 The implementation is split between two patches:
 
-1. **Base Implementation (0001)**: Parsing, shadow variables, data structures
-2. **Resolution Fixes (0002)**: Constraint enforcement, NULL safety, warning corrections
+1. **Base Implementation (0001)**: Parsing, shadow variable creation, data structures
+2. **Shadow Variable Walker (0002)**: Expression walker, constraint enforcement, bug fixes
 
 ---
 
@@ -58,7 +58,27 @@ gfc_forall_iterator;
 
 ---
 
-## Part 2: Resolution Fixes (a91797f65e2)
+## Part 2: Shadow Variable Walker and Resolution Fixes (b06716ac489)
+
+### Main Implementation: Shadow Variable Walker
+
+**Purpose:** Completes Jerry's type-spec implementation by substituting references to outer scope variables with their shadow counterparts.
+
+**Implementation (resolve.cc):**
+- `replace_in_expr_recursive()`: Recursively walks expressions (variables, array subscripts, substrings, operations)
+- `replace_in_code_recursive()`: Recursively walks code blocks (assignments, conditionals, loops)
+- `gfc_replace_forall_variable()`: Entry point that replaces all references to a given symbol
+
+**What it does:**
+When a DO CONCURRENT has a type-spec that creates shadow variables (with `_` prefix), this walker visits every expression in the loop body and replaces references to the original iterator name with references to the shadow variable. This ensures the loop uses the correct type throughout.
+
+**Example:**
+```fortran
+integer :: i
+do concurrent (integer(kind=8) :: i = 1:10)  ! Creates shadow _i
+  print *, i  ! Walker changes this to reference _i, not outer i
+end do
+```
 
 ### Fix 1: Constraint Enforcement (Flag Management)
 
@@ -242,11 +262,11 @@ grep "# of" /home/ert/code/gcc-dev/gcc-build/gcc/testsuite/gfortran/gfortran.sum
 - Files: gfortran.h, match.cc, resolve.cc
 - Commit: d11074121b3
 
-### 0002-fix-do-concurrent-constraints.patch
+### 0002-shadow-variable-walker.patch
 - Author: Christopher Albert
-- Size: 493 lines (264 insertions, 83 deletions)
+- Size: ~500 lines (264 insertions, 83 deletions)
 - Files: match.cc, resolve.cc
-- Commit: a91797f65e2
+- Commit: b06716ac489
 
 ---
 

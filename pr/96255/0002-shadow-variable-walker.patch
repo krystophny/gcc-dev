@@ -1,39 +1,42 @@
-From a91797f65e2ec7f1f28bd7c4d71ee60678568857 Mon Sep 17 00:00:00 2001
+From b06716ac489f010201083adf5c3ee3ab840db355 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Sun, 9 Nov 2025 15:04:02 +0100
-Subject: [PATCH] Fortran: Fix DO CONCURRENT resolution and constraint
- enforcement
+Subject: [PATCH] Fortran: Implement shadow variable walker for DO CONCURRENT
+ type-spec
 
-This patch fixes the resolution of DO CONCURRENT constructs and improves
-code quality in Jerry DeLisle's type-spec implementation.
+This patch completes Jerry DeLisle's DO CONCURRENT type-spec implementation
+by adding the shadow variable substitution walker and fixing constraint
+enforcement issues.
 
-Key changes in resolve.cc:
-1. Set gfc_do_concurrent_flag=1 before calling gfc_resolve_forall to
-   enable proper constraint checking during body resolution (F2008 C1139:
-   only PURE procedures allowed in DO CONCURRENT)
-2. Set gfc_do_concurrent_flag=2 after resolution to distinguish mask
-   context from block context for appropriate error messages
-3. Add NULL pointer checks for shadow variables from DO CONCURRENT
-   type-spec which may not have symtree initialized yet
-4. Update gfc_count_forall_iterators to handle both EXEC_FORALL and
-   EXEC_DO_CONCURRENT for proper nested construct iterator counting
-5. Fix initialization condition to check both forall_save==0 and nvar==0
-   to prevent incorrect total_var recalculation in nested constructs
-6. Skip FORALL obsolescence warning for DO CONCURRENT constructs
-7. Suppress FORALL many-to-one assignment warning for DO CONCURRENT
-   since reduction-like operations are semantically valid (formalized
-   with REDUCE locality-spec in Fortran 2023)
+Main implementation:
 
-Code quality improvements in match.cc:
-8. Improve error diagnostics with descriptive messages
-9. Eliminate code duplication by extracting apply_typespec_to_iterator
-   helper function (removed ~70 lines of duplicated code)
+Shadow variable walker (resolve.cc):
+Implements recursive expression walker to replace references to outer scope
+variables with their shadow counterparts (created with _ prefix). This
+replaces Jerry's placeholder fatal error and enables the type-spec feature
+to work correctly. The walker visits all expressions in the DO CONCURRENT
+body including array subscripts, substrings, and nested operations.
 
-Shadow variable implementation in resolve.cc:
-10. Implement shadow variable substitution walker to replace Jerry's
-    placeholder fatal error. The walker recursively visits all expressions
-    in the DO CONCURRENT body and replaces references to outer scope
-    variables with their shadow counterparts (created with _ prefix).
+Constraint enforcement fixes (resolve.cc):
+Set gfc_do_concurrent_flag properly (1 for block context, 2 for mask
+context) to enable F2008 C1139 enforcement (only PURE procedures allowed
+in DO CONCURRENT). This flag was never set, breaking constraint checking.
+
+Additional fixes (resolve.cc):
+- Add NULL pointer checks for shadow variables without initialized symtree
+- Fix iterator counting to handle both EXEC_FORALL and EXEC_DO_CONCURRENT
+- Fix memory allocation check (forall_save==0 && nvar==0) to prevent
+  incorrect reallocation in nested constructs
+- Skip FORALL obsolescence warning for DO CONCURRENT (F2018)
+- Suppress many-to-one assignment warning for DO CONCURRENT (reductions
+  are valid, formalized with REDUCE locality-spec in F2023)
+
+Code quality improvements (match.cc):
+- Extract apply_typespec_to_iterator() helper to eliminate ~70 lines of
+  duplicated shadow variable creation code
+- Improve error diagnostics with descriptive messages
+
+	PR fortran/96255
 
 gcc/fortran/ChangeLog:
 
