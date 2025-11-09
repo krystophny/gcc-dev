@@ -1,0 +1,270 @@
+From 8baae6f09abeefe33baa01f5662bfecba59a3f0a Mon Sep 17 00:00:00 2001
+From: Jerry DeLisle <jvdelisle@charter.net>
+Date: Sun, 9 Nov 2025 09:41:22 +0100
+Subject: [PATCH 1/2] fortran: Implement optional type spec for DO CONCURRENT
+
+This patch adds support for the F2018 optional integer type specification
+in DO CONCURRENT and FORALL headers, allowing constructs like:
+
+  do concurrent (integer :: i=1:10)
+
+The implementation handles type spec matching, creates shadow variables
+when needed, and converts iterator expressions to match the specified type.
+
+	PR fortran/96255
+
+Co-authored-by: Steve Kargl <sgk@troutmask.apl.washington.edu>
+---
+ gcc/fortran/gfortran.h |   2 +
+ gcc/fortran/match.cc   | 108 ++++++++++++++++++++++++++++++++++++++++-
+ gcc/fortran/resolve.cc |  28 ++++++++---
+ 3 files changed, 129 insertions(+), 9 deletions(-)
+
+diff --git a/gcc/fortran/gfortran.h b/gcc/fortran/gfortran.h
+index f1c4db23d00..848ad9ca1fa 100644
+--- a/gcc/fortran/gfortran.h
++++ b/gcc/fortran/gfortran.h
+@@ -3101,6 +3101,8 @@ typedef struct gfc_forall_iterator
+ {
+   gfc_expr *var, *start, *end, *stride;
+   gfc_loop_annot annot;
++  /* index-name shadows a variable from outer scope.  */
++  bool shadow;
+   struct gfc_forall_iterator *next;
+ }
+ gfc_forall_iterator;
+diff --git a/gcc/fortran/match.cc b/gcc/fortran/match.cc
+index 8355a390ee0..c9597a0bd0c 100644
+--- a/gcc/fortran/match.cc
++++ b/gcc/fortran/match.cc
+@@ -2608,7 +2608,12 @@ cleanup:
+ }
+ 
+ 
+-/* Match the header of a FORALL statement.  */
++/* Match the header of a FORALL statement.  In F2008 and F2018, the form of
++   the header is:
++
++      ([ type-spec :: ] concurrent-control-list [, scalar-mask-expr ] )
++
++   where type-spec is INTEGER.  */
+ 
+ static match
+ match_forall_header (gfc_forall_iterator **phead, gfc_expr **mask)
+@@ -2616,6 +2621,9 @@ match_forall_header (gfc_forall_iterator **phead, gfc_expr **mask)
+   gfc_forall_iterator *head, *tail, *new_iter;
+   gfc_expr *msk;
+   match m;
++  gfc_typespec ts;
++  bool seen_ts = false;
++  locus loc;
+ 
+   gfc_gobble_whitespace ();
+ 
+@@ -2625,12 +2633,74 @@ match_forall_header (gfc_forall_iterator **phead, gfc_expr **mask)
+   if (gfc_match_char ('(') != MATCH_YES)
+     return MATCH_NO;
+ 
++  /* Check for an optional type-spec.  */
++  gfc_clear_ts (&ts);
++  loc = gfc_current_locus;
++  m = gfc_match_type_spec (&ts);
++  if (m == MATCH_YES)
++    {
++      seen_ts = (gfc_match (" ::") == MATCH_YES);
++
++      if (seen_ts)
++	{
++	  if (!gfc_notify_std (GFC_STD_F2008, "FORALL or DO CONCURRENT "
++			       "construct includes type specification "
++			       "at %L", &loc))
++	    goto cleanup;
++
++	  if (ts.type != BT_INTEGER)
++	    {
++	      gfc_error ("Type-spec at %L must be an INTEGER type", &loc);
++	      goto cleanup;
++	    }
++	}
++    }
++  else if (m == MATCH_ERROR)
++    goto syntax;
++
+   m = match_forall_iterator (&new_iter);
+   if (m == MATCH_ERROR)
+     goto cleanup;
+   if (m == MATCH_NO)
+     goto syntax;
+ 
++  if (seen_ts)
++    {
++      char *name;
++      gfc_expr *v;
++      gfc_symtree *st;
++
++      /* If index-name does not have a type and type spec, then update the
++	 type spec in both the expr and symtree.  Otherwise, create a new
++	 shadow index-name.  */
++      v = new_iter->var;
++      if (v->ts.type == BT_UNKNOWN)
++	{
++	  v->ts.type = v->symtree->n.sym->ts.type = BT_INTEGER;
++	  v->ts.kind = v->symtree->n.sym->ts.kind = ts.kind;
++	}
++
++      name = (char *) alloca (strlen (v->symtree->name) + 2);
++      strcpy (name, "_");
++      strcat (name, v->symtree->name);
++      if (gfc_get_sym_tree (name, NULL, &st, false) != 0)
++	gfc_internal_error ("whoops");
++
++      v = gfc_get_expr ();
++      v->where = gfc_current_locus;
++      v->expr_type = EXPR_VARIABLE;
++      v->ts.type = st->n.sym->ts.type = ts.type;
++      v->ts.kind = st->n.sym->ts.kind = ts.kind;
++      st->n.sym->forall_index = true;
++      v->symtree = st;
++      gfc_replace_expr (new_iter->var, v);
++      new_iter->shadow = true;
++
++      gfc_convert_type (new_iter->start, &ts, 1);
++      gfc_convert_type (new_iter->end, &ts, 1);
++      gfc_convert_type (new_iter->stride, &ts, 1);
++    }
++
+   head = tail = new_iter;
+ 
+   for (;;)
+@@ -2644,6 +2714,42 @@ match_forall_header (gfc_forall_iterator **phead, gfc_expr **mask)
+ 
+       if (m == MATCH_YES)
+ 	{
++	  if (seen_ts)
++	    {
++	      char *name;
++	      gfc_expr *v;
++	      gfc_symtree *st;
++
++	      v = new_iter->var;
++	      if (v->ts.type == BT_UNKNOWN)
++		{
++		  v->ts.type = v->symtree->n.sym->ts.type = BT_INTEGER;
++		  v->ts.kind = v->symtree->n.sym->ts.kind = ts.kind;
++		}
++
++	      name = (char *) alloca (strlen (v->symtree->name) + 2);
++	      strcpy (name, "_");
++	      strcat (name, v->symtree->name);
++	      if (gfc_get_sym_tree (name, NULL, &st, false) != 0)
++		gfc_internal_error ("whoops");
++
++	      v = gfc_get_expr ();
++	      v->expr_type = EXPR_VARIABLE;
++	      v->ts.type = ts.type;
++	      v->ts.kind = ts.kind;
++	      v->where = gfc_current_locus;
++	      st->n.sym->ts.type = ts.type;
++	      st->n.sym->ts.kind = ts.kind;
++	      st->n.sym->forall_index = true;
++	      v->symtree = st;
++	      gfc_replace_expr (new_iter->var, v);
++	      new_iter->shadow = true;
++
++	      gfc_convert_type (new_iter->start, &ts, 1);
++	      gfc_convert_type (new_iter->end, &ts, 1);
++	      gfc_convert_type (new_iter->stride, &ts, 1);
++	    }
++
+ 	  tail->next = new_iter;
+ 	  tail = new_iter;
+ 	  continue;
+diff --git a/gcc/fortran/resolve.cc b/gcc/fortran/resolve.cc
+index 2a73f2a7ab5..75d5ad7f44e 100644
+--- a/gcc/fortran/resolve.cc
++++ b/gcc/fortran/resolve.cc
+@@ -6151,7 +6151,7 @@ gfc_resolve_ref (gfc_expr *expr)
+ 	    }
+ 
+ 	  /* The F08 standard requires(See R425, R431, R435, and in particular
+-	     Note 6.7) that a PDT parameter reference be a scalar even if 
++	     Note 6.7) that a PDT parameter reference be a scalar even if
+ 	     the designator is an array."  */
+ 	  if (array_ref && last_pdt && last_pdt->attr.pdt_type
+ 	      && (ref->u.c.component->attr.pdt_kind
+@@ -12251,11 +12251,10 @@ static void
+ gfc_resolve_assign_in_forall (gfc_code *code, int nvar, gfc_expr **var_expr)
+ {
+   int n;
++  gfc_symbol *forall_index;
+ 
+   for (n = 0; n < nvar; n++)
+     {
+-      gfc_symbol *forall_index;
+-
+       forall_index = var_expr[n]->symtree->n.sym;
+ 
+       /* Check whether the assignment target is one of the FORALL index
+@@ -12414,8 +12413,10 @@ gfc_count_forall_iterators (gfc_code *code)
+ }
+ 
+ 
+-/* Given a FORALL construct, first resolve the FORALL iterator, then call
+-   gfc_resolve_forall_body to resolve the FORALL body.  */
++/* Given a FORALL construct.
++   1) Resolve the FORALL iterator.
++   2) Check for shadow index-name(s) and update code block.
++   3) call gfc_resolve_forall_body to resolve the FORALL body.  */
+ 
+ static void
+ gfc_resolve_forall (gfc_code *code, gfc_namespace *ns, int forall_save)
+@@ -12425,6 +12426,7 @@ gfc_resolve_forall (gfc_code *code, gfc_namespace *ns, int forall_save)
+   static int nvar = 0;
+   int i, old_nvar, tmp;
+   gfc_forall_iterator *fa;
++  bool shadow = false;
+ 
+   old_nvar = nvar;
+ 
+@@ -12442,11 +12444,12 @@ gfc_resolve_forall (gfc_code *code, gfc_namespace *ns, int forall_save)
+       var_expr = XCNEWVEC (gfc_expr *, total_var);
+     }
+ 
+-  /* The information about FORALL iterator, including FORALL indices start, end
+-     and stride.  An outer FORALL indice cannot appear in start, end or stride.  */
++  /* The information about FORALL iterator, including FORALL indices start,
++     end and stride.  An outer FORALL indice cannot appear in start, end or
++     stride.  Check for a shadow index-name.  */
+   for (fa = code->ext.concur.forall_iterator; fa; fa = fa->next)
+     {
+-      /* Fortran 20008: C738 (R753).  */
++      /* Fortran 2008: C738 (R753).  */
+       if (fa->var->ref && fa->var->ref->type == REF_ARRAY)
+ 	{
+ 	  gfc_error ("FORALL index-name at %L must be a scalar variable "
+@@ -12463,6 +12466,9 @@ gfc_resolve_forall (gfc_code *code, gfc_namespace *ns, int forall_save)
+ 			"with this name %L", &fa->var->where);
+ 	}
+ 
++      if (fa->shadow)
++	shadow = true;
++
+       /* Record the current FORALL index.  */
+       var_expr[nvar] = gfc_copy_expr (fa->var);
+ 
+@@ -12472,6 +12478,12 @@ gfc_resolve_forall (gfc_code *code, gfc_namespace *ns, int forall_save)
+       gcc_assert (nvar <= total_var);
+     }
+ 
++  /* Need to walk the code and replace references to the index-name with
++     references to the shadow index-name.  */
++  if (shadow)
++    gfc_fatal_error ("An index-name shadows a variable from outer scope, "
++		     "which causes a wrong-code bug.");
++
+   /* Resolve the FORALL body.  */
+   gfc_resolve_forall_body (code, nvar, var_expr);
+ 
+-- 
+2.51.2
+

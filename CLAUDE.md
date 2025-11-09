@@ -100,9 +100,13 @@ gcc-build/gcc/gfortran -B gcc-build/gcc <file.f90>
    - Excellent for standards compliance testing
 
 5. **LFortran**
-   - **NOT currently installed**
+   ```bash
+   lfortran <file.f90>
+   ```
    - Interactive Fortran compiler
-   - Install if needed for additional validation
+   - Modern, fast compiler with good diagnostics
+   - Use for additional F2018+ feature validation
+   - Note: Some F2018 features may not be fully implemented yet
 
 **Testing Protocol:**
 - Always test reproducers with at least 2-3 compilers
@@ -136,6 +140,57 @@ Use format: `pr<number>-<short-desc>`
 ```bash
 git -C gcc fetch origin
 git -C gcc rebase origin/master
+```
+
+### GNU Commit Message Template with Sign-off
+
+**Commit Message Format:**
+```
+<component>: <short summary (max 50 chars)>
+
+<detailed description>
+
+<issue/PR references>
+
+Signed-off-by: Name <email@example.com>
+```
+
+**Rules:**
+- Component: e.g., `fortran`, `libgfortran`, `testsuite`
+- Short summary: Present tense, no period at end
+- Detailed description: Explain WHY not just WHAT
+- Blank line between sections
+- Sign-off line is MANDATORY for all GCC contributions
+- Co-authored patches: Add `Co-authored-by:` before `Signed-off-by:`
+
+**Example Commit Message:**
+```
+fortran: Implement optional type spec for DO CONCURRENT
+
+This patch adds support for the F2018 optional integer type specification
+in DO CONCURRENT headers, allowing constructs like:
+
+  do concurrent (integer :: i=1:10)
+
+The implementation follows the same approach used for FORALL type specs,
+creating shadow variables when the type spec differs from any outer scope
+variable with the same name.
+
+	PR fortran/96255
+
+Co-authored-by: Steve Kargl <sgk@troutmask.apl.washington.edu>
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+```
+
+**Creating Commits with Proper Authorship:**
+```bash
+# For commits authored by others (e.g., applying Jerry's patch):
+git commit --author="Jerry DeLisle <jvdelisle@charter.net>" -m "commit message"
+
+# For your own commits with sign-off:
+git commit -s -m "commit message"
+
+# The -s flag automatically adds your Signed-off-by line
 ```
 
 ## Coding Standards for GCC Development
@@ -190,6 +245,7 @@ Each PR directory (`pr/<number>/`) contains:
 - LLVM Flang: `/usr/bin/flang-new`
 - Intel ifx: `/opt/intel/oneapi/compiler/2025.2/bin/ifx` (source setvars.sh first)
 - NVIDIA nvfortran: `/opt/nvidia/hpc_sdk/Linux_x86_64/25.9/compilers/bin/nvfortran`
+- LFortran: `lfortran`
 
 **Example Makefile pattern:**
 ```makefile
@@ -198,10 +254,11 @@ FC_SYSTEM = /usr/bin/gfortran
 FC_FLANG  = /usr/bin/flang-new
 FC_IFX    = /opt/intel/oneapi/compiler/2025.2/bin/ifx
 FC_NVHPC  = /opt/nvidia/hpc_sdk/Linux_x86_64/25.9/compilers/bin/nvfortran
+FC_LFORT  = lfortran
 
 FFLAGS = -Wa,--noexecstack -Wl,-z,noexecstack
 
-all: test-custom test-system test-flang test-ifx test-nvhpc
+all: test-custom test-system test-flang test-ifx test-nvhpc test-lfortran
 
 test-custom:
 	$(FC_CUSTOM) $(FFLAGS) reproducer.f90 -o reproducer-custom.x
@@ -218,8 +275,15 @@ test-ifx:
 test-nvhpc:
 	$(FC_NVHPC) reproducer.f90 -o reproducer-nvhpc.x
 
+test-lfortran:
+	@if command -v $(FC_LFORT) >/dev/null 2>&1; then \
+		$(FC_LFORT) reproducer.f90 -o reproducer-lfortran.x; \
+	else \
+		echo "LFortran not found"; \
+	fi
+
 clean:
-	rm -f *.x *.o *.mod
+	rm -f *.x *.o *.mod *.smod
 ```
 
 ## Test Suite Execution Details
