@@ -329,6 +329,35 @@ cd /home/ert/code/gcc-dev/gcc-build/gcc && make check-gfortran RUNTESTFLAGS="dg.
 - Self-assignment (`a = a`) requires special handling to avoid use-after-free
 - Finalizer wrappers must not create self-referencing result symbols
 
+## Upstream Submission Policy
+
+### 🚨 CRITICAL: NEVER Submit Patches Without Explicit User Permission
+
+**ABSOLUTE PROHIBITION - ZERO TOLERANCE:**
+- **NEVER send emails to GCC mailing lists** (fortran@gcc.gnu.org, gcc-patches@gcc.gnu.org)
+- **NEVER post patches to GCC Bugzilla** without explicit user instruction
+- **NEVER create pull requests or submissions** to any GCC upstream channels
+- **ALWAYS prepare patches** and get user approval before ANY upstream interaction
+
+**Permitted Actions:**
+- ✅ Prepare patch files with `git format-patch`
+- ✅ Generate commit messages with proper ChangeLog format
+- ✅ Run local tests and validation
+- ✅ Export patches to `pr/<number>/` directory
+- ✅ Document submission readiness
+
+**Requiring Explicit User Permission:**
+- ❌ Posting to mailing lists
+- ❌ Updating Bugzilla
+- ❌ Any external communication about patches
+- ❌ Sending emails on behalf of the user
+
+**Rationale:**
+- User controls timing and content of all upstream submissions
+- User owns the relationship with GCC community
+- User determines when patches are ready for public review
+- User handles any required legal/authorization processes
+
 ## Meta-Repository Commits
 
 Track documentation, reproducer updates, and organizational changes in the meta-repo:
