@@ -163,6 +163,12 @@ Signed-off-by: Name <email@example.com>
 - Sign-off line is MANDATORY for all GCC contributions
 - Co-authored patches: Add `Co-authored-by:` before `Signed-off-by:`
 
+**ChangeLog Entry Formatting (CRITICAL):**
+- ChangeLog entries start with a single TAB character
+- Continuation lines use a SINGLE TAB, NOT <TAB><SPACE><SPACE>
+- Function names in parentheses followed by colon
+- Indentation: <TAB> for first level, <TAB> for continuation (NOT <TAB><SPACE><SPACE>)
+
 **Example Commit Message:**
 ```
 fortran: Implement optional type spec for DO CONCURRENT
@@ -177,6 +183,11 @@ creating shadow variables when the type spec differs from any outer scope
 variable with the same name.
 
 	PR fortran/96255
+
+gcc/fortran/ChangeLog:
+
+	* match.cc (match_forall_header): Add type-spec parsing.
+	* resolve.cc (gfc_resolve_forall): Handle shadow variables.
 
 Co-authored-by: Steve Kargl <sgk@troutmask.apl.washington.edu>
 Signed-off-by: Christopher Albert <albert@tugraz.at>
