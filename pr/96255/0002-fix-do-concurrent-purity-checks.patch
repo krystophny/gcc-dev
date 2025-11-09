@@ -1,13 +1,12 @@
-From 222cd7c47aa100146b1856f507561fca466d10c0 Mon Sep 17 00:00:00 2001
+From aa643f354b0e301ce6a394ffcc573221e961e3fb Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Sun, 9 Nov 2025 15:04:02 +0100
 Subject: [PATCH] Fortran: Fix DO CONCURRENT resolution and purity checks
 
-This patch fixes the resolution of DO CONCURRENT constructs by ensuring
-proper flag management and enabling purity checks for impure function/
-subroutine calls within DO CONCURRENT blocks.
+This patch fixes the resolution of DO CONCURRENT constructs and improves
+code quality in Jerry DeLisle's type-spec implementation.
 
-The key changes:
+Key changes in resolve.cc:
 1. Set gfc_do_concurrent_flag=1 before calling gfc_resolve_forall to
    enable proper purity validation during body resolution
 2. Set gfc_do_concurrent_flag=2 after resolution to distinguish mask
@@ -23,50 +22,172 @@ The key changes:
    since reduction-like operations are semantically valid (formalized
    with REDUCE locality-spec in Fortran 2023)
 
+Code quality improvements in match.cc:
+8. Replace unprofessional whoops error messages with descriptive ones
+9. Eliminate code duplication by extracting apply_typespec_to_iterator
+   helper function (removed ~70 lines of duplicated code)
+
 gcc/fortran/ChangeLog:
 
+	* match.cc (apply_typespec_to_iterator): New helper function.
+	Consolidates shadow variable creation logic previously duplicated
+	for first and subsequent iterators.
+	(match_forall_header): Replace duplicated shadow variable creation
+	with calls to apply_typespec_to_iterator. Improve error messages.
 	* resolve.cc (gfc_resolve_assign_in_forall): Skip many-to-one
-	assignment warning for DO CONCURRENT (reduction-like operations
-	are valid per Fortran 2023 REDUCE clause).
+	assignment warning for DO CONCURRENT.
 	(gfc_count_forall_iterators): Add gcc_assert for both EXEC_FORALL
-	and EXEC_DO_CONCURRENT. Handle both construct types in iterator
-	counting loop.
+	and EXEC_DO_CONCURRENT. Handle both construct types.
 	(gfc_resolve_forall): Skip F2018 obsolescence warning for
 	DO CONCURRENT. Check both forall_save==0 and nvar==0 before
-	allocating var_expr array to prevent double allocation when FORALL
-	is nested inside DO CONCURRENT. Add NULL checks for shadow variables.
+	allocating var_expr array. Add NULL checks for shadow variables.
 	(gfc_resolve_code): Set gfc_do_concurrent_flag=1 before calling
-	gfc_resolve_forall, then set to 2 after, paralleling forall_flag
-	handling for proper purity checking.
+	gfc_resolve_forall, then set to 2 after.
 ---
- gcc/fortran/match.cc   |   6 +-
+ gcc/fortran/match.cc   | 115 ++++++++------------
  gcc/fortran/resolve.cc | 232 ++++++++++++++++++++++++++++++++++++++---
- 2 files changed, 222 insertions(+), 16 deletions(-)
+ 2 files changed, 264 insertions(+), 83 deletions(-)
 
 diff --git a/gcc/fortran/match.cc b/gcc/fortran/match.cc
-index c9597a0bd0c..f1b7b56000a 100644
+index c9597a0bd0c..c2abc267c3a 100644
 --- a/gcc/fortran/match.cc
 +++ b/gcc/fortran/match.cc
-@@ -2684,7 +2684,8 @@ match_forall_header (gfc_forall_iterator **phead, gfc_expr **mask)
-       strcpy (name, "_");
-       strcat (name, v->symtree->name);
-       if (gfc_get_sym_tree (name, NULL, &st, false) != 0)
+@@ -2608,6 +2608,50 @@ cleanup:
+ }
+ 
+ 
++/* Apply type-spec to iterator and create shadow variable if needed.  */
++
++static void
++apply_typespec_to_iterator (gfc_forall_iterator *iter, gfc_typespec *ts,
++			     locus *loc)
++{
++  char *name;
++  gfc_expr *v;
++  gfc_symtree *st;
++
++  /* If index-name does not have a type set, update the type spec in both
++     the expr and symtree.  Otherwise, create a shadow index-name.  */
++  v = iter->var;
++  if (v->ts.type == BT_UNKNOWN)
++    {
++      v->ts.type = v->symtree->n.sym->ts.type = BT_INTEGER;
++      v->ts.kind = v->symtree->n.sym->ts.kind = ts->kind;
++    }
++
++  /* Create shadow variable with "_" prefix.  */
++  name = (char *) alloca (strlen (v->symtree->name) + 2);
++  strcpy (name, "_");
++  strcat (name, v->symtree->name);
++  if (gfc_get_sym_tree (name, NULL, &st, false) != 0)
++    gfc_internal_error ("Failed to create shadow variable symtree for "
++			"DO CONCURRENT type-spec at %L", loc);
++
++  v = gfc_get_expr ();
++  v->where = gfc_current_locus;
++  v->expr_type = EXPR_VARIABLE;
++  v->ts.type = st->n.sym->ts.type = ts->type;
++  v->ts.kind = st->n.sym->ts.kind = ts->kind;
++  st->n.sym->forall_index = true;
++  v->symtree = st;
++  gfc_replace_expr (iter->var, v);
++  iter->shadow = true;
++
++  /* Convert iterator bounds to the specified type.  */
++  gfc_convert_type (iter->start, ts, 1);
++  gfc_convert_type (iter->end, ts, 1);
++  gfc_convert_type (iter->stride, ts, 1);
++}
++
++
+ /* Match the header of a FORALL statement.  In F2008 and F2018, the form of
+    the header is:
+ 
+@@ -2665,41 +2709,7 @@ match_forall_header (gfc_forall_iterator **phead, gfc_expr **mask)
+     goto syntax;
+ 
+   if (seen_ts)
+-    {
+-      char *name;
+-      gfc_expr *v;
+-      gfc_symtree *st;
+-
+-      /* If index-name does not have a type and type spec, then update the
+-	 type spec in both the expr and symtree.  Otherwise, create a new
+-	 shadow index-name.  */
+-      v = new_iter->var;
+-      if (v->ts.type == BT_UNKNOWN)
+-	{
+-	  v->ts.type = v->symtree->n.sym->ts.type = BT_INTEGER;
+-	  v->ts.kind = v->symtree->n.sym->ts.kind = ts.kind;
+-	}
+-
+-      name = (char *) alloca (strlen (v->symtree->name) + 2);
+-      strcpy (name, "_");
+-      strcat (name, v->symtree->name);
+-      if (gfc_get_sym_tree (name, NULL, &st, false) != 0)
 -	gfc_internal_error ("whoops");
-+	gfc_internal_error ("Failed to create shadow variable symtree for "
-+			    "DO CONCURRENT type-spec at %L", &loc);
+-
+-      v = gfc_get_expr ();
+-      v->where = gfc_current_locus;
+-      v->expr_type = EXPR_VARIABLE;
+-      v->ts.type = st->n.sym->ts.type = ts.type;
+-      v->ts.kind = st->n.sym->ts.kind = ts.kind;
+-      st->n.sym->forall_index = true;
+-      v->symtree = st;
+-      gfc_replace_expr (new_iter->var, v);
+-      new_iter->shadow = true;
+-
+-      gfc_convert_type (new_iter->start, &ts, 1);
+-      gfc_convert_type (new_iter->end, &ts, 1);
+-      gfc_convert_type (new_iter->stride, &ts, 1);
+-    }
++    apply_typespec_to_iterator (new_iter, &ts, &loc);
  
-       v = gfc_get_expr ();
-       v->where = gfc_current_locus;
-@@ -2731,7 +2732,8 @@ match_forall_header (gfc_forall_iterator **phead, gfc_expr **mask)
- 	      strcpy (name, "_");
- 	      strcat (name, v->symtree->name);
- 	      if (gfc_get_sym_tree (name, NULL, &st, false) != 0)
+   head = tail = new_iter;
+ 
+@@ -2715,40 +2725,7 @@ match_forall_header (gfc_forall_iterator **phead, gfc_expr **mask)
+       if (m == MATCH_YES)
+ 	{
+ 	  if (seen_ts)
+-	    {
+-	      char *name;
+-	      gfc_expr *v;
+-	      gfc_symtree *st;
+-
+-	      v = new_iter->var;
+-	      if (v->ts.type == BT_UNKNOWN)
+-		{
+-		  v->ts.type = v->symtree->n.sym->ts.type = BT_INTEGER;
+-		  v->ts.kind = v->symtree->n.sym->ts.kind = ts.kind;
+-		}
+-
+-	      name = (char *) alloca (strlen (v->symtree->name) + 2);
+-	      strcpy (name, "_");
+-	      strcat (name, v->symtree->name);
+-	      if (gfc_get_sym_tree (name, NULL, &st, false) != 0)
 -		gfc_internal_error ("whoops");
-+		gfc_internal_error ("Failed to create shadow variable symtree for "
-+				    "DO CONCURRENT type-spec at %L", &loc);
+-
+-	      v = gfc_get_expr ();
+-	      v->expr_type = EXPR_VARIABLE;
+-	      v->ts.type = ts.type;
+-	      v->ts.kind = ts.kind;
+-	      v->where = gfc_current_locus;
+-	      st->n.sym->ts.type = ts.type;
+-	      st->n.sym->ts.kind = ts.kind;
+-	      st->n.sym->forall_index = true;
+-	      v->symtree = st;
+-	      gfc_replace_expr (new_iter->var, v);
+-	      new_iter->shadow = true;
+-
+-	      gfc_convert_type (new_iter->start, &ts, 1);
+-	      gfc_convert_type (new_iter->end, &ts, 1);
+-	      gfc_convert_type (new_iter->stride, &ts, 1);
+-	    }
++	    apply_typespec_to_iterator (new_iter, &ts, &loc);
  
- 	      v = gfc_get_expr ();
- 	      v->expr_type = EXPR_VARIABLE;
+ 	  tail->next = new_iter;
+ 	  tail = new_iter;
 diff --git a/gcc/fortran/resolve.cc b/gcc/fortran/resolve.cc
 index 75d5ad7f44e..aad211a30ec 100644
 --- a/gcc/fortran/resolve.cc
