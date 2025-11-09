@@ -1,9 +1,9 @@
-From 8baae6f09abeefe33baa01f5662bfecba59a3f0a Mon Sep 17 00:00:00 2001
-From: Jerry DeLisle <jvdelisle@charter.net>
-Date: Sun, 9 Nov 2025 09:41:22 +0100
-Subject: [PATCH 1/2] fortran: Implement optional type spec for DO CONCURRENT
+From d11074121b37418939f0259b137850b69105c437 Mon Sep 17 00:00:00 2001
+From: Jerry DeLisle <jvdelisle@gcc.gnu.org>
+Date: Sun, 9 Nov 2025 10:05:20 +0100
+Subject: [PATCH] fortran: Implement optional type spec for DO CONCURRENT
 
-This patch adds support for the F2018 optional integer type specification
+This patch adds support for the F2008 optional integer type specification
 in DO CONCURRENT and FORALL headers, allowing constructs like:
 
   do concurrent (integer :: i=1:10)
@@ -12,8 +12,6 @@ The implementation handles type spec matching, creates shadow variables
 when needed, and converts iterator expressions to match the specified type.
 
 	PR fortran/96255
-
-Co-authored-by: Steve Kargl <sgk@troutmask.apl.washington.edu>
 ---
  gcc/fortran/gfortran.h |   2 +
  gcc/fortran/match.cc   | 108 ++++++++++++++++++++++++++++++++++++++++-
