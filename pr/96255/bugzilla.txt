@@ -1,0 +1,855 @@
+GCC Bugzilla – Bug 96255	[F2018] Implement optional type spec for index in DO CONCURRENT	Last modified: 2025-11-08 22:14:01 UTC
+Home | New | Browse | Search | 
+  [?] | Reports | My Requests | Preferences | Help | Log out albert@tugraz.at
+Bug List: (325 of 1156) First Last Prev Next   Show last search results
+Bug 96255 - [F2018] Implement optional type spec for index in DO CONCURRENT
+Status:	NEW
+Alias:	None
+Product:	gcc
+Component:	fortran (show other bugs)
+Version:	11.0
+Importance:	P4 normal
+Target Milestone:	---
+Assignee:	Not yet assigned to anyone
+URL:	
+Keywords:	
+Personal Tags:	
+Duplicates (1):	121796 (view as bug list)
+Depends on:	78219
+Blocks:	F2018
+ 	Show dependency tree / graph
+ 
+Reported:	2020-07-21 00:47 UTC by Jerry DeLisle
+Modified:	2025-11-08 22:14 UTC (History)
+CC List:	 Add me to CC list
+7 users (edit)
+Ignore Bug Mail:	 (never email me about this bug)
+See Also:	
+Host:	
+Target:	
+Build:	
+Known to work:	
+Known to fail:	
+Last reconfirmed:	2020-07-21 00:00:00
+
+Attachments
+Revised preliminary patch, resolution incomplete (2.45 KB, patch)
+2025-11-08 22:13 UTC, Jerry DeLisle	Details | Diff
+Show Obsolete (1) View AllAdd an attachment (proposed patch, testcase, etc.)
+
+Additional Comments:
+Comment	Preview
+
+Status:	
+NEW
+[reply] [−]DescriptionJerry DeLisle 2020-07-21 00:47:40 UTC
+F2018 provides for an optional type spec in the DO CONCURRENT construct:
+
+R1125 concurrent-header is ( [ integer-type-spec :: ] concurrent-control-list [ , scalar-mask-expr ] )
+
+There is a constraint that it must be of type integer. This construct allows it to be declared locally to its block.
+
+program looper
+   implicit none
+   
+   !integer i
+   
+   do concurrent (integer :: i=1:10)
+     print *, i
+   end do
+
+end program looper
+
+$ gfc -c looper.f03 
+looper.f03:6:19:
+
+    6 |    do concurrent (integer :: i=1:10)
+      |                   1
+Error: Syntax error in DO statement at (1)
+looper.f03:8:6:
+
+    8 |    end do
+      |      1
+Error: Expecting END PROGRAM statement at (1)
+looper.f03:7:15:
+
+    7 |      print *, i
+      |               1
+Error: Symbol ‘i’ at (1) has no IMPLICIT type
+[reply] [−]Comment 1kargls@comcast.net 2020-07-21 04:24:51 UTC
+This is related to PR78219.
+
+If someone takes up the challenge, then this show accept only
+standard conforming type specs.  That is, INTEGER*4 should be
+rejected.  This means one should use the method introduced in
+array.c(gfc_match_array_constructor) for code to match
+a type spec in an array constructor.  Looks like a copy and
+paste with an additional check for INTEGER.
+[reply] [−]Comment 2kargls@comcast.net 2020-07-21 05:53:52 UTC
+This issue depends on the fix for FORALL.  In gfc_match_do in the concurrent section, one gets to 
+
+      m = match_forall_header (&head, &mask);
+
+to match the control portion of the statement.
+[reply] [−]Comment 3kargls@comcast.net 2020-07-21 05:57:32 UTC
+(In reply to kargl from comment #2)
+> This issue depends on the fix for FORALL.  In gfc_match_do in the concurrent
+> section, one gets to 
+> 
+>       m = match_forall_header (&head, &mask);
+> 
+> to match the control portion of the statement.
+
+
+This should be trivial for a new gfortran contributor.  In
+match.c(match_forall_header) prior to line 2401
+
+  m = match_forall_iterator (&new_iter);
+
+one needs to essentially copy lines 1229-1259 from array.c
+and modify the checks to enforce an integer type.
+[reply] [−]Comment 4Jerry DeLisle 2020-07-21 19:41:57 UTC
+(In reply to kargl from comment #1)
+> This is related to PR78219.
+> 
+> If someone takes up the challenge, then this show accept only
+> standard conforming type specs.  That is, INTEGER*4 should be
+> rejected.  This means one should use the method introduced in
+> array.c(gfc_match_array_constructor) for code to match
+> a type spec in an array constructor.  Looks like a copy and
+> paste with an additional check for INTEGER.
+
+
+Agree 200%, tired of people implementing the bad.
+[reply] [−]Comment 5Jerry DeLisle 2020-07-21 19:44:16 UTC
+(In reply to kargl from comment #2)
+> This issue depends on the fix for FORALL.  In gfc_match_do in the concurrent
+> section, one gets to 
+> 
+>       m = match_forall_header (&head, &mask);
+> 
+> to match the control portion of the statement.
+
+
+Although we need to support forall, it is interesting that the standards committe i going to deprecate it, if they have not done so already. Not encouraged to be used for sure. Also they will be adding features to DO CONCUURENT which look useful to me.
+[reply] [−]Comment 6Steve Kargl 2020-07-21 20:25:35 UTC
+On Tue, Jul 21, 2020 at 07:44:16PM +0000, jvdelisle at charter dot net wrote:
+> https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96255
+> 
+> --- Comment #5 from jvdelisle at charter dot net ---
+> (In reply to kargl from comment #2)
+> > This issue depends on the fix for FORALL.  In gfc_match_do in the concurrent
+> > section, one gets to 
+> > 
+> >       m = match_forall_header (&head, &mask);
+> > 
+> > to match the control portion of the statement.
+> 
+> Although we need to support forall, it is interesting that the standards
+> committe i going to deprecate it, if they have not done so already. Not
+> encouraged to be used for sure. Also they will be adding features to DO
+> CONCUURENT which look useful to me.
+> 
+
+
+do current (JUNK HERE)
+
+
+forall (JUNK HERE)
+
+The JUNK HERE is parsed by the same code; namely, match_forall_header().
+
+So, if one fixes do current, then one fixes forall.
+
+PS: J3 has an interesting discussion that suggests that do current
+is also broken.
+[reply] [−]Comment 7kargls@comcast.net 2020-07-22 06:29:05 UTC
+(In reply to Steve Kargl from comment #6)
+> On Tue, Jul 21, 2020 at 07:44:16PM +0000, jvdelisle at charter dot net wrote:
+> > https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96255
+> > 
+> > --- Comment #5 from jvdelisle at charter dot net ---
+> > (In reply to kargl from comment #2)
+> > > This issue depends on the fix for FORALL.  In gfc_match_do in the concurrent
+> > > section, one gets to 
+> > > 
+> > >       m = match_forall_header (&head, &mask);
+> > > 
+> > > to match the control portion of the statement.
+> > 
+> > Although we need to support forall, it is interesting that the standards
+> > committe i going to deprecate it, if they have not done so already. Not
+> > encouraged to be used for sure. Also they will be adding features to DO
+> > CONCUURENT which look useful to me.
+> > 
+> 
+> do current (JUNK HERE)
+> 
+> 
+> forall (JUNK HERE)
+> 
+> The JUNK HERE is parsed by the same code; namely, match_forall_header().
+> 
+> So, if one fixes do current, then one fixes forall.
+> 
+> PS: J3 has an interesting discussion that suggests that do current
+> is also broken.
+
+
+IMHO, J3 has done no one any good with adding type specs
+to FORALL and DO CONCURRENT.  There are three situations with 
+FORALL (and by extension DO CONCURRENT).
+
+1) The control variable is declared in the outer scope and a type spec
+   is not used.  This is what gfortran currently assumes.
+
+   subroutine sub1
+     implicit none
+     integer i, index(10), a(10), b(10)
+     b = (/ (i, i = 1, 10) /)
+     index = (/ b(1:10:2), b(2:10:2) /)
+     forall (i = 1:10)
+       a(index(i)) = b(i)
+     end forall
+     print '(10I3)', a
+     print '(10I3)', b
+     print '(10I3)', index
+   end subroutine sub1
+
+2) The control variable appears only in the FORALL construct and a type
+   spec is used. Here, we can simply set the type spec of the control
+   variable.
+
+   subroutine sub2
+     implicit none
+     integer i, index(10), a(10), b(10)
+     b = (/ (i, i = 1, 10) /)
+     index = (/ b(1:10:2), b(2:10:2) /)
+     forall (integer(2) :: j = 1:10)
+       a(index(j)) = b(j)
+     end forall
+     print '(10I3)', a
+     print '(10I3)', b
+     print '(10I3)', index
+  end subroutine sub2
+
+3) The control variable is declared in the outer scope and a type spec
+   is specified in the FORALL construct.  The control variable is a
+   statement entity (meaning FORALL should have its own namespace, but
+   it does not have one).  This now shadows the variable in the outer
+   scope. If the kind type parameters are the same, we're ok because we
+   can ignore the type spec.  If the kind type parameters are different,
+   gfortran needs to create a shadow variable.
+
+   subroutine sub3
+     implicit none
+     integer i, index(10), a(10), b(10)     ! i declared here.
+     b = (/ (i, i = 1, 10) /)
+     index = (/ b(1:10:2), b(2:10:2) /)
+     forall (integer(2) :: i = 1:10)        ! i re-declared here.
+       a(index(i)) = b(i)
+     end forall
+     print '(10I3)', a
+     print '(10I3)', b
+     print '(10I3)', index
+  end subroutine sub3
+
+The following diff permits the above cases with one caveat.  In case 3),
+when gfortran parses the body of the FORALL construct, the 'i' in
+'index(i)' and 'b(i)' is the 'i' from the outer scope.  It is not the
+newly created shadow variable '_i'.  AFAICT, we need to walk the gfc_code
+list in resolve.c:(gfc_resolve_forall) and update the 'i' to the 
+shadow variable '_i'
+
+Someone interesting in completing the patch can start here:
+
+Index: gcc/fortran/match.c
+===================================================================
+--- gcc/fortran/match.c	(revision 280157)
++++ gcc/fortran/match.c	(working copy)
+@@ -2381,7 +2381,10 @@ cleanup:
+ }
+ 
+ 
+-/* Match the header of a FORALL statement.  */
++/* Match the header of a FORALL statement.  In F2008 and F2018, the form of
++   the header is 
++   ([ type-spec :: ] concurrent-control-list [, scalar-mask-expr ] )
++   where type-spec is INTEGER.  */
+ 
+ static match
+ match_forall_header (gfc_forall_iterator **phead, gfc_expr **mask)
+@@ -2389,6 +2392,9 @@ match_forall_header (gfc_forall_iterator **phead, gfc_
+   gfc_forall_iterator *head, *tail, *new_iter;
+   gfc_expr *msk;
+   match m;
++  gfc_typespec ts;
++  bool seen_ts = false;
++  locus loc;
+ 
+   gfc_gobble_whitespace ();
+ 
+@@ -2398,12 +2404,74 @@ match_forall_header (gfc_forall_iterator **phead, gfc_
+   if (gfc_match_char ('(') != MATCH_YES)
+     return MATCH_NO;
+ 
++  /* Check for an optional type-spec.  */
++  gfc_clear_ts (&ts);
++  loc = gfc_current_locus;
++  m = gfc_match_type_spec (&ts);
++  if (m == MATCH_YES)
++    {
++      seen_ts = (gfc_match (" ::") == MATCH_YES);
++
++      if (seen_ts)
++	{
++	  if (!gfc_notify_std (GFC_STD_F2008, "FORALL or DO CONCURRENT "
++			       "construct includes type specification "
++			       "at %L", &loc))
++	    goto cleanup;
++
++	  if (ts.type != BT_INTEGER)
++	    {
++	      gfc_error ("Type-spec at %L must be an INTEGER type", &loc);
++	      goto cleanup;
++	    }
++	}
++    }
++  else if (m == MATCH_ERROR)
++    goto syntax;
++
+   m = match_forall_iterator (&new_iter);
+   if (m == MATCH_ERROR)
+     goto cleanup;
+   if (m == MATCH_NO)
+     goto syntax;
+ 
++  if (seen_ts)
++    {
++      char *name;
++      gfc_expr *v;
++      gfc_symtree *st;
++
++      /* If the control variable does not have a type and type spec, then
++	 update the type spec in both the variable and symtree.  Otherwise,
++	 create a new private symbol.  */
++      v = new_iter->var;
++      if (v->ts.type == BT_UNKNOWN)
++	{
++	  v->ts.type = v->symtree->n.sym->ts.type = BT_INTEGER;
++	  v->ts.kind = v->symtree->n.sym->ts.kind = ts.kind;
++	}
++      else if (v->ts.kind != ts.kind)
++	{
++	  name = (char *) alloca (strlen (v->symtree->name) + 2);
++	  strcpy (name, "_");
++	  strcat (name, v->symtree->name);
++	  if (gfc_get_sym_tree (name, NULL, &st, false) != 0)
++	    gfc_internal_error ("whoops");
++
++	  v = gfc_get_expr ();
++	  v->where = gfc_current_locus;
++	  v->expr_type = EXPR_VARIABLE;
++	  v->ts.type = st->n.sym->ts.type = ts.type;
++	  v->ts.kind = st->n.sym->ts.kind = ts.kind;
++	  st->n.sym->forall_index = true;
++	  v->symtree = st;
++	  gfc_replace_expr (new_iter->var, v);
++	}
++      gfc_convert_type (new_iter->start, &ts, 1);
++      gfc_convert_type (new_iter->end, &ts, 1);
++      gfc_convert_type (new_iter->stride, &ts, 1);
++    }
++
+   head = tail = new_iter;
+ 
+   for (;;)
+@@ -2417,6 +2485,42 @@ match_forall_header (gfc_forall_iterator **phead, gfc_
+ 
+       if (m == MATCH_YES)
+ 	{
++	  if (seen_ts)
++	    {
++	      char *name;
++	      gfc_expr *v;
++	      gfc_symtree *st;
++
++	      v = new_iter->var;
++	      if (v->ts.type == BT_UNKNOWN)
++		{
++		  v->ts.type = v->symtree->n.sym->ts.type = BT_INTEGER;
++		  v->ts.kind = v->symtree->n.sym->ts.kind = ts.kind;
++		}
++	      else if (v->ts.kind != ts.kind)
++		{
++		  name = (char *) alloca (strlen (v->symtree->name) + 2);
++		  strcpy (name, "_");
++		  strcat (name, v->symtree->name);
++		  if (gfc_get_sym_tree (name, NULL, &st, false) != 0)
++		    gfc_internal_error ("whoops");
++
++		  v = gfc_get_expr ();
++		  v->expr_type = EXPR_VARIABLE;
++		  v->ts.type = ts.type;
++		  v->ts.kind = ts.kind;
++		  v->where = gfc_current_locus;
++		  st->n.sym->ts.type = ts.type;
++		  st->n.sym->ts.kind = ts.kind;
++		  st->n.sym->forall_index = true;
++		  v->symtree = st;
++		  gfc_replace_expr (new_iter->var, v);
++		}
++	      gfc_convert_type (new_iter->start, &ts, 1);
++	      gfc_convert_type (new_iter->end, &ts, 1);
++	      gfc_convert_type (new_iter->stride, &ts, 1);
++    	    }
++
+ 	  tail->next = new_iter;
+ 	  tail = new_iter;
+ 	  continue;
+[reply] [−]Comment 8kargls@comcast.net 2020-07-22 18:25:15 UTC
+New patch.  This adds a bool component to gfc_forall_iterator so
+that an iterator with an index-name that shadows a variable from
+outer scope can be marked.  Shadowing only occurs when a type-spec
+causes the kind type parameter to differ from the kind type 
+parameter of the outer scope variable.
+
+A fatal error occurs if shadowing is found.  Someone needs to
+wlak the forall block (and by extension the do concurrent block)
+updating references to the outer scope variable to be those of
+the shadow variable.
+
+It might be beneficial to introduce a namespace for forall and
+do concurrent, but I won't go down that path.
+
+Index: gcc/fortran/gfortran.h
+===================================================================
+--- gcc/fortran/gfortran.h	(revision 280157)
++++ gcc/fortran/gfortran.h	(working copy)
+@@ -2525,6 +2525,8 @@ gfc_dt;
+ typedef struct gfc_forall_iterator
+ {
+   gfc_expr *var, *start, *end, *stride;
++  /* index-name shadows a variable from outer scope.  */
++  bool shadow;
+   struct gfc_forall_iterator *next;
+ }
+ gfc_forall_iterator;
+Index: gcc/fortran/match.c
+===================================================================
+--- gcc/fortran/match.c	(revision 280157)
++++ gcc/fortran/match.c	(working copy)
+@@ -2381,7 +2381,10 @@ cleanup:
+ }
+ 
+ 
+-/* Match the header of a FORALL statement.  */
++/* Match the header of a FORALL statement.  In F2008 and F2018, the form of
++   the header is 
++   ([ type-spec :: ] concurrent-control-list [, scalar-mask-expr ] )
++   where type-spec is INTEGER.  */
+ 
+ static match
+ match_forall_header (gfc_forall_iterator **phead, gfc_expr **mask)
+@@ -2389,6 +2392,9 @@ match_forall_header (gfc_forall_iterator **phead, gfc_
+   gfc_forall_iterator *head, *tail, *new_iter;
+   gfc_expr *msk;
+   match m;
++  gfc_typespec ts;
++  bool seen_ts = false;
++  locus loc;
+ 
+   gfc_gobble_whitespace ();
+ 
+@@ -2398,12 +2404,76 @@ match_forall_header (gfc_forall_iterator **phead, gfc_
+   if (gfc_match_char ('(') != MATCH_YES)
+     return MATCH_NO;
+ 
++  /* Check for an optional type-spec.  */
++  gfc_clear_ts (&ts);
++  loc = gfc_current_locus;
++  m = gfc_match_type_spec (&ts);
++  if (m == MATCH_YES)
++    {
++      seen_ts = (gfc_match (" ::") == MATCH_YES);
++
++      if (seen_ts)
++	{
++	  if (!gfc_notify_std (GFC_STD_F2008, "FORALL or DO CONCURRENT "
++			       "construct includes type specification "
++			       "at %L", &loc))
++	    goto cleanup;
++
++	  if (ts.type != BT_INTEGER)
++	    {
++	      gfc_error ("Type-spec at %L must be an INTEGER type", &loc);
++	      goto cleanup;
++	    }
++	}
++    }
++  else if (m == MATCH_ERROR)
++    goto syntax;
++
+   m = match_forall_iterator (&new_iter);
+   if (m == MATCH_ERROR)
+     goto cleanup;
+   if (m == MATCH_NO)
+     goto syntax;
+ 
++  if (seen_ts)
++    {
++      char *name;
++      gfc_expr *v;
++      gfc_symtree *st;
++
++      /* If index-name does not have a type and type spec, then update the
++	 type spec in both the expr and symtree.  Otherwise, create a new
++	 shadow index-name.  */
++      new_iter->shadow = false;
++      v = new_iter->var;
++      if (v->ts.type == BT_UNKNOWN)
++	{
++	  v->ts.type = v->symtree->n.sym->ts.type = BT_INTEGER;
++	  v->ts.kind = v->symtree->n.sym->ts.kind = ts.kind;
++	}
++      else if (v->ts.kind != ts.kind)
++	{
++	  name = (char *) alloca (strlen (v->symtree->name) + 2);
++	  strcpy (name, "_");
++	  strcat (name, v->symtree->name);
++	  if (gfc_get_sym_tree (name, NULL, &st, false) != 0)
++	    gfc_internal_error ("whoops");
++
++	  v = gfc_get_expr ();
++	  v->where = gfc_current_locus;
++	  v->expr_type = EXPR_VARIABLE;
++	  v->ts.type = st->n.sym->ts.type = ts.type;
++	  v->ts.kind = st->n.sym->ts.kind = ts.kind;
++	  st->n.sym->forall_index = true;
++	  v->symtree = st;
++	  gfc_replace_expr (new_iter->var, v);
++	  new_iter->shadow = true;
++	}
++      gfc_convert_type (new_iter->start, &ts, 1);
++      gfc_convert_type (new_iter->end, &ts, 1);
++      gfc_convert_type (new_iter->stride, &ts, 1);
++    }
++
+   head = tail = new_iter;
+ 
+   for (;;)
+@@ -2417,6 +2487,44 @@ match_forall_header (gfc_forall_iterator **phead, gfc_
+ 
+       if (m == MATCH_YES)
+ 	{
++	  if (seen_ts)
++	    {
++	      char *name;
++	      gfc_expr *v;
++	      gfc_symtree *st;
++
++	      new_iter->shadow = false;
++	      v = new_iter->var;
++	      if (v->ts.type == BT_UNKNOWN)
++		{
++		  v->ts.type = v->symtree->n.sym->ts.type = BT_INTEGER;
++		  v->ts.kind = v->symtree->n.sym->ts.kind = ts.kind;
++		}
++	      else if (v->ts.kind != ts.kind)
++		{
++		  name = (char *) alloca (strlen (v->symtree->name) + 2);
++		  strcpy (name, "_");
++		  strcat (name, v->symtree->name);
++		  if (gfc_get_sym_tree (name, NULL, &st, false) != 0)
++		    gfc_internal_error ("whoops");
++
++		  v = gfc_get_expr ();
++		  v->expr_type = EXPR_VARIABLE;
++		  v->ts.type = ts.type;
++		  v->ts.kind = ts.kind;
++		  v->where = gfc_current_locus;
++		  st->n.sym->ts.type = ts.type;
++		  st->n.sym->ts.kind = ts.kind;
++		  st->n.sym->forall_index = true;
++		  v->symtree = st;
++		  gfc_replace_expr (new_iter->var, v);
++	          new_iter->shadow = true;
++		}
++	      gfc_convert_type (new_iter->start, &ts, 1);
++	      gfc_convert_type (new_iter->end, &ts, 1);
++	      gfc_convert_type (new_iter->stride, &ts, 1);
++    	    }
++
+ 	  tail->next = new_iter;
+ 	  tail = new_iter;
+ 	  continue;
+Index: gcc/fortran/resolve.c
+===================================================================
+--- gcc/fortran/resolve.c	(revision 280157)
++++ gcc/fortran/resolve.c	(working copy)
+@@ -10322,11 +10322,10 @@ static void
+ gfc_resolve_assign_in_forall (gfc_code *code, int nvar, gfc_expr **var_expr)
+ {
+   int n;
++  gfc_symbol *forall_index;
+ 
+   for (n = 0; n < nvar; n++)
+     {
+-      gfc_symbol *forall_index;
+-
+       forall_index = var_expr[n]->symtree->n.sym;
+ 
+       /* Check whether the assignment target is one of the FORALL index
+@@ -10475,8 +10474,10 @@ gfc_count_forall_iterators (gfc_code *code)
+ }
+ 
+ 
+-/* Given a FORALL construct, first resolve the FORALL iterator, then call
+-   gfc_resolve_forall_body to resolve the FORALL body.  */
++/* Given a FORALL construct.
++   1) Resolve the FORALL iterator.
++   2) Check for shadow index-name(s) and update code block.
++   3) call gfc_resolve_forall_body to resolve the FORALL body.  */
+ 
+ static void
+ gfc_resolve_forall (gfc_code *code, gfc_namespace *ns, int forall_save)
+@@ -10486,6 +10487,7 @@ gfc_resolve_forall (gfc_code *code, gfc_namespace *ns,
+   static int nvar = 0;
+   int i, old_nvar, tmp;
+   gfc_forall_iterator *fa;
++  bool shadow = false;
+ 
+   old_nvar = nvar;
+ 
+@@ -10503,8 +10505,9 @@ gfc_resolve_forall (gfc_code *code, gfc_namespace *ns,
+       var_expr = XCNEWVEC (gfc_expr *, total_var);
+     }
+ 
+-  /* The information about FORALL iterator, including FORALL indices start, end
+-     and stride.  An outer FORALL indice cannot appear in start, end or stride.  */
++  /* The information about FORALL iterator, including FORALL indices start,
++     end and stride.  An outer FORALL indice cannot appear in start, end or
++     stride.  Check for a shadow index-name.  */
+   for (fa = code->ext.forall_iterator; fa; fa = fa->next)
+     {
+       /* Fortran 20008: C738 (R753).  */
+@@ -10524,6 +10527,9 @@ gfc_resolve_forall (gfc_code *code, gfc_namespace *ns,
+ 			"with this name %L", &fa->var->where);
+ 	}
+ 
++      if (fa->shadow)
++	shadow = true;
++
+       /* Record the current FORALL index.  */
+       var_expr[nvar] = gfc_copy_expr (fa->var);
+ 
+@@ -10532,6 +10538,12 @@ gfc_resolve_forall (gfc_code *code, gfc_namespace *ns,
+       /* No memory leak.  */
+       gcc_assert (nvar <= total_var);
+     }
++
++  /* Need to walk the code and replace references to the index-name with
++     references to the shadow index-name.  */
++  if (shadow)
++    gfc_fatal_error ("An index-name shadows a variable from outer scope, "
++		     "which causes a wrong-code bug.");
+ 
+   /* Resolve the FORALL body.  */
+   gfc_resolve_forall_body (code, nvar, var_expr);
+[reply] [−]Comment 9anlauf@gcc.gnu.org 2021-11-11 21:01:33 UTC
+(In reply to kargl from comment #8)
+> New patch.  This adds a bool component to gfc_forall_iterator so
+> that an iterator with an index-name that shadows a variable from
+> outer scope can be marked.  Shadowing only occurs when a type-spec
+> causes the kind type parameter to differ from the kind type 
+> parameter of the outer scope variable.
+
+
+F2018: 19.4  Statement and construct entities
+
+(6) The name of a variable that appears as an index-name in a DO CONCURRENT
+    construct, FORALL statement, or FORALL construct  has a scope of the
+    statement or construct. ...
+
+So the index variable may inherit the kind of a declared variable if there
+is no typespec, but we always have to shadow a variable of that name from
+the outer scope.
+
+This is confirmed by Intel and NAG.
+[reply] [−]Comment 10Scott Boyce 2023-02-02 20:11:47 UTC
+Just wanted to see if there was any change on this. I just was about to post the same issue (and found this one) for compiling with 11.3.0 and 12.1.0 on Ubuntu.
+
+I used this feature all the time for routines that don't have any available integers and it seems silly to create an extra int at the top of a routine just for a loop index.
+
+Its also nice for keeping the variable isolated from the other parts of a routine, when its only purpose is to serve as a loop index.
+[reply] [−]Comment 11kargls@comcast.net 2023-02-03 07:25:37 UTC
+(In reply to Scott Boyce from comment #10)
+> Just wanted to see if there was any change on this. I just was about to post
+> the same issue (and found this one) for compiling with 11.3.0 and 12.1.0 on
+> Ubuntu.
+> 
+> I used this feature all the time for routines that don't have any available
+> integers and it seems silly to create an extra int at the top of a routine
+> just for a loop index.
+> 
+> Its also nice for keeping the variable isolated from the other parts of a
+> routine, when its only purpose is to serve as a loop index.
+
+
+As the audit trail shows the bug is almost fixed, but someone
+needs to do the last little bit to finish it off.  A workaround
+would be to use a block construct.  Instead of
+
+     do concurrent (integer :: i=1:10)
+     ...
+     end do
+
+you can do
+
+    block
+      integer i
+      do concurrent (integer :: i=1:10)
+      ...
+      end do
+    end block
+[reply] [−]Comment 12Jerry DeLisle 2025-09-04 21:23:33 UTC
+*** Bug 121796 has been marked as a duplicate of this bug. ***
+[reply] [−]Comment 13Jerry DeLisle 2025-09-04 21:26:52 UTC
+(In reply to kargls from comment #11)
+> (In reply to Scott Boyce from comment #10)
+> > Just wanted to see if there was any change on this. I just was about to post
+> > the same issue (and found this one) for compiling with 11.3.0 and 12.1.0 on
+> > Ubuntu.
+> > 
+> > I used this feature all the time for routines that don't have any available
+> > integers and it seems silly to create an extra int at the top of a routine
+> > just for a loop index.
+> > 
+> > Its also nice for keeping the variable isolated from the other parts of a
+> > routine, when its only purpose is to serve as a loop index.
+> 
+> As the audit trail shows the bug is almost fixed, but someone
+> needs to do the last little bit to finish it off.  A workaround
+> would be to use a block construct.  Instead of
+> 
+>      do concurrent (integer :: i=1:10)
+>      ...
+>      end do
+> 
+> you can do
+> 
+>     block
+>       integer i
+>       do concurrent (integer :: i=1:10)
+>       ...
+>       end do
+>     end block
+
+
+Let me take a whack at this. (After I whack myself in the head)
+[reply] [−]Comment 14Jerry DeLisle 2025-09-04 21:50:12 UTC
+Created attachment 62308 [details]
+Preliminary patch cleaned up for current trunk
+
+Attached is Steves patch from comments within diffed to current trunk vs the original back when this was first done.
+
+With it, the original test case and the one in pr121796 both compile and run. Remaining is to sort out loose ends and any additional diagnostics. (including a more exhaustive testcase)
+[reply] [−]Comment 15Jerry DeLisle 2025-09-07 20:42:05 UTC
+Steve,
+
+In your second version of the patch which I have applie and have been testing, the last hunk states:
+
+@@ -12359,6 +12365,12 @@ gfc_resolve_forall (gfc_code *code, gfc_namespace *ns, int forall_save)
+       gcc_assert (nvar <= total_var);
+     }
+ 
++  /* Need to walk the code and replace references to the index-name with
++     references to the shadow index-name.  */
++  if (shadow)
++    gfc_fatal_error ("An index-name shadows a variable from outer scope, "
++                    "which causes a wrong-code bug.");
++
+   /* Resolve the FORALL body.  */
+   gfc_resolve_forall_body (code, nvar, var_expr);
+ 
+
+At this point, we are not walking the code and we do not trigger this error. I am assuming this is the place where we must do the walk and set this shadow flag.
+
+If outside the loop, we declare a variable with the same name as the index name, it seems this should be accepted. However, if we do not declare it outside the loop and it is declared inside we should give an error if we try to use it outside the loop when IMPLICIT NONE.
+
+For example:
+
+program looper
+  implicit none
+  
+  !integer i
+  
+  do concurrent (integer(kind=4) :: i=1:10, j=1:9, k=2:7)
+   print *, i, j, k
+  end do
+
+  print *, "All done!"
+  
+  print *, i, j, k
+
+end program looper
+
+Gives:
+    ... snipped ...
+           6           9           7
+           7           9           7
+           8           9           7
+           9           9           7
+          10           9           7
+ All done!
+  -751740621  2062093568           0
+
+Notice that outside the loop the index variable are not defined but we do not give an agnostic about not being implicitly declared.
+
+Seeking clarification/opinion.
+[reply] [−]Comment 16Jerry DeLisle 2025-09-11 19:44:42 UTC
+(In reply to Jerry DeLisle from comment #15)
+
+> 
+> Notice that outside the loop the index variables are not defined but we do
+> not give an diagnostic about not being implicitly declared.
+> 
+> Seeking clarification/opinion.
+
+
+Both NAG and Flang-new give an error.
+[reply] [−]Comment 17Jerry DeLisle 2025-09-24 23:17:03 UTC
+After some prowling through verious pointers, I finally found where the iterator variables are in the symtree.
+
+for   do concurrent (integer :: i=1:2, j=1:3, k=2:4)
+
+in gfc_resolve_code.
+
+(gdb) p *code.ext.iterator->var->symtree
+$4 = {priority = 33488, left = 0x0, right = 0x35020f0, name = 0x7fffe947f1d0 "i", 
+  ambiguous = 0, n = {sym = 0x3501450, uop = 0x3501450, common = 0x3501450, tb = 0x3501450, 
+    omp_udr = 0x3501450}, import_only = 0}
+(gdb) p *code.ext.iterator->var->symtree->right
+$5 = {priority = 23380, left = 0x3501ae0, right = 0x0, name = 0x7fffe947f1f0 "k", 
+  ambiguous = 0, n = {sym = 0x3501f80, uop = 0x3501f80, common = 0x3501f80, tb = 0x3501f80, 
+    omp_udr = 0x3501f80}, import_only = 0}
+(gdb) p *code.ext.iterator->var->symtree->right->left
+$6 = {priority = 13327, left = 0x0, right = 0x0, name = 0x7fffe947f1e0 "j", ambiguous = 0, 
+  n = {sym = 0x3501970, uop = 0x3501970, common = 0x3501970, tb = 0x3501970, 
+    omp_udr = 0x3501970}, import_only = 0}
+
+We often say walking, I think hopping would be more accurate. ;)
+[reply] [−]Comment 18Jerry DeLisle 2025-11-08 22:13:42 UTC
+Created attachment 62740 [details]
+Revised preliminary patch, resolution incomplete
+
+Here is my latest wiggles on this one.  Due to limitations I am going to have to unassign this one. Hopefully someone else can finish this soon.  I moved the shadow marjer inside the iterator annotation structure as this made more sense to me.  My understanding of the standard, the iterators variable should be treated uniquely within the DO CONCURRENT block and not modify any variable with the same name outside of the block.  I hope someone else can finish this.
+Add Comment
+Collapse All Comments
+Expand All Comments
+Format For Printing  - XML  - Clone This Bug  - Top of page
+Bug List: (325 of 1156) First Last Prev Next   Show last search results
+
+Home | New | Browse | Search | 
+  [?] | Reports | My Requests | Preferences | Help | Log out albert@tugraz.at
+My Bugs
