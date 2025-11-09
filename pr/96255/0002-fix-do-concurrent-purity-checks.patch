@@ -1,4 +1,4 @@
-From e005151048abc2912d9c0d19c1110ee1aa50ef6a Mon Sep 17 00:00:00 2001
+From 36c338612296c26108cbe9fb385e093ed7143fc2 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Sun, 9 Nov 2025 15:04:02 +0100
 Subject: [PATCH] Fortran: Fix DO CONCURRENT resolution and purity checks
@@ -39,11 +39,11 @@ gcc/fortran/ChangeLog:
 	gfc_resolve_forall, then set to 2 after, paralleling forall_flag
 	handling for proper purity checking.
 ---
- gcc/fortran/resolve.cc | 243 ++++++++++++++++++++++++++++++++++++++---
- 1 file changed, 229 insertions(+), 14 deletions(-)
+ gcc/fortran/resolve.cc | 232 ++++++++++++++++++++++++++++++++++++++---
+ 1 file changed, 218 insertions(+), 14 deletions(-)
 
 diff --git a/gcc/fortran/resolve.cc b/gcc/fortran/resolve.cc
-index 75d5ad7f44e..ff937d7fa2c 100644
+index 75d5ad7f44e..aad211a30ec 100644
 --- a/gcc/fortran/resolve.cc
 +++ b/gcc/fortran/resolve.cc
 @@ -12268,8 +12268,12 @@ gfc_resolve_assign_in_forall (gfc_code *code, int nvar, gfc_expr **var_expr)
@@ -79,21 +79,10 @@ index 75d5ad7f44e..ff937d7fa2c 100644
          {
            sub_iters = gfc_count_forall_iterators (code);
            if (sub_iters > max_iters)
-@@ -12418,6 +12422,167 @@ gfc_count_forall_iterators (gfc_code *code)
+@@ -12418,6 +12422,156 @@ gfc_count_forall_iterators (gfc_code *code)
     2) Check for shadow index-name(s) and update code block.
     3) call gfc_resolve_forall_body to resolve the FORALL body.  */
  
-+/* Dummy code walker - always continue walking.  */
-+
-+static int
-+dummy_code_callback (gfc_code **c ATTRIBUTE_UNUSED,
-+		      int *walk_subtrees ATTRIBUTE_UNUSED,
-+		      void *data ATTRIBUTE_UNUSED)
-+{
-+  return 0;  /* Continue walking */
-+}
-+
-+
 +/* Custom recursive expression walker that replaces symbols.
 +   This ensures we visit ALL expressions including those in array subscripts.  */
 +
@@ -247,7 +236,7 @@ index 75d5ad7f44e..ff937d7fa2c 100644
  static void
  gfc_resolve_forall (gfc_code *code, gfc_namespace *ns, int forall_save)
  {
-@@ -12430,11 +12595,17 @@ gfc_resolve_forall (gfc_code *code, gfc_namespace *ns, int forall_save)
+@@ -12430,11 +12584,17 @@ gfc_resolve_forall (gfc_code *code, gfc_namespace *ns, int forall_save)
  
    old_nvar = nvar;
  
@@ -267,7 +256,7 @@ index 75d5ad7f44e..ff937d7fa2c 100644
      {
        /* Count the total number of FORALL indices in the nested FORALL
           construct in order to allocate the VAR_EXPR with proper size.  */
-@@ -12458,10 +12629,12 @@ gfc_resolve_forall (gfc_code *code, gfc_namespace *ns, int forall_save)
+@@ -12458,10 +12618,12 @@ gfc_resolve_forall (gfc_code *code, gfc_namespace *ns, int forall_save)
  	}
  
        /* Check if any outer FORALL index name is the same as the current
@@ -282,7 +271,7 @@ index 75d5ad7f44e..ff937d7fa2c 100644
  	    gfc_error ("An outer FORALL construct already has an index "
  			"with this name %L", &fa->var->where);
  	}
-@@ -12479,10 +12652,46 @@ gfc_resolve_forall (gfc_code *code, gfc_namespace *ns, int forall_save)
+@@ -12479,10 +12641,46 @@ gfc_resolve_forall (gfc_code *code, gfc_namespace *ns, int forall_save)
      }
  
    /* Need to walk the code and replace references to the index-name with
@@ -332,7 +321,7 @@ index 75d5ad7f44e..ff937d7fa2c 100644
  
    /* Resolve the FORALL body.  */
    gfc_resolve_forall_body (code, nvar, var_expr);
-@@ -13753,11 +13962,17 @@ gfc_resolve_code (gfc_code *code, gfc_namespace *ns)
+@@ -13753,11 +13951,17 @@ gfc_resolve_code (gfc_code *code, gfc_namespace *ns)
        forall_save = forall_flag;
        do_concurrent_save = gfc_do_concurrent_flag;
  
