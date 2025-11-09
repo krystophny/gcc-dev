@@ -3,7 +3,7 @@
 **Status:** Complete - All tests passing (0 unexpected failures)
 **Commits:**
 - `d11074121b3` - Jerry DeLisle's base implementation
-- `aa643f354b0` - Our fixes and refactoring on top
+- `684ab90e8a0` - Our fixes and refactoring on top
 
 ---
 
@@ -103,7 +103,7 @@ if (shadow)
 
 ---
 
-## Part 2: Our Fixes and Improvements (Commit aa643f354b0)
+## Part 2: Our Fixes and Improvements (Commit 684ab90e8a0)
 
 ### Critical Bug Fixes:
 
@@ -247,9 +247,9 @@ if (!find_forall_index (code->expr1, forall_index, 0)
 
 ### Code Quality Improvements:
 
-#### Improvement 1: Fixed Unprofessional Error Messages
+#### Improvement 1: Enhanced Error Diagnostics
 
-**Problem:** Jerry's code had 2 "whoops" error messages.
+**Improved error messages for better debugging.**
 
 **Locations:** `match.cc:2708, 2749`
 
@@ -264,13 +264,13 @@ gfc_internal_error ("Failed to create shadow variable symtree for "
                     "DO CONCURRENT type-spec at %L", &loc);
 ```
 
-**Why:** Professional error messages aid debugging.
+**Why:** Descriptive error messages aid debugging and help users understand what went wrong.
 
 ---
 
 #### Improvement 2: Eliminated Code Duplication
 
-**Problem:** ~70 lines of duplicated shadow variable creation code.
+**Refactored to reduce duplication and improve maintainability.**
 
 **Solution:** Created `apply_typespec_to_iterator()` helper function.
 
@@ -534,7 +534,7 @@ Created comprehensive test: `/tmp/test_shadow_all_cases.f90`
 - **Author:** Our fixes
 - **Size:** 493 lines
 - **Scope:** Bug fixes + code quality improvements
-- **Commit:** aa643f354b0
+- **Commit:** 684ab90e8a0
 
 ---
 
@@ -552,7 +552,7 @@ cd /home/ert/code/gcc-dev/gcc-build/gcc
 make -j32 -k check-gfortran > /tmp/test.log 2>&1 &
 ```
 
-**WRONG locations:**
+**Incorrect locations:**
 - ❌ `/home/ert/code/gcc-dev/` (no target)
 - ❌ `/home/ert/code/gcc-dev/gcc-build/` (no target)
 - ❌ `/home/ert/code/gcc-dev/gcc/` (source tree)
