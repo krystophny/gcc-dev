@@ -1,4 +1,4 @@
-From aa643f354b0e301ce6a394ffcc573221e961e3fb Mon Sep 17 00:00:00 2001
+From 684ab90e8a06c47da949e32e38f7312f27b85c13 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Sun, 9 Nov 2025 15:04:02 +0100
 Subject: [PATCH] Fortran: Fix DO CONCURRENT resolution and purity checks
@@ -23,7 +23,7 @@ Key changes in resolve.cc:
    with REDUCE locality-spec in Fortran 2023)
 
 Code quality improvements in match.cc:
-8. Replace unprofessional whoops error messages with descriptive ones
+8. Improve error diagnostics with descriptive messages
 9. Eliminate code duplication by extracting apply_typespec_to_iterator
    helper function (removed ~70 lines of duplicated code)
 
