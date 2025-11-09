@@ -1,4 +1,4 @@
-From 36c338612296c26108cbe9fb385e093ed7143fc2 Mon Sep 17 00:00:00 2001
+From 222cd7c47aa100146b1856f507561fca466d10c0 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Sun, 9 Nov 2025 15:04:02 +0100
 Subject: [PATCH] Fortran: Fix DO CONCURRENT resolution and purity checks
@@ -39,9 +39,34 @@ gcc/fortran/ChangeLog:
 	gfc_resolve_forall, then set to 2 after, paralleling forall_flag
 	handling for proper purity checking.
 ---
+ gcc/fortran/match.cc   |   6 +-
  gcc/fortran/resolve.cc | 232 ++++++++++++++++++++++++++++++++++++++---
- 1 file changed, 218 insertions(+), 14 deletions(-)
+ 2 files changed, 222 insertions(+), 16 deletions(-)
 
+diff --git a/gcc/fortran/match.cc b/gcc/fortran/match.cc
+index c9597a0bd0c..f1b7b56000a 100644
+--- a/gcc/fortran/match.cc
++++ b/gcc/fortran/match.cc
+@@ -2684,7 +2684,8 @@ match_forall_header (gfc_forall_iterator **phead, gfc_expr **mask)
+       strcpy (name, "_");
+       strcat (name, v->symtree->name);
+       if (gfc_get_sym_tree (name, NULL, &st, false) != 0)
+-	gfc_internal_error ("whoops");
++	gfc_internal_error ("Failed to create shadow variable symtree for "
++			    "DO CONCURRENT type-spec at %L", &loc);
+ 
+       v = gfc_get_expr ();
+       v->where = gfc_current_locus;
+@@ -2731,7 +2732,8 @@ match_forall_header (gfc_forall_iterator **phead, gfc_expr **mask)
+ 	      strcpy (name, "_");
+ 	      strcat (name, v->symtree->name);
+ 	      if (gfc_get_sym_tree (name, NULL, &st, false) != 0)
+-		gfc_internal_error ("whoops");
++		gfc_internal_error ("Failed to create shadow variable symtree for "
++				    "DO CONCURRENT type-spec at %L", &loc);
+ 
+ 	      v = gfc_get_expr ();
+ 	      v->expr_type = EXPR_VARIABLE;
 diff --git a/gcc/fortran/resolve.cc b/gcc/fortran/resolve.cc
 index 75d5ad7f44e..aad211a30ec 100644
 --- a/gcc/fortran/resolve.cc
