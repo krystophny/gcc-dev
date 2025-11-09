@@ -114,6 +114,27 @@ gcc-build/gcc/gfortran -B gcc-build/gcc <file.f90>
 - Document which compilers show correct behavior
 - Compare output for semantic correctness
 
+### Test Suite Conventions
+
+**Runtime Test Patterns:**
+- **PREFERRED**: Use `if (result /= expected) stop n` pattern for runtime tests
+- Provides clear pass/fail with specific error codes
+- Easier to read and maintain than pattern matching
+- Each test condition should have unique stop number (1, 2, 3, ...)
+- Exit code indicates which specific check failed
+
+**Example:**
+```fortran
+if (a%value /= 100) stop 1
+if (.not. allocated(a%next)) stop 2
+if (a%next%value /= 200) stop 3
+```
+
+**Alternative (less preferred):**
+- Print/pattern matching with `! { dg-output "..." }`
+- Use only when actual output values need verification
+- More verbose and harder to maintain
+
 ### Reproducer Testing
 PR-specific reproducers in `pr/<number>/`:
 ```bash
