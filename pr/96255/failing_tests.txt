@@ -1,0 +1,27 @@
+# Failing DO CONCURRENT tests after shadow variable implementation
+# Run with: cd gcc-build/gcc && make check-gfortran RUNTESTFLAGS="$(cat ../../pr/96255/failing_tests.txt | grep -v '^#' | tr '\n' ' ')"
+
+conditional_9.f90
+do_concurrent_1.f90
+do_concurrent_2.f90
+do_concurrent_3.f90
+do_concurrent_8_f2018.f90
+do_concurrent_8_f2023.f90
+do_concurrent_9.f90
+do_concurrent_11.f90
+do_concurrent_12.f90
+do_concurrent_13.f90
+do_concurrent_14.f90
+do_concurrent_local_init.f90
+do_concurrent_locality_specs.f90
+do_concurrent_multiple_reduce.f90
+do_concurrent_reduce_max.f90
+do_concurrent_reduce_sum.f90
+do_concurrent_shared.f90
+do_concurrent_type_spec.f90
+gomp/unroll-12.f90
+gomp/unroll-6.f90
+impure_fcn_do_concurrent.f90
+pr79966.f90
+pr119836_2.f90
+pr119836_4.f90
