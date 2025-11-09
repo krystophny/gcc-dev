@@ -4,7 +4,7 @@
 
 **Commits:**
 - d11074121b3 - Jerry DeLisle's base implementation
-- 684ab90e8a0 - Resolution fixes and code quality improvements
+- a91797f65e2 - Resolution fixes and code quality improvements
 
 ---
 
@@ -21,7 +21,7 @@ end do
 The implementation is split between two patches:
 
 1. **Base Implementation (0001)**: Parsing, shadow variables, data structures
-2. **Resolution Fixes (0002)**: Purity checks, NULL safety, warning corrections
+2. **Resolution Fixes (0002)**: Constraint enforcement, NULL safety, warning corrections
 
 ---
 
@@ -58,11 +58,11 @@ gfc_forall_iterator;
 
 ---
 
-## Part 2: Resolution Fixes (684ab90e8a0)
+## Part 2: Resolution Fixes (a91797f65e2)
 
-### Fix 1: Purity Checking (Flag Management)
+### Fix 1: Constraint Enforcement (Flag Management)
 
-**Problem:** `gfc_do_concurrent_flag` was never set, breaking purity checks.
+**Problem:** `gfc_do_concurrent_flag` was never set, breaking F2008 constraint checking (C1139: only PURE procedures allowed in DO CONCURRENT).
 
 **Solution (resolve.cc:13957-13964):**
 ```c
@@ -75,8 +75,8 @@ if (code->op == EXEC_DO_CONCURRENT)
 
 **Flag states:**
 - 0 = Outside DO CONCURRENT
-- 1 = Inside DO CONCURRENT body (strict purity)
-- 2 = Inside DO CONCURRENT mask (allows non-pure like SUM)
+- 1 = Inside DO CONCURRENT body (only PURE procedures allowed)
+- 2 = Inside DO CONCURRENT mask (impure functions like SUM allowed)
 
 ### Fix 2: NULL Pointer Safety
 
@@ -172,7 +172,7 @@ Created `apply_typespec_to_iterator()` helper function to consolidate shadow var
 
 ### DO CONCURRENT Tests
 
-All 21 `do_concurrent_*.f90` tests pass, including purity checks, nested loops, and array operations.
+All 21 `do_concurrent_*.f90` tests pass, including constraint checking, nested loops, and array operations.
 
 ### Multi-Compiler Validation
 
@@ -220,7 +220,7 @@ grep "# of" /home/ert/code/gcc-dev/gcc-build/gcc/testsuite/gfortran/gfortran.sum
 
 ### F2008 Features
 - DO CONCURRENT type-spec syntax (R1125)
-- Purity checks (C1139)
+- Constraint checking (C1139: only PURE procedures allowed)
 - Integer type requirement
 - Shadow variable creation
 
@@ -242,11 +242,11 @@ grep "# of" /home/ert/code/gcc-dev/gcc-build/gcc/testsuite/gfortran/gfortran.sum
 - Files: gfortran.h, match.cc, resolve.cc
 - Commit: d11074121b3
 
-### 0002-fix-do-concurrent-purity-checks.patch
+### 0002-fix-do-concurrent-constraints.patch
 - Author: Christopher Albert
 - Size: 493 lines (264 insertions, 83 deletions)
 - Files: match.cc, resolve.cc
-- Commit: 684ab90e8a0
+- Commit: a91797f65e2
 
 ---
 

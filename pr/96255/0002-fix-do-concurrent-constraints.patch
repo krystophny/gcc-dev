@@ -1,14 +1,16 @@
-From 684ab90e8a06c47da949e32e38f7312f27b85c13 Mon Sep 17 00:00:00 2001
+From a91797f65e2ec7f1f28bd7c4d71ee60678568857 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Sun, 9 Nov 2025 15:04:02 +0100
-Subject: [PATCH] Fortran: Fix DO CONCURRENT resolution and purity checks
+Subject: [PATCH] Fortran: Fix DO CONCURRENT resolution and constraint
+ enforcement
 
 This patch fixes the resolution of DO CONCURRENT constructs and improves
 code quality in Jerry DeLisle's type-spec implementation.
 
 Key changes in resolve.cc:
 1. Set gfc_do_concurrent_flag=1 before calling gfc_resolve_forall to
-   enable proper purity validation during body resolution
+   enable proper constraint checking during body resolution (F2008 C1139:
+   only PURE procedures allowed in DO CONCURRENT)
 2. Set gfc_do_concurrent_flag=2 after resolution to distinguish mask
    context from block context for appropriate error messages
 3. Add NULL pointer checks for shadow variables from DO CONCURRENT
@@ -27,6 +29,12 @@ Code quality improvements in match.cc:
 9. Eliminate code duplication by extracting apply_typespec_to_iterator
    helper function (removed ~70 lines of duplicated code)
 
+Shadow variable implementation in resolve.cc:
+10. Implement shadow variable substitution walker to replace Jerry's
+    placeholder fatal error. The walker recursively visits all expressions
+    in the DO CONCURRENT body and replaces references to outer scope
+    variables with their shadow counterparts (created with _ prefix).
+
 gcc/fortran/ChangeLog:
 
 	* match.cc (apply_typespec_to_iterator): New helper function.
@@ -34,13 +42,20 @@ gcc/fortran/ChangeLog:
 	for first and subsequent iterators.
 	(match_forall_header): Replace duplicated shadow variable creation
 	with calls to apply_typespec_to_iterator. Improve error messages.
-	* resolve.cc (gfc_resolve_assign_in_forall): Skip many-to-one
-	assignment warning for DO CONCURRENT.
+	* resolve.cc (replace_in_expr_recursive): New function. Recursively
+	walks expressions to replace symbol references.
+	(replace_in_code_recursive): New function. Recursively walks code
+	blocks to replace symbol references.
+	(gfc_replace_forall_variable): New function. Entry point for shadow
+	variable substitution.
+	(gfc_resolve_assign_in_forall): Skip many-to-one assignment warning
+	for DO CONCURRENT.
 	(gfc_count_forall_iterators): Add gcc_assert for both EXEC_FORALL
 	and EXEC_DO_CONCURRENT. Handle both construct types.
 	(gfc_resolve_forall): Skip F2018 obsolescence warning for
 	DO CONCURRENT. Check both forall_save==0 and nvar==0 before
 	allocating var_expr array. Add NULL checks for shadow variables.
+	Implement shadow variable walker to replace placeholder fatal error.
 	(gfc_resolve_code): Set gfc_do_concurrent_flag=1 before calling
 	gfc_resolve_forall, then set to 2 after.
 ---
