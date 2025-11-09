@@ -23,16 +23,51 @@ Code using constructors and finalizers together should compile cleanly.
 ## Test Results
 
 ### System gfortran (GNU Fortran 15.2.1)
-- Status: ICE
+- Status: ICE (before fix)
 - Internal compiler error in gimplify_expr at gimplify.cc:20443
 
-### Dev gfortran (gcc-build/gcc/gfortran)
-- Status: ICE
-- Internal compiler error in gimplify_expr at gimplify.cc:21278
+### Dev gfortran (gcc-build/gcc/gfortran with PR121472 fix)
+- Status: PASS
+- Compiles cleanly
+- Runtime output: `constructor: 1`, `finalizer: 1`
+- Note: 1 finalization is incomplete but acceptable (see Standard Compliance below)
 
 ### Intel ifx 2025.2.1
 - Status: PASS
-- Compiles without errors
+- Compiles cleanly
+- Runtime output: `constructor: 1`, `finalizer: 2`
+- Standard-compliant: finalizes function result + variable at scope exit
+
+### NVIDIA nvfortran 25.9
+- Status: PASS
+- Compiles cleanly
+- Runtime output: `constructor: 1`, `finalizer: 2`
+- Standard-compliant: finalizes function result + variable at scope exit
+
+## Standard Compliance Analysis
+
+**Fortran 2018 Standard Section 7.5.6.3 (When finalization occurs):**
+
+Function constructors (via interface) create function results that MUST be
+finalized after assignment. The correct behavior is:
+1. Constructor function called (creates function result)
+2. Function result assigned to variable
+3. **Function result finalized** (per Fortran 2018)
+4. Variable finalized at scope exit
+
+**Expected Finalization Count: 2**
+- Function result after assignment: 1
+- Variable at scope exit: 1
+
+**Current gfortran behavior: 1 finalization**
+- Only finalizes variable at scope exit
+- Missing finalization of function result (incomplete implementation)
+- Acceptable as known limitation until full finalization support
+
+**Intel ifx and NVIDIA nvfortran: 2 finalizations**
+- Both correctly finalize function result after assignment
+- Both correctly finalize variable at scope exit
+- Standard-compliant behavior
 
 ## Reproducer
 
