@@ -1,4 +1,4 @@
-From bf33ca3ab5b4ba19f92c5cc6be8f345f5d7277c7 Mon Sep 17 00:00:00 2001
+From b93c2fffd30c55f87e57784ce03a3d9b29cdedaa Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Fri, 7 Nov 2025 12:41:42 +0100
 Subject: [PATCH] fortran: Fix ICE and self-assignment bugs with recursive
@@ -17,28 +17,28 @@ comparison at runtime to skip finalization when lhs == rhs.
 Test pr112459.f90 now expects 6 _final calls instead of 12 because separate
 result symbols eliminate double-counting in tree dumps.
 
+	PR fortran/90519
+
 gcc/fortran/ChangeLog:
 
-	PR fortran/90519
 	* class.cc (generate_finalization_wrapper): Create separate result
-	  symbol for finalizer wrapper functions instead of self-referencing
-	  the procedure symbol, avoiding ICE in gimplify_call_expr.
+	symbol for finalizer wrapper functions instead of self-referencing
+	the procedure symbol, avoiding ICE in gimplify_call_expr.
 	* trans-expr.cc (gfc_trans_scalar_assign): Skip finalization for
-	  self-assignment when deep_copy is enabled, using compile-time
-	  dependency analysis and runtime pointer comparison to detect
-	  identity between lvalue and rvalue.
+	self-assignment when deep_copy is enabled, using compile-time
+	dependency analysis and runtime pointer comparison to detect
+	identity between lvalue and rvalue.
 	(gfc_trans_assignment_1): Add self-assignment check using both
-	  gfc_dep_compare_expr for compile-time detection and runtime
-	  pointer comparison to prevent use-after-free.
+	gfc_dep_compare_expr for compile-time detection and runtime
+	pointer comparison to prevent use-after-free.
 
 gcc/testsuite/ChangeLog:
 
-	PR fortran/90519
 	* gfortran.dg/finalizer_recursive_alloc_1.f90: New test for ICE fix.
 	* gfortran.dg/finalizer_recursive_alloc_2.f90: New execution test.
 	* gfortran.dg/finalizer_self_assign.f90: New test for self-assignment.
 	* gfortran.dg/pr112459.f90: Update to expect 6 _final calls instead
-	  of 12, reflecting corrected self-assignment behavior.
+	of 12, reflecting corrected self-assignment behavior.
 
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
