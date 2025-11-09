@@ -189,6 +189,8 @@ Signed-off-by: Name <email@example.com>
 - Continuation lines use a SINGLE TAB, NOT <TAB><SPACE><SPACE>
 - Function names in parentheses followed by colon
 - Indentation: <TAB> for first level, <TAB> for continuation (NOT <TAB><SPACE><SPACE>)
+- **VERIFY WITH**: `git log -1 --format=%B | cat -A` (should show `^I` for TABs, no trailing spaces)
+- GCC filters will REJECT commits with improper ChangeLog formatting
 
 **Example Commit Message:**
 ```
@@ -359,7 +361,54 @@ cd /home/ert/code/gcc-dev/gcc-build/gcc && make check-gfortran RUNTESTFLAGS="dg.
 ### Finalization
 - FINAL procedures called when derived type objects go out of scope
 - Self-assignment (`a = a`) requires special handling to avoid use-after-free
+- Parenthesized expressions like `(a)` create INTRINSIC_PARENTHESES operator nodes
 - Finalizer wrappers must not create self-referencing result symbols
+
+### Common Expression Tree Patterns in trans-expr.cc
+- **INTRINSIC_PARENTHESES**: Created by `(expr)` - defeats simple variable checks
+- Use helper functions to strip parentheses when checking for self-assignment
+- Check both `gfc_dep_compare_expr` (compile-time) and runtime pointer equality
+- `gfc_expr_is_variable(expr)` returns false for parenthesized variables
+- Always strip parentheses before enabling `deep_copy` flag in assignments
+
+## Debugging and Validation Techniques
+
+### Multi-Compiler Validation Strategy
+When fixing bugs, ALWAYS test with multiple compilers to understand correct behavior:
+
+1. **Identify Reference Implementation:**
+   - Test with Intel ifx, NVIDIA nvfortran, NAG (if available)
+   - These often have better F2018+ compliance than GCC
+   - Document which compiler(s) show correct behavior
+
+2. **Create Minimal Reproducer:**
+   - Strip down to smallest test case showing the bug
+   - Test both simple (`a = a`) and parenthesized (`a = (a)`) cases
+   - Use if/stop pattern for clear pass/fail indication
+
+3. **Trace Execution Path:**
+   - Add temporary debug output in trans-expr.cc to trace code paths
+   - Check which flags are set (deep_copy, finalize, etc.)
+   - Verify expression tree structure (EXPR_VARIABLE vs EXPR_OP)
+
+4. **Verify Fix Completeness:**
+   - Test all related expression patterns
+   - Run full test suite to catch regressions
+   - Compare behavior with reference compilers
+
+### Commit Message Verification
+Before finalizing commits:
+```bash
+# Check ChangeLog formatting (should show ^I for TABs):
+git log -1 --format=%B | cat -A
+
+# Verify commit compiles and tests pass:
+cd /home/ert/code/gcc-dev/gcc-build && make -j32
+cd /home/ert/code/gcc-dev/gcc-build/gcc && make -j32 -k check-gfortran
+
+# Run style checker:
+./gcc/contrib/check_GNU_style.sh gcc/fortran/<modified-file>
+```
 
 ## Upstream Submission Policy
 
