@@ -1,4 +1,4 @@
-From 1f0bcc08ee292486c390f68126642a1cfc5caaa7 Mon Sep 17 00:00:00 2001
+From f0208ef2cb268aa4520a3cb1abd2d059e892a3fb Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Fri, 7 Nov 2025 12:41:42 +0100
 Subject: [PATCH] fortran: Fix ICE and self-assignment bugs with recursive
@@ -50,13 +50,13 @@ gcc/testsuite/ChangeLog:
 
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
- gcc/fortran/class.cc                          | 25 ++++++-
- gcc/fortran/trans-expr.cc                     | 60 ++++++++++++---
- .../finalizer_recursive_alloc_1.f90           | 15 ++++
- .../finalizer_recursive_alloc_2.f90           | 32 ++++++++
- .../gfortran.dg/finalizer_self_assign.f90     | 74 +++++++++++++++++++
- gcc/testsuite/gfortran.dg/pr112459.f90        |  4 +-
- 6 files changed, 196 insertions(+), 14 deletions(-)
+ gcc/fortran/class.cc                          |  25 ++++-
+ gcc/fortran/trans-expr.cc                     |  60 +++++++++--
+ .../finalizer_recursive_alloc_1.f90           |  15 +++
+ .../finalizer_recursive_alloc_2.f90           |  32 ++++++
+ .../gfortran.dg/finalizer_self_assign.f90     | 101 ++++++++++++++++++
+ gcc/testsuite/gfortran.dg/pr112459.f90        |   4 +-
+ 6 files changed, 223 insertions(+), 14 deletions(-)
  create mode 100644 gcc/testsuite/gfortran.dg/finalizer_recursive_alloc_1.f90
  create mode 100644 gcc/testsuite/gfortran.dg/finalizer_recursive_alloc_2.f90
  create mode 100644 gcc/testsuite/gfortran.dg/finalizer_self_assign.f90
@@ -282,10 +282,10 @@ index 00000000000..6e9edff59d5
 +end program test_finalizer
 diff --git a/gcc/testsuite/gfortran.dg/finalizer_self_assign.f90 b/gcc/testsuite/gfortran.dg/finalizer_self_assign.f90
 new file mode 100644
-index 00000000000..c970044c4e8
+index 00000000000..4e5b807df88
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/finalizer_self_assign.f90
-@@ -0,0 +1,74 @@
+@@ -0,0 +1,101 @@
 +! { dg-do run }
 +! Test self-assignment with recursive allocatable and finalizer
 +! This should preserve allocatable components after a = a and a = (a)
@@ -311,6 +311,7 @@ index 00000000000..c970044c4e8
 +  call test_simple_self_assign()
 +  call test_parenthesized_self_assign()
 +  call test_triple_parenthesized_self_assign()
++  call test_array_bounds()
 +
 +contains
 +
@@ -358,6 +359,32 @@ index 00000000000..c970044c4e8
 +    if (.not. allocated(a%next)) stop 8
 +    if (a%next%value /= 200) stop 9
 +  end subroutine test_triple_parenthesized_self_assign
++
++  subroutine test_array_bounds()
++    type(node_t), allocatable :: b(:), c(:)
++
++    ! Test array bounds behavior with parentheses.
++    ! Per F2023:10.2.1.3, lbound((b),1) = 1 even if lbound(b,1) = 5.
++    ! However, for b = (b) where b is already allocated with the right shape,
++    ! NO reallocation occurs, so bounds are preserved.
++    ! For c = (b) where c is unallocated, c gets allocated with default bounds.
++    allocate(b(5:5))
++    b(5)%value = 500
++
++    ! Self-assignment with parentheses: no reallocation (same shape), bounds preserved
++    b = (b)
++    if (.not. allocated(b)) stop 10
++    if (lbound(b, 1) /= 5) stop 11  ! Bounds preserved (no realloc)
++    if (ubound(b, 1) /= 5) stop 12
++    if (b(5)%value /= 500) stop 13
++
++    ! Assignment to unallocated array: gets default (1-based) bounds
++    c = (b)
++    if (.not. allocated(c)) stop 14
++    if (lbound(c, 1) /= 1) stop 15  ! Default bounds (new allocation)
++    if (ubound(c, 1) /= 1) stop 16
++    if (c(1)%value /= 500) stop 17
++  end subroutine test_array_bounds
 +
 +end program test_self_assign
 diff --git a/gcc/testsuite/gfortran.dg/pr112459.f90 b/gcc/testsuite/gfortran.dg/pr112459.f90
