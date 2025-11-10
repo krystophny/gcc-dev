@@ -1,4 +1,4 @@
-From a81bed107ebe169f5fdcb91a72f1ffc4657c593d Mon Sep 17 00:00:00 2001
+From 924eec287bbcd7d2b0329db98e65cf8363e55f61 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Mon, 10 Nov 2025 20:19:48 +0100
 Subject: [PATCH] fortran: Implement optional type spec for DO CONCURRENT
@@ -65,9 +65,9 @@ Co-authored-by: Jerry DeLisle <jvdelisle@gcc.gnu.org>
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
  gcc/fortran/gfortran.h |   2 +
- gcc/fortran/match.cc   |  89 ++++++++++++++-
+ gcc/fortran/match.cc   |  93 ++++++++++++++-
  gcc/fortran/resolve.cc | 254 ++++++++++++++++++++++++++++++++++++++---
- 3 files changed, 325 insertions(+), 20 deletions(-)
+ 3 files changed, 329 insertions(+), 20 deletions(-)
 
 diff --git a/gcc/fortran/gfortran.h b/gcc/fortran/gfortran.h
 index f1c4db23d00..848ad9ca1fa 100644
@@ -83,10 +83,10 @@ index f1c4db23d00..848ad9ca1fa 100644
  }
  gfc_forall_iterator;
 diff --git a/gcc/fortran/match.cc b/gcc/fortran/match.cc
-index 8355a390ee0..b19f6e0fac0 100644
+index 8355a390ee0..60434c14ee2 100644
 --- a/gcc/fortran/match.cc
 +++ b/gcc/fortran/match.cc
-@@ -2608,7 +2608,60 @@ cleanup:
+@@ -2608,7 +2608,64 @@ cleanup:
  }
  
  
@@ -101,19 +101,23 @@ index 8355a390ee0..b19f6e0fac0 100644
 +  gfc_expr *v;
 +  gfc_symtree *st;
 +
-+  /* If index-name does not have a type set, update the type spec in both
-+     the expr and symtree.  Otherwise, if kinds differ, create a shadow
-+     index-name.  */
++  /* When a type-spec is provided in DO CONCURRENT/FORALL, F2018 19.4(6)
++     requires the index-name to have scope limited to the construct,
++     shadowing any variable with the same name from outer scope.
++     If the index-name was not previously declared, we can simply set its
++     type.  Otherwise, create a shadow variable with "_" prefix.  */
 +  iter->shadow = false;
 +  v = iter->var;
 +  if (v->ts.type == BT_UNKNOWN)
 +    {
++      /* Variable not declared in outer scope - just set the type.  */
 +      v->ts.type = v->symtree->n.sym->ts.type = BT_INTEGER;
 +      v->ts.kind = v->symtree->n.sym->ts.kind = ts->kind;
 +    }
-+  else if (v->ts.kind != ts->kind)
++  else
 +    {
-+      /* Create shadow variable with "_" prefix.  */
++      /* Variable exists in outer scope - must create shadow to comply
++	 with F2018 19.4(6) scoping rules.  */
 +      name = (char *) alloca (strlen (v->symtree->name) + 2);
 +      strcpy (name, "_");
 +      strcat (name, v->symtree->name);
@@ -148,7 +152,7 @@ index 8355a390ee0..b19f6e0fac0 100644
  
  static match
  match_forall_header (gfc_forall_iterator **phead, gfc_expr **mask)
-@@ -2616,6 +2669,9 @@ match_forall_header (gfc_forall_iterator **phead, gfc_expr **mask)
+@@ -2616,6 +2673,9 @@ match_forall_header (gfc_forall_iterator **phead, gfc_expr **mask)
    gfc_forall_iterator *head, *tail, *new_iter;
    gfc_expr *msk;
    match m;
@@ -158,7 +162,7 @@ index 8355a390ee0..b19f6e0fac0 100644
  
    gfc_gobble_whitespace ();
  
-@@ -2625,12 +2681,40 @@ match_forall_header (gfc_forall_iterator **phead, gfc_expr **mask)
+@@ -2625,12 +2685,40 @@ match_forall_header (gfc_forall_iterator **phead, gfc_expr **mask)
    if (gfc_match_char ('(') != MATCH_YES)
      return MATCH_NO;
  
@@ -199,7 +203,7 @@ index 8355a390ee0..b19f6e0fac0 100644
    head = tail = new_iter;
  
    for (;;)
-@@ -2644,6 +2728,9 @@ match_forall_header (gfc_forall_iterator **phead, gfc_expr **mask)
+@@ -2644,6 +2732,9 @@ match_forall_header (gfc_forall_iterator **phead, gfc_expr **mask)
  
        if (m == MATCH_YES)
  	{
