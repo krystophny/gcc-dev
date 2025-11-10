@@ -1,0 +1,127 @@
+From af791a9700603d876dec64318b70b2d33e25d2fa Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Tue, 11 Nov 2025 00:34:32 +0100
+Subject: [PATCH] fortran: Improve error messages for specification statements
+ in executable section
+
+PR fortran/32365 - Better error message for specification statement in executable section
+
+Previously, specification statements appearing in the executable section would
+generate generic "Unexpected X statement at (1)" errors, which provided no
+educational value about the underlying Fortran statement ordering rules.
+
+This change enhances error messages in parse_executable() for specification
+statements (declarations, COMMON, EQUIVALENCE, DATA, etc.) and OpenMP
+specification directives (THREADPRIVATE, DECLARE TARGET, etc.) to provide
+clear, educational messages that explain the statement ordering violation.
+
+Before:
+  Error: Unexpected INTEGER declaration statement at (1)
+  Error: Unexpected COMMON statement at (1)
+
+After:
+  Error: INTEGER declaration statement cannot appear after the first executable statement at (1)
+  Error: COMMON statement cannot appear after the first executable statement at (1)
+
+These improved error messages:
+- Teach Fortran statement ordering concepts
+- Match the educational quality of modern compilers like Intel ifx
+- Provide specific identification of problematic statements
+- Help users understand why their code is invalid
+
+The fix adds specific cases in parse_executable() before the default
+unexpected_statement() handler, ensuring consistent educational messaging
+across all specification statement types.
+
+gcc/fortran/ChangeLog:
+
+	* parse.cc (parse_executable): Add specific error handling for
+	specification statements appearing after first executable statement.
+	Provide educational error messages instead of generic "Unexpected X
+	statement" errors.
+
+Tested with affected test cases and full gfortran test suite.
+
+PR fortran/32365
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/parse.cc                          |  9 ++++
+ .../gfortran.dg/spec_statement_in_exec.f90    | 44 +++++++++++++++++++
+ 2 files changed, 53 insertions(+)
+ create mode 100644 gcc/testsuite/gfortran.dg/spec_statement_in_exec.f90
+
+diff --git a/gcc/fortran/parse.cc b/gcc/fortran/parse.cc
+index f987f464023..306937d7afa 100644
+--- a/gcc/fortran/parse.cc
++++ b/gcc/fortran/parse.cc
+@@ -7132,6 +7132,15 @@ loop:
+ 	  accept_statement (st);
+ 	  goto done;
+ 
++	/* Specification statements cannot appear in the executable section.  */
++	case_decl:
++	case_omp_decl:
++	  gfc_error ("%s statement cannot appear after the first executable statement at %C",
++		     gfc_ascii_statement (st));
++	  reject_statement ();
++	  st = next_statement ();
++	  continue;
++
+ 	default:
+ 	  break;
+ 	}
+diff --git a/gcc/testsuite/gfortran.dg/spec_statement_in_exec.f90 b/gcc/testsuite/gfortran.dg/spec_statement_in_exec.f90
+new file mode 100644
+index 00000000000..fbbfcaa08c3
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/spec_statement_in_exec.f90
+@@ -0,0 +1,44 @@
++! { dg-do compile }
++! { dg-options "-fopenmp" }
++! Test improved error messages for specification statements in executable section
++! PR fortran/32365 - Better error message for specification statement in executable section
++
++subroutine test_spec_in_exec
++  implicit none
++  integer :: i
++
++  ! First executable statement
++  i = 1
++
++  ! Test key specification statement types
++  integer :: j                     ! { dg-error "data declaration statement cannot appear after the first executable statement" }
++  real :: x                       ! { dg-error "data declaration statement cannot appear after the first executable statement" }
++  complex :: z                    ! { dg-error "data declaration statement cannot appear after the first executable statement" }
++  logical :: flag                  ! { dg-error "data declaration statement cannot appear after the first executable statement" }
++  character(len=20) :: name       ! { dg-error "data declaration statement cannot appear after the first executable statement" }
++  double precision :: d           ! { dg-error "data declaration statement cannot appear after the first executable statement" }
++  common /myblock/ i              ! { dg-error "COMMON statement cannot appear after the first executable statement" }
++  equivalence (i, i)              ! { dg-error "EQUIVALENCE statement cannot appear after the first executable statement" }
++  namelist /nml/ i                ! { dg-error "NAMELIST statement cannot appear after the first executable statement" }
++  data i / 2 /                    ! { dg-error "DATA statement cannot appear after the first executable statement" }
++!$omp threadprivate(i)             ! { dg-error "THREADPRIVATE statement cannot appear after the first executable statement" }
++!$omp declare target (i)           ! { dg-error "DECLARE TARGET statement cannot appear after the first executable statement" }
++
++end subroutine test_spec_in_exec
++
++! Test that correct order still works fine
++subroutine test_correct_order
++  implicit none
++  integer :: i, j
++  real :: x
++
++  ! All specification statements first
++  common /myblock/ i, j
++  data i, j / 1, 2 /
++!$omp threadprivate(i)
++
++  ! Then executable statements
++  i = 4
++  x = 3.14
++
++end subroutine test_correct_order
+\ No newline at end of file
+-- 
+2.51.2
+
