@@ -1,4 +1,4 @@
-From 34c0071539f8d31ce908249f30ff7bda598a4ee4 Mon Sep 17 00:00:00 2001
+From e0b3d26ecf7b6406cba33c22d8e2ede3c3e4d32e Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Mon, 10 Nov 2025 20:19:48 +0100
 Subject: [PATCH] fortran: Implement optional type spec for DO CONCURRENT
@@ -60,6 +60,7 @@ gcc/fortran/ChangeLog:
 	(gfc_resolve_code): Set gfc_do_concurrent_flag for DO CONCURRENT
 	constructs to enable constraint checking.
 
+Co-authored-by: Steve Kargl <kargl@gcc.gnu.org>
 Co-authored-by: Jerry DeLisle <jvdelisle@gcc.gnu.org>
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
