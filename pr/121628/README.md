@@ -2,6 +2,11 @@
 
 Artifacts and notes for Bug 121628 (recursive allocatable component deep copy).
 
+## Status
+
+- Fix merged upstream (see GCC r16-5094); trunk no longer reproduces the use-after-free.
+- Alternative C-linked-list implementation is preserved in GCC branch `archive/pr121628-c-version` for reference.
+
 Programs:
 - `121628.f90` and derivatives capture the original reproducer.
 - `deepcopy.f90` contains the simplified reproducer used in testing.
