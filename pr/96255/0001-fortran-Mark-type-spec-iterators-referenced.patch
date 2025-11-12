@@ -1,0 +1,85 @@
+From 602d11e24dea62faff6ffdf53efb96b197dd53c3 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Wed, 12 Nov 2025 07:38:40 +0100
+Subject: [PATCH] fortran: Mark type-spec iterators referenced
+
+Mark DO CONCURRENT iterators created via a type-spec as referenced so that the generated shadow names are not warned about under -Wall. Extend the regression test with a BT_UNKNOWN iterator that is unused in the loop body and forbid the relevant warnings.
+
+This fixes the bogus -Wunused-variable diagnostics reported against the new testcase from PR fortran/96255.
+
+gcc/fortran/ChangeLog:
+	* match.cc (apply_typespec_to_iterator): Call gfc_set_sym_referenced for both new and shadow iterator symbols.
+
+gcc/testsuite/ChangeLog:
+	* gfortran.dg/do_concurrent_typespec_1.f90: Compile with -Wall, add dg-bogus checks for the unused shadow iterators, exercise the new iterator path with test_unused_new_iterator().
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/match.cc                          |  2 ++
+ .../gfortran.dg/do_concurrent_typespec_1.f90  | 20 ++++++++++++++++++-
+ 2 files changed, 21 insertions(+), 1 deletion(-)
+
+diff --git a/gcc/fortran/match.cc b/gcc/fortran/match.cc
+index 60434c14ee2..e009c82b0bd 100644
+--- a/gcc/fortran/match.cc
++++ b/gcc/fortran/match.cc
+@@ -2630,6 +2630,7 @@ apply_typespec_to_iterator (gfc_forall_iterator *iter, gfc_typespec *ts,
+       /* Variable not declared in outer scope - just set the type.  */
+       v->ts.type = v->symtree->n.sym->ts.type = BT_INTEGER;
+       v->ts.kind = v->symtree->n.sym->ts.kind = ts->kind;
++      gfc_set_sym_referenced (v->symtree->n.sym);
+     }
+   else
+     {
+@@ -2651,6 +2652,7 @@ apply_typespec_to_iterator (gfc_forall_iterator *iter, gfc_typespec *ts,
+       v->symtree = st;
+       gfc_replace_expr (iter->var, v);
+       iter->shadow = true;
++      gfc_set_sym_referenced (st->n.sym);
+     }
+ 
+   /* Convert iterator bounds to the specified type.  */
+diff --git a/gcc/testsuite/gfortran.dg/do_concurrent_typespec_1.f90 b/gcc/testsuite/gfortran.dg/do_concurrent_typespec_1.f90
+index f5c498f6f27..46036dfbdc2 100644
+--- a/gcc/testsuite/gfortran.dg/do_concurrent_typespec_1.f90
++++ b/gcc/testsuite/gfortran.dg/do_concurrent_typespec_1.f90
+@@ -1,5 +1,8 @@
+ ! { dg-do run }
+-! { dg-options "-std=f2008" }
++! { dg-options "-std=f2008 -Wall" }
++! { dg-bogus "Unused variable '_i' declared" }
++! { dg-bogus "Unused variable '_k' declared" }
++! { dg-bogus "Unused variable 'n' declared" }
+ !
+ ! PR fortran/96255
+ ! Test DO CONCURRENT with optional type specification
+@@ -29,6 +32,10 @@ program test_do_concurrent_typespec
+   call test_multiple_iterators()
+   test_count = test_count + 1
+ 
++  ! Test 5: Type-spec iterator with no outer symbol and unused index
++  call test_unused_new_iterator()
++  test_count = test_count + 1
++
+   print *, "All", test_count, "tests passed"
+ 
+ contains
+@@ -110,4 +117,15 @@ contains
+     if (sum_val /= 66) stop 9
+   end subroutine test_multiple_iterators
+ 
++  subroutine test_unused_new_iterator()
++    implicit none
++    integer :: iter_count
++
++    iter_count = 0
++    do concurrent (integer :: n = 1:4)
++      iter_count = iter_count + 1
++    end do
++
++    if (iter_count /= 4) stop 10
++  end subroutine test_unused_new_iterator
+ end program test_do_concurrent_typespec
+-- 
+2.51.2
+
