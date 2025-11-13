@@ -1,10 +1,12 @@
 # PR96255: Fortran DO CONCURRENT Type-Spec Implementation
 
-**Status:** Complete - All tests passing (0 unexpected failures)
+**Status:** ✅ MERGED UPSTREAM
 
-**Commits:**
-- d11074121b3 - Jerry DeLisle's base implementation
-- b06716ac489 - Shadow variable walker and resolution fixes
+**Upstream Commits:**
+- 5e62a23cc3a - fortran: Implement optional type spec for DO CONCURRENT [PR96255]
+- 1099ffffffe - Fortran: Mark type-spec iterators referenced
+
+**Test Results:** All tests passing (0 unexpected failures)
 
 ---
 
@@ -18,14 +20,16 @@ do concurrent (integer(kind=4) :: i = 1:10)
 end do
 ```
 
-The implementation is split between two patches:
+**MERGED:** Upstream as commit 5e62a23cc3a (Main implementation) and 1099ffffffe (Mark iterators referenced)
 
-1. **Base Implementation (0001)**: Parsing, shadow variable creation, data structures
-2. **Shadow Variable Walker (0002)**: Expression walker, constraint enforcement, bug fixes
+The implementation is split between two major patches:
+
+1. **Base Implementation (5e62a23cc3a)**: Parsing, shadow variable creation, data structures
+2. **Follow-up Fixes (1099ffffffe)**: Iterator marking, reference tracking, optimization
 
 ---
 
-## Part 1: Base Implementation (d11074121b3)
+## Part 1: Base Implementation (5e62a23cc3a)
 
 ### Parser Changes (match.cc)
 
@@ -58,124 +62,58 @@ gfc_forall_iterator;
 
 ---
 
-## Part 2: Shadow Variable Walker and Resolution Fixes (b06716ac489)
+## Part 2: Iterator Marking and Reference Tracking (1099ffffffe)
 
-### Main Implementation: Shadow Variable Walker
+### Upstream Fix: Mark type-spec iterators referenced
 
-**Purpose:** Completes Jerry's type-spec implementation by substituting references to outer scope variables with their shadow counterparts.
+**Purpose:** Ensures type-spec iterator variables are properly marked as "referenced" so the compiler tracks them correctly.
 
 **Implementation (resolve.cc):**
-- `replace_in_expr_recursive()`: Recursively walks expressions (variables, array subscripts, substrings, operations)
-- `replace_in_code_recursive()`: Recursively walks code blocks (assignments, conditionals, loops)
-- `gfc_replace_forall_variable()`: Entry point that replaces all references to a given symbol
+- Marks iterator variables created by type-specs as referenced
+- Prevents spurious "unused variable" warnings
+- Ensures proper symbol resolution and optimization
 
 **What it does:**
-When a DO CONCURRENT has a type-spec that creates shadow variables (with `_` prefix), this walker visits every expression in the loop body and replaces references to the original iterator name with references to the shadow variable. This ensures the loop uses the correct type throughout.
+When a DO CONCURRENT has a type-spec that creates a new local iterator with a specific type, this fix ensures the compiler knows the iterator is actually being used (rather than marked as unused). This is critical for proper code generation and diagnostics.
 
 **Example:**
 ```fortran
 integer :: i
-do concurrent (integer(kind=8) :: i = 1:10)  ! Creates shadow _i
-  print *, i  ! Walker changes this to reference _i, not outer i
+do concurrent (integer(kind=8) :: i = 1:10)  ! Iterator i is marked referenced
+  print *, i  ! Prevents "i is unused" warning
 end do
 ```
 
-### Fix 1: Constraint Enforcement (Flag Management)
+---
 
-**Problem:** `gfc_do_concurrent_flag` was never set, breaking F2008 constraint checking (C1139: only PURE procedures allowed in DO CONCURRENT).
+## Original Implementation Details (Reference)
 
-**Solution (resolve.cc:13957-13964):**
-```c
-if (code->op == EXEC_DO_CONCURRENT)
-  gfc_do_concurrent_flag = 1;
-gfc_resolve_forall (code, ns, forall_save);
-if (code->op == EXEC_DO_CONCURRENT)
-  gfc_do_concurrent_flag = 2;
-```
+### Shadow Variable Mechanism
 
-**Flag states:**
+When type-spec differs from outer scope variable:
+- Creates new symbol with `_` prefix (e.g., `_i` for iterator `i`)
+- Sets `iter->shadow = true` flag
+- Converts iterator bounds to specified type
+- Replaces all references in loop body with shadow variable
+
+Purpose: Avoids type conflicts when DO CONCURRENT type-spec differs from outer scope variable kind.
+
+### F2008 Constraint Enforcement
+
+`gfc_do_concurrent_flag` states:
 - 0 = Outside DO CONCURRENT
 - 1 = Inside DO CONCURRENT body (only PURE procedures allowed)
 - 2 = Inside DO CONCURRENT mask (impure functions like SUM allowed)
 
-### Fix 2: NULL Pointer Safety
+Enforces F2008 constraint C1139: only PURE procedures allowed in DO CONCURRENT body.
 
-**Problem:** Shadow variable code could crash on NULL pointers.
-
-**Solution (resolve.cc:12625-12626):**
-```c
-if (fa->var && fa->var->symtree && var_expr[i] && var_expr[i]->symtree
-    && fa->var->symtree->n.sym == var_expr[i]->symtree->n.sym)
-```
-
-### Fix 3: Memory Leak Prevention
-
-**Problem:** `var_expr` array allocated twice in nested constructs.
-
-**Solution (resolve.cc:12597):**
-```c
-if (forall_save == 0 && nvar == 0)
-  var_expr = XCNEWVEC (gfc_expr *, total_var);
-```
-
-### Fix 4: Iterator Counting
-
-**Problem:** Code only counted FORALL iterators, not DO CONCURRENT.
-
-**Solution (resolve.cc:12394, 12407):**
-```c
-gcc_assert (code->op == EXEC_FORALL || code->op == EXEC_DO_CONCURRENT);
-if (code->op == EXEC_FORALL || code->op == EXEC_DO_CONCURRENT)
-  n++;
-```
-
-### Fix 5: Obsolescence Warning
-
-**Problem:** Warning fired for both FORALL and DO CONCURRENT.
-
-**Solution (resolve.cc:12588-12590):**
-```c
-if (code->op == EXEC_FORALL
-    && !gfc_notify_std (GFC_STD_F2018_OBS, "FORALL construct at %L", ...))
-```
-
-FORALL was marked obsolescent in F2018; DO CONCURRENT is not obsolescent.
-
-### Fix 6: Reduction Warning Suppression
-
-**Problem:** Warning fired for valid reduction-like code in DO CONCURRENT.
-
-**Solution (resolve.cc:12272-12276):**
-```c
-/* DO NOT emit this warning for DO CONCURRENT - reduction-like
-   many-to-one assignments are semantically valid (formalized with
-   the REDUCE locality-spec in Fortran 2023).  */
-if (!find_forall_index (code->expr1, forall_index, 0)
-    && !gfc_do_concurrent_flag)
-  gfc_warning (...);
-```
-
-**Justification:**
+### Reduction Semantics in DO CONCURRENT
 
 DO CONCURRENT and FORALL have different semantics:
 - **FORALL**: Strict iteration independence required
 - **DO CONCURRENT**: "Arbitrary order execution" (more permissive)
 
-All major compilers (Intel ifx, NVIDIA nvfortran, HPE cce) have always allowed reductions in DO CONCURRENT. Fortran 2023's REDUCE locality-spec formalizes this existing practice rather than introducing new semantics.
-
-### Code Quality Improvements (match.cc)
-
-**Improvement 1: Enhanced Error Diagnostics**
-
-Replaced generic error messages with descriptive diagnostics:
-```c
-gfc_internal_error ("Failed to create shadow variable symtree for "
-                    "DO CONCURRENT type-spec at %L", &loc);
-```
-
-**Improvement 2: Eliminated Code Duplication**
-
-Created `apply_typespec_to_iterator()` helper function to consolidate shadow variable creation logic, removing approximately 70 lines of duplicated code.
+All major compilers (Intel ifx, NVIDIA nvfortran, HPE cce) have always allowed reductions in DO CONCURRENT. Fortran 2023's REDUCE locality-spec formalizes this existing practice.
 
 ---
 
@@ -254,19 +192,22 @@ grep "# of" /home/ert/code/gcc-dev/gcc-build/gcc/testsuite/gfortran/gfortran.sum
 
 ---
 
-## Patch Files
+## Upstream Commits
 
-### 0001-fortran-Implement-optional-type-spec-for-DO-CONCURRE.patch
-- Author: Jerry DeLisle
-- Size: 268 lines (129 insertions, 9 deletions)
+### Main Implementation (5e62a23cc3a)
+- fortran: Implement optional type spec for DO CONCURRENT [PR96255]
 - Files: gfortran.h, match.cc, resolve.cc
-- Commit: d11074121b3
+- Added type-spec parsing and shadow variable creation
 
-### 0002-shadow-variable-walker.patch
-- Author: Christopher Albert
-- Size: ~500 lines (264 insertions, 83 deletions)
-- Files: match.cc, resolve.cc
-- Commit: b06716ac489
+### Follow-up Fix (1099ffffffe)
+- Fortran: Mark type-spec iterators referenced
+- Files: resolve.cc
+- Ensures proper reference tracking for iterators
+
+## Local Patch Files (for reference/archival)
+
+- 0001-fortran-Implement-optional-type-spec-for-DO-CONCURRE.patch
+- 0001-fortran-Mark-type-spec-iterators-referenced.patch
 
 ---
 
