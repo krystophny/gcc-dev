@@ -1,0 +1,38 @@
+Bug: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=107721
+Title: Lost typespec with constant expressions using array constructors and parentheses
+Status: NEW (last updated 2025-08-04)
+Priority: P3 normal
+Component: fortran
+Reported by: anlauf@gcc.gnu.org (2022-11-16)
+Assignee: Jerry DeLisle
+Keywords: wrong-code
+Duplicates: 107820
+
+Summary:
+  Array constructors that use an explicit type-spec lose that type when the
+  constructor expression is wrapped in parentheses. Constant-folded expressions
+  therefore re-evaluate elements using their original literal types instead of
+  the declared type, which produces wrong runtime results for INTEGER/REAL/
+  COMPLEX conversions. GCC 10 used to ICE, GCC 11+ produces wrong answers.
+
+Key comments:
+  #0 (report): Demonstrates `[integer :: ([1.0])] ** 2` printing 1.00000000
+      instead of 1; same for REAL/COMPLEX.
+  #3-#7 (Jerry): Parser matches ac-implied-do constructs but fails to treat
+      parenthesized array constructors as expressions; suggests recursive
+      matching and handling nested constructors like `((/2,3/))`.
+  #5 (Steve): `match_array_cons_element` already matches expressions, but
+      simplification leaves `([1.0])` as an `EXPR_OP`, so the walker never
+      applies type conversion; hints that simplification should drop parens.
+  #8 (Jerry): `seen_ts` flag is local to `gfc_match_array_constructor`; nested
+      calls reset it, so conversions never occur once expressions recurse.
+  #9 (Mikael): Type is retained in the outer constructor; actual loss happens
+      later in `arith.cc` (e.g., `reduce_binary_ac`) which strips elements
+      without inserting conversions to the constructor type.
+
+Action items from comments:
+  * Decide whether to propagate `seen_ts` or to rework constant folding so
+    array-constructor reductions insert conversions.
+  * Test more complex nesting `((([1.0])))` and implied-do forms like
+    `[real :: ((/2,3/))]`.
+

@@ -1,68 +1,55 @@
-From af791a9700603d876dec64318b70b2d33e25d2fa Mon Sep 17 00:00:00 2001
+From e695caec0a4258180c1a2d0b690f7ed1a5e50d5f Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Tue, 11 Nov 2025 00:34:32 +0100
-Subject: [PATCH] fortran: Improve error messages for specification statements
- in executable section
+Subject: [PATCH] fortran: clarify spec-stmt ordering error
 
-PR fortran/32365 - Better error message for specification statement in executable section
-
-Previously, specification statements appearing in the executable section would
-generate generic "Unexpected X statement at (1)" errors, which provided no
-educational value about the underlying Fortran statement ordering rules.
-
-This change enhances error messages in parse_executable() for specification
-statements (declarations, COMMON, EQUIVALENCE, DATA, etc.) and OpenMP
-specification directives (THREADPRIVATE, DECLARE TARGET, etc.) to provide
-clear, educational messages that explain the statement ordering violation.
-
-Before:
-  Error: Unexpected INTEGER declaration statement at (1)
-  Error: Unexpected COMMON statement at (1)
-
-After:
-  Error: INTEGER declaration statement cannot appear after the first executable statement at (1)
-  Error: COMMON statement cannot appear after the first executable statement at (1)
-
-These improved error messages:
-- Teach Fortran statement ordering concepts
-- Match the educational quality of modern compilers like Intel ifx
-- Provide specific identification of problematic statements
-- Help users understand why their code is invalid
-
-The fix adds specific cases in parse_executable() before the default
-unexpected_statement() handler, ensuring consistent educational messaging
-across all specification statement types.
-
-gcc/fortran/ChangeLog:
-
-	* parse.cc (parse_executable): Add specific error handling for
-	specification statements appearing after first executable statement.
-	Provide educational error messages instead of generic "Unexpected X
-	statement" errors.
-
-Tested with affected test cases and full gfortran test suite.
+* parse.cc (parse_executable): Reject declaration/OpenMP spec statements
+  with "in the execution part" diagnostic when seen after executable code.
+* testsuite/gfortran.dg/spec_statement_in_exec.f90: New regression.
+* testsuite/gfortran.dg/common_22.f90: Expect new COMMON wording.
+* testsuite/gfortran.dg/common_24.f: Likewise.
+* testsuite/gfortran.dg/pr61669.f90: Likewise for data declarations.
+* testsuite/gfortran.dg/goacc/routine-1.f90: Expect new !$ACC message.
+* testsuite/gfortran.dg/goacc/routine-2.f90: Likewise.
+* testsuite/gfortran.dg/gomp/declare-variant-17.f90: Update message.
+* testsuite/gfortran.dg/gomp/interop-1.f90: Likewise.
+* testsuite/gfortran.dg/gomp/order-2.f90: Likewise for OpenMP directives.
+* testsuite/gfortran.dg/gomp/pr78026.f03: Likewise for DECLARE SIMD.
+* testsuite/gfortran.dg/gomp/requires-4.f90: Likewise for REQUIRES.
+* testsuite/gfortran.dg/gomp/requires-6.f90: Likewise.
 
 PR fortran/32365
 
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
- gcc/fortran/parse.cc                          |  9 ++++
- .../gfortran.dg/spec_statement_in_exec.f90    | 44 +++++++++++++++++++
- 2 files changed, 53 insertions(+)
+ gcc/fortran/parse.cc                          |  9 +++++++
+ gcc/testsuite/gfortran.dg/common_22.f90       | 16 +++++------
+ gcc/testsuite/gfortran.dg/common_24.f         |  2 +-
+ gcc/testsuite/gfortran.dg/goacc/routine-1.f90 |  6 ++---
+ gcc/testsuite/gfortran.dg/goacc/routine-2.f90 |  2 +-
+ .../gfortran.dg/gomp/declare-variant-17.f90   |  4 +--
+ gcc/testsuite/gfortran.dg/gomp/interop-1.f90  |  2 +-
+ gcc/testsuite/gfortran.dg/gomp/order-2.f90    | 10 +++----
+ gcc/testsuite/gfortran.dg/gomp/pr78026.f03    |  2 +-
+ gcc/testsuite/gfortran.dg/gomp/requires-4.f90 |  2 +-
+ gcc/testsuite/gfortran.dg/gomp/requires-6.f90 |  2 +-
+ gcc/testsuite/gfortran.dg/pr61669.f90         |  4 +--
+ .../gfortran.dg/spec_statement_in_exec.f90    | 27 +++++++++++++++++++
+ 13 files changed, 62 insertions(+), 26 deletions(-)
  create mode 100644 gcc/testsuite/gfortran.dg/spec_statement_in_exec.f90
 
 diff --git a/gcc/fortran/parse.cc b/gcc/fortran/parse.cc
-index f987f464023..306937d7afa 100644
+index f987f464023..95e1bc999a7 100644
 --- a/gcc/fortran/parse.cc
 +++ b/gcc/fortran/parse.cc
 @@ -7132,6 +7132,15 @@ loop:
  	  accept_statement (st);
  	  goto done;
  
-+	/* Specification statements cannot appear in the executable section.  */
++	/* Specification statements cannot appear in the execution part.  */
 +	case_decl:
 +	case_omp_decl:
-+	  gfc_error ("%s statement cannot appear after the first executable statement at %C",
++	  gfc_error ("%s statement cannot appear in the execution part at %C",
 +		     gfc_ascii_statement (st));
 +	  reject_statement ();
 +	  st = next_statement ();
@@ -71,12 +58,214 @@ index f987f464023..306937d7afa 100644
  	default:
  	  break;
  	}
+diff --git a/gcc/testsuite/gfortran.dg/common_22.f90 b/gcc/testsuite/gfortran.dg/common_22.f90
+index e2254099d72..74917d679d8 100644
+--- a/gcc/testsuite/gfortran.dg/common_22.f90
++++ b/gcc/testsuite/gfortran.dg/common_22.f90
+@@ -7,18 +7,18 @@
+ ! Contributed by Bud Davis  <jmdavis@link.com>
+ 
+       CALL RCCFL (NVE,IR,NU3,VE (1,1,1,I))
+-      COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "Unexpected COMMON" }
+-      COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "Unexpected COMMON" }
++      COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "COMMON statement cannot appear in the execution part" }
++      COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "COMMON statement cannot appear in the execution part" }
+ !  the PR only contained the two above.
+ !  success is no segfaults or infinite loops.
+ !  let's check some combinations
+      CALL ABC (INTG)
+-     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "Unexpected COMMON" }
+-     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "Unexpected COMMON" }
++     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "COMMON statement cannot appear in the execution part" }
++     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "COMMON statement cannot appear in the execution part" }
+      CALL DEF (NT1)
+-     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "Unexpected COMMON" }
+-     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "Unexpected COMMON" }
++     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "COMMON statement cannot appear in the execution part" }
++     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "COMMON statement cannot appear in the execution part" }
+      CALL GHI (NRESL)
+-     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "Unexpected COMMON" }
+-     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "Unexpected COMMON" }
++     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "COMMON statement cannot appear in the execution part" }
++     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "COMMON statement cannot appear in the execution part" }
+      END
+diff --git a/gcc/testsuite/gfortran.dg/common_24.f b/gcc/testsuite/gfortran.dg/common_24.f
+index ea37c2a8660..6a770c0e9be 100644
+--- a/gcc/testsuite/gfortran.dg/common_24.f
++++ b/gcc/testsuite/gfortran.dg/common_24.f
+@@ -7,5 +7,5 @@ c Contributed by Ilya Enkovich <ienkovich@gcc.gnu.org>
+ 
+       COMMON /FMCOM / X(80 000 000)
+       CALL T(XX(A))
+-      COMMON /FMCOM / XX(80 000 000) ! { dg-error "Unexpected COMMON" }
++      COMMON /FMCOM / XX(80 000 000) ! { dg-error "COMMON statement cannot appear in the execution part" }
+       END
+diff --git a/gcc/testsuite/gfortran.dg/goacc/routine-1.f90 b/gcc/testsuite/gfortran.dg/goacc/routine-1.f90
+index 67c5f11be6a..d596a9857cf 100644
+--- a/gcc/testsuite/gfortran.dg/goacc/routine-1.f90
++++ b/gcc/testsuite/gfortran.dg/goacc/routine-1.f90
+@@ -4,7 +4,7 @@
+   integer :: a(n), i
+   integer, external :: fact
+   i = 1
+-  !$acc routine (fact)  ! { dg-error "Unexpected \\\!\\\$ACC ROUTINE" }
++  !$acc routine (fact)  ! { dg-error "\\\\\\!\\\\\\$ACC ROUTINE statement cannot appear in the execution part" }
+   !$acc routine ()  ! { dg-error "Syntax error in \\\!\\\$ACC ROUTINE \\\( NAME \\\)" }
+   !$acc parallel
+   !$acc loop
+@@ -21,7 +21,7 @@ recursive function fact (x) result (res)
+   integer, intent(in) :: x
+   integer :: res
+   res = 1
+-  !$acc routine  ! { dg-error "Unexpected \\\!\\\$ACC ROUTINE" }
++  !$acc routine  ! { dg-error "\\\\\\!\\\\\\$ACC ROUTINE statement cannot appear in the execution part" }
+   if (x < 1) then
+      res = 1
+   else
+@@ -32,6 +32,6 @@ subroutine incr (x)
+   integer, intent(inout) :: x
+   integer i
+   i = 0
+-  !$acc routine  ! { dg-error "Unexpected \\\!\\\$ACC ROUTINE" }
++  !$acc routine  ! { dg-error "\\\\\\!\\\\\\$ACC ROUTINE statement cannot appear in the execution part" }
+   x = x + 1
+ end subroutine incr
+diff --git a/gcc/testsuite/gfortran.dg/goacc/routine-2.f90 b/gcc/testsuite/gfortran.dg/goacc/routine-2.f90
+index 3be33511581..6ce2bdfb74f 100644
+--- a/gcc/testsuite/gfortran.dg/goacc/routine-2.f90
++++ b/gcc/testsuite/gfortran.dg/goacc/routine-2.f90
+@@ -7,7 +7,7 @@
+       integer :: res
+       integer i
+       i = 0
+-      !$acc routine  ! { dg-error "Unexpected \\\!\\\$ACC ROUTINE" }
++      !$acc routine  ! { dg-error "\\\\\\!\\\\\\$ACC ROUTINE statement cannot appear in the execution part" }
+       if (x < 1) then
+          res = 1
+       else
+diff --git a/gcc/testsuite/gfortran.dg/gomp/declare-variant-17.f90 b/gcc/testsuite/gfortran.dg/gomp/declare-variant-17.f90
+index df57f9c089c..3e4aa3f13a1 100644
+--- a/gcc/testsuite/gfortran.dg/gomp/declare-variant-17.f90
++++ b/gcc/testsuite/gfortran.dg/gomp/declare-variant-17.f90
+@@ -7,11 +7,11 @@ program main
+ 
+   continue
+ 
+-  !$omp declare variant (base: variant) match (construct={parallel})  ! { dg-error "Unexpected \\\!\\\$OMP DECLARE VARIANT statement at .1." }
++  !$omp declare variant (base: variant) match (construct={parallel})  ! { dg-error "\\\\\\!\\\\\\$OMP DECLARE VARIANT statement cannot appear in the execution part" }
+ contains
+   subroutine base ()
+     continue
+ 
+-    !$omp declare variant (variant) match (construct={parallel})  ! { dg-error "Unexpected \\\!\\\$OMP DECLARE VARIANT statement at .1." }
++    !$omp declare variant (variant) match (construct={parallel})  ! { dg-error "\\\\\\!\\\\\\$OMP DECLARE VARIANT statement cannot appear in the execution part" }
+   end subroutine
+ end program
+diff --git a/gcc/testsuite/gfortran.dg/gomp/interop-1.f90 b/gcc/testsuite/gfortran.dg/gomp/interop-1.f90
+index eae0cb3ae16..cb84c4b2b73 100644
+--- a/gcc/testsuite/gfortran.dg/gomp/interop-1.f90
++++ b/gcc/testsuite/gfortran.dg/gomp/interop-1.f90
+@@ -19,7 +19,7 @@ end module m
+ 
+ subroutine sub1  ! { dg-error "Program unit at .1. has OpenMP device constructs/routines but does not set !.OMP REQUIRES REVERSE_OFFLOAD but other program units do" }
+   !$omp interop
+-  integer :: y ! { dg-error "Unexpected data declaration statement" }
++  integer :: y ! { dg-error "data declaration statement cannot appear in the execution part" }
+ end subroutine sub1
+ 
+ program main
+diff --git a/gcc/testsuite/gfortran.dg/gomp/order-2.f90 b/gcc/testsuite/gfortran.dg/gomp/order-2.f90
+index 4ee3a82d518..1578579ebd0 100644
+--- a/gcc/testsuite/gfortran.dg/gomp/order-2.f90
++++ b/gcc/testsuite/gfortran.dg/gomp/order-2.f90
+@@ -11,14 +11,14 @@ contains
+     implicit none
+     integer, save :: t
+     t = 1
+-    !$omp threadprivate (t1)	! { dg-error "Unexpected" }
++    !$omp threadprivate (t1)	! { dg-error "\\\\\\!\\\\\\$OMP THREADPRIVATE statement cannot appear in the execution part" }
+   end subroutine f2
+   subroutine f3
+     use m
+     implicit none
+     integer :: j
+     j = 1
+-    !$omp declare reduction (foo:real:omp_out = omp_out + omp_in)	! { dg-error "Unexpected" }
++    !$omp declare reduction (foo:real:omp_out = omp_out + omp_in)	! { dg-error "\\\\\\!\\\\\\$OMP DECLARE REDUCTION statement cannot appear in the execution part" }
+   end subroutine f3
+   subroutine f4
+     use m
+@@ -26,12 +26,12 @@ contains
+     !$omp declare target
+     integer, save :: f4_1
+     f4_1 = 1
+-    !$omp declare target (f4_1)	! { dg-error "Unexpected" }
+-    !$omp declare target	! { dg-error "Unexpected" }
++    !$omp declare target (f4_1)	! { dg-error "\\\\\\!\\\\\\$OMP DECLARE TARGET statement cannot appear in the execution part" }
++    !$omp declare target	! { dg-error "\\\\\\!\\\\\\$OMP DECLARE TARGET statement cannot appear in the execution part" }
+   end subroutine f4
+   integer function f5 (a, b)
+     integer :: a, b
+     a = 1; b = 2
+-    !$omp declare simd (f5) notinbranch	! { dg-error "Unexpected" }
++    !$omp declare simd (f5) notinbranch	! { dg-error "\\\\\\!\\\\\\$OMP DECLARE SIMD statement cannot appear in the execution part" }
+   end function f5
+ end subroutine f1
+diff --git a/gcc/testsuite/gfortran.dg/gomp/pr78026.f03 b/gcc/testsuite/gfortran.dg/gomp/pr78026.f03
+index 61f945886e6..c81c02d6fd8 100644
+--- a/gcc/testsuite/gfortran.dg/gomp/pr78026.f03
++++ b/gcc/testsuite/gfortran.dg/gomp/pr78026.f03
+@@ -1,5 +1,5 @@
+ ! PR fortran/78026
+ select type (a)		! { dg-error "Selector shall be polymorphic in SELECT TYPE statement" }
+ end select
+-!$omp declare simd(b)	! { dg-error "Unexpected !.OMP DECLARE SIMD statement" }
++!$omp declare simd(b)	! { dg-error "\\\\\\!\\\\\\$OMP DECLARE SIMD statement cannot appear in the execution part" }
+ end			! { dg-error "should refer to containing procedure" "" { target *-*-* } .-1 }
+diff --git a/gcc/testsuite/gfortran.dg/gomp/requires-4.f90 b/gcc/testsuite/gfortran.dg/gomp/requires-4.f90
+index 9d936197f8f..06381520265 100644
+--- a/gcc/testsuite/gfortran.dg/gomp/requires-4.f90
++++ b/gcc/testsuite/gfortran.dg/gomp/requires-4.f90
+@@ -16,7 +16,7 @@ end
+ 
+ subroutine foobar
+ i = 5  ! < execution statement
+-!$omp requires atomic_default_mem_order(seq_cst) ! { dg-error "Unexpected ..OMP REQUIRES statement" }
++!$omp requires atomic_default_mem_order(seq_cst) ! { dg-error "\\\\\\!\\\\\\$OMP REQUIRES statement cannot appear in the execution part" }
+ end
+ 
+ program main
+diff --git a/gcc/testsuite/gfortran.dg/gomp/requires-6.f90 b/gcc/testsuite/gfortran.dg/gomp/requires-6.f90
+index b20c218dd6b..3a95e6e6361 100644
+--- a/gcc/testsuite/gfortran.dg/gomp/requires-6.f90
++++ b/gcc/testsuite/gfortran.dg/gomp/requires-6.f90
+@@ -10,5 +10,5 @@ end
+ subroutine foobar
+ !$omp atomic
+  i = i + 5
+-!$omp requires atomic_default_mem_order(acq_rel) ! { dg-error "Unexpected !.OMP REQUIRES statement" }
++!$omp requires atomic_default_mem_order(acq_rel) ! { dg-error "\\\\\\!\\\\\\$OMP REQUIRES statement cannot appear in the execution part" }
+ end
+diff --git a/gcc/testsuite/gfortran.dg/pr61669.f90 b/gcc/testsuite/gfortran.dg/pr61669.f90
+index 5bceafda762..d4fd256a2a8 100644
+--- a/gcc/testsuite/gfortran.dg/pr61669.f90
++++ b/gcc/testsuite/gfortran.dg/pr61669.f90
+@@ -1,7 +1,7 @@
+ ! { dg-do compile }
+       write (*,"(a)") char(12)
+-      CHARACTER*80 A /"A"/      ! { dg-error "Unexpected data declaration statement" }
+-      REAL*4 B                  ! { dg-error "Unexpected data declaration statement" }
++      CHARACTER*80 A /"A"/      ! { dg-error "data declaration statement cannot appear in the execution part" }
++      REAL*4 B                  ! { dg-error "data declaration statement cannot appear in the execution part" }
+       write (*,"(a)") char(12)
+       DATA B / 0.02 /           ! { dg-warning "Obsolescent feature: DATA statement" }
+       END
 diff --git a/gcc/testsuite/gfortran.dg/spec_statement_in_exec.f90 b/gcc/testsuite/gfortran.dg/spec_statement_in_exec.f90
 new file mode 100644
-index 00000000000..fbbfcaa08c3
+index 00000000000..3e2ffeca3db
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/spec_statement_in_exec.f90
-@@ -0,0 +1,44 @@
+@@ -0,0 +1,27 @@
 +! { dg-do compile }
 +! { dg-options "-fopenmp" }
 +! Test improved error messages for specification statements in executable section
@@ -90,38 +279,20 @@ index 00000000000..fbbfcaa08c3
 +  i = 1
 +
 +  ! Test key specification statement types
-+  integer :: j                     ! { dg-error "data declaration statement cannot appear after the first executable statement" }
-+  real :: x                       ! { dg-error "data declaration statement cannot appear after the first executable statement" }
-+  complex :: z                    ! { dg-error "data declaration statement cannot appear after the first executable statement" }
-+  logical :: flag                  ! { dg-error "data declaration statement cannot appear after the first executable statement" }
-+  character(len=20) :: name       ! { dg-error "data declaration statement cannot appear after the first executable statement" }
-+  double precision :: d           ! { dg-error "data declaration statement cannot appear after the first executable statement" }
-+  common /myblock/ i              ! { dg-error "COMMON statement cannot appear after the first executable statement" }
-+  equivalence (i, i)              ! { dg-error "EQUIVALENCE statement cannot appear after the first executable statement" }
-+  namelist /nml/ i                ! { dg-error "NAMELIST statement cannot appear after the first executable statement" }
-+  data i / 2 /                    ! { dg-error "DATA statement cannot appear after the first executable statement" }
-+!$omp threadprivate(i)             ! { dg-error "THREADPRIVATE statement cannot appear after the first executable statement" }
-+!$omp declare target (i)           ! { dg-error "DECLARE TARGET statement cannot appear after the first executable statement" }
++  integer :: j                     ! { dg-error "data declaration statement cannot appear in the execution part" }
++  real :: x                       ! { dg-error "data declaration statement cannot appear in the execution part" }
++  complex :: z                    ! { dg-error "data declaration statement cannot appear in the execution part" }
++  logical :: flag                  ! { dg-error "data declaration statement cannot appear in the execution part" }
++  character(len=20) :: name       ! { dg-error "data declaration statement cannot appear in the execution part" }
++  double precision :: d           ! { dg-error "data declaration statement cannot appear in the execution part" }
++  common /myblock/ i              ! { dg-error "COMMON statement cannot appear in the execution part" }
++  equivalence (i, i)              ! { dg-error "EQUIVALENCE statement cannot appear in the execution part" }
++  namelist /nml/ i                ! { dg-error "NAMELIST statement cannot appear in the execution part" }
++  data i / 2 /                    ! { dg-error "DATA statement cannot appear in the execution part" }
++!$omp threadprivate(i)             ! { dg-error "THREADPRIVATE statement cannot appear in the execution part" }
++!$omp declare target (i)           ! { dg-error "DECLARE TARGET statement cannot appear in the execution part" }
 +
 +end subroutine test_spec_in_exec
-+
-+! Test that correct order still works fine
-+subroutine test_correct_order
-+  implicit none
-+  integer :: i, j
-+  real :: x
-+
-+  ! All specification statements first
-+  common /myblock/ i, j
-+  data i, j / 1, 2 /
-+!$omp threadprivate(i)
-+
-+  ! Then executable statements
-+  i = 4
-+  x = 3.14
-+
-+end subroutine test_correct_order
-\ No newline at end of file
 -- 
 2.51.2
 
