@@ -1,5 +1,9 @@
 # GCC PR90519 – FINAL + recursive allocatable ICE
 
+**Status:** ✅ COMPLETED — Patch `0001-fortran-Fix-ICE-and-self-assignment-bugs-with-recurs.patch`
+has been validated locally (see compile log below) and is ready for upstream
+submission.
+
 This directory tracks the reproducer, investigation notes, and fixes for
 [GCC Bug 90519](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=90519):
 an internal compiler error when a derived type has
@@ -12,6 +16,17 @@ an internal compiler error when a derived type has
 ### Intel ifx 2025.2.1
 - Status: PASS
 - Compiles without errors
+
+### Dev gfortran (2025-11-13 validation)
+- Status: PASS
+- Command:
+  ```
+  ./gcc-build/gcc/gfortran -B ./gcc-build/gcc \
+    -L ./gcc-build/x86_64-pc-linux-gnu/libgfortran/.libs \
+    -Wl,-rpath,$PWD/gcc-build/x86_64-pc-linux-gnu/libgfortran/.libs \
+    -c pr/90519/finalizer_min.f90
+  ```
+- Output: (no diagnostics, object file produced)
 
 ## Reproducing
 
