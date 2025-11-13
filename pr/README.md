@@ -13,42 +13,53 @@ Each subdirectory contains a minimal reproducer, test results, and analysis for 
 
 ## Status Summary
 
-| PR | Title | Bugzilla Status | System GCC 15.2.1 | Dev GCC 16.0 | Intel ifx 2025.2.1 | Category |
-|----|-------|----------------|-------------------|--------------|-------------------|----------|
-| [90519](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=90519) | FINAL + recursive allocatable ICE | NEW | ICE | PASS | PASS | Finalizer |
-| [121472](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121472) | ICE with constructor and finalizer | UNCONFIRMED | ICE | ICE | PASS | Finalizer |
-| [121628](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121628) | Recursive allocatable deep copy | NEW | - | - | PASS | Allocatable |
-| [113885](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=113885) | ICE with finalization and elemental functions | RESOLVED FIXED | PASS | PASS | PASS | Finalizer |
-| [114535](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=114535) | ICE with elemental finalizer | RESOLVED FIXED | PASS | PASS | PASS | Finalizer |
-| [110987](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=110987) | Segfault with finalization of temporary | RESOLVED FIXED | PASS | PASS | PASS | Finalizer |
-| [82622](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82622) | ICE with PDT allocation | RESOLVED FIXED | PASS | PASS | PASS | PDT |
-| [116669](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=116669) | Crash on circular derived type | RESOLVED FIXED | PASS | PASS | PASS | Type Resolution |
-| [85002](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=85002) | Coarray ICE in fold_ternary_loc | RESOLVED FIXED | PASS | PASS | FAIL* | Coarray |
-| [104684](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=104684) | Coarray ICE in verify_gimple | RESOLVED FIXED | PASS | PASS | FAIL* | Coarray |
-| [103716](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=103716) | ICE with character len inquiry | RESOLVED FIXED | PASS | PASS | PASS | Character |
-| [103368](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=103368) | ICE with class(*) in structure constructor | RESOLVED FIXED | PASS | PASS | PASS | Polymorphic |
-| [122191](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=122191) | ICE with composite PDT result | RESOLVED FIXED | PASS | PASS | PASS | PDT |
+### Open PRs
 
-*Coarray tests expected to fail on ifx - different implementation than gfortran's `-fcoarray=single`
+| PR | Title | Local Status | Notes |
+|----|-------|--------------|-------|
+| [32365](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=32365) | Better specification-statement diagnostics | OPEN | Needs improved parser diagnostics when spec statements appear in executable sections (see `pr/32365/README.md`). |
+| [121472](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121472) | Constructor/finalizer ICE | OPEN | ICE in `gimplify_expr` on GCC 15.2.1 and trunk; reproducer + patches tracked in `pr/121472/`. |
+
+### Completed PRs
+
+| PR | Title | Resolution | Evidence |
+|----|-------|------------|----------|
+| [90519](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=90519) | FINAL + recursive allocatable ICE | Completed locally with patch `0001-fortran-Fix-ICE-and-self-assignment-bugs-with-recurs.patch`. | Dev gfortran compile of `pr/90519/finalizer_min.f90` succeeded (2025-11-13); see `pr/90519/README.md`. |
+| [121628](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121628) | Recursive allocatable deep copy | Upstream fix in GCC r16-5094. | Dev gfortran compile of `pr/121628/deepcopy.f90` succeeded (2025-11-13); details in `pr/121628/README.md`. |
+| [96255](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96255) | DO CONCURRENT type-spec implementation | Merged upstream (commits 5e62a23cc3a & 1099ffffffe). | Dev gfortran compile of `pr/96255/looper.f90` succeeded (2025-11-13); see `pr/96255/README.md`. |
+
+*Coarray tests are still expected to fail on ifx because it lacks gfortran's `-fcoarray=single` semantics.*
 
 ## Analysis
 
 ### Active Bugs
 
+**PR32365** - Better specification-statement diagnostics
+- Status: OPEN (enhancement request dating back to GCC 4.3)
+- Current behavior: generic "Unexpected XYZ statement" errors whenever a specification statement appears after executable statements, which is unhelpful for users.
+- Goal: update parser diagnostics so they clearly state that specification statements cannot appear in the executable section; see examples in `pr/32365/README.md`.
+- Next steps: prototype targeted diagnostic in `parse.c` for both data declarations and OpenMP directives.
+
 **PR121472** - ICE with constructor and finalizer
 - Status: UNCONFIRMED (Bugzilla), ACTIVE (both compilers fail)
 - System GCC 15.2.1: ICE in gimplify_expr at gimplify.cc:20443
 - Dev GCC 16.0: ICE in gimplify_expr at gimplify.cc:21278
-- Priority: HIGH - affects both released and development versions
+- Priority: HIGH - affects both released and development versions; reproducer + logging available in `pr/121472/`.
 
-### Fixed in Development (Not Yet Released)
+### Completed Bugs
 
 **PR90519** - FINAL + recursive allocatable ICE
-- Status: NEW (Bugzilla), FIXED (dev compiler only)
-- System GCC 15.2.1: ICE
-- Dev GCC 16.0: PASS
-- Fix: Local patch generates distinct result symbols for FINAL wrappers
-- Release target: GCC 16.1 (projected April 2026)
+- Status: COMPLETED LOCALLY (awaiting upstream submission)
+- Fix: Patch `0001-fortran-Fix-ICE-and-self-assignment-bugs-with-recurs.patch` ensures FINAL wrappers call procedure pointers instead of result symbols.
+- Evidence: `pr/90519/finalizer_min.f90` compiles cleanly with dev gfortran as of 2025-11-13.
+
+**PR121628** - Recursive allocatable deep copy
+- Status: MERGED UPSTREAM (GCC r16-5094)
+- Fix: Runtime deep-copy helper plus compiler integration now shipped on trunk; reproducer builds cleanly (see `pr/121628/README.md`).
+
+**PR96255** - DO CONCURRENT type-spec implementation
+- Status: MERGED UPSTREAM (commits 5e62a23cc3a & 1099ffffffe)
+- Fix: Optional type-spec parsing and iterator-marking logic; `pr/96255/looper.f90` compiles with current trunk build.
 
 ### Fixed but Bugzilla Shows Open
 
@@ -90,8 +101,8 @@ make test-all
 
 ```bash
 # Test individual PR
+make 32365
 make 121472
-make 90519
 
 # Test by number
 make <PR-number>

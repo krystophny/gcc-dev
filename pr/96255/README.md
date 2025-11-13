@@ -119,6 +119,17 @@ All major compilers (Intel ifx, NVIDIA nvfortran, HPE cce) have always allowed r
 
 ## Test Results
 
+### Dev gfortran (2025-11-13 validation)
+- Status: PASS
+- Command:
+  ```
+  ./gcc-build/gcc/gfortran -B ./gcc-build/gcc \
+    -L ./gcc-build/x86_64-pc-linux-gnu/libgfortran/.libs \
+    -Wl,-rpath,$PWD/gcc-build/x86_64-pc-linux-gnu/libgfortran/.libs \
+    -c pr/96255/looper.f90
+  ```
+- Output: no diagnostics, compile succeeded
+
 ### Full GCC Fortran Test Suite
 
 ```
