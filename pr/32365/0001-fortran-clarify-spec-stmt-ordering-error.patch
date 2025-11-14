@@ -1,14 +1,14 @@
-From 393724e5cf3411de0a1ddb74beab4c64dd42a754 Mon Sep 17 00:00:00 2001
+From f9bd4018290f7ea9d85ce9b04ddd7413a6217183 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
-Date: Fri, 14 Nov 2025 11:46:16 +0100
-Subject: [PATCH] fortran: gate spec-stmt execution error on -std
+Date: Fri, 14 Nov 2025 13:22:47 +0100
+Subject: [PATCH] fortran: enforce spec statements ordering
 
-* parse.cc (parse_executable): Only reject specification/OMP statements in
-  the execution part when compiling in an ISO -std mode; leave legacy/GNU
-  modes unchanged while still warning about DATA after executables.
-* testsuite/gfortran.dg/spec_statement_in_exec.f90: Require -std=f2018,
-  update expected diagnostics, and keep the helper subroutine free of other
-  errors.
+* parse.cc (parse_executable): Reject declaration/OpenMP specification
+  statements seen after executable code whenever compiling in an ISO
+  -std mode, but retain legacy/GNU acceptance; keep the old DATA warning
+  for legacy builds by downgrading it to gfc_notify_std when allowed.
+* testsuite/gfortran.dg/spec_statement_in_exec.f90: New regression that
+  exercises data/common/namelist/OpenMP directives with -std=f2018 -fopenmp.
 * testsuite/gfortran.dg/pr88248.f90: Expect the stricter DATA diagnostic
   under -std=f2018.
 
@@ -16,13 +16,14 @@ PR fortran/32365
 
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
- gcc/fortran/parse.cc                          | 24 +++++++++++----
+ gcc/fortran/parse.cc                          | 21 ++++++++++
  gcc/testsuite/gfortran.dg/pr88248.f90         |  2 +-
- .../gfortran.dg/spec_statement_in_exec.f90    | 30 +++++++++----------
- 3 files changed, 33 insertions(+), 23 deletions(-)
+ .../gfortran.dg/spec_statement_in_exec.f90    | 42 +++++++++++++++++++
+ 3 files changed, 64 insertions(+), 1 deletion(-)
+ create mode 100644 gcc/testsuite/gfortran.dg/spec_statement_in_exec.f90
 
 diff --git a/gcc/fortran/parse.cc b/gcc/fortran/parse.cc
-index 96382512884..8d577db484d 100644
+index f987f464023..8d577db484d 100644
 --- a/gcc/fortran/parse.cc
 +++ b/gcc/fortran/parse.cc
 @@ -6710,6 +6710,14 @@ parse_executable (gfc_statement st)
@@ -40,19 +41,13 @@ index 96382512884..8d577db484d 100644
  	  gfc_notify_std (GFC_STD_F95_OBS, "DATA statement at %C after the "
  			  "first executable statement");
  	  /* Fall through.  */
-@@ -7132,14 +7140,18 @@ loop:
+@@ -7132,6 +7140,19 @@ loop:
  	  accept_statement (st);
  	  goto done;
  
--	/* Specification statements cannot appear after executable statements.  */
 +	/* Specification statements cannot follow executable statements.  */
- 	case_decl:
- 	case_omp_decl:
--	  gfc_error ("%s statement at %C after the first executable statement",
--		     gfc_ascii_statement (st));
--	  reject_statement ();
--	  st = next_statement ();
--	  continue;
++	case_decl:
++	case_omp_decl:
 +	  if ((gfc_option.allow_std & GFC_STD_GNU) == 0)
 +	    {
 +	      gfc_error ("%s statement at %C cannot follow executable statement",
@@ -62,9 +57,10 @@ index 96382512884..8d577db484d 100644
 +	      continue;
 +	    }
 +	  break;
- 
++
  	default:
  	  break;
+ 	}
 diff --git a/gcc/testsuite/gfortran.dg/pr88248.f90 b/gcc/testsuite/gfortran.dg/pr88248.f90
 index 2a49305e70a..4531c074ee1 100644
 --- a/gcc/testsuite/gfortran.dg/pr88248.f90
@@ -79,32 +75,24 @@ index 2a49305e70a..4531c074ee1 100644
    ! No warning should be printed below
    goto 1
 diff --git a/gcc/testsuite/gfortran.dg/spec_statement_in_exec.f90 b/gcc/testsuite/gfortran.dg/spec_statement_in_exec.f90
-index 268304bc049..c86d898e365 100644
---- a/gcc/testsuite/gfortran.dg/spec_statement_in_exec.f90
+new file mode 100644
+index 00000000000..c86d898e365
+--- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/spec_statement_in_exec.f90
-@@ -1,5 +1,5 @@
- ! { dg-do compile }
--! { dg-options "-fopenmp" }
+@@ -0,0 +1,42 @@
++! { dg-do compile }
 +! { dg-options "-fopenmp -std=f2018" }
- ! Test improved error messages for specification statements in executable section
- ! PR fortran/32365 - Better error message for specification statement in executable section
- 
-@@ -11,18 +11,18 @@ subroutine test_spec_in_exec
-   i = 1
- 
-   ! Test key specification statement types
--  integer :: j                     ! { dg-error "data declaration statement cannot appear after an executable statement" }
--  real :: x                       ! { dg-error "data declaration statement cannot appear after an executable statement" }
--  complex :: z                    ! { dg-error "data declaration statement cannot appear after an executable statement" }
--  logical :: flag                  ! { dg-error "data declaration statement cannot appear after an executable statement" }
--  character(len=20) :: name       ! { dg-error "data declaration statement cannot appear after an executable statement" }
--  double precision :: d           ! { dg-error "data declaration statement cannot appear after an executable statement" }
--  common /myblock/ i              ! { dg-error "COMMON statement cannot appear after an executable statement" }
--  equivalence (i, i)              ! { dg-error "EQUIVALENCE statement cannot appear after an executable statement" }
--  namelist /nml/ i                ! { dg-error "NAMELIST statement cannot appear after an executable statement" }
--  data i / 2 /                    ! { dg-error "DATA statement cannot appear after an executable statement" }
--!$omp threadprivate(i)             ! { dg-error "THREADPRIVATE statement cannot appear after an executable statement" }
--!$omp declare target (i)           ! { dg-error "DECLARE TARGET statement cannot appear after an executable statement" }
++! Test improved error messages for specification statements in executable section
++! PR fortran/32365 - Better error message for specification statement in executable section
++
++subroutine test_spec_in_exec
++  implicit none
++  integer :: i
++
++  ! First executable statement
++  i = 1
++
++  ! Test key specification statement types
 +  integer :: j                     ! { dg-error "data declaration statement at \\(1\\) cannot follow executable statement" }
 +  real :: x                       ! { dg-error "data declaration statement at \\(1\\) cannot follow executable statement" }
 +  complex :: z                    ! { dg-error "data declaration statement at \\(1\\) cannot follow executable statement" }
@@ -117,22 +105,23 @@ index 268304bc049..c86d898e365 100644
 +  data i / 2 /                    ! { dg-error "DATA statement at \\(1\\) cannot follow executable statement" }
 +!$omp threadprivate(i)             ! { dg-error "THREADPRIVATE statement at \\(1\\) cannot follow executable statement" }
 +!$omp declare target (i)           ! { dg-error "DECLARE TARGET statement at \\(1\\) cannot follow executable statement" }
- 
- end subroutine test_spec_in_exec
- 
-@@ -31,11 +31,9 @@ subroutine test_correct_order
-   implicit none
-   integer :: i, j
-   real :: x
++
++end subroutine test_spec_in_exec
++
++! Test that correct order still works fine
++subroutine test_correct_order
++  implicit none
++  integer :: i, j
++  real :: x
 +  logical :: flag
- 
-   ! All specification statements first
--  common /myblock/ i, j
--  data i, j / 1, 2 /
--!$omp threadprivate(i)
- 
-   ! Then executable statements
-   i = 4
++
++  ! All specification statements first
++
++  ! Then executable statements
++  i = 4
++  x = 3.14
++
++end subroutine test_correct_order
 -- 
 2.51.2
 
