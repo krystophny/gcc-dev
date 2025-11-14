@@ -428,19 +428,42 @@ cd /home/ert/code/gcc-dev/gcc-build/gcc && make check-gfortran RUNTESTFLAGS="fin
 cd /home/ert/code/gcc-dev/gcc-build/gcc && make check-gfortran RUNTESTFLAGS="dg.exp=finalize*.f90"
 ```
 
-## Fortran Standards Compliance
+## 🚨 FORTRAN STANDARDS COMPLIANCE - ABSOLUTE REQUIREMENTS 🚨
+
+**MANDATORY POLICY - ZERO TOLERANCE FOR NON-COMPLIANCE:**
+
+### ISO Standard Compliance is NON-NEGOTIABLE
+- **ALL implementations MUST match Fortran 2018 (or later) ISO standard EXACTLY**
+- **NO EXCEPTIONS** for "partial implementations" or "known limitations"
+- **NO "acceptable for now"** - non-compliance is a BUG that MUST be fixed
+- **ALWAYS document standard violations** with specific ISO section references
+- **ALWAYS mark non-compliant behavior** as ❌ NOT ACCEPTABLE in documentation
+- **ALWAYS compare against reference compilers** (Intel ifx, NVIDIA nvfortran) for correct behavior
+
+### Standards Compliance Validation Protocol
+1. **Identify ISO Standard Reference**: Cite exact section (e.g., F2018 7.5.6.3)
+2. **Test Reference Compilers**: Intel ifx, NVIDIA nvfortran (known for compliance)
+3. **Document Expected Behavior**: What ISO standard requires
+4. **Document Actual Behavior**: What GCC currently does
+5. **Mark Compliance Status**:
+   - ✅ **STANDARD-COMPLIANT**: Matches ISO standard exactly
+   - ❌ **NON-COMPLIANT**: Violates ISO standard - MUST BE FIXED
+6. **NO Compromise**: Never accept partial compliance as "good enough"
 
 ### Allocatable Component Assignment (Fortran 2018)
 - Component-by-component intrinsic assignment
 - Allocatable LHS components: deallocate first, reallocate to match RHS, then copy
 - Must produce distinct storage (no aliasing with source)
 - Deep copy required for nested allocatable components
+- **Reference**: ISO/IEC 1539-1:2018 Section 7.5.2.3
 
-### Finalization
+### Finalization (Fortran 2018)
 - FINAL procedures called when derived type objects go out of scope
+- Function results MUST be finalized after assignment (F2018 7.5.6.3)
 - Self-assignment (`a = a`) requires special handling to avoid use-after-free
 - Parenthesized expressions like `(a)` create INTRINSIC_PARENTHESES operator nodes
 - Finalizer wrappers must not create self-referencing result symbols
+- **Reference**: ISO/IEC 1539-1:2018 Section 7.5.6.3
 
 ### Common Expression Tree Patterns in trans-expr.cc
 - **INTRINSIC_PARENTHESES**: Created by `(expr)` - defeats simple variable checks
@@ -451,28 +474,37 @@ cd /home/ert/code/gcc-dev/gcc-build/gcc && make check-gfortran RUNTESTFLAGS="dg.
 
 ## Debugging and Validation Techniques
 
-### Multi-Compiler Validation Strategy
-When fixing bugs, ALWAYS test with multiple compilers to understand correct behavior:
+### Multi-Compiler Validation Strategy - MANDATORY FOR ALL FIXES
 
-1. **Identify Reference Implementation:**
-   - Test with Intel ifx, NVIDIA nvfortran, NAG (if available)
-   - These often have better F2018+ compliance than GCC
-   - Document which compiler(s) show correct behavior
+**CRITICAL: ALL bug fixes MUST be validated against ISO standard behavior:**
+
+1. **Identify Reference Implementation (MANDATORY):**
+   - **ALWAYS test with Intel ifx and NVIDIA nvfortran** (best F2018+ compliance)
+   - Test with LLVM Flang and LFortran when available
+   - Document which compilers show ISO-compliant behavior
+   - **Reference compilers are the source of truth**, not GCC current behavior
 
 2. **Create Minimal Reproducer:**
    - Strip down to smallest test case showing the bug
    - Test both simple (`a = a`) and parenthesized (`a = (a)`) cases
    - Use if/stop pattern for clear pass/fail indication
 
-3. **Trace Execution Path:**
+3. **Document ISO Standard Requirements:**
+   - Cite exact ISO standard section (e.g., ISO/IEC 1539-1:2018 Section 7.5.6.3)
+   - Document what standard REQUIRES (not what GCC currently does)
+   - Mark any deviation from standard as ❌ NON-COMPLIANT
+
+4. **Trace Execution Path:**
    - Add temporary debug output in trans-expr.cc to trace code paths
    - Check which flags are set (deep_copy, finalize, etc.)
    - Verify expression tree structure (EXPR_VARIABLE vs EXPR_OP)
 
-4. **Verify Fix Completeness:**
+5. **Verify Fix Completeness (STRICT):**
    - Test all related expression patterns
    - Run full test suite to catch regressions
-   - Compare behavior with reference compilers
+   - **MANDATORY**: Compare behavior with reference compilers
+   - **MANDATORY**: Match ISO standard exactly - NO partial compliance
+   - If fix doesn't achieve full compliance, document as ❌ INCOMPLETE
 
 ### Commit Message Verification
 Before finalizing commits:
