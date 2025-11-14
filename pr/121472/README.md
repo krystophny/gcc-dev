@@ -44,6 +44,18 @@ Code using constructors and finalizers together should compile cleanly.
 - Runtime output: `constructor: 1`, `finalizer: 2`
 - Standard-compliant: finalizes function result + variable at scope exit
 
+### LLVM Flang (flang-new 21.1.5)
+- Status: PASS
+- Compiles with warning about undefined function result (benign)
+- Runtime: no output (no finalization printed)
+- No ICE, clean compilation
+
+### LFortran
+- Status: PASS
+- Compiles cleanly with no warnings
+- Runtime: no output (no finalization printed)
+- No ICE, clean compilation
+
 ## Standard Compliance Analysis
 
 **Fortran 2018 Standard Section 7.5.6.3 (When finalization occurs):**
@@ -62,12 +74,13 @@ finalized after assignment. The correct behavior is:
 **Current gfortran behavior: 1 finalization**
 - Only finalizes variable at scope exit
 - Missing finalization of function result (incomplete implementation)
-- Acceptable as known limitation until full finalization support
+- ⚠️ **NON-COMPLIANT**: Violates Fortran 2018 Section 7.5.6.3
+- ❌ **NOT ACCEPTABLE**: Must be fixed to match ISO standard
 
 **Intel ifx and NVIDIA nvfortran: 2 finalizations**
 - Both correctly finalize function result after assignment
 - Both correctly finalize variable at scope exit
-- Standard-compliant behavior
+- ✅ **STANDARD-COMPLIANT**: Correct Fortran 2018 behavior
 
 ## Reproducer
 
