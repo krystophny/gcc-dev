@@ -1,4 +1,4 @@
-From 86aec696a30621516771d8b03eba48c02a3cb149 Mon Sep 17 00:00:00 2001
+From 953c09c99005e243bffbba54c14061e466f56b03 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Fri, 14 Nov 2025 10:33:56 +0100
 Subject: [PATCH] fortran: mention first executable statement in error
