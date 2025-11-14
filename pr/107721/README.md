@@ -148,3 +148,73 @@ regression without depending on textual output.
 - `reproducer.f90`: standalone reproducer.
 - `bugzilla.txt`: curated notes from GCC Bugzilla (#107721) with references to
   key comments and suspected root causes.
+
+## Solution Implemented
+
+### Root Cause (Per Bugzilla Comment #9)
+The type-spec information IS preserved during parsing on the outer constructor.
+The bug occurs in **arith.cc's reduce_* functions** during constant folding:
+- `reduce_unary()`, `reduce_binary_ac()`, `reduce_binary_ca()`, `reduce_binary_aa()`
+- These functions evaluate operators at compile-time
+- They extract array constructor elements WITHOUT converting to declared type
+- Result: `[integer :: ([1.0])] ** 2` uses `1.0` (REAL) instead of `1` (INTEGER)
+
+### Fix Applied
+Added conversion logic in arith.cc BEFORE constant folding:
+
+1. **New helper: `array_constructor_allows_conversion()`**
+   - Returns true for: BT_INTEGER, BT_REAL, BT_COMPLEX, BT_LOGICAL, BT_UNSIGNED, BT_CHARACTER
+   - Returns false for: BT_DERIVED, BT_CLASS (not handled by gfc_convert_constant)
+
+2. **New helper: `maybe_convert_constructor_elements()`**
+   - Called before reduce_* functions process elements
+   - For each constant element:
+     - Simplify expression
+     - Check if type or kind mismatch with constructor's declared type
+     - If mismatch: call `gfc_convert_constant()` to convert
+     - If match: skip (optimization - already validated elsewhere)
+   - Non-constant elements: skip (already wrapped with conversion from parse time)
+
+3. **Integration points:**
+   - `reduce_unary()` - Before unary operations
+   - `reduce_binary_ac()` - Before array + scalar operations
+   - `reduce_binary_ca()` - Before scalar + array operations
+   - `reduce_binary_aa()` - Before array + array operations
+
+### Coverage
+- **Types**: All intrinsic types (INTEGER, REAL, COMPLEX, LOGICAL, UNSIGNED, CHARACTER)
+- **Patterns**: Parentheses, nested constructors, deep nesting, implied-do loops
+- **Related PRs**: Fixes PR107721 and PR102417 (CHARACTER arrays)
+- **Test**: array_constructor_typespec_1.f90 with 19 runtime correctness checks
+
+### Patch Submission
+
+**Title:**
+```
+[PATCH] fortran: Honor array constructor type-spec during constant folding [PR107721]
+```
+
+**Comment:**
+```
+This patch fixes PR107721 by adding type conversion in arith.cc before
+constant folding, addressing the issue identified in Comment #9.
+
+Array constructors with explicit type-spec now correctly convert their
+elements before the reduce_* functions fold constant expressions. This
+handles parentheses, nested constructors, and all intrinsic types,
+also fixing the related PR102417 for CHARACTER.
+
+Tested on x86_64-linux, zero regressions, new comprehensive test added.
+```
+
+**Files:**
+- Patch: `0001-fortran-honor-array-constructor-type-spec-during-fol.patch`
+- Branch: `pr107721-typespec` (single commit on top of upstream master)
+- Commit: e342503d731 (GNU-compliant message, proper ChangeLog, Signed-off-by)
+
+### Testing Results
+- ✅ Zero regressions in `make check-gfortran`
+- ✅ New test passes with 19/19 checks
+- ✅ Previously failing arithmetic_overflow tests now pass
+- ✅ All bugzilla examples work correctly
+- ✅ Multi-compiler validation confirms standards compliance
