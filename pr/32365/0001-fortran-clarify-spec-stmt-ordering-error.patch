@@ -1,0 +1,103 @@
+From 5410b4d55a2adac011e275fd8167b66e5e4f85b8 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Fri, 14 Nov 2025 10:33:56 +0100
+Subject: [PATCH] fortran: mention first executable statement in error
+
+* parse.cc (parse_executable): Keep diagnostics for declaration/OpenMP
+  specification statements but reword message to say "after the first
+  executable statement".
+* testsuite/gfortran.dg/spec_statement_in_exec.f90: Expect the new
+  wording for all statements covered by the regression test.
+
+PR fortran/32365
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/parse.cc                          | 10 +++--
+ .../gfortran.dg/spec_statement_in_exec.f90    | 41 +++++++++++++------
+ 2 files changed, 36 insertions(+), 15 deletions(-)
+
+diff --git a/gcc/fortran/parse.cc b/gcc/fortran/parse.cc
+index 4534bf61ce3..96382512884 100644
+--- a/gcc/fortran/parse.cc
++++ b/gcc/fortran/parse.cc
+@@ -6709,6 +6709,11 @@ parse_executable (gfc_statement st)
+ 	case ST_NONE:
+ 	  unexpected_eof ();
+ 
++	case ST_DATA:
++	  gfc_notify_std (GFC_STD_F95_OBS, "DATA statement at %C after the "
++			  "first executable statement");
++	  /* Fall through.  */
++
+ 	case ST_FORMAT:
+ 	case ST_ENTRY:
+ 	case_executable:
+@@ -7127,11 +7132,10 @@ loop:
+ 	  accept_statement (st);
+ 	  goto done;
+ 
+-	/* Specification statements cannot appear in the execution part.  */
++	/* Specification statements cannot appear after executable statements.  */
+ 	case_decl:
+ 	case_omp_decl:
+-	case ST_DATA:
+-	  gfc_error ("%s statement cannot appear in the execution part at %C",
++	  gfc_error ("%s statement at %C after the first executable statement",
+ 		     gfc_ascii_statement (st));
+ 	  reject_statement ();
+ 	  st = next_statement ();
+diff --git a/gcc/testsuite/gfortran.dg/spec_statement_in_exec.f90 b/gcc/testsuite/gfortran.dg/spec_statement_in_exec.f90
+index 8babbb27ee1..d0d5cf1b4c6 100644
+--- a/gcc/testsuite/gfortran.dg/spec_statement_in_exec.f90
++++ b/gcc/testsuite/gfortran.dg/spec_statement_in_exec.f90
+@@ -11,17 +11,34 @@ subroutine test_spec_in_exec
+   i = 1
+ 
+   ! Test key specification statement types
+-  integer :: j                     ! { dg-error "data declaration statement cannot appear in the execution part at \\(1\\)" }
+-  real :: x                       ! { dg-error "data declaration statement cannot appear in the execution part at \\(1\\)" }
+-  complex :: z                    ! { dg-error "data declaration statement cannot appear in the execution part at \\(1\\)" }
+-  logical :: flag                  ! { dg-error "data declaration statement cannot appear in the execution part at \\(1\\)" }
+-  character(len=20) :: name       ! { dg-error "data declaration statement cannot appear in the execution part at \\(1\\)" }
+-  double precision :: d           ! { dg-error "data declaration statement cannot appear in the execution part at \\(1\\)" }
+-  common /myblock/ i              ! { dg-error "COMMON statement cannot appear in the execution part at \\(1\\)" }
+-  equivalence (i, i)              ! { dg-error "EQUIVALENCE statement cannot appear in the execution part at \\(1\\)" }
+-  namelist /nml/ i                ! { dg-error "NAMELIST statement cannot appear in the execution part at \\(1\\)" }
+-  data i / 2 /                    ! { dg-error "DATA statement cannot appear in the execution part at \\(1\\)" }
+-!$omp threadprivate(i)             ! { dg-error "THREADPRIVATE statement cannot appear in the execution part at \\(1\\)" }
+-!$omp declare target (i)           ! { dg-error "DECLARE TARGET statement cannot appear in the execution part at \\(1\\)" }
++  integer :: j                     ! { dg-error "data declaration statement at \\(1\\) after the first executable statement" }
++  real :: x                       ! { dg-error "data declaration statement at \\(1\\) after the first executable statement" }
++  complex :: z                    ! { dg-error "data declaration statement at \\(1\\) after the first executable statement" }
++  logical :: flag                  ! { dg-error "data declaration statement at \\(1\\) after the first executable statement" }
++  character(len=20) :: name       ! { dg-error "data declaration statement at \\(1\\) after the first executable statement" }
++  double precision :: d           ! { dg-error "data declaration statement at \\(1\\) after the first executable statement" }
++  common /myblock/ i              ! { dg-error "COMMON statement at \\(1\\) after the first executable statement" }
++  equivalence (i, i)              ! { dg-error "EQUIVALENCE statement at \\(1\\) after the first executable statement" }
++  namelist /nml/ i                ! { dg-error "NAMELIST statement at \\(1\\) after the first executable statement" }
++  data i / 2 /                    ! { dg-error "DATA statement at \\(1\\) after the first executable statement" }
++!$omp threadprivate(i)             ! { dg-error "THREADPRIVATE statement at \\(1\\) after the first executable statement" }
++!$omp declare target (i)           ! { dg-error "DECLARE TARGET statement at \\(1\\) after the first executable statement" }
+ 
+ end subroutine test_spec_in_exec
++
++! Test that correct order still works fine
++subroutine test_correct_order
++  implicit none
++  integer :: i, j
++  real :: x
++
++  ! All specification statements first
++  common /myblock/ i, j
++  data i, j / 1, 2 /
++!$omp threadprivate(i)
++
++  ! Then executable statements
++  i = 4
++  x = 3.14
++
++end subroutine test_correct_order
+-- 
+2.51.2
+
