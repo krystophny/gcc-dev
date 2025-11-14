@@ -1,4 +1,4 @@
-From f9bd4018290f7ea9d85ce9b04ddd7413a6217183 Mon Sep 17 00:00:00 2001
+From 9683b0f32fd0b66b047e356386f2e00192eb8605 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Fri, 14 Nov 2025 13:22:47 +0100
 Subject: [PATCH] fortran: enforce spec statements ordering
