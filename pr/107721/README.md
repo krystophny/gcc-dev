@@ -114,11 +114,11 @@ Additional reference runs (all correct):
 ## Minimal testsuite reproducer
 - File: `gcc/gcc/testsuite/gfortran.dg/array_constructor_typespec_1.f90`
 - Mechanism: compares the decimal range returned by `range()` for expressions
-  with and without parentheses around the constructor. Correct compilers see
-  identical range values (both expressions keep their declared type); buggy
-  compilers return the real range (37) for the parenthesized INTEGER case and
-  the integer range (9) for the parenthesized REAL case, triggering `stop 1`
-  or `stop 2`.
+  with and without parentheses around the constructor (plain literals and
+  implied-do loops) and checks the storage size of COMPLEX constructors. Bad
+  compilers flip INTEGER⇄REAL ranges once parentheses introduce nested array
+  constructors (`stop 1-4`) and shrink COMPLEX storage down to the REAL size
+  (`stop 5`).
 - Targeted run:
   ```bash
   cd /home/ert/code/gcc-dev/gcc-build/gcc
@@ -126,8 +126,9 @@ Additional reference runs (all correct):
   ```
   (The file currently lives only on branch `pr107721-typespec`; wire it into
   `dg.exp` when we post the fix.)
-- Follow-up: extend this family with implied-do and COMPLEX coverage once we
-  wire in the conversion fix so we can keep all variants green.
+- Follow-up: consider adding CLASS(*)/implied-do chains that mix scalars and
+  array constructors once the main patch lands upstream, and wire the file
+  into `dg.exp` before running the full `check-gfortran` sweep.
 
 ## Cross-compiler status (array_constructor_typespec_1.f90)
 | Compiler | Command | Result |
