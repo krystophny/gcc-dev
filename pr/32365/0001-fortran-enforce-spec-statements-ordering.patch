@@ -1,6 +1,6 @@
-From 1e106bdee206c87fc0c2062b587d302b349f3be4 Mon Sep 17 00:00:00 2001
+From 8110f52f625bab61898b7f44441f49301eb3a193 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
-Date: Fri, 14 Nov 2025 13:22:47 +0100
+Date: Fri, 14 Nov 2025 14:21:16 +0100
 Subject: [PATCH] fortran: enforce spec statements ordering
 
 * parse.cc (parse_executable): Reject declaration/OpenMP specification
@@ -16,70 +16,37 @@ PR fortran/32365
 
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
- gcc/fortran/parse.cc                          | 21 +++++++++++++++
- gcc/testsuite/gfortran.dg/pr88248.f90         |  2 +-
- .../gfortran.dg/spec_statement_in_exec.f90    | 27 +++++++++++++++++++
- 3 files changed, 49 insertions(+), 1 deletion(-)
+ gcc/fortran/parse.cc                          |  9 +++++++
+ .../gfortran.dg/spec_statement_in_exec.f90    | 26 +++++++++++++++++++
+ 2 files changed, 35 insertions(+)
  create mode 100644 gcc/testsuite/gfortran.dg/spec_statement_in_exec.f90
 
 diff --git a/gcc/fortran/parse.cc b/gcc/fortran/parse.cc
-index f987f464023..8d577db484d 100644
+index f987f464023..3784b2a00cf 100644
 --- a/gcc/fortran/parse.cc
 +++ b/gcc/fortran/parse.cc
-@@ -6710,6 +6710,14 @@ parse_executable (gfc_statement st)
- 	  unexpected_eof ();
- 
- 	case ST_DATA:
-+	  if ((gfc_option.allow_std & GFC_STD_GNU) == 0)
-+	    {
-+	      gfc_error ("%s statement at %C cannot follow executable statement",
-+			 gfc_ascii_statement (st));
-+	      reject_statement ();
-+	      st = next_statement ();
-+	      continue;
-+	    }
- 	  gfc_notify_std (GFC_STD_F95_OBS, "DATA statement at %C after the "
- 			  "first executable statement");
- 	  /* Fall through.  */
-@@ -7132,6 +7140,19 @@ loop:
+@@ -7132,6 +7132,15 @@ loop:
  	  accept_statement (st);
  	  goto done;
  
 +	/* Specification statements cannot follow executable statements.  */
 +	case_decl:
 +	case_omp_decl:
-+	  if ((gfc_option.allow_std & GFC_STD_GNU) == 0)
-+	    {
-+	      gfc_error ("%s statement at %C cannot follow executable statement",
-+			 gfc_ascii_statement (st));
-+	      reject_statement ();
-+	      st = next_statement ();
-+	      continue;
-+	    }
-+	  break;
++	  gfc_error ("%s statement at %C cannot follow executable statement",
++		     gfc_ascii_statement (st));
++	  reject_statement ();
++	  st = next_statement ();
++	  continue;
 +
  	default:
  	  break;
  	}
-diff --git a/gcc/testsuite/gfortran.dg/pr88248.f90 b/gcc/testsuite/gfortran.dg/pr88248.f90
-index 2a49305e70a..4531c074ee1 100644
---- a/gcc/testsuite/gfortran.dg/pr88248.f90
-+++ b/gcc/testsuite/gfortran.dg/pr88248.f90
-@@ -7,7 +7,7 @@ program pr88248
-   character*80 text     ! { dg-warning "Old-style character length" }
-   f(x) = x              ! { dg-warning "Statement function" }
-   call foo (*99)        ! { dg-warning "Alternate-return argument" }
--  data y / 1.0 /        ! { dg-warning "DATA statement" }
-+  data y / 1.0 /        ! { dg-error "DATA statement at \\(1\\) cannot follow executable statement" }
-   goto (1,99) i+1       ! { dg-warning "Computed GOTO" }
-   ! No warning should be printed below
-   goto 1
 diff --git a/gcc/testsuite/gfortran.dg/spec_statement_in_exec.f90 b/gcc/testsuite/gfortran.dg/spec_statement_in_exec.f90
 new file mode 100644
-index 00000000000..2a9e2089dcf
+index 00000000000..1c8b9899f83
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/spec_statement_in_exec.f90
-@@ -0,0 +1,27 @@
+@@ -0,0 +1,26 @@
 +! { dg-do compile }
 +! { dg-options "-fopenmp -std=f2018" }
 +! Test improved error messages for specification statements in executable section
@@ -102,7 +69,6 @@ index 00000000000..2a9e2089dcf
 +  common /myblock/ i              ! { dg-error "COMMON statement at \\(1\\) cannot follow executable statement" }
 +  equivalence (i, i)              ! { dg-error "EQUIVALENCE statement at \\(1\\) cannot follow executable statement" }
 +  namelist /nml/ i                ! { dg-error "NAMELIST statement at \\(1\\) cannot follow executable statement" }
-+  data i / 2 /                    ! { dg-warning "DATA statement" }
 +!$omp threadprivate(i)             ! { dg-error "THREADPRIVATE statement at \\(1\\) cannot follow executable statement" }
 +!$omp declare target (i)           ! { dg-error "DECLARE TARGET statement at \\(1\\) cannot follow executable statement" }
 +
