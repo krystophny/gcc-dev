@@ -178,6 +178,69 @@ git -C gcc fetch origin
 git -C gcc rebase origin/master
 ```
 
+### Complete Patch Development Workflow
+
+**CRITICAL: Always maintain a single, clean commit on top of upstream base branch.**
+
+This workflow ensures patches are ready for upstream submission:
+
+1. **Create Topic Branch**
+   ```bash
+   git -C gcc checkout -b pr<number>-<short-desc>
+   ```
+
+2. **Develop and Test Iteratively**
+   - Make changes to source and test files
+   - Build: `cd gcc-build && make -j32`
+   - Test: `cd gcc-build/gcc && make -j32 -k check-gfortran`
+   - Amend commits as you iterate: `git -C gcc commit --amend`
+
+3. **Keep Single Commit with --amend**
+   ```bash
+   # After each round of changes:
+   git -C gcc add <modified-files>
+   git -C gcc commit --amend --no-edit  # Keeps same message
+   # OR
+   git -C gcc commit --amend  # Edit message
+   ```
+
+4. **Squash Multiple Commits if Needed**
+   ```bash
+   # If you accidentally created multiple commits:
+   git -C gcc reset --soft HEAD~2  # Soft reset last 2 commits
+   git -C gcc commit -s  # Create single commit
+   ```
+
+5. **Verify Commit Message Format**
+   ```bash
+   # Check TAB formatting (should show ^I):
+   git -C gcc log -1 --format=%B | cat -A
+
+   # Verify single commit on top of upstream:
+   git -C gcc log --oneline -5
+   ```
+
+6. **Export Patch**
+   ```bash
+   git -C gcc format-patch -1 HEAD -o ../pr/<number>/
+   ```
+
+7. **Track in Meta-Repo**
+   ```bash
+   git add pr/<number>/<patch-file>
+   git commit -m "pr<number>: description of patch"
+   ```
+
+**Key Principles:**
+- ✅ ONE commit per PR on topic branch
+- ✅ Commit message includes PR reference and ChangeLog
+- ✅ ChangeLog entries ONLY in commit message (NOT in files)
+- ✅ TAB formatting verified with `cat -A`
+- ✅ Signed-off-by line present
+- ✅ Tests passing before patch export
+- ❌ NEVER push to upstream remote
+- ❌ NEVER edit ChangeLog files directly
+
 ### GNU Commit Message Template with Sign-off
 
 **Commit Message Format:**
