@@ -13,7 +13,9 @@ This meta-repository tracks GCC Fortran bug reproducers, patches, and developmen
 **Git Command Conventions:**
 - Upstream GCC work: `git -C gcc <command>` (from meta-repo root)
 - Meta-repo work: `git <command>` (from meta-repo root)
-- **Never push the `gcc/` repository** - Export patches instead
+- **Push targets matter:**
+  - `origin` (GitHub private fork) is safe for both repos—push topic branches here whenever we need to share WIP.
+  - `upstream` (gcc.gnu.org) must NEVER receive pushes; export patches or use `git send-email` instead.
 - **Do not edit GCC ChangeLog files** - Upstream regenerates them from commits
 
 ## Build and Test Workflow
