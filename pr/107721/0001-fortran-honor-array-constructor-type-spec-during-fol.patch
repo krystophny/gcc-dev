@@ -1,0 +1,202 @@
+From f9691059951cd42d6f2b55228801816ec4f5483a Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Fri, 14 Nov 2025 20:15:26 +0100
+Subject: [PATCH] fortran: honor array constructor type-spec during folding
+
+Add helpers so array constructors with explicit type-spec convert their
+elements before constant folding, even when parentheses or nested
+constructors are present. Extend the gfortran.dg test to cover
+literal/implied-do INTEGER/REAL cases plus COMPLEX storage.
+
+	PR fortran/107721
+
+gcc/fortran/ChangeLog:
+
+	* arith.cc: Include intrinsic.h.
+	(array_constructor_allows_conversion): New helper to check if
+	array constructor type allows element conversion.
+	(maybe_convert_constructor_elements): New helper to convert
+	array constructor elements to declared type before folding.
+	(reduce_unary): Call maybe_convert_constructor_elements.
+	(reduce_binary_ac): Likewise.
+	(reduce_binary_ca): Likewise.
+	(reduce_binary_aa): Likewise.
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/array_constructor_typespec_1.f90: New test for
+	array constructor type-spec preservation with parentheses and
+	implied-do loops.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/arith.cc                          | 78 +++++++++++++++++++
+ .../array_constructor_typespec_1.f90          | 31 ++++++++
+ 2 files changed, 109 insertions(+)
+ create mode 100644 gcc/testsuite/gfortran.dg/array_constructor_typespec_1.f90
+
+diff --git a/gcc/fortran/arith.cc b/gcc/fortran/arith.cc
+index 82a8b6fb995..cbbe694bf21 100644
+--- a/gcc/fortran/arith.cc
++++ b/gcc/fortran/arith.cc
+@@ -29,11 +29,66 @@ along with GCC; see the file COPYING3.  If not see
+ #include "options.h"
+ #include "gfortran.h"
+ #include "arith.h"
++#include "intrinsic.h"
+ #include "target-memory.h"
+ #include "constructor.h"
+ 
+ bool gfc_seen_div0;
+ 
++static bool
++array_constructor_allows_conversion (const gfc_expr *op)
++{
++  if (op == NULL || op->expr_type != EXPR_ARRAY)
++    return false;
++
++  switch (op->ts.type)
++    {
++    case BT_INTEGER:
++    case BT_REAL:
++    case BT_COMPLEX:
++    case BT_LOGICAL:
++    case BT_UNSIGNED:
++      return true;
++
++    default:
++      return false;
++    }
++}
++
++static arith
++maybe_convert_constructor_elements (gfc_expr *op)
++{
++  gfc_constructor *c;
++
++  if (!array_constructor_allows_conversion (op))
++    return ARITH_OK;
++
++  if (op->value.constructor == NULL)
++    return ARITH_OK;
++
++  for (c = gfc_constructor_first (op->value.constructor);
++       c; c = gfc_constructor_next (c))
++    {
++      gfc_expr *converted;
++
++      if (c->expr == NULL)
++        continue;
++
++      gfc_simplify_expr (c->expr, 0);
++
++      if (!gfc_is_constant_expr (c->expr))
++        continue;
++
++      converted = gfc_convert_constant (c->expr, op->ts.type, op->ts.kind);
++      if (converted == NULL || converted == &gfc_bad_expr)
++        return ARITH_NOT_REDUCED;
++
++      gfc_replace_expr (c->expr, converted);
++    }
++
++  return ARITH_OK;
++}
++
+ /* MPFR does not have a direct replacement for mpz_set_f() from GMP.
+    It's easily implemented with a few calls though.  */
+ 
+@@ -1474,6 +1529,10 @@ reduce_unary (arith (*eval) (gfc_expr *, gfc_expr **), gfc_expr *op,
+   if (op->expr_type != EXPR_ARRAY)
+     return ARITH_NOT_REDUCED;
+ 
++  rc = maybe_convert_constructor_elements (op);
++  if (rc != ARITH_OK)
++    return rc;
++
+   rc = ARITH_OK;
+   head = gfc_constructor_copy (op->value.constructor);
+   for (c = gfc_constructor_first (head); c; c = gfc_constructor_next (c))
+@@ -1528,6 +1587,11 @@ reduce_binary_ac (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
+   gfc_expr *r;
+   arith rc = ARITH_OK;
+ 
++  rc = maybe_convert_constructor_elements (op1);
++  if (rc != ARITH_OK)
++    return rc;
++
++  rc = ARITH_OK;
+   head = gfc_constructor_copy (op1->value.constructor);
+   for (c = gfc_constructor_first (head); c; c = gfc_constructor_next (c))
+     {
+@@ -1592,6 +1656,11 @@ reduce_binary_ca (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
+   gfc_expr *r;
+   arith rc = ARITH_OK;
+ 
++  rc = maybe_convert_constructor_elements (op2);
++  if (rc != ARITH_OK)
++    return rc;
++
++  rc = ARITH_OK;
+   head = gfc_constructor_copy (op2->value.constructor);
+   for (c = gfc_constructor_first (head); c; c = gfc_constructor_next (c))
+     {
+@@ -1661,9 +1730,18 @@ reduce_binary_aa (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
+   gfc_expr *r;
+   arith rc = ARITH_OK;
+ 
++  rc = maybe_convert_constructor_elements (op1);
++  if (rc != ARITH_OK)
++    return rc;
++
++  rc = maybe_convert_constructor_elements (op2);
++  if (rc != ARITH_OK)
++    return rc;
++
+   if (!gfc_check_conformance (op1, op2, _("elemental binary operation")))
+     return ARITH_INCOMMENSURATE;
+ 
++  rc = ARITH_OK;
+   head = gfc_constructor_copy (op1->value.constructor);
+   for (c = gfc_constructor_first (head),
+        d = gfc_constructor_first (op2->value.constructor);
+diff --git a/gcc/testsuite/gfortran.dg/array_constructor_typespec_1.f90 b/gcc/testsuite/gfortran.dg/array_constructor_typespec_1.f90
+new file mode 100644
+index 00000000000..d1a49d8212c
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/array_constructor_typespec_1.f90
+@@ -0,0 +1,31 @@
++! { dg-do run }
++
++program array_constructor_typespec_1
++    implicit none
++    integer :: i
++    integer :: range_int_plain, range_int_paren
++    integer :: range_real_plain, range_real_paren
++    integer :: range_int_plain_ido, range_int_paren_ido
++    integer :: range_real_plain_ido, range_real_paren_ido
++    integer :: size_c_plain, size_c_paren
++
++    range_int_plain = range(([integer ::[1.0]]**2))
++    range_int_paren = range(([integer ::([1.0])]**2))
++    if (range_int_plain /= range_int_paren) stop 1
++
++    range_real_plain = range(([real ::[2]]**2))
++    range_real_paren = range(([real ::([2])]**2))
++    if (range_real_plain /= range_real_paren) stop 2
++
++    range_int_plain_ido = range(([integer ::(/(1.0, i=1, 1)/)]**2))
++    range_int_paren_ido = range(([integer ::((/(1.0, i=1, 1)/))]**2))
++    if (range_int_plain_ido /= range_int_paren_ido) stop 3
++
++    range_real_plain_ido = range(([real ::(/(2, i=1, 1)/)]**2))
++    range_real_paren_ido = range(([real ::((/(2, i=1, 1)/))]**2))
++    if (range_real_plain_ido /= range_real_paren_ido) stop 4
++
++    size_c_plain = storage_size(([complex ::[(3.0, 0.0)]]**2))
++    size_c_paren = storage_size(([complex ::([(3.0, 0.0)])]**2))
++    if (size_c_plain /= size_c_paren) stop 5
++end program array_constructor_typespec_1
+-- 
+2.51.2
+
