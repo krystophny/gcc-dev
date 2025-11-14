@@ -26,11 +26,12 @@ Code using constructors and finalizers together should compile cleanly.
 - Status: ICE (before fix)
 - Internal compiler error in gimplify_expr at gimplify.cc:20443
 
-### Dev gfortran (gcc-build/gcc/gfortran with PR121472 fix)
+### Dev gfortran (gcc-build/gcc/gfortran with PR121472 ISO-compliant fix)
 - Status: PASS
 - Compiles cleanly
-- Runtime output: `constructor: 1`, `finalizer: 1`
-- Note: 1 finalization is incomplete but acceptable (see Standard Compliance below)
+- Runtime output: `constructor: 1`, `finalizer: 2`
+- ✅ **STANDARD-COMPLIANT**: Correct Fortran 2018 behavior
+- Finalizes function result after assignment + variable at scope exit
 
 ### Intel ifx 2025.2.1
 - Status: PASS
@@ -71,11 +72,11 @@ finalized after assignment. The correct behavior is:
 - Function result after assignment: 1
 - Variable at scope exit: 1
 
-**Current gfortran behavior: 1 finalization**
-- Only finalizes variable at scope exit
-- Missing finalization of function result (incomplete implementation)
-- ⚠️ **NON-COMPLIANT**: Violates Fortran 2018 Section 7.5.6.3
-- ❌ **NOT ACCEPTABLE**: Must be fixed to match ISO standard
+**Updated gfortran behavior: 2 finalizations**
+- ✅ Finalizes function result after assignment (ISO F2018 7.5.6.3)
+- ✅ Finalizes variable at scope exit
+- ✅ **STANDARD-COMPLIANT**: Full ISO F2018 Section 7.5.6.3 compliance
+- ✅ **MATCHES REFERENCE COMPILERS**: Intel ifx and NVIDIA nvfortran behavior
 
 **Intel ifx and NVIDIA nvfortran: 2 finalizations**
 - Both correctly finalize function result after assignment
@@ -129,4 +130,19 @@ Added formal regression test: `gcc/testsuite/gfortran.dg/finalize_constructor_1.
 - ✅ New testsuite entry passes
 - ✅ GNU coding standards compliant
 - ✅ Independent review by Patrick-Auditor: CONDITIONAL_APPROVE (7/10 cleanliness)
+- ✅ No new regressions introduced (baseline vs patched identical behavior)
+- ⚠️  Pre-existing test failures in finalize_39.f90 and finalize_45.f90 (unrelated to this fix)
 - ✅ Ready for upstream submission
+
+### Test Suite Status
+
+**CRITICAL**: This fix does NOT introduce any new test regressions.
+
+**Pre-existing test failures (NOT caused by this patch):**
+- `finalize_39.f90`: Known pre-existing finalization count mismatch
+- `finalize_45.f90`: Known bug with TODO comment in test itself (lines 125-127)
+
+**Verification method:**
+- Tested baseline GCC (without changes): Same finalize_39/45 failures
+- Tested patched GCC (with PR121472 fix): Same finalize_39/45 failures
+- **Conclusion**: Failures are pre-existing, not regressions from this fix
