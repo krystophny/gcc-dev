@@ -1,4 +1,4 @@
-From a55dc7d4bcb9c4d1d9ab083ab1f55a5d8a3a66d4 Mon Sep 17 00:00:00 2001
+From e342503d73121a680b1a28c4951dbc0166e4fe4e Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Fri, 14 Nov 2025 20:15:26 +0100
 Subject: [PATCH] fortran: honor array constructor type-spec during folding
@@ -31,8 +31,8 @@ gcc/testsuite/ChangeLog:
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
  gcc/fortran/arith.cc                          | 85 +++++++++++++++++++
- .../array_constructor_typespec_1.f90          | 31 +++++++
- 2 files changed, 116 insertions(+)
+ .../array_constructor_typespec_1.f90          | 64 ++++++++++++++
+ 2 files changed, 149 insertions(+)
  create mode 100644 gcc/testsuite/gfortran.dg/array_constructor_typespec_1.f90
 
 diff --git a/gcc/fortran/arith.cc b/gcc/fortran/arith.cc
@@ -169,40 +169,73 @@ index 82a8b6fb995..e52e85e3c56 100644
         d = gfc_constructor_first (op2->value.constructor);
 diff --git a/gcc/testsuite/gfortran.dg/array_constructor_typespec_1.f90 b/gcc/testsuite/gfortran.dg/array_constructor_typespec_1.f90
 new file mode 100644
-index 00000000000..d1a49d8212c
+index 00000000000..04594d3aace
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/array_constructor_typespec_1.f90
-@@ -0,0 +1,31 @@
+@@ -0,0 +1,64 @@
 +! { dg-do run }
++! PR fortran/107721 - array constructor type-spec lost with parentheses
++! PR fortran/102417 - character array constructor type-spec lost
 +
 +program array_constructor_typespec_1
 +    implicit none
 +    integer :: i
-+    integer :: range_int_plain, range_int_paren
-+    integer :: range_real_plain, range_real_paren
-+    integer :: range_int_plain_ido, range_int_paren_ido
-+    integer :: range_real_plain_ido, range_real_paren_ido
-+    integer :: size_c_plain, size_c_paren
++    integer, dimension(2) :: iarr
++    real, dimension(2) :: rarr
++    complex, dimension(2) :: carr
++    logical, dimension(2) :: larr
++    character(4), dimension(3) :: charr
++    character :: x = 'a'
 +
-+    range_int_plain = range(([integer ::[1.0]]**2))
-+    range_int_paren = range(([integer ::([1.0])]**2))
-+    if (range_int_plain /= range_int_paren) stop 1
++    ! INTEGER - runtime value checks
++    iarr = [integer :: [1.0], [2.0]]
++    if (any(iarr /= [1, 2])) stop 1
++    iarr = [integer :: ([1.0]), ([2.0])]
++    if (any(iarr /= [1, 2])) stop 2
++    iarr = [integer :: ((([1.0]))), [2.0]]
++    if (any(iarr /= [1, 2])) stop 3
 +
-+    range_real_plain = range(([real ::[2]]**2))
-+    range_real_paren = range(([real ::([2])]**2))
-+    if (range_real_plain /= range_real_paren) stop 2
++    ! REAL - runtime value checks
++    rarr = [real :: [2], [3]]
++    if (any(rarr /= [2.0, 3.0])) stop 4
++    rarr = [real :: ([2]), ([3])]
++    if (any(rarr /= [2.0, 3.0])) stop 5
++    rarr = [real :: ((([2]))), [3]]
++    if (any(rarr /= [2.0, 3.0])) stop 6
 +
-+    range_int_plain_ido = range(([integer ::(/(1.0, i=1, 1)/)]**2))
-+    range_int_paren_ido = range(([integer ::((/(1.0, i=1, 1)/))]**2))
-+    if (range_int_plain_ido /= range_int_paren_ido) stop 3
++    ! COMPLEX - runtime value checks
++    carr = [complex :: [3], [4]]
++    if (any(carr /= [(3.0, 0.0), (4.0, 0.0)])) stop 7
++    carr = [complex :: ([3]), ([4])]
++    if (any(carr /= [(3.0, 0.0), (4.0, 0.0)])) stop 8
++    carr = [complex :: ((([3]))), [4]]
++    if (any(carr /= [(3.0, 0.0), (4.0, 0.0)])) stop 9
 +
-+    range_real_plain_ido = range(([real ::(/(2, i=1, 1)/)]**2))
-+    range_real_paren_ido = range(([real ::((/(2, i=1, 1)/))]**2))
-+    if (range_real_plain_ido /= range_real_paren_ido) stop 4
++    ! LOGICAL - runtime value checks
++    larr = [logical :: [1], [0]]
++    if (any(larr .neqv. [.true., .false.])) stop 10
++    larr = [logical :: ([1]), ([0])]
++    if (any(larr .neqv. [.true., .false.])) stop 11
 +
-+    size_c_plain = storage_size(([complex ::[(3.0, 0.0)]]**2))
-+    size_c_paren = storage_size(([complex ::([(3.0, 0.0)])]**2))
-+    if (size_c_plain /= size_c_paren) stop 5
++    ! CHARACTER - runtime value checks (PR 102417)
++    charr = [character(4) :: x, 'b', 'c']
++    if (any(charr /= ['a   ', 'b   ', 'c   '])) stop 12
++    charr = [character(4) :: (x), 'b', 'c']
++    if (any(charr /= ['a   ', 'b   ', 'c   '])) stop 13
++    charr = [[character(4) :: x, 'b', 'c']]
++    if (any(charr /= ['a   ', 'b   ', 'c   '])) stop 14
++
++    ! Implied-do with parentheses
++    iarr = [integer :: (/(1.0*i, i=1, 2)/)]
++    if (any(iarr /= [1, 2])) stop 15
++    iarr = [integer :: ((/(1.0*i, i=1, 2)/))]
++    if (any(iarr /= [1, 2])) stop 16
++
++    ! Operations on parenthesized constructors
++    if ([integer :: ([1.0])] ** 2 /= 1) stop 17
++    if (any([real :: ([2]), [3]] ** 2 /= [4.0, 9.0])) stop 18
++    if ([complex :: ([3])] ** 2 /= (9.0, 0.0)) stop 19
++
 +end program array_constructor_typespec_1
 -- 
 2.51.2
