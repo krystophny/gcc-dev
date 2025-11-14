@@ -1,27 +1,46 @@
-From 81d392acb2a9adcb7a86d2abca537e526de17b06 Mon Sep 17 00:00:00 2001
+From 393724e5cf3411de0a1ddb74beab4c64dd42a754 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Fri, 14 Nov 2025 11:46:16 +0100
-Subject: [PATCH] fortran: align spec-stmt message with verify_st_order
+Subject: [PATCH] fortran: gate spec-stmt execution error on -std
 
-* parse.cc (parse_executable): Reword diagnostic to say "%s
-  statement ... cannot follow executable statement" mirroring other
-  ordering errors.
-* testsuite/gfortran.dg/spec_statement_in_exec.f90: Expect updated
-  wording.
+* parse.cc (parse_executable): Only reject specification/OMP statements in
+  the execution part when compiling in an ISO -std mode; leave legacy/GNU
+  modes unchanged while still warning about DATA after executables.
+* testsuite/gfortran.dg/spec_statement_in_exec.f90: Require -std=f2018,
+  update expected diagnostics, and keep the helper subroutine free of other
+  errors.
+* testsuite/gfortran.dg/pr88248.f90: Expect the stricter DATA diagnostic
+  under -std=f2018.
 
 PR fortran/32365
 
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
- gcc/fortran/parse.cc                          |  4 ++--
- .../gfortran.dg/spec_statement_in_exec.f90    | 24 +++++++++----------
- 2 files changed, 14 insertions(+), 14 deletions(-)
+ gcc/fortran/parse.cc                          | 24 +++++++++++----
+ gcc/testsuite/gfortran.dg/pr88248.f90         |  2 +-
+ .../gfortran.dg/spec_statement_in_exec.f90    | 30 +++++++++----------
+ 3 files changed, 33 insertions(+), 23 deletions(-)
 
 diff --git a/gcc/fortran/parse.cc b/gcc/fortran/parse.cc
-index 96382512884..3784b2a00cf 100644
+index 96382512884..8d577db484d 100644
 --- a/gcc/fortran/parse.cc
 +++ b/gcc/fortran/parse.cc
-@@ -7132,10 +7132,10 @@ loop:
+@@ -6710,6 +6710,14 @@ parse_executable (gfc_statement st)
+ 	  unexpected_eof ();
+ 
+ 	case ST_DATA:
++	  if ((gfc_option.allow_std & GFC_STD_GNU) == 0)
++	    {
++	      gfc_error ("%s statement at %C cannot follow executable statement",
++			 gfc_ascii_statement (st));
++	      reject_statement ();
++	      st = next_statement ();
++	      continue;
++	    }
+ 	  gfc_notify_std (GFC_STD_F95_OBS, "DATA statement at %C after the "
+ 			  "first executable statement");
+ 	  /* Fall through.  */
+@@ -7132,14 +7140,18 @@ loop:
  	  accept_statement (st);
  	  goto done;
  
@@ -30,14 +49,46 @@ index 96382512884..3784b2a00cf 100644
  	case_decl:
  	case_omp_decl:
 -	  gfc_error ("%s statement at %C after the first executable statement",
-+	  gfc_error ("%s statement at %C cannot follow executable statement",
- 		     gfc_ascii_statement (st));
- 	  reject_statement ();
- 	  st = next_statement ();
+-		     gfc_ascii_statement (st));
+-	  reject_statement ();
+-	  st = next_statement ();
+-	  continue;
++	  if ((gfc_option.allow_std & GFC_STD_GNU) == 0)
++	    {
++	      gfc_error ("%s statement at %C cannot follow executable statement",
++			 gfc_ascii_statement (st));
++	      reject_statement ();
++	      st = next_statement ();
++	      continue;
++	    }
++	  break;
+ 
+ 	default:
+ 	  break;
+diff --git a/gcc/testsuite/gfortran.dg/pr88248.f90 b/gcc/testsuite/gfortran.dg/pr88248.f90
+index 2a49305e70a..4531c074ee1 100644
+--- a/gcc/testsuite/gfortran.dg/pr88248.f90
++++ b/gcc/testsuite/gfortran.dg/pr88248.f90
+@@ -7,7 +7,7 @@ program pr88248
+   character*80 text     ! { dg-warning "Old-style character length" }
+   f(x) = x              ! { dg-warning "Statement function" }
+   call foo (*99)        ! { dg-warning "Alternate-return argument" }
+-  data y / 1.0 /        ! { dg-warning "DATA statement" }
++  data y / 1.0 /        ! { dg-error "DATA statement at \\(1\\) cannot follow executable statement" }
+   goto (1,99) i+1       ! { dg-warning "Computed GOTO" }
+   ! No warning should be printed below
+   goto 1
 diff --git a/gcc/testsuite/gfortran.dg/spec_statement_in_exec.f90 b/gcc/testsuite/gfortran.dg/spec_statement_in_exec.f90
-index 268304bc049..397c57c94ff 100644
+index 268304bc049..c86d898e365 100644
 --- a/gcc/testsuite/gfortran.dg/spec_statement_in_exec.f90
 +++ b/gcc/testsuite/gfortran.dg/spec_statement_in_exec.f90
+@@ -1,5 +1,5 @@
+ ! { dg-do compile }
+-! { dg-options "-fopenmp" }
++! { dg-options "-fopenmp -std=f2018" }
+ ! Test improved error messages for specification statements in executable section
+ ! PR fortran/32365 - Better error message for specification statement in executable section
+ 
 @@ -11,18 +11,18 @@ subroutine test_spec_in_exec
    i = 1
  
@@ -69,6 +120,19 @@ index 268304bc049..397c57c94ff 100644
  
  end subroutine test_spec_in_exec
  
+@@ -31,11 +31,9 @@ subroutine test_correct_order
+   implicit none
+   integer :: i, j
+   real :: x
++  logical :: flag
+ 
+   ! All specification statements first
+-  common /myblock/ i, j
+-  data i, j / 1, 2 /
+-!$omp threadprivate(i)
+ 
+   ! Then executable statements
+   i = 4
 -- 
 2.51.2
 
