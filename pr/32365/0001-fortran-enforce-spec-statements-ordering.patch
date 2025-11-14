@@ -1,4 +1,4 @@
-From 8110f52f625bab61898b7f44441f49301eb3a193 Mon Sep 17 00:00:00 2001
+From d4291afa8107a75c60deddc1d108cb750e0f2676 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Fri, 14 Nov 2025 14:21:16 +0100
 Subject: [PATCH] fortran: enforce spec statements ordering
@@ -17,8 +17,19 @@ PR fortran/32365
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
  gcc/fortran/parse.cc                          |  9 +++++++
+ gcc/testsuite/gfortran.dg/common_22.f90       | 16 ++++++------
+ gcc/testsuite/gfortran.dg/common_24.f         |  2 +-
+ gcc/testsuite/gfortran.dg/goacc/routine-1.f90 |  6 ++---
+ gcc/testsuite/gfortran.dg/goacc/routine-2.f90 |  2 +-
+ .../gfortran.dg/gomp/declare-variant-17.f90   |  4 +--
+ gcc/testsuite/gfortran.dg/gomp/interop-1.f90  |  2 +-
+ gcc/testsuite/gfortran.dg/gomp/order-2.f90    | 10 +++----
+ gcc/testsuite/gfortran.dg/gomp/pr78026.f03    |  2 +-
+ gcc/testsuite/gfortran.dg/gomp/requires-4.f90 |  2 +-
+ gcc/testsuite/gfortran.dg/gomp/requires-6.f90 |  2 +-
+ gcc/testsuite/gfortran.dg/pr61669.f90         |  4 +--
  .../gfortran.dg/spec_statement_in_exec.f90    | 26 +++++++++++++++++++
- 2 files changed, 35 insertions(+)
+ 13 files changed, 61 insertions(+), 26 deletions(-)
  create mode 100644 gcc/testsuite/gfortran.dg/spec_statement_in_exec.f90
 
 diff --git a/gcc/fortran/parse.cc b/gcc/fortran/parse.cc
@@ -41,6 +52,208 @@ index f987f464023..3784b2a00cf 100644
  	default:
  	  break;
  	}
+diff --git a/gcc/testsuite/gfortran.dg/common_22.f90 b/gcc/testsuite/gfortran.dg/common_22.f90
+index e2254099d72..9763d2a571b 100644
+--- a/gcc/testsuite/gfortran.dg/common_22.f90
++++ b/gcc/testsuite/gfortran.dg/common_22.f90
+@@ -7,18 +7,18 @@
+ ! Contributed by Bud Davis  <jmdavis@link.com>
+ 
+       CALL RCCFL (NVE,IR,NU3,VE (1,1,1,I))
+-      COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "Unexpected COMMON" }
+-      COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "Unexpected COMMON" }
++      COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "COMMON statement at \\(1\\) cannot follow executable statement" }
++      COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "COMMON statement at \\(1\\) cannot follow executable statement" }
+ !  the PR only contained the two above.
+ !  success is no segfaults or infinite loops.
+ !  let's check some combinations
+      CALL ABC (INTG)
+-     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "Unexpected COMMON" }
+-     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "Unexpected COMMON" }
++     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "COMMON statement at \\(1\\) cannot follow executable statement" }
++     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "COMMON statement at \\(1\\) cannot follow executable statement" }
+      CALL DEF (NT1)
+-     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "Unexpected COMMON" }
+-     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "Unexpected COMMON" }
++     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "COMMON statement at \\(1\\) cannot follow executable statement" }
++     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "COMMON statement at \\(1\\) cannot follow executable statement" }
+      CALL GHI (NRESL)
+-     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "Unexpected COMMON" }
+-     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "Unexpected COMMON" }
++     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "COMMON statement at \\(1\\) cannot follow executable statement" }
++     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "COMMON statement at \\(1\\) cannot follow executable statement" }
+      END
+diff --git a/gcc/testsuite/gfortran.dg/common_24.f b/gcc/testsuite/gfortran.dg/common_24.f
+index ea37c2a8660..9bbf9806f57 100644
+--- a/gcc/testsuite/gfortran.dg/common_24.f
++++ b/gcc/testsuite/gfortran.dg/common_24.f
+@@ -7,5 +7,5 @@ c Contributed by Ilya Enkovich <ienkovich@gcc.gnu.org>
+ 
+       COMMON /FMCOM / X(80 000 000)
+       CALL T(XX(A))
+-      COMMON /FMCOM / XX(80 000 000) ! { dg-error "Unexpected COMMON" }
++      COMMON /FMCOM / XX(80 000 000) ! { dg-error "COMMON statement at \\(1\\) cannot follow executable statement" }
+       END
+diff --git a/gcc/testsuite/gfortran.dg/goacc/routine-1.f90 b/gcc/testsuite/gfortran.dg/goacc/routine-1.f90
+index 67c5f11be6a..1e65d1a9b77 100644
+--- a/gcc/testsuite/gfortran.dg/goacc/routine-1.f90
++++ b/gcc/testsuite/gfortran.dg/goacc/routine-1.f90
+@@ -4,7 +4,7 @@
+   integer :: a(n), i
+   integer, external :: fact
+   i = 1
+-  !$acc routine (fact)  ! { dg-error "Unexpected \\\!\\\$ACC ROUTINE" }
++  !$acc routine (fact)  ! { dg-error "\\!\\$ACC ROUTINE statement at \\(1\\) cannot follow executable statement" }
+   !$acc routine ()  ! { dg-error "Syntax error in \\\!\\\$ACC ROUTINE \\\( NAME \\\)" }
+   !$acc parallel
+   !$acc loop
+@@ -21,7 +21,7 @@ recursive function fact (x) result (res)
+   integer, intent(in) :: x
+   integer :: res
+   res = 1
+-  !$acc routine  ! { dg-error "Unexpected \\\!\\\$ACC ROUTINE" }
++  !$acc routine  ! { dg-error "\\!\\$ACC ROUTINE statement at \\(1\\) cannot follow executable statement" }
+   if (x < 1) then
+      res = 1
+   else
+@@ -32,6 +32,6 @@ subroutine incr (x)
+   integer, intent(inout) :: x
+   integer i
+   i = 0
+-  !$acc routine  ! { dg-error "Unexpected \\\!\\\$ACC ROUTINE" }
++  !$acc routine  ! { dg-error "\\!\\$ACC ROUTINE statement at \\(1\\) cannot follow executable statement" }
+   x = x + 1
+ end subroutine incr
+diff --git a/gcc/testsuite/gfortran.dg/goacc/routine-2.f90 b/gcc/testsuite/gfortran.dg/goacc/routine-2.f90
+index 3be33511581..432f993c18c 100644
+--- a/gcc/testsuite/gfortran.dg/goacc/routine-2.f90
++++ b/gcc/testsuite/gfortran.dg/goacc/routine-2.f90
+@@ -7,7 +7,7 @@
+       integer :: res
+       integer i
+       i = 0
+-      !$acc routine  ! { dg-error "Unexpected \\\!\\\$ACC ROUTINE" }
++      !$acc routine  ! { dg-error "\\!\\$ACC ROUTINE statement at \\(1\\) cannot follow executable statement" }
+       if (x < 1) then
+          res = 1
+       else
+diff --git a/gcc/testsuite/gfortran.dg/gomp/declare-variant-17.f90 b/gcc/testsuite/gfortran.dg/gomp/declare-variant-17.f90
+index df57f9c089c..bc6c8612a98 100644
+--- a/gcc/testsuite/gfortran.dg/gomp/declare-variant-17.f90
++++ b/gcc/testsuite/gfortran.dg/gomp/declare-variant-17.f90
+@@ -7,11 +7,11 @@ program main
+ 
+   continue
+ 
+-  !$omp declare variant (base: variant) match (construct={parallel})  ! { dg-error "Unexpected \\\!\\\$OMP DECLARE VARIANT statement at .1." }
++  !$omp declare variant (base: variant) match (construct={parallel})  ! { dg-error "\\!\\$OMP DECLARE VARIANT statement at \\(1\\) cannot follow executable statement" }
+ contains
+   subroutine base ()
+     continue
+ 
+-    !$omp declare variant (variant) match (construct={parallel})  ! { dg-error "Unexpected \\\!\\\$OMP DECLARE VARIANT statement at .1." }
++    !$omp declare variant (variant) match (construct={parallel})  ! { dg-error "\\!\\$OMP DECLARE VARIANT statement at \\(1\\) cannot follow executable statement" }
+   end subroutine
+ end program
+diff --git a/gcc/testsuite/gfortran.dg/gomp/interop-1.f90 b/gcc/testsuite/gfortran.dg/gomp/interop-1.f90
+index eae0cb3ae16..88827e2f102 100644
+--- a/gcc/testsuite/gfortran.dg/gomp/interop-1.f90
++++ b/gcc/testsuite/gfortran.dg/gomp/interop-1.f90
+@@ -19,7 +19,7 @@ end module m
+ 
+ subroutine sub1  ! { dg-error "Program unit at .1. has OpenMP device constructs/routines but does not set !.OMP REQUIRES REVERSE_OFFLOAD but other program units do" }
+   !$omp interop
+-  integer :: y ! { dg-error "Unexpected data declaration statement" }
++  integer :: y ! { dg-error "data declaration statement at \\(1\\) cannot follow executable statement" }
+ end subroutine sub1
+ 
+ program main
+diff --git a/gcc/testsuite/gfortran.dg/gomp/order-2.f90 b/gcc/testsuite/gfortran.dg/gomp/order-2.f90
+index 4ee3a82d518..ceb18288036 100644
+--- a/gcc/testsuite/gfortran.dg/gomp/order-2.f90
++++ b/gcc/testsuite/gfortran.dg/gomp/order-2.f90
+@@ -11,14 +11,14 @@ contains
+     implicit none
+     integer, save :: t
+     t = 1
+-    !$omp threadprivate (t1)	! { dg-error "Unexpected" }
++    !$omp threadprivate (t1)	! { dg-error "\\!\\$OMP THREADPRIVATE statement at \\(1\\) cannot follow executable statement" }
+   end subroutine f2
+   subroutine f3
+     use m
+     implicit none
+     integer :: j
+     j = 1
+-    !$omp declare reduction (foo:real:omp_out = omp_out + omp_in)	! { dg-error "Unexpected" }
++    !$omp declare reduction (foo:real:omp_out = omp_out + omp_in)	! { dg-error "\\!\\$OMP DECLARE REDUCTION statement at \\(1\\) cannot follow executable statement" }
+   end subroutine f3
+   subroutine f4
+     use m
+@@ -26,12 +26,12 @@ contains
+     !$omp declare target
+     integer, save :: f4_1
+     f4_1 = 1
+-    !$omp declare target (f4_1)	! { dg-error "Unexpected" }
+-    !$omp declare target	! { dg-error "Unexpected" }
++    !$omp declare target (f4_1)	! { dg-error "\\!\\$OMP DECLARE TARGET statement at \\(1\\) cannot follow executable statement" }
++    !$omp declare target	! { dg-error "\\!\\$OMP DECLARE TARGET statement at \\(1\\) cannot follow executable statement" }
+   end subroutine f4
+   integer function f5 (a, b)
+     integer :: a, b
+     a = 1; b = 2
+-    !$omp declare simd (f5) notinbranch	! { dg-error "Unexpected" }
++    !$omp declare simd (f5) notinbranch	! { dg-error "\\!\\$OMP DECLARE SIMD statement at \\(1\\) cannot follow executable statement" }
+   end function f5
+ end subroutine f1
+diff --git a/gcc/testsuite/gfortran.dg/gomp/pr78026.f03 b/gcc/testsuite/gfortran.dg/gomp/pr78026.f03
+index 61f945886e6..5d8fb03d0d6 100644
+--- a/gcc/testsuite/gfortran.dg/gomp/pr78026.f03
++++ b/gcc/testsuite/gfortran.dg/gomp/pr78026.f03
+@@ -1,5 +1,5 @@
+ ! PR fortran/78026
+ select type (a)		! { dg-error "Selector shall be polymorphic in SELECT TYPE statement" }
+ end select
+-!$omp declare simd(b)	! { dg-error "Unexpected !.OMP DECLARE SIMD statement" }
++!$omp declare simd(b)	! { dg-error "\\!\\$OMP DECLARE SIMD statement at \\(1\\) cannot follow executable statement" }
+ end			! { dg-error "should refer to containing procedure" "" { target *-*-* } .-1 }
+diff --git a/gcc/testsuite/gfortran.dg/gomp/requires-4.f90 b/gcc/testsuite/gfortran.dg/gomp/requires-4.f90
+index 9d936197f8f..b8e3e990410 100644
+--- a/gcc/testsuite/gfortran.dg/gomp/requires-4.f90
++++ b/gcc/testsuite/gfortran.dg/gomp/requires-4.f90
+@@ -16,7 +16,7 @@ end
+ 
+ subroutine foobar
+ i = 5  ! < execution statement
+-!$omp requires atomic_default_mem_order(seq_cst) ! { dg-error "Unexpected ..OMP REQUIRES statement" }
++!$omp requires atomic_default_mem_order(seq_cst) ! { dg-error "\\!\\$OMP REQUIRES statement at \\(1\\) cannot follow executable statement" }
+ end
+ 
+ program main
+diff --git a/gcc/testsuite/gfortran.dg/gomp/requires-6.f90 b/gcc/testsuite/gfortran.dg/gomp/requires-6.f90
+index b20c218dd6b..71cc102f846 100644
+--- a/gcc/testsuite/gfortran.dg/gomp/requires-6.f90
++++ b/gcc/testsuite/gfortran.dg/gomp/requires-6.f90
+@@ -10,5 +10,5 @@ end
+ subroutine foobar
+ !$omp atomic
+  i = i + 5
+-!$omp requires atomic_default_mem_order(acq_rel) ! { dg-error "Unexpected !.OMP REQUIRES statement" }
++!$omp requires atomic_default_mem_order(acq_rel) ! { dg-error "\\!\\$OMP REQUIRES statement at \\(1\\) cannot follow executable statement" }
+ end
+diff --git a/gcc/testsuite/gfortran.dg/pr61669.f90 b/gcc/testsuite/gfortran.dg/pr61669.f90
+index 5bceafda762..12896fef97b 100644
+--- a/gcc/testsuite/gfortran.dg/pr61669.f90
++++ b/gcc/testsuite/gfortran.dg/pr61669.f90
+@@ -1,7 +1,7 @@
+ ! { dg-do compile }
+       write (*,"(a)") char(12)
+-      CHARACTER*80 A /"A"/      ! { dg-error "Unexpected data declaration statement" }
+-      REAL*4 B                  ! { dg-error "Unexpected data declaration statement" }
++      CHARACTER*80 A /"A"/      ! { dg-error "data declaration statement at \\(1\\) cannot follow executable statement" }
++      REAL*4 B                  ! { dg-error "data declaration statement at \\(1\\) cannot follow executable statement" }
+       write (*,"(a)") char(12)
+       DATA B / 0.02 /           ! { dg-warning "Obsolescent feature: DATA statement" }
+       END
 diff --git a/gcc/testsuite/gfortran.dg/spec_statement_in_exec.f90 b/gcc/testsuite/gfortran.dg/spec_statement_in_exec.f90
 new file mode 100644
 index 00000000000..1c8b9899f83
