@@ -26,6 +26,19 @@ cd gcc-build
 make -j32
 ```
 
+#### Reconfiguring for a non-bootstrap Fortran-only build
+If the build directory was configured differently (for instance by a prior
+bootstrap), wipe and recreate it before rebuilding:
+```bash
+rm -rf gcc-build
+mkdir gcc-build
+cd gcc-build
+../gcc/configure --enable-languages=fortran --disable-multilib \
+  --disable-bootstrap CFLAGS='-Og -g' CXXFLAGS='-Og -g'
+```
+This mirrors the `bootstrap.sh` helper script and produces a single-stage,
+debuggable Fortran toolchain (no bootstrap/checking, optimized with `-Og`).
+
 ### Running Test Suite
 **CRITICAL: Test suite MUST be run from `gcc-build/gcc/` directory**
 
