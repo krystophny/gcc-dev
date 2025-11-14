@@ -16,7 +16,7 @@ This meta-repository tracks GCC Fortran bug reproducers, patches, and developmen
 - **Push targets matter:**
   - `origin` (GitHub private fork) is safe for both repos—push topic branches here whenever we need to share WIP.
   - `upstream` (gcc.gnu.org) must NEVER receive pushes; export patches or use `git send-email` instead.
-- **Do not edit GCC ChangeLog files** - Upstream regenerates them from commits
+- **Do not edit GCC ChangeLog files** - upstream regenerates them from commit metadata. NEVER touch the ChangeLog entries by hand; all ChangeLog content must come from the git commit message when patches are exported upstream.
 
 ## Build and Test Workflow
 
