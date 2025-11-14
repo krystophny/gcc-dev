@@ -1,4 +1,4 @@
-From f9691059951cd42d6f2b55228801816ec4f5483a Mon Sep 17 00:00:00 2001
+From 8e8e9ce8b90270e3e130ba73b024d92770abc565 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Fri, 14 Nov 2025 20:15:26 +0100
 Subject: [PATCH] fortran: honor array constructor type-spec during folding
@@ -30,16 +30,16 @@ gcc/testsuite/ChangeLog:
 
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
- gcc/fortran/arith.cc                          | 78 +++++++++++++++++++
- .../array_constructor_typespec_1.f90          | 31 ++++++++
- 2 files changed, 109 insertions(+)
+ gcc/fortran/arith.cc                          | 82 +++++++++++++++++++
+ .../array_constructor_typespec_1.f90          | 31 +++++++
+ 2 files changed, 113 insertions(+)
  create mode 100644 gcc/testsuite/gfortran.dg/array_constructor_typespec_1.f90
 
 diff --git a/gcc/fortran/arith.cc b/gcc/fortran/arith.cc
-index 82a8b6fb995..cbbe694bf21 100644
+index 82a8b6fb995..f7d3368f93f 100644
 --- a/gcc/fortran/arith.cc
 +++ b/gcc/fortran/arith.cc
-@@ -29,11 +29,66 @@ along with GCC; see the file COPYING3.  If not see
+@@ -29,11 +29,70 @@ along with GCC; see the file COPYING3.  If not see
  #include "options.h"
  #include "gfortran.h"
  #include "arith.h"
@@ -93,6 +93,10 @@ index 82a8b6fb995..cbbe694bf21 100644
 +      if (!gfc_is_constant_expr (c->expr))
 +        continue;
 +
++      /* Only convert if there is a type or kind mismatch.  */
++      if (c->expr->ts.type == op->ts.type && c->expr->ts.kind == op->ts.kind)
++        continue;
++
 +      converted = gfc_convert_constant (c->expr, op->ts.type, op->ts.kind);
 +      if (converted == NULL || converted == &gfc_bad_expr)
 +        return ARITH_NOT_REDUCED;
@@ -106,7 +110,7 @@ index 82a8b6fb995..cbbe694bf21 100644
  /* MPFR does not have a direct replacement for mpz_set_f() from GMP.
     It's easily implemented with a few calls though.  */
  
-@@ -1474,6 +1529,10 @@ reduce_unary (arith (*eval) (gfc_expr *, gfc_expr **), gfc_expr *op,
+@@ -1474,6 +1533,10 @@ reduce_unary (arith (*eval) (gfc_expr *, gfc_expr **), gfc_expr *op,
    if (op->expr_type != EXPR_ARRAY)
      return ARITH_NOT_REDUCED;
  
@@ -117,7 +121,7 @@ index 82a8b6fb995..cbbe694bf21 100644
    rc = ARITH_OK;
    head = gfc_constructor_copy (op->value.constructor);
    for (c = gfc_constructor_first (head); c; c = gfc_constructor_next (c))
-@@ -1528,6 +1587,11 @@ reduce_binary_ac (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
+@@ -1528,6 +1591,11 @@ reduce_binary_ac (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
    gfc_expr *r;
    arith rc = ARITH_OK;
  
@@ -129,7 +133,7 @@ index 82a8b6fb995..cbbe694bf21 100644
    head = gfc_constructor_copy (op1->value.constructor);
    for (c = gfc_constructor_first (head); c; c = gfc_constructor_next (c))
      {
-@@ -1592,6 +1656,11 @@ reduce_binary_ca (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
+@@ -1592,6 +1660,11 @@ reduce_binary_ca (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
    gfc_expr *r;
    arith rc = ARITH_OK;
  
@@ -141,7 +145,7 @@ index 82a8b6fb995..cbbe694bf21 100644
    head = gfc_constructor_copy (op2->value.constructor);
    for (c = gfc_constructor_first (head); c; c = gfc_constructor_next (c))
      {
-@@ -1661,9 +1730,18 @@ reduce_binary_aa (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
+@@ -1661,9 +1734,18 @@ reduce_binary_aa (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
    gfc_expr *r;
    arith rc = ARITH_OK;
  
