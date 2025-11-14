@@ -1,4 +1,4 @@
-From 0d57c87810baba0bd7b85d09835bfeadd4678fee Mon Sep 17 00:00:00 2001
+From a55dc7d4bcb9c4d1d9ab083ab1f55a5d8a3a66d4 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Fri, 14 Nov 2025 20:15:26 +0100
 Subject: [PATCH] fortran: honor array constructor type-spec during folding
@@ -30,16 +30,16 @@ gcc/testsuite/ChangeLog:
 
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
- gcc/fortran/arith.cc                          | 84 +++++++++++++++++++
+ gcc/fortran/arith.cc                          | 85 +++++++++++++++++++
  .../array_constructor_typespec_1.f90          | 31 +++++++
- 2 files changed, 115 insertions(+)
+ 2 files changed, 116 insertions(+)
  create mode 100644 gcc/testsuite/gfortran.dg/array_constructor_typespec_1.f90
 
 diff --git a/gcc/fortran/arith.cc b/gcc/fortran/arith.cc
-index 82a8b6fb995..0dabf4c5d85 100644
+index 82a8b6fb995..e52e85e3c56 100644
 --- a/gcc/fortran/arith.cc
 +++ b/gcc/fortran/arith.cc
-@@ -29,11 +29,72 @@ along with GCC; see the file COPYING3.  If not see
+@@ -29,11 +29,73 @@ along with GCC; see the file COPYING3.  If not see
  #include "options.h"
  #include "gfortran.h"
  #include "arith.h"
@@ -62,6 +62,7 @@ index 82a8b6fb995..0dabf4c5d85 100644
 +    case BT_COMPLEX:
 +    case BT_LOGICAL:
 +    case BT_UNSIGNED:
++    case BT_CHARACTER:
 +      return true;
 +
 +    default:
@@ -112,7 +113,7 @@ index 82a8b6fb995..0dabf4c5d85 100644
  /* MPFR does not have a direct replacement for mpz_set_f() from GMP.
     It's easily implemented with a few calls though.  */
  
-@@ -1474,6 +1535,10 @@ reduce_unary (arith (*eval) (gfc_expr *, gfc_expr **), gfc_expr *op,
+@@ -1474,6 +1536,10 @@ reduce_unary (arith (*eval) (gfc_expr *, gfc_expr **), gfc_expr *op,
    if (op->expr_type != EXPR_ARRAY)
      return ARITH_NOT_REDUCED;
  
@@ -123,7 +124,7 @@ index 82a8b6fb995..0dabf4c5d85 100644
    rc = ARITH_OK;
    head = gfc_constructor_copy (op->value.constructor);
    for (c = gfc_constructor_first (head); c; c = gfc_constructor_next (c))
-@@ -1528,6 +1593,11 @@ reduce_binary_ac (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
+@@ -1528,6 +1594,11 @@ reduce_binary_ac (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
    gfc_expr *r;
    arith rc = ARITH_OK;
  
@@ -135,7 +136,7 @@ index 82a8b6fb995..0dabf4c5d85 100644
    head = gfc_constructor_copy (op1->value.constructor);
    for (c = gfc_constructor_first (head); c; c = gfc_constructor_next (c))
      {
-@@ -1592,6 +1662,11 @@ reduce_binary_ca (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
+@@ -1592,6 +1663,11 @@ reduce_binary_ca (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
    gfc_expr *r;
    arith rc = ARITH_OK;
  
@@ -147,7 +148,7 @@ index 82a8b6fb995..0dabf4c5d85 100644
    head = gfc_constructor_copy (op2->value.constructor);
    for (c = gfc_constructor_first (head); c; c = gfc_constructor_next (c))
      {
-@@ -1661,9 +1736,18 @@ reduce_binary_aa (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
+@@ -1661,9 +1737,18 @@ reduce_binary_aa (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
    gfc_expr *r;
    arith rc = ARITH_OK;
  
