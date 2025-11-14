@@ -1,16 +1,14 @@
-From d4291afa8107a75c60deddc1d108cb750e0f2676 Mon Sep 17 00:00:00 2001
+From 1168946131c2ddc0c066e5231e1e9414d0f254cd Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Fri, 14 Nov 2025 14:21:16 +0100
 Subject: [PATCH] fortran: enforce spec statements ordering
 
 * parse.cc (parse_executable): Reject declaration/OpenMP specification
-  statements seen after executable code whenever compiling in an ISO
-  -std mode, but retain legacy/GNU acceptance; keep the old DATA warning
-  for legacy builds by downgrading it to gfc_notify_std when allowed.
+  statements seen after executable code unconditionally, keeping the
+  legacy DATA diagnostic as a warning.
 * testsuite/gfortran.dg/spec_statement_in_exec.f90: New regression that
-  exercises data/common/namelist/OpenMP directives with -std=f2018 -fopenmp.
-* testsuite/gfortran.dg/pr88248.f90: Expect the stricter DATA diagnostic
-  under -std=f2018.
+  exercises data/common/namelist/OpenMP directives with -fopenmp.
+* testsuite/gfortran.dg/pr88248.f90: Expect only the legacy DATA warning.
 
 PR fortran/32365
 
@@ -256,12 +254,12 @@ index 5bceafda762..12896fef97b 100644
        END
 diff --git a/gcc/testsuite/gfortran.dg/spec_statement_in_exec.f90 b/gcc/testsuite/gfortran.dg/spec_statement_in_exec.f90
 new file mode 100644
-index 00000000000..1c8b9899f83
+index 00000000000..62380e794bf
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/spec_statement_in_exec.f90
 @@ -0,0 +1,26 @@
 +! { dg-do compile }
-+! { dg-options "-fopenmp -std=f2018" }
++! { dg-options "-fopenmp" }
 +! Test improved error messages for specification statements in executable section
 +! PR fortran/32365 - Better error message for specification statement in executable section
 +
