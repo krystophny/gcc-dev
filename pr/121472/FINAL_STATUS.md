@@ -1,68 +1,57 @@
-# PR 121472 Final Status
+# PR121472 Finalization Fix - Current Status
 
-## ISO F2018 Compliant Fix - Complete
+## Summary
 
-### Standard Reference
+Partial fix committed for PR121472 finalization issues. Constructor finalization backward compatibility restored, but function result finalization still needs work.
 
-**ISO/IEC 1539-1:2018 Section 7.5.6.3 paragraph 3:**
-> "Finalization occurs ... (3) when an intrinsic assignment statement is executed and ... the variable is of a finalizable type, the variable is finalized after evaluation of expr and before the definition of the variable."
+## Test Results
 
-### Fix Implementation
+### ✅ finalize_38a.f90 - PASS
+- Passes with `-std=f2008` (backward compatibility mode)
+- Issues appropriate warnings about f08/0011 corrigendum
+- Constructor finalization works correctly with standard flags
 
-**Files Modified:**
-1. `gcc/fortran/trans.cc` - Added `gfc_derived_needs_copy()` helper and CALL_EXPR skip
-2. `gcc/fortran/trans-expr.cc` - Added function result finalization after assignment
-3. `gcc/testsuite/gfortran.dg/finalize_constructor_1.f90` - Updated test to require exactly 2 finalizations
+### ❌ finalize_45.f90 - FAIL (STOP 3)
+- **Issue**: Function result not finalized after user-defined assignment
+- **Expected**: 2 finalizations (function result + old LHS from intent(out))
+- **Actual**: 1 finalization (only old LHS)
+- **Root cause**: `must_finalize` flag set but finalization happens before call, not after
 
-### Finalization Count Breakdown
+### ❌ finalize_55.f90 - FAIL (STOP 2)
+- **Issue**: Elemental function results not fully finalized
+- **Status**: Pre-existing issue, may be unrelated to PR121472
 
-For the statement: `obj = constructor_function()`
+## Changes Committed
 
-**Expected: 2 finalizations**
-- (1) Function result from `constructor_function()` after assignment per ISO F2018 7.5.6.3(3)
-- (2) Variable `obj` at end of scope per ISO F2018 7.5.6.3(1)
+### gcc/fortran/resolve.cc
+- Added `must_finalize = 1` for function results in user-defined assignments
+- Ensures RHS function expressions are marked for finalization
 
-**Before Fix:**
-- ❌ ICE in gimplify_expr (crash)
+### gcc/fortran/trans-expr.cc
+- Restored upstream `gfc_notification_std(GFC_STD_F2018_DEL)` logic
+- Fixes constructor finalization with proper standard version handling
+- Removed incorrect unconditional constructor finalization disable
 
-**After Fix:**
-- ✅ No ICE
-- ✅ 2 finalizations (ISO F2018 compliant)
-- ✅ Matches reference compiler behavior
+## Remaining Work
 
-### Test Results
+### Function Result Finalization (finalize_45)
 
-**PR 121472 Reproducer:**
-| Compiler | ICE | Finalizations | ISO Compliant |
-|----------|-----|---------------|---------------|
-| GCC (before fix) | ✅ | - | ❌ |
-| GCC (after fix) | ❌ | 2 | ✅ |
-| Flang 21.1.5 | ❌ | 0 | ❌ |
+**Problem**: In `gfc_trans_call`, argument finalization code is added to `se.finalblock` which gets merged into `se.pre` (before the call). For user-defined assignments, we need finalization AFTER the call.
 
-**Regression suite:**
-- Command: `make -j32 -k check-gfortran` (2025-11-15)
-- Result: 3392 expected passes, 6 expected failures (documented OpenACC TODOs), 6 unsupported
-- No unexpected failures; finalize_{43,47,51,55,56} and finalize_constructor_1 now all PASS.
+**Solution Path**:
+1. Modify `gfc_conv_procedure_call` to detect user-defined assignment context
+2. For function result arguments with `must_finalize=1`, defer finalization
+3. Add deferred finalization to `se.post` instead of `se.pre`
+4. Ensure finalization happens after assignment subroutine returns
 
-### Outstanding Issues
+**Key Code Locations**:
+- `trans-stmt.cc:518-519` - where finalblock is added to pre
+- `trans-expr.cc:gfc_conv_procedure_call` - argument evaluation
+- Need to pass `dependency_check` flag or detect assignment context
 
-- None. All known finalize test regressions are resolved in the ISO-compliant pipeline.
+## Next Steps
 
-### Code Documentation
-
-All code now includes:
-- ✅ Explicit ISO F2018 7.5.6.3 references in both implementation and docs
-- ✅ Breakdown of expected finalization counts per assignment
-- ✅ Explanation of when each finalization occurs
-- ✅ No vendor-specific commentary in source comments
-
-### Compliance Verification
-
-The fix correctly implements ISO/IEC 1539-1:2018 Section 7.5.6.3(3) for:
-- ✅ Non-elemental function constructors
-- ✅ Intrinsic assignment (not user-defined)
-- ✅ Finalizable derived types without pointer attribute
-
-### Next Steps
-
-1. Prepare upstream submission once sign-off obtained.
+1. Implement deferred finalization for user-defined assignment arguments
+2. Run full gfortran test suite
+3. Fix any regressions
+4. Verify 100% pass rate before final submission
