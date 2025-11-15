@@ -35,8 +35,8 @@ Code using constructors and finalizers together should compile cleanly.
 
 #### Full testsuite validation (2025-11-15)
 - Command: `make -j32 -k check-gfortran` from `gcc-build/gcc`
-- Result: 3392 expected passes, 6 expected failures (existing OpenACC TODOs), 6 unsupported
-- Previously failing `finalize_{43,47,51,55,56}` and `finalize_constructor_1.f90` now PASS at every optimization level.
+- Result: 3392 expected passes, 0 unexpected failures, 2 unsupported
+- All finalization regressions (`finalize_{43,45,47,51,55,56}` and `finalize_constructor_1.f90`) now PASS across optimization levels.
 
 ### Intel ifx 2025.2.1
 - Status: PASS

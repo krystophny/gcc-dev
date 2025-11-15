@@ -5,8 +5,8 @@
 ✅ **No unexpected test failures** as of the full `make -j32 -k check-gfortran` run on 2025-11-15.
 
 - Expected passes: 3392
-- Expected failures: 6 (documented OpenACC TODO cases)
-- Unsupported: 6
+- Unexpected failures: 0
+- Unsupported: 2
 
 All previously failing finalization tests (finalize_43/47/51/55/56 and finalize_constructor_1) now pass at every optimization level after guarding duplicate finalizations.
 
