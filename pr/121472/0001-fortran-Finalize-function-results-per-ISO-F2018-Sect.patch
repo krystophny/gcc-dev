@@ -1,4 +1,4 @@
-From 6b4c273fd5dcb7484ec3166a84fd2dd33c97efc8 Mon Sep 17 00:00:00 2001
+From 573f51b2c833cc382bd5e58fda4c1596d836ad0f Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Fri, 14 Nov 2025 22:33:01 +0100
 Subject: [PATCH] fortran: Finalize function results per ISO F2018 Section
@@ -30,14 +30,14 @@ gcc/testsuite/ChangeLog:
 
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
- gcc/fortran/trans-expr.cc                     | 23 +++++++++++++++--
- gcc/fortran/trans.cc                          | 20 +++++++++------
- gcc/testsuite/gfortran.dg/finalize_45.f90     |  4 +--
- .../gfortran.dg/finalize_constructor_1.f90    | 25 ++++++++++++-------
- 4 files changed, 50 insertions(+), 22 deletions(-)
+ gcc/fortran/trans-expr.cc                     | 38 +++++++++++++------
+ gcc/fortran/trans.cc                          | 20 ++++++----
+ gcc/testsuite/gfortran.dg/finalize_45.f90     |  4 +-
+ .../gfortran.dg/finalize_constructor_1.f90    | 25 +++++++-----
+ 4 files changed, 56 insertions(+), 31 deletions(-)
 
 diff --git a/gcc/fortran/trans-expr.cc b/gcc/fortran/trans-expr.cc
-index ac85b762c7f..81656f7290f 100644
+index ac85b762c7f..63f329b532a 100644
 --- a/gcc/fortran/trans-expr.cc
 +++ b/gcc/fortran/trans-expr.cc
 @@ -8803,7 +8803,8 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
@@ -60,13 +60,14 @@ index ac85b762c7f..81656f7290f 100644
  		gfc_finalize_tree_expr (se, der, attr, expr->rank);
  	    }
  	  else if (ts.type == BT_CHARACTER)
-@@ -8977,6 +8979,23 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
+@@ -8977,6 +8979,24 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
  		&& attr.pointer))
  	    gfc_finalize_tree_expr (se, NULL, attr, expr->rank);
  	}
-+      /* For a function with a finalizable derived type result,
-+	 finalize the result after assignment per ISO/IEC 1539-1:2018
-+	 Section 7.5.6.3 paragraph 3.  */
++      /* For a function with a finalizable derived type result, finalize
++	 the result after assignment. Function results are variables and
++	 must be finalized per F2003+. Structure constructors (EXPR_STRUCTURE)
++	 create values not variables and are NOT finalized per F2008 Corr. 1.  */
 +      else if (expr && expr->expr_type == EXPR_FUNCTION
 +	       && expr->ts.type == BT_DERIVED
 +	       && expr->must_finalize
@@ -74,7 +75,7 @@ index ac85b762c7f..81656f7290f 100644
 +	{
 +	  se->expr = gfc_evaluate_now (se->expr, &se->pre);
 +
-+	  /* Finalize the result, if necessary.  */
++	  /* Finalize the function result.  */
 +	  attr = expr->value.function.esym
 +		 ? expr->value.function.esym->result->attr
 +		 : expr->symtree->n.sym->attr;
@@ -82,6 +83,27 @@ index ac85b762c7f..81656f7290f 100644
 +	    gfc_finalize_tree_expr (se, expr->ts.u.derived, attr, expr->rank);
 +	}
        gfc_add_block_to_block (&se->post, &post);
+     }
+ 
+@@ -13073,15 +13093,11 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
+ 	  && (gfc_expr_attr (expr2).pointer
+ 	      || (expr2->ts.type == BT_CLASS && CLASS_DATA (expr2)->attr.class_pointer)))
+ 	expr2->must_finalize = 0;
+-      /* F2008 4.5.6.3 para 5: If an executable construct references a
+-	 structure constructor or array constructor, the entity created by
+-	 the constructor is finalized after execution of the innermost
+-	 executable construct containing the reference.
+-	 These finalizations were later deleted by the Combined Techical
+-	 Corrigenda 1 TO 4 for fortran 2008 (f08/0011).  */
+-      else if (gfc_notification_std (GFC_STD_F2018_DEL)
+-	  && (expr2->expr_type == EXPR_STRUCTURE
+-	      || expr2->expr_type == EXPR_ARRAY))
++      /* F2008 Corrigendum 1 (f08/0011): Structure/array constructors create
++	 values not variables, so are NOT finalized. This applies to F2008+
++	 including F2018, F2023, and default mode.  */
++      else if (expr2->expr_type == EXPR_STRUCTURE
++	  || expr2->expr_type == EXPR_ARRAY)
+ 	expr2->must_finalize = 0;
      }
  
 diff --git a/gcc/fortran/trans.cc b/gcc/fortran/trans.cc
