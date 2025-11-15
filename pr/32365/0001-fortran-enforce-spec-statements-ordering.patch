@@ -38,10 +38,10 @@ index f987f464023..3784b2a00cf 100644
  	  accept_statement (st);
  	  goto done;
  
-+	/* Specification statements cannot follow executable statements.  */
++	/* Specification statements cannot appear after executable statements.  */
 +	case_decl:
 +	case_omp_decl:
-+	  gfc_error ("%s statement at %C cannot follow executable statement",
++	  gfc_error ("%s statement at %C cannot appear after executable statements",
 +		     gfc_ascii_statement (st));
 +	  reject_statement ();
 +	  st = next_statement ();
@@ -60,26 +60,26 @@ index e2254099d72..9763d2a571b 100644
        CALL RCCFL (NVE,IR,NU3,VE (1,1,1,I))
 -      COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "Unexpected COMMON" }
 -      COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "Unexpected COMMON" }
-+      COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "COMMON statement at \\(1\\) cannot follow executable statement" }
-+      COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "COMMON statement at \\(1\\) cannot follow executable statement" }
++      COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "COMMON statement at \\(1\\) cannot appear after executable statements" }
++      COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "COMMON statement at \\(1\\) cannot appear after executable statements" }
  !  the PR only contained the two above.
  !  success is no segfaults or infinite loops.
  !  let's check some combinations
       CALL ABC (INTG)
 -     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "Unexpected COMMON" }
 -     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "Unexpected COMMON" }
-+     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "COMMON statement at \\(1\\) cannot follow executable statement" }
-+     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "COMMON statement at \\(1\\) cannot follow executable statement" }
++     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "COMMON statement at \\(1\\) cannot appear after executable statements" }
++     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "COMMON statement at \\(1\\) cannot appear after executable statements" }
       CALL DEF (NT1)
 -     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "Unexpected COMMON" }
 -     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "Unexpected COMMON" }
-+     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "COMMON statement at \\(1\\) cannot follow executable statement" }
-+     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "COMMON statement at \\(1\\) cannot follow executable statement" }
++     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "COMMON statement at \\(1\\) cannot appear after executable statements" }
++     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "COMMON statement at \\(1\\) cannot appear after executable statements" }
       CALL GHI (NRESL)
 -     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "Unexpected COMMON" }
 -     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "Unexpected COMMON" }
-+     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "COMMON statement at \\(1\\) cannot follow executable statement" }
-+     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "COMMON statement at \\(1\\) cannot follow executable statement" }
++     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "COMMON statement at \\(1\\) cannot appear after executable statements" }
++     COMMON /CCFILE/ INTG,NT1,NT2,NT3,NVM,NVE,NFRLE,NRESF,NRESL !{ dg-error "COMMON statement at \\(1\\) cannot appear after executable statements" }
       END
 diff --git a/gcc/testsuite/gfortran.dg/common_24.f b/gcc/testsuite/gfortran.dg/common_24.f
 index ea37c2a8660..9bbf9806f57 100644
@@ -90,7 +90,7 @@ index ea37c2a8660..9bbf9806f57 100644
        COMMON /FMCOM / X(80 000 000)
        CALL T(XX(A))
 -      COMMON /FMCOM / XX(80 000 000) ! { dg-error "Unexpected COMMON" }
-+      COMMON /FMCOM / XX(80 000 000) ! { dg-error "COMMON statement at \\(1\\) cannot follow executable statement" }
++      COMMON /FMCOM / XX(80 000 000) ! { dg-error "COMMON statement at \\(1\\) cannot appear after executable statements" }
        END
 diff --git a/gcc/testsuite/gfortran.dg/goacc/routine-1.f90 b/gcc/testsuite/gfortran.dg/goacc/routine-1.f90
 index 67c5f11be6a..1e65d1a9b77 100644
@@ -101,7 +101,7 @@ index 67c5f11be6a..1e65d1a9b77 100644
    integer, external :: fact
    i = 1
 -  !$acc routine (fact)  ! { dg-error "Unexpected \\\!\\\$ACC ROUTINE" }
-+  !$acc routine (fact)  ! { dg-error "\\!\\$ACC ROUTINE statement at \\(1\\) cannot follow executable statement" }
++  !$acc routine (fact)  ! { dg-error "\\!\\$ACC ROUTINE statement at \\(1\\) cannot appear after executable statements" }
    !$acc routine ()  ! { dg-error "Syntax error in \\\!\\\$ACC ROUTINE \\\( NAME \\\)" }
    !$acc parallel
    !$acc loop
@@ -110,7 +110,7 @@ index 67c5f11be6a..1e65d1a9b77 100644
    integer :: res
    res = 1
 -  !$acc routine  ! { dg-error "Unexpected \\\!\\\$ACC ROUTINE" }
-+  !$acc routine  ! { dg-error "\\!\\$ACC ROUTINE statement at \\(1\\) cannot follow executable statement" }
++  !$acc routine  ! { dg-error "\\!\\$ACC ROUTINE statement at \\(1\\) cannot appear after executable statements" }
    if (x < 1) then
       res = 1
    else
@@ -119,7 +119,7 @@ index 67c5f11be6a..1e65d1a9b77 100644
    integer i
    i = 0
 -  !$acc routine  ! { dg-error "Unexpected \\\!\\\$ACC ROUTINE" }
-+  !$acc routine  ! { dg-error "\\!\\$ACC ROUTINE statement at \\(1\\) cannot follow executable statement" }
++  !$acc routine  ! { dg-error "\\!\\$ACC ROUTINE statement at \\(1\\) cannot appear after executable statements" }
    x = x + 1
  end subroutine incr
 diff --git a/gcc/testsuite/gfortran.dg/goacc/routine-2.f90 b/gcc/testsuite/gfortran.dg/goacc/routine-2.f90
@@ -131,7 +131,7 @@ index 3be33511581..432f993c18c 100644
        integer i
        i = 0
 -      !$acc routine  ! { dg-error "Unexpected \\\!\\\$ACC ROUTINE" }
-+      !$acc routine  ! { dg-error "\\!\\$ACC ROUTINE statement at \\(1\\) cannot follow executable statement" }
++      !$acc routine  ! { dg-error "\\!\\$ACC ROUTINE statement at \\(1\\) cannot appear after executable statements" }
        if (x < 1) then
           res = 1
        else
@@ -144,13 +144,13 @@ index df57f9c089c..bc6c8612a98 100644
    continue
  
 -  !$omp declare variant (base: variant) match (construct={parallel})  ! { dg-error "Unexpected \\\!\\\$OMP DECLARE VARIANT statement at .1." }
-+  !$omp declare variant (base: variant) match (construct={parallel})  ! { dg-error "\\!\\$OMP DECLARE VARIANT statement at \\(1\\) cannot follow executable statement" }
++  !$omp declare variant (base: variant) match (construct={parallel})  ! { dg-error "\\!\\$OMP DECLARE VARIANT statement at \\(1\\) cannot appear after executable statements" }
  contains
    subroutine base ()
      continue
  
 -    !$omp declare variant (variant) match (construct={parallel})  ! { dg-error "Unexpected \\\!\\\$OMP DECLARE VARIANT statement at .1." }
-+    !$omp declare variant (variant) match (construct={parallel})  ! { dg-error "\\!\\$OMP DECLARE VARIANT statement at \\(1\\) cannot follow executable statement" }
++    !$omp declare variant (variant) match (construct={parallel})  ! { dg-error "\\!\\$OMP DECLARE VARIANT statement at \\(1\\) cannot appear after executable statements" }
    end subroutine
  end program
 diff --git a/gcc/testsuite/gfortran.dg/gomp/interop-1.f90 b/gcc/testsuite/gfortran.dg/gomp/interop-1.f90
@@ -162,7 +162,7 @@ index eae0cb3ae16..88827e2f102 100644
  subroutine sub1  ! { dg-error "Program unit at .1. has OpenMP device constructs/routines but does not set !.OMP REQUIRES REVERSE_OFFLOAD but other program units do" }
    !$omp interop
 -  integer :: y ! { dg-error "Unexpected data declaration statement" }
-+  integer :: y ! { dg-error "data declaration statement at \\(1\\) cannot follow executable statement" }
++  integer :: y ! { dg-error "data declaration statement at \\(1\\) cannot appear after executable statements" }
  end subroutine sub1
  
  program main
@@ -175,7 +175,7 @@ index 4ee3a82d518..ceb18288036 100644
      integer, save :: t
      t = 1
 -    !$omp threadprivate (t1)	! { dg-error "Unexpected" }
-+    !$omp threadprivate (t1)	! { dg-error "\\!\\$OMP THREADPRIVATE statement at \\(1\\) cannot follow executable statement" }
++    !$omp threadprivate (t1)	! { dg-error "\\!\\$OMP THREADPRIVATE statement at \\(1\\) cannot appear after executable statements" }
    end subroutine f2
    subroutine f3
      use m
@@ -183,7 +183,7 @@ index 4ee3a82d518..ceb18288036 100644
      integer :: j
      j = 1
 -    !$omp declare reduction (foo:real:omp_out = omp_out + omp_in)	! { dg-error "Unexpected" }
-+    !$omp declare reduction (foo:real:omp_out = omp_out + omp_in)	! { dg-error "\\!\\$OMP DECLARE REDUCTION statement at \\(1\\) cannot follow executable statement" }
++    !$omp declare reduction (foo:real:omp_out = omp_out + omp_in)	! { dg-error "\\!\\$OMP DECLARE REDUCTION statement at \\(1\\) cannot appear after executable statements" }
    end subroutine f3
    subroutine f4
      use m
@@ -193,14 +193,14 @@ index 4ee3a82d518..ceb18288036 100644
      f4_1 = 1
 -    !$omp declare target (f4_1)	! { dg-error "Unexpected" }
 -    !$omp declare target	! { dg-error "Unexpected" }
-+    !$omp declare target (f4_1)	! { dg-error "\\!\\$OMP DECLARE TARGET statement at \\(1\\) cannot follow executable statement" }
-+    !$omp declare target	! { dg-error "\\!\\$OMP DECLARE TARGET statement at \\(1\\) cannot follow executable statement" }
++    !$omp declare target (f4_1)	! { dg-error "\\!\\$OMP DECLARE TARGET statement at \\(1\\) cannot appear after executable statements" }
++    !$omp declare target	! { dg-error "\\!\\$OMP DECLARE TARGET statement at \\(1\\) cannot appear after executable statements" }
    end subroutine f4
    integer function f5 (a, b)
      integer :: a, b
      a = 1; b = 2
 -    !$omp declare simd (f5) notinbranch	! { dg-error "Unexpected" }
-+    !$omp declare simd (f5) notinbranch	! { dg-error "\\!\\$OMP DECLARE SIMD statement at \\(1\\) cannot follow executable statement" }
++    !$omp declare simd (f5) notinbranch	! { dg-error "\\!\\$OMP DECLARE SIMD statement at \\(1\\) cannot appear after executable statements" }
    end function f5
  end subroutine f1
 diff --git a/gcc/testsuite/gfortran.dg/gomp/pr78026.f03 b/gcc/testsuite/gfortran.dg/gomp/pr78026.f03
@@ -212,7 +212,7 @@ index 61f945886e6..5d8fb03d0d6 100644
  select type (a)		! { dg-error "Selector shall be polymorphic in SELECT TYPE statement" }
  end select
 -!$omp declare simd(b)	! { dg-error "Unexpected !.OMP DECLARE SIMD statement" }
-+!$omp declare simd(b)	! { dg-error "\\!\\$OMP DECLARE SIMD statement at \\(1\\) cannot follow executable statement" }
++!$omp declare simd(b)	! { dg-error "\\!\\$OMP DECLARE SIMD statement at \\(1\\) cannot appear after executable statements" }
  end			! { dg-error "should refer to containing procedure" "" { target *-*-* } .-1 }
 diff --git a/gcc/testsuite/gfortran.dg/gomp/requires-4.f90 b/gcc/testsuite/gfortran.dg/gomp/requires-4.f90
 index 9d936197f8f..b8e3e990410 100644
@@ -223,7 +223,7 @@ index 9d936197f8f..b8e3e990410 100644
  subroutine foobar
  i = 5  ! < execution statement
 -!$omp requires atomic_default_mem_order(seq_cst) ! { dg-error "Unexpected ..OMP REQUIRES statement" }
-+!$omp requires atomic_default_mem_order(seq_cst) ! { dg-error "\\!\\$OMP REQUIRES statement at \\(1\\) cannot follow executable statement" }
++!$omp requires atomic_default_mem_order(seq_cst) ! { dg-error "\\!\\$OMP REQUIRES statement at \\(1\\) cannot appear after executable statements" }
  end
  
  program main
@@ -236,7 +236,7 @@ index b20c218dd6b..71cc102f846 100644
  !$omp atomic
   i = i + 5
 -!$omp requires atomic_default_mem_order(acq_rel) ! { dg-error "Unexpected !.OMP REQUIRES statement" }
-+!$omp requires atomic_default_mem_order(acq_rel) ! { dg-error "\\!\\$OMP REQUIRES statement at \\(1\\) cannot follow executable statement" }
++!$omp requires atomic_default_mem_order(acq_rel) ! { dg-error "\\!\\$OMP REQUIRES statement at \\(1\\) cannot appear after executable statements" }
  end
 diff --git a/gcc/testsuite/gfortran.dg/pr61669.f90 b/gcc/testsuite/gfortran.dg/pr61669.f90
 index 5bceafda762..12896fef97b 100644
@@ -247,8 +247,8 @@ index 5bceafda762..12896fef97b 100644
        write (*,"(a)") char(12)
 -      CHARACTER*80 A /"A"/      ! { dg-error "Unexpected data declaration statement" }
 -      REAL*4 B                  ! { dg-error "Unexpected data declaration statement" }
-+      CHARACTER*80 A /"A"/      ! { dg-error "data declaration statement at \\(1\\) cannot follow executable statement" }
-+      REAL*4 B                  ! { dg-error "data declaration statement at \\(1\\) cannot follow executable statement" }
++      CHARACTER*80 A /"A"/      ! { dg-error "data declaration statement at \\(1\\) cannot appear after executable statements" }
++      REAL*4 B                  ! { dg-error "data declaration statement at \\(1\\) cannot appear after executable statements" }
        write (*,"(a)") char(12)
        DATA B / 0.02 /           ! { dg-warning "Obsolescent feature: DATA statement" }
        END
@@ -271,17 +271,17 @@ index 00000000000..62380e794bf
 +  i = 1
 +
 +  ! Test key specification statement types
-+  integer :: j                     ! { dg-error "data declaration statement at \\(1\\) cannot follow executable statement" }
-+  real :: x                       ! { dg-error "data declaration statement at \\(1\\) cannot follow executable statement" }
-+  complex :: z                    ! { dg-error "data declaration statement at \\(1\\) cannot follow executable statement" }
-+  logical :: flag                  ! { dg-error "data declaration statement at \\(1\\) cannot follow executable statement" }
-+  character(len=20) :: name       ! { dg-error "data declaration statement at \\(1\\) cannot follow executable statement" }
-+  double precision :: d           ! { dg-error "data declaration statement at \\(1\\) cannot follow executable statement" }
-+  common /myblock/ i              ! { dg-error "COMMON statement at \\(1\\) cannot follow executable statement" }
-+  equivalence (i, i)              ! { dg-error "EQUIVALENCE statement at \\(1\\) cannot follow executable statement" }
-+  namelist /nml/ i                ! { dg-error "NAMELIST statement at \\(1\\) cannot follow executable statement" }
-+!$omp threadprivate(i)             ! { dg-error "THREADPRIVATE statement at \\(1\\) cannot follow executable statement" }
-+!$omp declare target (i)           ! { dg-error "DECLARE TARGET statement at \\(1\\) cannot follow executable statement" }
++  integer :: j                     ! { dg-error "data declaration statement at \\(1\\) cannot appear after executable statements" }
++  real :: x                       ! { dg-error "data declaration statement at \\(1\\) cannot appear after executable statements" }
++  complex :: z                    ! { dg-error "data declaration statement at \\(1\\) cannot appear after executable statements" }
++  logical :: flag                  ! { dg-error "data declaration statement at \\(1\\) cannot appear after executable statements" }
++  character(len=20) :: name       ! { dg-error "data declaration statement at \\(1\\) cannot appear after executable statements" }
++  double precision :: d           ! { dg-error "data declaration statement at \\(1\\) cannot appear after executable statements" }
++  common /myblock/ i              ! { dg-error "COMMON statement at \\(1\\) cannot appear after executable statements" }
++  equivalence (i, i)              ! { dg-error "EQUIVALENCE statement at \\(1\\) cannot appear after executable statements" }
++  namelist /nml/ i                ! { dg-error "NAMELIST statement at \\(1\\) cannot appear after executable statements" }
++!$omp threadprivate(i)             ! { dg-error "THREADPRIVATE statement at \\(1\\) cannot appear after executable statements" }
++!$omp declare target (i)           ! { dg-error "DECLARE TARGET statement at \\(1\\) cannot appear after executable statements" }
 +
 +end subroutine test_spec_in_exec
 -- 
