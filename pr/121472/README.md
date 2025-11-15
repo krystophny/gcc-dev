@@ -108,6 +108,16 @@ finalization semantics across Fortran standards from F77 through F2023.
 
 See `reproducer.f90` - constructor interface with finalizer.
 
+## Documentation
+
+All auxiliary analysis notes now live in `docs/` to keep the PR directory
+manageable. Key files:
+
+- `docs/FINAL_STATUS.md` – running status + fix checklist
+- `docs/IMPLEMENTATION_SUMMARY.md` – patch design details
+- `docs/FORTRAN_FINALIZATION_STANDARDS_HISTORY.md` – ISO references
+- `docs/TEST_FAILURES_SUMMARY.md` – rolling test log
+
 ## Fix Details
 
 **STATUS: FIXED** in local development branch `pr121472-constructor-finalizer-ice`
