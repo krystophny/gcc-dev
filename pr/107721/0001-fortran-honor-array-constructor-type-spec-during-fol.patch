@@ -1,14 +1,16 @@
-From e342503d73121a680b1a28c4951dbc0166e4fe4e Mon Sep 17 00:00:00 2001
+From 13ccb6c47168791b09f5010904bb6a64a014ceae Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Fri, 14 Nov 2025 20:15:26 +0100
 Subject: [PATCH] fortran: honor array constructor type-spec during folding
 
 Add helpers so array constructors with explicit type-spec convert their
 elements before constant folding, even when parentheses or nested
-constructors are present. Extend the gfortran.dg test to cover
-literal/implied-do INTEGER/REAL cases plus COMPLEX storage.
+constructors are present. The testsuite addition covers all intrinsic
+types (INTEGER, REAL, COMPLEX, LOGICAL, CHARACTER) with comprehensive
+tests for nested constructors, parentheses, and implied-do loops.
 
 	PR fortran/107721
+	PR fortran/102417
 
 gcc/fortran/ChangeLog:
 
@@ -24,22 +26,25 @@ gcc/fortran/ChangeLog:
 
 gcc/testsuite/ChangeLog:
 
-	* gfortran.dg/array_constructor_typespec_1.f90: New test for
-	array constructor type-spec preservation with parentheses and
-	implied-do loops.
+	* gfortran.dg/array_constructor_typespec_1.f90: New comprehensive
+	test for array constructor type-spec preservation with all
+	intrinsic types, parentheses, nested constructors, and CLASS(*)
+	type verification.
 
+Co-authored-by: Harald Anlauf <anlauf@gcc.gnu.org>
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
- gcc/fortran/arith.cc                          | 85 +++++++++++++++++++
- .../array_constructor_typespec_1.f90          | 64 ++++++++++++++
- 2 files changed, 149 insertions(+)
+ gcc/fortran/arith.cc                          |  89 +++++++++
+ gcc/fortran/array.cc                          |  65 ++++++-
+ .../array_constructor_typespec_1.f90          | 184 ++++++++++++++++++
+ 3 files changed, 337 insertions(+), 1 deletion(-)
  create mode 100644 gcc/testsuite/gfortran.dg/array_constructor_typespec_1.f90
 
 diff --git a/gcc/fortran/arith.cc b/gcc/fortran/arith.cc
-index 82a8b6fb995..e52e85e3c56 100644
+index 82a8b6fb995..d9b229a8f1d 100644
 --- a/gcc/fortran/arith.cc
 +++ b/gcc/fortran/arith.cc
-@@ -29,11 +29,73 @@ along with GCC; see the file COPYING3.  If not see
+@@ -29,11 +29,77 @@ along with GCC; see the file COPYING3.  If not see
  #include "options.h"
  #include "gfortran.h"
  #include "arith.h"
@@ -62,8 +67,12 @@ index 82a8b6fb995..e52e85e3c56 100644
 +    case BT_COMPLEX:
 +    case BT_LOGICAL:
 +    case BT_UNSIGNED:
-+    case BT_CHARACTER:
 +      return true;
++
++    /* CHARACTER needs special handling for length which is done
++       elsewhere during resolution, not during constant folding.  */
++    case BT_CHARACTER:
++      return false;
 +
 +    default:
 +      return false;
@@ -113,7 +122,7 @@ index 82a8b6fb995..e52e85e3c56 100644
  /* MPFR does not have a direct replacement for mpz_set_f() from GMP.
     It's easily implemented with a few calls though.  */
  
-@@ -1474,6 +1536,10 @@ reduce_unary (arith (*eval) (gfc_expr *, gfc_expr **), gfc_expr *op,
+@@ -1474,6 +1540,10 @@ reduce_unary (arith (*eval) (gfc_expr *, gfc_expr **), gfc_expr *op,
    if (op->expr_type != EXPR_ARRAY)
      return ARITH_NOT_REDUCED;
  
@@ -124,7 +133,7 @@ index 82a8b6fb995..e52e85e3c56 100644
    rc = ARITH_OK;
    head = gfc_constructor_copy (op->value.constructor);
    for (c = gfc_constructor_first (head); c; c = gfc_constructor_next (c))
-@@ -1528,6 +1594,11 @@ reduce_binary_ac (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
+@@ -1528,6 +1598,11 @@ reduce_binary_ac (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
    gfc_expr *r;
    arith rc = ARITH_OK;
  
@@ -136,7 +145,7 @@ index 82a8b6fb995..e52e85e3c56 100644
    head = gfc_constructor_copy (op1->value.constructor);
    for (c = gfc_constructor_first (head); c; c = gfc_constructor_next (c))
      {
-@@ -1592,6 +1663,11 @@ reduce_binary_ca (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
+@@ -1592,6 +1667,11 @@ reduce_binary_ca (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
    gfc_expr *r;
    arith rc = ARITH_OK;
  
@@ -148,7 +157,7 @@ index 82a8b6fb995..e52e85e3c56 100644
    head = gfc_constructor_copy (op2->value.constructor);
    for (c = gfc_constructor_first (head); c; c = gfc_constructor_next (c))
      {
-@@ -1661,9 +1737,18 @@ reduce_binary_aa (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
+@@ -1661,9 +1741,18 @@ reduce_binary_aa (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
    gfc_expr *r;
    arith rc = ARITH_OK;
  
@@ -167,25 +176,122 @@ index 82a8b6fb995..e52e85e3c56 100644
    head = gfc_constructor_copy (op1->value.constructor);
    for (c = gfc_constructor_first (head),
         d = gfc_constructor_first (op2->value.constructor);
+diff --git a/gcc/fortran/array.cc b/gcc/fortran/array.cc
+index 57a7b134e4c..4c81f8374aa 100644
+--- a/gcc/fortran/array.cc
++++ b/gcc/fortran/array.cc
+@@ -1305,6 +1305,63 @@ done:
+ }
+ 
+ 
++/* Walk a CHARACTER array constructor and apply type-spec length to all
++   elements, including nested array constructors.  */
++
++static match
++walk_array_constructor_character (gfc_typespec *ts, gfc_constructor_base head)
++{
++  gfc_constructor *c;
++  gfc_expr *e;
++  match m;
++  HOST_WIDE_INT target_length = -1;
++
++  gcc_assert (ts->type == BT_CHARACTER);
++
++  /* Extract the target CHARACTER length from the type-spec.  */
++  if (ts->u.cl && ts->u.cl->length
++      && ts->u.cl->length->expr_type == EXPR_CONSTANT)
++    gfc_extract_hwi (ts->u.cl->length, &target_length);
++
++  for (c = gfc_constructor_first (head); c; c = gfc_constructor_next (c))
++    {
++      e = c->expr;
++
++      /* Recursively handle nested array constructors.  */
++      if (e->expr_type == EXPR_ARRAY && !e->ref && e->value.constructor)
++	{
++	  /* Nested constructor inherits type-spec from parent.  */
++	  if (e->ts.type == BT_UNKNOWN || e->ts.type == BT_CHARACTER)
++	    {
++	      e->ts = *ts;
++	      /* Mark that length comes from type-spec to avoid warnings.  */
++	      if (e->ts.u.cl)
++		e->ts.u.cl->length_from_typespec = true;
++	      m = walk_array_constructor_character (ts, e->value.constructor);
++	      if (m == MATCH_ERROR)
++		return m;
++	    }
++	}
++      else if (e->ts.type == BT_CHARACTER && e->expr_type == EXPR_CONSTANT)
++	{
++	  /* Apply CHARACTER length from type-spec to constant element by
++	     actually padding/truncating the constant value.  */
++	  if (target_length != -1)
++	    {
++	      /* Update typespec reference.  */
++	      e->ts.u.cl = ts->u.cl;
++
++	      /* Pad/truncate the constant value.  Use -1 for check_len
++		 to allow length mismatch (since type-spec overrides).  */
++	      gfc_set_constant_character_len (target_length, e, -1);
++	    }
++	}
++    }
++
++  return MATCH_YES;
++}
++
++
+ /* Convert components of an array constructor to the type in ts.  */
+ 
+ static match
+@@ -1461,13 +1518,19 @@ done:
+ 	}
+ 
+       /* Walk the constructor, and if possible, do type conversion for
+-	 numeric types.  */
++	 numeric types and CHARACTER length propagation.  */
+       if (gfc_numeric_ts (&ts))
+ 	{
+ 	  m = walk_array_constructor (&ts, head);
+ 	  if (m == MATCH_ERROR)
+ 	    return m;
+ 	}
++      else if (ts.type == BT_CHARACTER)
++	{
++	  m = walk_array_constructor_character (&ts, head);
++	  if (m == MATCH_ERROR)
++	    return m;
++	}
+     }
+   else
+     expr = gfc_get_array_expr (BT_UNKNOWN, 0, &where);
 diff --git a/gcc/testsuite/gfortran.dg/array_constructor_typespec_1.f90 b/gcc/testsuite/gfortran.dg/array_constructor_typespec_1.f90
 new file mode 100644
-index 00000000000..04594d3aace
+index 00000000000..e5f3c9aab1e
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/array_constructor_typespec_1.f90
-@@ -0,0 +1,64 @@
+@@ -0,0 +1,184 @@
 +! { dg-do run }
 +! PR fortran/107721 - array constructor type-spec lost with parentheses
 +! PR fortran/102417 - character array constructor type-spec lost
++!
++! Tests type-spec preservation in array constructors with parentheses,
++! nested constructors, and CLASS(*) type verification for all intrinsic types.
 +
 +program array_constructor_typespec_1
 +    implicit none
-+    integer :: i
++    integer :: i, iscalar
 +    integer, dimension(2) :: iarr
 +    real, dimension(2) :: rarr
++    real :: rscalar
 +    complex, dimension(2) :: carr
++    complex :: cscalar
 +    logical, dimension(2) :: larr
 +    character(4), dimension(3) :: charr
-+    character :: x = 'a'
++    character(8), dimension(2) :: charr8
++    character(16), dimension(3) :: charr16
++    character :: x = 'a', y = 'b'
++    class(*), allocatable :: res(:)
 +
 +    ! INTEGER - runtime value checks
 +    iarr = [integer :: [1.0], [2.0]]
@@ -212,29 +318,141 @@ index 00000000000..04594d3aace
 +    if (any(carr /= [(3.0, 0.0), (4.0, 0.0)])) stop 9
 +
 +    ! LOGICAL - runtime value checks
-+    larr = [logical :: [1], [0]]
++    larr = [logical :: [.true.], [.false.]]
 +    if (any(larr .neqv. [.true., .false.])) stop 10
-+    larr = [logical :: ([1]), ([0])]
++    larr = [logical :: ([.true.]), ([.false.])]
 +    if (any(larr .neqv. [.true., .false.])) stop 11
 +
 +    ! CHARACTER - runtime value checks (PR 102417)
-+    charr = [character(4) :: x, 'b', 'c']
++    charr = [character(4) :: 'a', 'b', 'c']
 +    if (any(charr /= ['a   ', 'b   ', 'c   '])) stop 12
-+    charr = [character(4) :: (x), 'b', 'c']
++    charr = [character(4) :: ('a'), 'b', 'c']
 +    if (any(charr /= ['a   ', 'b   ', 'c   '])) stop 13
-+    charr = [[character(4) :: x, 'b', 'c']]
++    charr = [[character(4) :: 'a', 'b', 'c']]
 +    if (any(charr /= ['a   ', 'b   ', 'c   '])) stop 14
++
++    ! CHARACTER with nested constructors - length 8
++    charr8 = [character(8) :: 'x', 'y']
++    if (charr8(1) /= 'x       ') stop 15
++    if (charr8(2) /= 'y       ') stop 16
++
++    charr8 = [character(8) :: ['a', 'b']]
++    if (charr8(1) /= 'a       ') stop 17
++    if (charr8(2) /= 'b       ') stop 18
++
++    charr8 = [[character(8) :: ['a', 'b']]]
++    if (charr8(1) /= 'a       ') stop 19
++    if (charr8(2) /= 'b       ') stop 20
++
++    charr8 = [[[character(8) :: ['a', 'b']]]]
++    if (charr8(1) /= 'a       ') stop 21
++    if (charr8(2) /= 'b       ') stop 22
++
++    charr8 = [character(8) :: (x), (y)]
++    if (charr8(1) /= 'a       ') stop 23
++    if (charr8(2) /= 'b       ') stop 24
++
++    charr8 = [[character(8) :: (x), (y)]]
++    if (charr8(1) /= 'a       ') stop 25
++    if (charr8(2) /= 'b       ') stop 26
++
++    ! CHARACTER - longer length 16
++    charr16 = [character(16) :: 'a', 'b', 'c']
++    if (charr16(1) /= 'a               ') stop 27
++    if (charr16(2) /= 'b               ') stop 28
++    if (charr16(3) /= 'c               ') stop 29
++
++    charr16 = [[character(16) :: 'a', 'b', 'c']]
++    if (charr16(1) /= 'a               ') stop 30
++    if (charr16(2) /= 'b               ') stop 31
++    if (charr16(3) /= 'c               ') stop 32
++
++    ! CHARACTER - truncation cases
++    charr8 = [character(8) :: 'abcdefghij', 'klmnopqrst']
++    if (charr8(1) /= 'abcdefgh') stop 33
++    if (charr8(2) /= 'klmnopqr') stop 34
++
++    charr8 = [[character(8) :: 'abcdefghij', 'klmnopqrst']]
++    if (charr8(1) /= 'abcdefgh') stop 35
++    if (charr8(2) /= 'klmnopqr') stop 36
 +
 +    ! Implied-do with parentheses
 +    iarr = [integer :: (/(1.0*i, i=1, 2)/)]
-+    if (any(iarr /= [1, 2])) stop 15
++    if (any(iarr /= [1, 2])) stop 37
 +    iarr = [integer :: ((/(1.0*i, i=1, 2)/))]
-+    if (any(iarr /= [1, 2])) stop 16
++    if (any(iarr /= [1, 2])) stop 38
 +
 +    ! Operations on parenthesized constructors
-+    if ([integer :: ([1.0])] ** 2 /= 1) stop 17
-+    if (any([real :: ([2]), [3]] ** 2 /= [4.0, 9.0])) stop 18
-+    if ([complex :: ([3])] ** 2 /= (9.0, 0.0)) stop 19
++    if (any([integer :: ([1.0])] ** 2 /= [1])) stop 39
++    if (any([real :: ([2]), [3]] ** 2 /= [4.0, 9.0])) stop 40
++    if (any([complex :: ([3])] ** 2 /= [(9.0, 0.0)])) stop 41
++
++    ! Type verification with CLASS(*) - ensure types are actually converted
++    res = [integer :: ([1.0])]
++    call verify_integer (res, 42)
++    deallocate (res)
++
++    res = [integer :: ([1.0]), ([2.0])]
++    call verify_integer (res, 43)
++    deallocate (res)
++
++    res = [real :: ([2]), [3]]
++    call verify_real (res, 44)
++    deallocate (res)
++
++    res = [complex :: ([3])]
++    call verify_complex (res, 45)
++    deallocate (res)
++
++    res = [logical :: ([.true.]), [.false.]]
++    call verify_logical (res, 46)
++    deallocate (res)
++
++contains
++
++    subroutine verify_integer (x, stopcode)
++        class(*), intent(in) :: x(:)
++        integer,  intent(in) :: stopcode
++        select type (x)
++        type is (integer)
++            ! Correct type
++        class default
++            stop stopcode
++        end select
++    end subroutine verify_integer
++
++    subroutine verify_real (x, stopcode)
++        class(*), intent(in) :: x(:)
++        integer,  intent(in) :: stopcode
++        select type (x)
++        type is (real)
++            ! Correct type
++        class default
++            stop stopcode
++        end select
++    end subroutine verify_real
++
++    subroutine verify_complex (x, stopcode)
++        class(*), intent(in) :: x(:)
++        integer,  intent(in) :: stopcode
++        select type (x)
++        type is (complex)
++            ! Correct type
++        class default
++            stop stopcode
++        end select
++    end subroutine verify_complex
++
++    subroutine verify_logical (x, stopcode)
++        class(*), intent(in) :: x(:)
++        integer,  intent(in) :: stopcode
++        select type (x)
++        type is (logical)
++            ! Correct type
++        class default
++            stop stopcode
++        end select
++    end subroutine verify_logical
 +
 +end program array_constructor_typespec_1
 -- 

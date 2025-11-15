@@ -210,11 +210,18 @@ Tested on x86_64-linux, zero regressions, new comprehensive test added.
 **Files:**
 - Patch: `0001-fortran-honor-array-constructor-type-spec-during-fol.patch`
 - Branch: `pr107721-typespec` (single commit on top of upstream master)
-- Commit: e342503d731 (GNU-compliant message, proper ChangeLog, Signed-off-by)
+- Commit: 13ccb6c4716 (GNU-compliant message, proper ChangeLog, Co-authored-by Harald Anlauf)
 
 ### Testing Results
 - ✅ Zero regressions in `make check-gfortran`
-- ✅ New test passes with 19/19 checks
-- ✅ Previously failing arithmetic_overflow tests now pass
+- ✅ New test passes with 46 comprehensive checks covering all intrinsic types
 - ✅ All bugzilla examples work correctly
-- ✅ Multi-compiler validation confirms standards compliance
+- ✅ Multi-compiler validation confirms standards compliance (ifx, nvfortran, flang-new all pass)
+
+### Status: COMPLETE - Ready for Upstream Submission
+- Single comprehensive test file: `array_constructor_typespec_1.f90`
+- Covers: INTEGER, REAL, COMPLEX, LOGICAL, CHARACTER types
+- Includes: nested constructors, parentheses, implied-do loops, CLASS(*) verification
+- Patch ready at: `pr/107721/0001-fortran-honor-array-constructor-type-spec-during-fol.patch`
+- Co-authored-by: Harald Anlauf <anlauf@gcc.gnu.org>
+- Signed-off-by: Christopher Albert <albert@tugraz.at>
