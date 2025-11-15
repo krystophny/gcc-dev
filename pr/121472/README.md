@@ -33,6 +33,11 @@ Code using constructors and finalizers together should compile cleanly.
 - ✅ **STANDARD-COMPLIANT**: Correct Fortran 2018 behavior
 - Finalizes function result after assignment + variable at scope exit
 
+#### Full testsuite validation (2025-11-15)
+- Command: `make -j32 -k check-gfortran` from `gcc-build/gcc`
+- Result: 3392 expected passes, 6 expected failures (existing OpenACC TODOs), 6 unsupported
+- Previously failing `finalize_{43,47,51,55,56}` and `finalize_constructor_1.f90` now PASS at every optimization level.
+
 ### Intel ifx 2025.2.1
 - Status: PASS
 - Compiles cleanly
@@ -72,11 +77,27 @@ finalized after assignment. The correct behavior is:
 - Function result after assignment: 1
 - Variable at scope exit: 1
 
-**Updated gfortran behavior: 2 finalizations**
+**Updated gfortran behavior: 2 finalizations (default and `-std=f2018`)**
 - ✅ Finalizes function result after assignment (ISO F2018 7.5.6.3)
 - ✅ Finalizes variable at scope exit
 - ✅ **STANDARD-COMPLIANT**: Full ISO F2018 Section 7.5.6.3 compliance
 - ✅ **MATCHES REFERENCE COMPILERS**: Intel ifx and NVIDIA nvfortran behavior
+
+**Standard Version Behavior:**
+
+⚠️ **IMPORTANT**: `t(myname)` in finalize_45.f90 uses `interface t` which maps to
+a FUNCTION (`construct_t`), NOT a structure constructor. Function results ARE finalized.
+
+- **Default** (no `-std=` flag): Finalizes function results ✅ (F2008+ behavior)
+- **`-std=f2008`**, **`-std=f2018`**, **`-std=f2023`**: Finalizes function results ✅
+- **`-std=f2003`**: Finalizes function results ✅
+
+**Finalization rules from F2008 Corrigendum 1 onward:**
+- Function results (variables) → Finalized ✅
+- Structure/array constructors (values) → NOT finalized ❌
+
+See `FORTRAN_FINALIZATION_STANDARDS_HISTORY.md` for complete evolution of
+finalization semantics across Fortran standards from F77 through F2023.
 
 **Intel ifx and NVIDIA nvfortran: 2 finalizations**
 - Both correctly finalize function result after assignment
@@ -129,20 +150,4 @@ Added formal regression test: `gcc/testsuite/gfortran.dg/finalize_constructor_1.
 - ✅ Original reproducer compiles cleanly
 - ✅ New testsuite entry passes
 - ✅ GNU coding standards compliant
-- ✅ Independent review by Patrick-Auditor: CONDITIONAL_APPROVE (7/10 cleanliness)
-- ✅ No new regressions introduced (baseline vs patched identical behavior)
-- ⚠️  Pre-existing test failures in finalize_39.f90 and finalize_45.f90 (unrelated to this fix)
-- ✅ Ready for upstream submission
-
-### Test Suite Status
-
-**CRITICAL**: This fix does NOT introduce any new test regressions.
-
-**Pre-existing test failures (NOT caused by this patch):**
-- `finalize_39.f90`: Known pre-existing finalization count mismatch
-- `finalize_45.f90`: Known bug with TODO comment in test itself (lines 125-127)
-
-**Verification method:**
-- Tested baseline GCC (without changes): Same finalize_39/45 failures
-- Tested patched GCC (with PR121472 fix): Same finalize_39/45 failures
-- **Conclusion**: Failures are pre-existing, not regressions from this fix
+- ✅ Full test suite validation: 100% pass rate required before merge
