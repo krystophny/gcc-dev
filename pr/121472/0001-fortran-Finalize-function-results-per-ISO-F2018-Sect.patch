@@ -1,4 +1,4 @@
-From e36f90c3f8de7f7ffa59c25806079a550076f434 Mon Sep 17 00:00:00 2001
+From 6b4c273fd5dcb7484ec3166a84fd2dd33c97efc8 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Fri, 14 Nov 2025 22:33:01 +0100
 Subject: [PATCH] fortran: Finalize function results per ISO F2018 Section
@@ -30,17 +30,37 @@ gcc/testsuite/ChangeLog:
 
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
- gcc/fortran/trans-expr.cc                     | 17 +++++++++++++
+ gcc/fortran/trans-expr.cc                     | 23 +++++++++++++++--
  gcc/fortran/trans.cc                          | 20 +++++++++------
  gcc/testsuite/gfortran.dg/finalize_45.f90     |  4 +--
  .../gfortran.dg/finalize_constructor_1.f90    | 25 ++++++++++++-------
- 4 files changed, 46 insertions(+), 20 deletions(-)
+ 4 files changed, 50 insertions(+), 22 deletions(-)
 
 diff --git a/gcc/fortran/trans-expr.cc b/gcc/fortran/trans-expr.cc
-index ac85b762c7f..e6e6b849a57 100644
+index ac85b762c7f..81656f7290f 100644
 --- a/gcc/fortran/trans-expr.cc
 +++ b/gcc/fortran/trans-expr.cc
-@@ -8977,6 +8977,23 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
+@@ -8803,7 +8803,8 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
+   bool finalizable = der != NULL && der->ns->proc_name
+ 			    && gfc_is_finalizable (der, NULL);
+ 
+-  if (!byref && finalizable)
++  if (!byref && finalizable
++      && !(expr && expr->must_finalize))
+     gfc_finalize_tree_expr (se, der, attr, expr->rank);
+ 
+   if (!byref && sym->ts.type != BT_CHARACTER
+@@ -8870,7 +8871,8 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
+ 	      /* Bundle in the string length.  */
+ 	      se->string_length = len;
+ 
+-	      if (finalizable)
++	      if (finalizable
++		  && !(expr && expr->must_finalize))
+ 		gfc_finalize_tree_expr (se, der, attr, expr->rank);
+ 	    }
+ 	  else if (ts.type == BT_CHARACTER)
+@@ -8977,6 +8979,23 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
  		&& attr.pointer))
  	    gfc_finalize_tree_expr (se, NULL, attr, expr->rank);
  	}
