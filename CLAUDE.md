@@ -353,10 +353,20 @@ git commit -s -m "commit message"
 
 **Pre-Completion Review Checklist (MANDATORY):**
 
-Run style checker on all modified files:
+Run style checker on ALL modified AND new files (including test cases):
 ```bash
-./gcc/contrib/check_GNU_style.sh gcc/fortran/<modified-file>
+# For modified/new source files:
+./gcc/contrib/check_GNU_style.sh gcc/fortran/<file>
+
+# For new test cases:
+./gcc/contrib/check_GNU_style.sh gcc/testsuite/gfortran.dg/<test-file>
 ```
+
+**CRITICAL: Style checker MUST be run on:**
+- ✅ All modified source files in `gcc/fortran/`
+- ✅ All NEW source files in `gcc/fortran/`
+- ✅ All NEW test files in `gcc/testsuite/gfortran.dg/`
+- ✅ All modified files in `libgfortran/`
 
 **Verify all of these pass:**
 - ✅ No lines exceeding 80 characters
