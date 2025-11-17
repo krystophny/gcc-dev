@@ -1,4 +1,4 @@
-From 11ef97a670da3afd8f3d2f54c39f0f1d43df3c69 Mon Sep 17 00:00:00 2001
+From 2e26d9c163f83bbf2980a3efa516e68894361b88 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Fri, 14 Nov 2025 20:15:26 +0100
 Subject: [PATCH] fortran: honor array constructor type-spec during folding
@@ -300,7 +300,7 @@ index 82a8b6fb995..3d1ce6f87ed 100644
        r->shape = gfc_copy_shape (op1->shape, op1->rank);
        r->rank = op1->rank;
 diff --git a/gcc/fortran/array.cc b/gcc/fortran/array.cc
-index 57a7b134e4c..0ffc3dde126 100644
+index 57a7b134e4c..eab80abfcee 100644
 --- a/gcc/fortran/array.cc
 +++ b/gcc/fortran/array.cc
 @@ -1305,6 +1305,108 @@ done:
@@ -367,7 +367,7 @@ index 57a7b134e4c..0ffc3dde126 100644
 +	  if (target_length != -1 && e->ts.u.cl)
 +	    {
 +	      e->ts.u.cl = ts->u.cl;
-+	      
++
 +	      /* Recursively handle operands first.  */
 +	      if (e->value.op.op1 && e->value.op.op1->ts.type == BT_CHARACTER)
 +		{
@@ -381,7 +381,7 @@ index 57a7b134e4c..0ffc3dde126 100644
 +		      gfc_simplify_expr (e->value.op.op1, 0);
 +		    }
 +		}
-+	      
++
 +	      if (e->value.op.op2 && e->value.op.op2->ts.type == BT_CHARACTER)
 +		{
 +		  e->value.op.op2->ts.u.cl = ts->u.cl;
@@ -394,10 +394,10 @@ index 57a7b134e4c..0ffc3dde126 100644
 +		      gfc_simplify_expr (e->value.op.op2, 0);
 +		    }
 +		}
-+	      
++
 +	      /* Simplify the operation to get a constant result.  */
 +	      gfc_simplify_expr (e, 0);
-+	      
++
 +	      /* Now pad/truncate the resulting constant if needed.  */
 +	      if (e->expr_type == EXPR_CONSTANT)
 +		gfc_set_constant_character_len (target_length, e, -1);
