@@ -1,4 +1,4 @@
-From 2e26d9c163f83bbf2980a3efa516e68894361b88 Mon Sep 17 00:00:00 2001
+From e7289034ae59a7dcd5f532b4d62719a0eb79f38c Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Fri, 14 Nov 2025 20:15:26 +0100
 Subject: [PATCH] fortran: honor array constructor type-spec during folding
@@ -34,14 +34,14 @@ gcc/testsuite/ChangeLog:
 Co-authored-by: Harald Anlauf <anlauf@gcc.gnu.org>
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
- gcc/fortran/arith.cc                          | 160 ++++++++++++-
+ gcc/fortran/arith.cc                          | 173 +++++++++++++-
  gcc/fortran/array.cc                          | 168 ++++++++++++--
  .../array_constructor_typespec_1.f90          | 215 ++++++++++++++++++
- 3 files changed, 522 insertions(+), 21 deletions(-)
+ 3 files changed, 535 insertions(+), 21 deletions(-)
  create mode 100644 gcc/testsuite/gfortran.dg/array_constructor_typespec_1.f90
 
 diff --git a/gcc/fortran/arith.cc b/gcc/fortran/arith.cc
-index 82a8b6fb995..3d1ce6f87ed 100644
+index 82a8b6fb995..218408db68a 100644
 --- a/gcc/fortran/arith.cc
 +++ b/gcc/fortran/arith.cc
 @@ -29,11 +29,97 @@ along with GCC; see the file COPYING3.  If not see
@@ -153,7 +153,26 @@ index 82a8b6fb995..3d1ce6f87ed 100644
    rc = ARITH_OK;
    head = gfc_constructor_copy (op->value.constructor);
    for (c = gfc_constructor_first (head); c; c = gfc_constructor_next (c))
-@@ -1528,13 +1618,17 @@ reduce_binary_ac (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
+@@ -1519,6 +1609,18 @@ reduce_unary (arith (*eval) (gfc_expr *, gfc_expr **), gfc_expr *op,
+ }
+ 
+ 
++/* Helper function to copy CHARACTER type length from source to destination.
++   Operations like concatenation may change character length, so we need to
++   preserve the resulting length from computed expressions.  */
++
++static void
++copy_character_type_length (gfc_expr *dest, const gfc_expr *src)
++{
++  if (src->ts.type == BT_CHARACTER && src->ts.u.cl)
++    dest->ts.u.cl = src->ts.u.cl;
++}
++
++
+ static arith
+ reduce_binary_ac (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
+ 		  gfc_expr *op1, gfc_expr *op2, gfc_expr **result)
+@@ -1528,13 +1630,17 @@ reduce_binary_ac (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
    gfc_expr *r;
    arith rc = ARITH_OK;
  
@@ -173,29 +192,27 @@ index 82a8b6fb995..3d1ce6f87ed 100644
        if (c->expr->expr_type == EXPR_CONSTANT)
  	rc_tmp = eval (c->expr, op2, &r);
        else if (c->expr->expr_type != EXPR_ARRAY)
-@@ -1565,6 +1659,11 @@ reduce_binary_ac (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
+@@ -1565,6 +1671,10 @@ reduce_binary_ac (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
  	  r = gfc_get_array_expr (c->expr->ts.type, c->expr->ts.kind,
  				  &op1->where);
  	  r->shape = gfc_copy_shape (op1->shape, op1->rank);
 +	  /* Copy character length from the result elements, not the
 +	     original constructor, since operations like concatenation may
 +	     change the character length.  */
-+	  if (c->expr->ts.type == BT_CHARACTER && c->expr->ts.u.cl)
-+	    r->ts.u.cl = c->expr->ts.u.cl;
++	  copy_character_type_length (r, c->expr);
  	}
        else
  	{
-@@ -1572,6 +1671,9 @@ reduce_binary_ac (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
+@@ -1572,6 +1682,8 @@ reduce_binary_ac (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
  	  r = gfc_get_array_expr (op1->ts.type, op1->ts.kind,
  				  &op1->where);
  	  r->shape = gfc_get_shape (op1->rank);
 +	  /* Copy character length from the constructor if applicable.  */
-+	  if (op1->ts.type == BT_CHARACTER && op1->ts.u.cl)
-+	    r->ts.u.cl = op1->ts.u.cl;
++	  copy_character_type_length (r, op1);
  	}
        r->rank = op1->rank;
        r->corank = op1->corank;
-@@ -1592,6 +1694,11 @@ reduce_binary_ca (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
+@@ -1592,6 +1704,11 @@ reduce_binary_ca (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
    gfc_expr *r;
    arith rc = ARITH_OK;
  
@@ -207,7 +224,7 @@ index 82a8b6fb995..3d1ce6f87ed 100644
    head = gfc_constructor_copy (op2->value.constructor);
    for (c = gfc_constructor_first (head); c; c = gfc_constructor_next (c))
      {
-@@ -1599,6 +1706,30 @@ reduce_binary_ca (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
+@@ -1599,6 +1716,37 @@ reduce_binary_ca (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
  
        gfc_simplify_expr (c->expr, 0);
  
@@ -221,7 +238,14 @@ index 82a8b6fb995..3d1ce6f87ed 100644
 +	  HOST_WIDE_INT target_len;
 +	  if (gfc_extract_hwi (op2->ts.u.cl->length, &target_len))
 +	    {
-+	      /* Handle both constants and operations that might simplify to constants.  */
++	      /* Handle both constants and operations that might simplify to
++		 constants.  In the constant folding context, this minimal
++		 EXPR_OP handling (top-level typespec update + simplification)
++		 is sufficient because gfc_simplify_expr handles nested
++		 operations.  This differs from the comprehensive recursive
++		 approach in array.cc's expand_constructor which processes
++		 operands directly during constructor expansion.  Tests verify
++		 this approach produces correct results.  */
 +	      if (c->expr->expr_type == EXPR_OP)
 +		{
 +		  /* Set typespec and try simplifying again.  */
@@ -238,29 +262,27 @@ index 82a8b6fb995..3d1ce6f87ed 100644
        if (c->expr->expr_type == EXPR_CONSTANT)
  	rc_tmp = eval (op1, c->expr, &r);
        else if (c->expr->expr_type != EXPR_ARRAY)
-@@ -1629,6 +1760,11 @@ reduce_binary_ca (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
+@@ -1629,6 +1777,10 @@ reduce_binary_ca (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
  	  r = gfc_get_array_expr (c->expr->ts.type, c->expr->ts.kind,
  				  &op2->where);
  	  r->shape = gfc_copy_shape (op2->shape, op2->rank);
 +	  /* Copy character length from the result elements, not the
 +	     original constructor, since operations like concatenation may
 +	     change the character length.  */
-+	  if (c->expr->ts.type == BT_CHARACTER && c->expr->ts.u.cl)
-+	    r->ts.u.cl = c->expr->ts.u.cl;
++	  copy_character_type_length (r, c->expr);
  	}
        else
  	{
-@@ -1636,6 +1772,9 @@ reduce_binary_ca (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
+@@ -1636,6 +1788,8 @@ reduce_binary_ca (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
  	  r = gfc_get_array_expr (op2->ts.type, op2->ts.kind,
  				  &op2->where);
  	  r->shape = gfc_get_shape (op2->rank);
 +	  /* Copy character length from the constructor if applicable.  */
-+	  if (op2->ts.type == BT_CHARACTER && op2->ts.u.cl)
-+	    r->ts.u.cl = op2->ts.u.cl;
++	  copy_character_type_length (r, op2);
  	}
        r->rank = op2->rank;
        r->corank = op2->corank;
-@@ -1661,9 +1800,18 @@ reduce_binary_aa (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
+@@ -1661,9 +1815,18 @@ reduce_binary_aa (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
    gfc_expr *r;
    arith rc = ARITH_OK;
  
@@ -279,13 +301,12 @@ index 82a8b6fb995..3d1ce6f87ed 100644
    head = gfc_constructor_copy (op1->value.constructor);
    for (c = gfc_constructor_first (head),
         d = gfc_constructor_first (op2->value.constructor);
-@@ -1697,11 +1845,19 @@ reduce_binary_aa (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
+@@ -1697,11 +1860,17 @@ reduce_binary_aa (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
  	{
  	  /* Handle zero-sized arrays.  */
  	  r = gfc_get_array_expr (op1->ts.type, op1->ts.kind, &op1->where);
 +	  /* Copy character length if applicable.  */
-+	  if (op1->ts.type == BT_CHARACTER && op1->ts.u.cl)
-+	    r->ts.u.cl = op1->ts.u.cl;
++	  copy_character_type_length (r, op1);
  	}
        else
  	{
@@ -294,8 +315,7 @@ index 82a8b6fb995..3d1ce6f87ed 100644
 +	  /* Copy character length from the result elements, not the
 +	     original constructor, since operations like concatenation may
 +	     change the character length.  */
-+	  if (c->expr->ts.type == BT_CHARACTER && c->expr->ts.u.cl)
-+	    r->ts.u.cl = c->expr->ts.u.cl;
++	  copy_character_type_length (r, c->expr);
  	}
        r->shape = gfc_copy_shape (op1->shape, op1->rank);
        r->rank = op1->rank;
