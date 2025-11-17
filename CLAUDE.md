@@ -334,14 +334,41 @@ git commit -s -m "commit message"
    - If file is mixed, prefer C
    - If converting C++ to C, keep it simple and equivalent
 
+### GNU Style Formatting Rules
+
+**Whitespace and Indentation:**
+- ✅ Lines ≤ 80 characters (hard limit)
+- ✅ Replace 8 consecutive spaces with TAB character
+- ✅ No trailing whitespace
+- ✅ TAB stops every 8 columns
+- ✅ ChangeLog entries: single TAB for indentation (verify with `cat -A` showing `^I`)
+
+**Spacing Conventions:**
+- ✅ Exactly one space between function name and `(`
+- ✅ No space before `[` or before closing `)`
+- ✅ Dot-space-space between sentences in comments
+- ✅ No space before dot
+
 ### Code Quality Checks
 
-**Mandatory before completion:**
+**Pre-Completion Review Checklist (MANDATORY):**
+
+Run style checker on all modified files:
 ```bash
-./gcc/contrib/check_GNU_style.sh <modified-file>
+./gcc/contrib/check_GNU_style.sh gcc/fortran/<modified-file>
 ```
 
-Run on each file modified in `gcc/gcc/fortran/` or `gcc/libgfortran/`.
+**Verify all of these pass:**
+- ✅ No lines exceeding 80 characters
+- ✅ No blocks of 8 spaces (should be TABs)
+- ✅ No trailing whitespace
+- ✅ Proper spacing around operators and punctuation
+- ✅ ChangeLog TAB formatting correct (`git log -1 --format=%B | cat -A` shows `^I`)
+- ✅ Builds without warnings (`make -j32` in gcc-build/)
+- ✅ All tests pass (`make -j32 -k check-gfortran` in gcc-build/gcc/)
+- ✅ No regressions in test suite
+- ✅ New test cases added for bug fixes
+- ✅ Reproducer tested with reference compilers (ifx, nvfortran)
 
 ## PR Directory Organization
 
