@@ -1,4 +1,4 @@
-From 13ccb6c47168791b09f5010904bb6a64a014ceae Mon Sep 17 00:00:00 2001
+From 8b7a9bcc4404d4e7482014b02284dbe2942d3450 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Fri, 14 Nov 2025 20:15:26 +0100
 Subject: [PATCH] fortran: honor array constructor type-spec during folding
@@ -34,23 +34,24 @@ gcc/testsuite/ChangeLog:
 Co-authored-by: Harald Anlauf <anlauf@gcc.gnu.org>
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
- gcc/fortran/arith.cc                          |  89 +++++++++
- gcc/fortran/array.cc                          |  65 ++++++-
- .../array_constructor_typespec_1.f90          | 184 ++++++++++++++++++
- 3 files changed, 337 insertions(+), 1 deletion(-)
+ gcc/fortran/arith.cc                          | 160 ++++++++++++-
+ gcc/fortran/array.cc                          | 168 ++++++++++++--
+ .../array_constructor_typespec_1.f90          | 215 ++++++++++++++++++
+ 3 files changed, 522 insertions(+), 21 deletions(-)
  create mode 100644 gcc/testsuite/gfortran.dg/array_constructor_typespec_1.f90
 
 diff --git a/gcc/fortran/arith.cc b/gcc/fortran/arith.cc
-index 82a8b6fb995..d9b229a8f1d 100644
+index 82a8b6fb995..e3518b5a401 100644
 --- a/gcc/fortran/arith.cc
 +++ b/gcc/fortran/arith.cc
-@@ -29,11 +29,77 @@ along with GCC; see the file COPYING3.  If not see
+@@ -29,11 +29,97 @@ along with GCC; see the file COPYING3.  If not see
  #include "options.h"
  #include "gfortran.h"
  #include "arith.h"
 +#include "intrinsic.h"
  #include "target-memory.h"
  #include "constructor.h"
++#include "match.h"
  
  bool gfc_seen_div0;
  
@@ -103,6 +104,25 @@ index 82a8b6fb995..d9b229a8f1d 100644
 +      if (!gfc_is_constant_expr (c->expr))
 +        continue;
 +
++      /* For CHARACTER, pad/truncate to the type-spec length even if type
++	 and kind match, since length is part of the type.  */
++      if (c->expr->ts.type == BT_CHARACTER
++	  && op->ts.type == BT_CHARACTER
++	  && op->ts.u.cl && op->ts.u.cl->length
++	  && op->ts.u.cl->length->expr_type == EXPR_CONSTANT)
++	{
++	  HOST_WIDE_INT target_len;
++	  if (gfc_extract_hwi (op->ts.u.cl->length, &target_len))
++	    {
++	      if (c->expr->expr_type == EXPR_CONSTANT
++		  && c->expr->value.character.length != target_len)
++		{
++		  gfc_set_constant_character_len (target_len, c->expr, -1);
++		}
++	    }
++	  continue;
++	}
++
 +      /* Skip conversion when type and kind already match.  Matching values
 +	 are already validated (literals at parse time, computed values by
 +	 their operations), so this avoids redundant conversion calls.  */
@@ -122,7 +142,7 @@ index 82a8b6fb995..d9b229a8f1d 100644
  /* MPFR does not have a direct replacement for mpz_set_f() from GMP.
     It's easily implemented with a few calls though.  */
  
-@@ -1474,6 +1540,10 @@ reduce_unary (arith (*eval) (gfc_expr *, gfc_expr **), gfc_expr *op,
+@@ -1474,6 +1560,10 @@ reduce_unary (arith (*eval) (gfc_expr *, gfc_expr **), gfc_expr *op,
    if (op->expr_type != EXPR_ARRAY)
      return ARITH_NOT_REDUCED;
  
@@ -133,7 +153,7 @@ index 82a8b6fb995..d9b229a8f1d 100644
    rc = ARITH_OK;
    head = gfc_constructor_copy (op->value.constructor);
    for (c = gfc_constructor_first (head); c; c = gfc_constructor_next (c))
-@@ -1528,6 +1598,11 @@ reduce_binary_ac (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
+@@ -1528,13 +1618,17 @@ reduce_binary_ac (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
    gfc_expr *r;
    arith rc = ARITH_OK;
  
@@ -143,9 +163,39 @@ index 82a8b6fb995..d9b229a8f1d 100644
 +
 +  rc = ARITH_OK;
    head = gfc_constructor_copy (op1->value.constructor);
++
    for (c = gfc_constructor_first (head); c; c = gfc_constructor_next (c))
      {
-@@ -1592,6 +1667,11 @@ reduce_binary_ca (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
+       arith rc_tmp;
+ 
+-      gfc_simplify_expr (c->expr, 0);
+-
+       if (c->expr->expr_type == EXPR_CONSTANT)
+ 	rc_tmp = eval (c->expr, op2, &r);
+       else if (c->expr->expr_type != EXPR_ARRAY)
+@@ -1565,6 +1659,11 @@ reduce_binary_ac (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
+ 	  r = gfc_get_array_expr (c->expr->ts.type, c->expr->ts.kind,
+ 				  &op1->where);
+ 	  r->shape = gfc_copy_shape (op1->shape, op1->rank);
++	  /* Copy character length from the result elements, not the
++	     original constructor, since operations like concatenation may
++	     change the character length.  */
++	  if (c->expr->ts.type == BT_CHARACTER && c->expr->ts.u.cl)
++	    r->ts.u.cl = c->expr->ts.u.cl;
+ 	}
+       else
+ 	{
+@@ -1572,6 +1671,9 @@ reduce_binary_ac (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
+ 	  r = gfc_get_array_expr (op1->ts.type, op1->ts.kind,
+ 				  &op1->where);
+ 	  r->shape = gfc_get_shape (op1->rank);
++	  /* Copy character length from the constructor if applicable.  */
++	  if (op1->ts.type == BT_CHARACTER && op1->ts.u.cl)
++	    r->ts.u.cl = op1->ts.u.cl;
+ 	}
+       r->rank = op1->rank;
+       r->corank = op1->corank;
+@@ -1592,6 +1694,11 @@ reduce_binary_ca (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
    gfc_expr *r;
    arith rc = ARITH_OK;
  
@@ -157,7 +207,60 @@ index 82a8b6fb995..d9b229a8f1d 100644
    head = gfc_constructor_copy (op2->value.constructor);
    for (c = gfc_constructor_first (head); c; c = gfc_constructor_next (c))
      {
-@@ -1661,9 +1741,18 @@ reduce_binary_aa (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
+@@ -1599,6 +1706,30 @@ reduce_binary_ca (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
+ 
+       gfc_simplify_expr (c->expr, 0);
+ 
++      /* For character constants in constructors with type-spec, ensure they're
++	 padded/truncated to the specified length before applying operations.  */
++      if (c->expr->ts.type == BT_CHARACTER
++	  && op2->ts.type == BT_CHARACTER
++	  && op2->ts.u.cl && op2->ts.u.cl->length
++	  && op2->ts.u.cl->length->expr_type == EXPR_CONSTANT)
++	{
++	  HOST_WIDE_INT target_len;
++	  if (gfc_extract_hwi (op2->ts.u.cl->length, &target_len))
++	    {
++	      /* Handle both constants and operations that might simplify to constants.  */
++	      if (c->expr->expr_type == EXPR_OP)
++		{
++		  /* Set typespec and try simplifying again.  */
++		  c->expr->ts.u.cl = op2->ts.u.cl;
++		  gfc_simplify_expr (c->expr, 0);
++		}
++	      
++	      if (c->expr->expr_type == EXPR_CONSTANT
++		  && c->expr->value.character.length != target_len)
++		gfc_set_constant_character_len (target_len, c->expr, -1);
++	    }
++	}
++
+       if (c->expr->expr_type == EXPR_CONSTANT)
+ 	rc_tmp = eval (op1, c->expr, &r);
+       else if (c->expr->expr_type != EXPR_ARRAY)
+@@ -1629,6 +1760,11 @@ reduce_binary_ca (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
+ 	  r = gfc_get_array_expr (c->expr->ts.type, c->expr->ts.kind,
+ 				  &op2->where);
+ 	  r->shape = gfc_copy_shape (op2->shape, op2->rank);
++	  /* Copy character length from the result elements, not the
++	     original constructor, since operations like concatenation may
++	     change the character length.  */
++	  if (c->expr->ts.type == BT_CHARACTER && c->expr->ts.u.cl)
++	    r->ts.u.cl = c->expr->ts.u.cl;
+ 	}
+       else
+ 	{
+@@ -1636,6 +1772,9 @@ reduce_binary_ca (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
+ 	  r = gfc_get_array_expr (op2->ts.type, op2->ts.kind,
+ 				  &op2->where);
+ 	  r->shape = gfc_get_shape (op2->rank);
++	  /* Copy character length from the constructor if applicable.  */
++	  if (op2->ts.type == BT_CHARACTER && op2->ts.u.cl)
++	    r->ts.u.cl = op2->ts.u.cl;
+ 	}
+       r->rank = op2->rank;
+       r->corank = op2->corank;
+@@ -1661,9 +1800,18 @@ reduce_binary_aa (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
    gfc_expr *r;
    arith rc = ARITH_OK;
  
@@ -176,11 +279,31 @@ index 82a8b6fb995..d9b229a8f1d 100644
    head = gfc_constructor_copy (op1->value.constructor);
    for (c = gfc_constructor_first (head),
         d = gfc_constructor_first (op2->value.constructor);
+@@ -1697,11 +1845,19 @@ reduce_binary_aa (arith (*eval) (gfc_expr *, gfc_expr *, gfc_expr **),
+ 	{
+ 	  /* Handle zero-sized arrays.  */
+ 	  r = gfc_get_array_expr (op1->ts.type, op1->ts.kind, &op1->where);
++	  /* Copy character length if applicable.  */
++	  if (op1->ts.type == BT_CHARACTER && op1->ts.u.cl)
++	    r->ts.u.cl = op1->ts.u.cl;
+ 	}
+       else
+ 	{
+ 	  r = gfc_get_array_expr (c->expr->ts.type, c->expr->ts.kind,
+ 				  &op1->where);
++	  /* Copy character length from the result elements, not the
++	     original constructor, since operations like concatenation may
++	     change the character length.  */
++	  if (c->expr->ts.type == BT_CHARACTER && c->expr->ts.u.cl)
++	    r->ts.u.cl = c->expr->ts.u.cl;
+ 	}
+       r->shape = gfc_copy_shape (op1->shape, op1->rank);
+       r->rank = op1->rank;
 diff --git a/gcc/fortran/array.cc b/gcc/fortran/array.cc
-index 57a7b134e4c..4c81f8374aa 100644
+index 57a7b134e4c..0ffc3dde126 100644
 --- a/gcc/fortran/array.cc
 +++ b/gcc/fortran/array.cc
-@@ -1305,6 +1305,63 @@ done:
+@@ -1305,6 +1305,108 @@ done:
  }
  
  
@@ -235,6 +358,51 @@ index 57a7b134e4c..4c81f8374aa 100644
 +	      gfc_set_constant_character_len (target_length, e, -1);
 +	    }
 +	}
++      else if (e->ts.type == BT_CHARACTER && e->expr_type == EXPR_OP)
++	{
++	  /* Apply CHARACTER length from type-spec to character operations
++	     (concatenation, parentheses, etc.) that appear in constructors.
++	     Recursively apply to all operands, then simplify to get a
++	     constant, then pad/truncate that constant.  */
++	  if (target_length != -1 && e->ts.u.cl)
++	    {
++	      e->ts.u.cl = ts->u.cl;
++	      
++	      /* Recursively handle operands first.  */
++	      if (e->value.op.op1 && e->value.op.op1->ts.type == BT_CHARACTER)
++		{
++		  e->value.op.op1->ts.u.cl = ts->u.cl;
++		  if (e->value.op.op1->expr_type == EXPR_CONSTANT)
++		    gfc_set_constant_character_len (target_length,
++						    e->value.op.op1, -1);
++		  else if (e->value.op.op1->expr_type == EXPR_OP)
++		    {
++		      /* Recursively handle nested operations.  */
++		      gfc_simplify_expr (e->value.op.op1, 0);
++		    }
++		}
++	      
++	      if (e->value.op.op2 && e->value.op.op2->ts.type == BT_CHARACTER)
++		{
++		  e->value.op.op2->ts.u.cl = ts->u.cl;
++		  if (e->value.op.op2->expr_type == EXPR_CONSTANT)
++		    gfc_set_constant_character_len (target_length,
++						    e->value.op.op2, -1);
++		  else if (e->value.op.op2->expr_type == EXPR_OP)
++		    {
++		      /* Recursively handle nested operations.  */
++		      gfc_simplify_expr (e->value.op.op2, 0);
++		    }
++		}
++	      
++	      /* Simplify the operation to get a constant result.  */
++	      gfc_simplify_expr (e, 0);
++	      
++	      /* Now pad/truncate the resulting constant if needed.  */
++	      if (e->expr_type == EXPR_CONSTANT)
++		gfc_set_constant_character_len (target_length, e, -1);
++	    }
++	}
 +    }
 +
 +  return MATCH_YES;
@@ -244,7 +412,7 @@ index 57a7b134e4c..4c81f8374aa 100644
  /* Convert components of an array constructor to the type in ts.  */
  
  static match
-@@ -1461,13 +1518,19 @@ done:
+@@ -1461,13 +1563,19 @@ done:
  	}
  
        /* Walk the constructor, and if possible, do type conversion for
@@ -265,12 +433,81 @@ index 57a7b134e4c..4c81f8374aa 100644
      }
    else
      expr = gfc_get_array_expr (BT_UNKNOWN, 0, &where);
+@@ -2367,28 +2475,50 @@ got_charlen:
+       if (found_length != -1)
+ 	for (p = gfc_constructor_first (expr->value.constructor);
+ 	     p; p = gfc_constructor_next (p))
+-	  if (p->expr->expr_type == EXPR_CONSTANT)
+-	    {
+-	      gfc_expr *cl = NULL;
+-	      HOST_WIDE_INT current_length = -1;
+-	      bool has_ts;
+-
+-	      if (p->expr->ts.u.cl && p->expr->ts.u.cl->length)
++	  {
++	    if (p->expr->expr_type == EXPR_CONSTANT)
+ 	      {
+-		cl = p->expr->ts.u.cl->length;
+-		gfc_extract_hwi (cl, &current_length);
+-	      }
++		gfc_expr *cl = NULL;
++		HOST_WIDE_INT current_length = -1;
++		bool has_ts;
+ 
+-	      /* If gfc_extract_int above set current_length, we implicitly
+-		 know the type is BT_INTEGER and it's EXPR_CONSTANT.  */
++		if (p->expr->ts.u.cl && p->expr->ts.u.cl->length)
++		  {
++		    cl = p->expr->ts.u.cl->length;
++		    gfc_extract_hwi (cl, &current_length);
++		  }
+ 
+-	      has_ts = expr->ts.u.cl->length_from_typespec;
++		/* If gfc_extract_int above set current_length, we implicitly
++		   know the type is BT_INTEGER and it's EXPR_CONSTANT.  */
+ 
+-	      if (! cl
+-		  || (current_length != -1 && current_length != found_length))
+-		gfc_set_constant_character_len (found_length, p->expr,
+-						has_ts ? -1 : found_length);
+-	    }
++		has_ts = expr->ts.u.cl->length_from_typespec;
++
++		if (! cl
++		    || (current_length != -1 && current_length != found_length))
++		  gfc_set_constant_character_len (found_length, p->expr,
++						  has_ts ? -1 : found_length);
++	      }
++	    else if (p->expr->expr_type == EXPR_OP && p->expr->ts.type == BT_CHARACTER)
++	      {
++		/* Handle character operations (concat, parentheses, etc.).
++		   Update the typespec to match the constructor's type-spec,
++		   then simplify to get the correctly-sized constant.  */
++		if (p->expr->ts.u.cl != expr->ts.u.cl)
++		  {
++		    p->expr->ts.u.cl = expr->ts.u.cl;
++		    gfc_simplify_expr (p->expr, 0);
++		    
++		    /* After simplification, if it's now a constant, apply the
++		       length again to ensure correct padding/truncation.  */
++		    if (p->expr->expr_type == EXPR_CONSTANT)
++		      {
++			bool has_ts = expr->ts.u.cl->length_from_typespec;
++			gfc_set_constant_character_len (found_length, p->expr,
++							has_ts ? -1 : found_length);
++		      }
++		  }
++	      }
++	  }
+     }
+ 
+   return true;
 diff --git a/gcc/testsuite/gfortran.dg/array_constructor_typespec_1.f90 b/gcc/testsuite/gfortran.dg/array_constructor_typespec_1.f90
 new file mode 100644
-index 00000000000..e5f3c9aab1e
+index 00000000000..d5d84b2d4df
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/array_constructor_typespec_1.f90
-@@ -0,0 +1,184 @@
+@@ -0,0 +1,215 @@
 +! { dg-do run }
 +! PR fortran/107721 - array constructor type-spec lost with parentheses
 +! PR fortran/102417 - character array constructor type-spec lost
@@ -290,6 +527,8 @@ index 00000000000..e5f3c9aab1e
 +    character(4), dimension(3) :: charr
 +    character(8), dimension(2) :: charr8
 +    character(16), dimension(3) :: charr16
++    character(16), dimension(2) :: charr16_2
++    character(17), dimension(2) :: charr17
 +    character :: x = 'a', y = 'b'
 +    class(*), allocatable :: res(:)
 +
@@ -355,6 +594,35 @@ index 00000000000..e5f3c9aab1e
 +    charr8 = [[character(8) :: (x), (y)]]
 +    if (charr8(1) /= 'a       ') stop 25
 +    if (charr8(2) /= 'b       ') stop 26
++
++    ! CHARACTER concatenation with parentheses (PR 107721 comment 14)
++    charr16_2 = [character(16) :: 'a' // 'c', 'b' // 'de']
++    if (charr16_2(1) /= 'ac              ') stop 101
++    if (charr16_2(2) /= 'bde             ') stop 102
++
++    charr16_2 = [character(16) :: 'a' // 'c', ('b' // 'de')]
++    if (charr16_2(1) /= 'ac              ') stop 103
++    if (charr16_2(2) /= 'bde             ') stop 104
++
++    charr16_2 = [character(16) :: ('a' // 'c'), 'b' // 'de']
++    if (charr16_2(1) /= 'ac              ') stop 105
++    if (charr16_2(2) /= 'bde             ') stop 106
++
++    ! CHARACTER concatenation after constructor - verify length 17
++    charr17 = [character(16) :: 'a' // 'c', 'b' // 'de'] // '|'
++    if (len(charr17) /= 17) stop 107
++    if (charr17(1) /= 'ac              |') stop 108
++    if (charr17(2) /= 'bde             |') stop 109
++
++    charr17 = [character(16) :: 'a' // 'c', ('b' // 'de')] // '|'
++    if (len(charr17) /= 17) stop 110
++    if (charr17(1) /= 'ac              |') stop 111
++    if (charr17(2) /= 'bde             |') stop 112
++
++    charr17 = [character(16) :: ('a' // 'c'), 'b' // 'de'] // '|'
++    if (len(charr17) /= 17) stop 113
++    if (charr17(1) /= 'ac              |') stop 114
++    if (charr17(2) /= 'bde             |') stop 115
 +
 +    ! CHARACTER - longer length 16
 +    charr16 = [character(16) :: 'a', 'b', 'c']
