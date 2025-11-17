@@ -7,7 +7,11 @@ This meta-repository tracks GCC Fortran bug reproducers, patches, and developmen
 **Directory Structure:**
 - `/home/ert/code/gcc-dev/` - Meta-repo root (tracked on `main` branch, pushable to GitHub)
 - `/home/ert/code/gcc-dev/gcc/` - Upstream GCC repository (local branches only, never push)
+  - `/home/ert/code/gcc-dev/gcc/gcc/` - GCC source code
+  - `/home/ert/code/gcc-dev/gcc/gcc/fortran/` - Fortran frontend source
+  - `/home/ert/code/gcc-dev/gcc/gcc/testsuite/gfortran.dg/` - Fortran test suite
 - `/home/ert/code/gcc-dev/gcc-build/` - Build artifacts
+  - `/home/ert/code/gcc-dev/gcc-build/gcc/` - Run tests from here: `make check-gfortran`
 - `/home/ert/code/gcc-dev/pr/` - Bug reproducers and patches, organized by PR number
 
 **Git Command Conventions:**
