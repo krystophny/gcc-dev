@@ -1,4 +1,4 @@
-From 8b7a9bcc4404d4e7482014b02284dbe2942d3450 Mon Sep 17 00:00:00 2001
+From 11ef97a670da3afd8f3d2f54c39f0f1d43df3c69 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Fri, 14 Nov 2025 20:15:26 +0100
 Subject: [PATCH] fortran: honor array constructor type-spec during folding
@@ -41,7 +41,7 @@ Signed-off-by: Christopher Albert <albert@tugraz.at>
  create mode 100644 gcc/testsuite/gfortran.dg/array_constructor_typespec_1.f90
 
 diff --git a/gcc/fortran/arith.cc b/gcc/fortran/arith.cc
-index 82a8b6fb995..e3518b5a401 100644
+index 82a8b6fb995..3d1ce6f87ed 100644
 --- a/gcc/fortran/arith.cc
 +++ b/gcc/fortran/arith.cc
 @@ -29,11 +29,97 @@ along with GCC; see the file COPYING3.  If not see
@@ -97,12 +97,12 @@ index 82a8b6fb995..e3518b5a401 100644
 +      gfc_expr *converted;
 +
 +      if (c->expr == NULL)
-+        continue;
++	continue;
 +
 +      gfc_simplify_expr (c->expr, 0);
 +
 +      if (!gfc_is_constant_expr (c->expr))
-+        continue;
++	continue;
 +
 +      /* For CHARACTER, pad/truncate to the type-spec length even if type
 +	 and kind match, since length is part of the type.  */
@@ -127,11 +127,11 @@ index 82a8b6fb995..e3518b5a401 100644
 +	 are already validated (literals at parse time, computed values by
 +	 their operations), so this avoids redundant conversion calls.  */
 +      if (c->expr->ts.type == op->ts.type && c->expr->ts.kind == op->ts.kind)
-+        continue;
++	continue;
 +
 +      converted = gfc_convert_constant (c->expr, op->ts.type, op->ts.kind);
 +      if (converted == NULL || converted == &gfc_bad_expr)
-+        return ARITH_NOT_REDUCED;
++	return ARITH_NOT_REDUCED;
 +
 +      gfc_replace_expr (c->expr, converted);
 +    }
