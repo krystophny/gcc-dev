@@ -1,4 +1,4 @@
-From e7289034ae59a7dcd5f532b4d62719a0eb79f38c Mon Sep 17 00:00:00 2001
+From 93530a264d3208a48709d38817ddab9e1163c959 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Fri, 14 Nov 2025 20:15:26 +0100
 Subject: [PATCH] fortran: honor array constructor type-spec during folding
@@ -744,5 +744,5 @@ index 00000000000..d5d84b2d4df
 +
 +end program array_constructor_typespec_1
 -- 
-2.51.2
+2.52.0
 
