@@ -69,10 +69,24 @@ make -j32 -k check-gfortran > /tmp/test-output.log 2>&1 &
 - Detailed log: `gcc-build/gcc/testsuite/gfortran/gfortran.log`
 - Look for: `# of expected passes`, `# of unexpected failures`
 
+**Analyzing test results:**
+After running the test suite, use the test summary tool for detailed analysis:
+```bash
+# From meta-repo root:
+./gcc/contrib/test_summary
+
+# This provides a concise summary of all test problems including:
+# - Unexpected failures with test names
+# - New failures compared to baseline
+# - Grouped results by test category
+# - Easy-to-read format for quick diagnosis
+```
+
 **Verification checklist:**
 - Zero unexpected failures required for merge
 - All new tests passing
 - No regressions in existing tests
+- Run `./gcc/contrib/test_summary` to analyze any failures
 
 ### Custom Compiler Invocation
 ```bash
