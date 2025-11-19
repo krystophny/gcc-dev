@@ -1,4 +1,4 @@
-From 93530a264d3208a48709d38817ddab9e1163c959 Mon Sep 17 00:00:00 2001
+From 1f121e4b991e856461cdc83aafc1fd8c1b0cccbe Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Fri, 14 Nov 2025 20:15:26 +0100
 Subject: [PATCH] fortran: honor array constructor type-spec during folding
@@ -41,7 +41,7 @@ Signed-off-by: Christopher Albert <albert@tugraz.at>
  create mode 100644 gcc/testsuite/gfortran.dg/array_constructor_typespec_1.f90
 
 diff --git a/gcc/fortran/arith.cc b/gcc/fortran/arith.cc
-index 82a8b6fb995..218408db68a 100644
+index 82a8b6fb995..593d3800713 100644
 --- a/gcc/fortran/arith.cc
 +++ b/gcc/fortran/arith.cc
 @@ -29,11 +29,97 @@ along with GCC; see the file COPYING3.  If not see
@@ -252,7 +252,7 @@ index 82a8b6fb995..218408db68a 100644
 +		  c->expr->ts.u.cl = op2->ts.u.cl;
 +		  gfc_simplify_expr (c->expr, 0);
 +		}
-+	      
++
 +	      if (c->expr->expr_type == EXPR_CONSTANT
 +		  && c->expr->value.character.length != target_len)
 +		gfc_set_constant_character_len (target_len, c->expr, -1);
@@ -320,7 +320,7 @@ index 82a8b6fb995..218408db68a 100644
        r->shape = gfc_copy_shape (op1->shape, op1->rank);
        r->rank = op1->rank;
 diff --git a/gcc/fortran/array.cc b/gcc/fortran/array.cc
-index 57a7b134e4c..eab80abfcee 100644
+index 57a7b134e4c..48424f19bb4 100644
 --- a/gcc/fortran/array.cc
 +++ b/gcc/fortran/array.cc
 @@ -1305,6 +1305,108 @@ done:
@@ -507,7 +507,7 @@ index 57a7b134e4c..eab80abfcee 100644
 +		  {
 +		    p->expr->ts.u.cl = expr->ts.u.cl;
 +		    gfc_simplify_expr (p->expr, 0);
-+		    
++
 +		    /* After simplification, if it's now a constant, apply the
 +		       length again to ensure correct padding/truncation.  */
 +		    if (p->expr->expr_type == EXPR_CONSTANT)
