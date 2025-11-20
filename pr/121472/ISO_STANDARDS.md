@@ -60,14 +60,18 @@ array(i) = elemental_func()
 
 ## GCC Compliance Status for PR121472
 
-### Current Status: ✅ STANDARD-COMPLIANT
+### Current Status: ✅ STANDARD-COMPLIANT (on upstream master)
 
-**Issue:** RESOLVED - Function results now finalized exactly once
+**Issue:** NO ISSUE - finalize_55.f90 already passes on upstream master
 - **Expected**: 1 finalization per function result
 - **Actual**: 1 finalization per function result ✅
-- **Test case**: finalize_55.f90 passes with correct count (ctr=6->16)
+- **Test case**: finalize_55.f90 passes with correct count (12 passes)
 
 ### Reference Compiler Compliance
+
+**Upstream GCC master:**
+- ✅ STANDARD-COMPLIANT
+- finalize_55.f90: correct count (12 passes)
 
 **Intel ifx 2025.2.1:**
 - ✅ STANDARD-COMPLIANT
@@ -80,11 +84,6 @@ array(i) = elemental_func()
 **System gfortran 15.2.1:**
 - ✅ STANDARD-COMPLIANT
 - finalize_55.f90: correct count (16 total)
-
-**Custom gfortran (this fix):**
-- ✅ STANDARD-COMPLIANT
-- finalize_55.f90: correct count (16 total) - ALL TESTS PASS
-- Test suite: 74,417 passes, 0 failures
 
 ## Function Results vs Structure Constructors
 

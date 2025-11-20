@@ -1,32 +1,21 @@
 # GCC PR121472 - ICE with constructor and finalizer
 
 **Bug URL:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121472
-**Status:** Active (ICE fixed, temp metadata infrastructure in place, finalize_55 over-finalization remains)
-**Branch:** `pr121472-finalizer-clean`
-**Title:** ICE in gimplify_expr / finalization regressions
+**Status:** UNFIXED - Original ICE remains
+**Branch:** `pr121472-constructor-finalizer-ice` (has messy history, needs rebase)
+**Title:** ICE in gimplify_expr with constructor interface and finalizer
 
 ## Current Status (2025-11-20)
 
-### ✅ FIXED - Full ISO Compliance Achieved!
+### ❌ UNFIXED - Original Bug Remains
 
-- ✅ ICE fixed: Original reproducer compiles cleanly
-- ✅ Deep copy guard prevents self-referencing ICE in assignment helpers
-- ✅ Temp metadata infrastructure implemented (typespec, rank, finalizable tracking)
-- ✅ Finalization consumer implemented: temp teardown finalization using `temp_finalizable` flag
-- ✅ **finalize_55.f90 PASSES**: correct finalization count (ctr=6 at stop 2, ctr=16 at stop 4)
-- ✅ All finalize_* tests pass (166 expected passes across all finalization tests)
+- ❌ **ICE NOT FIXED**: reproducer.f90 still causes `internal compiler error: in gimplify_expr, at gimplify.cc:21278`
+- ❌ **finalize_55.f90**: Already PASSES on upstream master (no bug to fix)
+- ⚠️ **False fix attempt**: Temp metadata patch was unnecessary - fixed a non-existent problem
 
-### ISO Compliance Status
-✅ **STANDARD-COMPLIANT** with ISO/IEC 1539-1:2018 Section 7.5.6.3
-- Function results finalized exactly once (no over-finalization)
-- Matches reference compiler behavior (Intel ifx, NVIDIA nvfortran, system gfortran)
-- Finalization occurs at temp teardown before deallocation
-
-### Latest Test Results
-- Build: `make -j32` ✅ (no warnings)
-- finalize_55.f90: ✅ 12 passes (previously failing)
-- All finalize_* tests: ✅ 166 passes, 0 failures
-- Full test suite: Running (results pending)
+### Test Results on Upstream Master
+- reproducer.f90: ❌ ICE (gimplify_expr crash)
+- finalize_55.f90: ✅ 12 passes (already working correctly)
 
 ### Reference Compilers
 - **System gfortran 15.2.1**: finalize_55 passes (ctr=16) — baseline
