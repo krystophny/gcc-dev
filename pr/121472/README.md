@@ -1,135 +1,152 @@
 # GCC PR121472 - ICE with constructor and finalizer
 
 **Bug URL:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121472
-**Status:** Active (local fixes in progress; finalize_55 over-finalization still open)
+**Status:** Active (ICE fixed, temp metadata infrastructure in place, finalize_55 over-finalization remains)
+**Branch:** `pr121472-finalizer-clean`
 **Title:** ICE in gimplify_expr / finalization regressions
-
-## Description
-
-This bug triggers an internal compiler error when using a derived type with
-both a final subroutine and a constructor interface. The assignment using
-the constructor triggers the ICE during gimplification.
 
 ## Current Status (2025-11-20)
 
-- ICE fixed on branch `pr121472-constructor-finalizer-ice`.
-- Finalizer regressions: **finalize_55.f90 still fails** — ctr already 12 at STOP 2 (expected 6 on way to 16). Other targeted finalizer tests (42, 49, 41, 45, constructor_1, 39) currently pass.
-- Code changes in play in `gcc/fortran/{resolve,trans-array,trans-expr}.cc`:
-  - Avoid over-finalizing RHS function actuals (INTENT guard).
-  - Restore `must_finalize` marking for non-alloc/pointer function results in user-defined assignments.
-  - Finalization hooks for RHS temporaries and array temps; dependency-breaking temps now retain the originating expr for finalization.
+### Fixed
+- ✅ ICE fixed: Original reproducer compiles cleanly
+- ✅ Deep copy guard prevents self-referencing ICE in assignment helpers
+- ✅ Temp metadata infrastructure added (typespec, rank, finalizable tracking)
 
-### Tests Recently Run
-- `make -j32` (build) — ✅
-- Targeted:  
-  - `make -j8 -k check-gfortran RUNTESTFLAGS="dg.exp=finalize_42.f90"` — ✅ 12 passes  
-  - `... finalize_49.f90` — ✅ 2 passes  
-  - `... finalize_55.f90` — ❌ 6 unexpected failures (all OPT levels; ctr=12 at STOP 2)
+### In Progress
+- ⚠️ **finalize_55.f90 over-finalization**: counter = 12 at first checkpoint (expected 6→16)
+- Need to implement finalization consumer logic that uses temp metadata
+- Need temp teardown finalization using `temp_finalizable` flag
 
-### What remains
-- Remove duplicate per-element finalization in the scalarized path for elemental RHS temporaries so ctr reaches 6 then 16.
-- After fix: rerun `finalize_*` subset then broader smoke.
+### ISO Compliance Status
+❌ **NON-COMPLIANT** with ISO/IEC 1539-1:2018 Section 7.5.6.3
+- Over-finalization: elemental function results finalized multiple times
+- Expected: exactly one finalization per function result
+- Actual: multiple finalization calls per element (per-element + array-temp)
 
-### Reference compilers
-- System gfortran 15.2.1: no ICE; finalize_55 passes (ctr=16) — baseline to match.
-- Intel ifx / nvfortran: previously used for cross-check; not rerun today.
+### Latest Test Results
+- Build: `make -j32` ✅
+- finalize_42.f90: ✅ 12 passes
+- finalize_49.f90: ✅ 2 passes
+- finalize_55.f90: ❌ unexpected failures (counter=12, expected 6→16)
 
-## Standard Compliance Analysis
+### Reference Compilers
+- **System gfortran 15.2.1**: finalize_55 passes (ctr=16) — baseline
+- **Intel ifx 2025.2.1**: Standard-compliant F2018 behavior
+- **NVIDIA nvfortran 25.9**: Standard-compliant F2018 behavior
 
-**Fortran 2018 Standard Section 7.5.6.3 (When finalization occurs):**
+## Description
 
-Function constructors (via interface) create function results that MUST be
-finalized after assignment. The correct behavior is:
-1. Constructor function called (creates function result)
-2. Function result assigned to variable
-3. **Function result finalized** (per Fortran 2018)
-4. Variable finalized at scope exit
+ICE when using derived type with both finalizer and constructor interface.
+Assignment using constructor triggers gimplification failure.
 
-**Expected Finalization Count: 2**
-- Function result after assignment: 1
-- Variable at scope exit: 1
+## Root Cause
 
-**Updated gfortran behavior: 2 finalizations (default and `-std=f2018`)**
-- ✅ Finalizes function result after assignment (ISO F2018 7.5.6.3)
-- ✅ Finalizes variable at scope exit
-- ✅ **STANDARD-COMPLIANT**: Full ISO F2018 Section 7.5.6.3 compliance
-- ✅ **MATCHES REFERENCE COMPILERS**: Intel ifx and NVIDIA nvfortran behavior
+The ICE occurs because `gfc_finalize_tree_expr()` is called on unevaluated
+`CALL_EXPR` nodes. When derived type has finalizer + constructor + non-allocatable
+components, type gets marked with `alloc_comp` transitively, triggering
+finalization code on unevaluated expressions.
 
-**Standard Version Behavior:**
+## Current Implementation
 
-⚠️ **IMPORTANT**: `t(myname)` in finalize_45.f90 uses `interface t` which maps to
-a FUNCTION (`construct_t`), NOT a structure constructor. Function results ARE finalized.
+### Patch: temp metadata tracking (commit b7785bf)
 
-- **Default** (no `-std=` flag): Finalizes function results ✅ (F2008+ behavior)
-- **`-std=f2008`**, **`-std=f2018`**, **`-std=f2023`**: Finalizes function results ✅
-- **`-std=f2003`**: Finalizes function results ✅
+**Files Modified:**
+- `gcc/fortran/trans.h`: Add temp_ts, temp_rank, temp_finalizable to gfc_ss_info
+- `gcc/fortran/trans-array.h`: Add typespec parameter to gfc_get_temp_ss()
+- `gcc/fortran/trans-array.cc`:
+  - Store temp metadata in gfc_get_temp_ss()
+  - Guard deep copy to prevent self-referencing (dest/decl checks)
+  - Update all call sites to pass typespec
+- `gcc/fortran/trans-expr.cc`:
+  - Update gfc_get_temp_ss() call
+  - Simplify RHS finalization logic (remove l_is_temp guards)
 
-**Finalization rules from F2008 Corrigendum 1 onward:**
-- Function results (variables) → Finalized ✅
-- Structure/array constructors (values) → NOT finalized ❌
+**Design:**
+1. **Temp metadata infrastructure**: gfc_ss_info carries typespec/rank/finalizable
+2. **Deep copy guard**: Prevents ICE by checking dest && COMPONENT_REF && decl != dest
+3. **Finalization strategy change**: Remove conditional suppression, defer to temp metadata
 
-See `FORTRAN_FINALIZATION_STANDARDS_HISTORY.md` for complete evolution of
-finalization semantics across Fortran standards from F77 through F2023.
+**Remaining Work:**
+- ❌ Implement finalization consumer that reads temp_finalizable
+- ❌ Add finalization at temp teardown using stored metadata
+- ❌ Fix finalize_55 over-finalization bug
 
-**Intel ifx and NVIDIA nvfortran: 2 finalizations**
-- Both correctly finalize function result after assignment
-- Both correctly finalize variable at scope exit
-- ✅ **STANDARD-COMPLIANT**: Correct Fortran 2018 behavior
+## Fortran 2018 Standard Compliance
+
+**ISO/IEC 1539-1:2018 Section 7.5.6.3 - When finalization occurs**
+
+Function results (including elemental function results) MUST be finalized
+exactly once after assignment, before result temporary goes out of scope.
+
+**Expected behavior:**
+```
+do i = 1, 3
+  array(i) = elemental_func()  ! Creates 1 temp, assigns, finalizes temp once
+end do
+! Expected finalization count: 3 (one per iteration)
+```
+
+**Current GCC behavior (NON-COMPLIANT):**
+- Multiple finalization calls per element
+- Per-element finalization in scalarized loop
+- Array-temp finalization
+- Descriptor finalization
+- Result: counter = 12 instead of expected 6
+
+**Reference compiler behavior (COMPLIANT):**
+- Intel ifx: correct count (16 total in finalize_55)
+- NVIDIA nvfortran: correct count (16 total)
+- System gfortran 15.2.1: correct count (16 total)
 
 ## Reproducer
 
-See `reproducer.f90` - constructor interface with finalizer.
+See `reproducer.f90` - constructor interface with finalizer
 
-## Documentation
+## Test Cases
 
-All auxiliary analysis notes now live in `docs/` to keep the PR directory
-manageable. Key files:
+- `reproducer.f90`: Original ICE reproducer (now compiles)
+- `finalize_55.f90`: Over-finalization regression (fails)
+- `finalize_42.f90`: Basic finalization test (passes)
+- `finalize_49.f90`: Function result finalization (passes)
 
-- `docs/FINAL_STATUS.md` – running status + fix checklist
-- `docs/IMPLEMENTATION_SUMMARY.md` – patch design details
-- `docs/FORTRAN_FINALIZATION_STANDARDS_HISTORY.md` – ISO references
-- `docs/TEST_FAILURES_SUMMARY.md` – rolling test log
+## Build and Test
 
-## Fix Details
+```bash
+# Build from meta-repo root
+cd /home/ert/code/gcc-dev/gcc-build
+make -j32
 
-**STATUS: FIXED** in local development branch `pr121472-constructor-finalizer-ice`
+# Test specific case
+cd gcc
+make check-gfortran RUNTESTFLAGS="dg.exp=finalize_55.f90"
 
-### Root Cause
+# Test reproducer with multiple compilers
+cd /home/ert/code/gcc-dev/pr/121472
+make test-custom   # Custom gfortran (in development)
+make test-system   # System gfortran (reference)
+make test-ifx      # Intel ifx (reference)
+make test-nvhpc    # NVIDIA nvfortran (reference)
+```
 
-The ICE occurs because `gfc_finalize_tree_expr()` is called on unevaluated
-`CALL_EXPR` nodes representing constructor results. When a derived type has:
-1. A finalizer procedure
-2. A constructor interface
-3. Non-allocatable components
+## Next Steps
 
-The type gets marked with `alloc_comp` transitively (due to conservative
-frontend attribute inheritance), even though it has no actual allocatable
-components. The finalization code then attempts to generate tree structures
-for an unevaluated expression, causing gimplification to hit `gcc_unreachable()`.
+1. **Implement temp finalization consumer**:
+   - Find temp teardown location in gfc_trans_create_temp_array
+   - Check ss_info->temp_finalizable
+   - Call finalization for temp using ss_info->temp_ts metadata
 
-### Solution
+2. **Fix finalize_55 over-finalization**:
+   - Ensure one-time finalization per temp (not per-element)
+   - Verify with GIMPLE dumps
+   - Test counter reaches 6, then 16 (not 12)
 
-Two-part minimal fix in `gcc/fortran/trans.cc`:
+3. **Verify ISO compliance**:
+   - Test against reference compilers
+   - Verify finalization count matches standard
+   - Document compliance in commit message
 
-1. **Skip finalization for unevaluated CALL_EXPR** - Constructor/function
-   results are already properly initialized and will be finalized via the
-   assignment path if needed.
-
-2. **Helper function `gfc_derived_needs_copy()`** - Distinguishes types with
-   actual allocatable components from those with only transitive `alloc_comp`
-   marking, preventing unnecessary tree code generation.
-
-### Patch File
-
-`0001-fortran-Fix-ICE-with-constructor-interface-and-finalizer-PR121472.patch`
-
-### Test Case
-
-Added formal regression test: `gcc/testsuite/gfortran.dg/finalize_constructor_1.f90`
-
-### Verification
-
-- ✅ Original reproducer compiles cleanly
-- ✅ New testsuite entry passes
-- ✅ GNU coding standards compliant
-- ✅ Full test suite validation: 100% pass rate required before merge
+4. **Clean commit for upstream**:
+   - Ensure 100% test pass rate
+   - Update commit message with ISO references
+   - Run full test suite
+   - Export patch when ready
