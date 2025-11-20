@@ -3,7 +3,7 @@
 ## Problem Statement
 
 1. PR121472 ICE when finalizing constructor results (fixed).
-2. Regressions in finalization order/count after fixing the ICE, especially for elemental RHS temporaries (current focus).
+2. Regressions in finalization order/count after fixing the ICE, especially for elemental RHS temporaries (current focus). Current blocker: `finalize_55` over‑finalizes (ctr=12 at first STOP; should be 6 on way to 16).
 
 ## What Changed (current branch)
 - `resolve.cc`: mark non-alloc/pointer RHS function results in UDA as `must_finalize`.
@@ -11,11 +11,11 @@
 - `trans-array.cc`: finalize array temporaries before freeing when the type is finalizable.
 
 ## Remaining Gap
-- Elemental RHS result temporaries (e.g., `atmp.*` in finalize_55) still bypass finalization before free; need to route the descriptor through `gfc_finalize_tree_expr` in the scalarized assignment path.
+- Elemental RHS result temporaries in the scalarized assignment path are finalized multiple times (two descriptor wrappers) plus the temp-array finalization; need exactly one `_final` per element.
 
 ## Testing Snapshot (2025-11-20)
 - Build: `make -j32` ✅
-- Targeted: `finalize_42` ✅, `finalize_49` ✅, `finalize_55` ❌ (counter 14/16).
+- Targeted: `finalize_42` ✅, `finalize_49` ✅, `finalize_55` ❌ (counter 12 at STOP 2, expected 6→16).
 
 ## Lessons Learned / Standards
 - ISO/IEC 1539-1:2018 §7.5.6.3 requires finalization of elemental function results; freeing the temporary without `_final` violates the standard.
@@ -29,7 +29,7 @@
 
 ### Expected Test Results
 
-Full test suite: ~3400 expected passes, 6 expected failures (pre-existing OpenACC TODOs)
+Full test suite must be 100% clean; currently blocked by `finalize_55`.
 
 ## Code Quality
 
@@ -42,10 +42,8 @@ Full test suite: ~3400 expected passes, 6 expected failures (pre-existing OpenAC
 - ✅ Sign-off line present
 
 ### ISO Standards Compliance
-- ✅ Full ISO/IEC 1539-1:2018 Section 7.5.6.3 paragraph 3 compliance
-- ✅ Backward compatibility with F2008 via `-std=f2008` flag
-- ✅ Forward compatibility with F2023 (maintains F2018 semantics)
-- ✅ Respects user's standard selection
+- ❌ Not yet: failing `finalize_55` means current code is non‑compliant with ISO/IEC 1539-1:2018 §7.5.6.3 (needs one finalization per elemental result).
+- ✅ Guards in place for RHS INTENT OUT/INOUT/VALUE to avoid spurious finalization in other cases.
 
 ## Documentation
 
@@ -59,7 +57,7 @@ Full test suite: ~3400 expected passes, 6 expected failures (pre-existing OpenAC
 - Single, clean commit on topic branch `pr121472-constructor-finalizer-ice`
 - Ready for upstream submission via `git send-email` or format-patch
 
-## Upstream Readiness
+## Upstream Readiness (BLOCKED until finalize_55 passes)
 
 ### Checklist
 - ✅ Single commit with proper GNU commit message format
@@ -68,7 +66,7 @@ Full test suite: ~3400 expected passes, 6 expected failures (pre-existing OpenAC
 - ✅ Sign-off line present
 - ✅ ISO standard references included
 - ✅ GNU coding standards compliant
-- ✅ Full test suite passes (pending verification)
+- ❌ Full test suite passes (blocked by `finalize_55`)
 - ✅ No regressions introduced
 - ✅ Standard-version-aware (respects `-std=` flag)
 

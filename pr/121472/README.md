@@ -1,7 +1,7 @@
 # GCC PR121472 - ICE with constructor and finalizer
 
 **Bug URL:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121472
-**Status:** Active (local fixes in progress)
+**Status:** Active (local fixes in progress; finalize_55 over-finalization still open)
 **Title:** ICE in gimplify_expr / finalization regressions
 
 ## Description
@@ -13,21 +13,21 @@ the constructor triggers the ICE during gimplification.
 ## Current Status (2025-11-20)
 
 - ICE fixed on branch `pr121472-constructor-finalizer-ice`.
-- Finalizer regressions under investigation: **finalize_55.f90 still fails** (counter stops at 14/16). All other targeted `finalize_*` tests exercised today pass (42, 49, 41, 45, constructor_1, 39).
-- Code changes pending commit in `gcc/fortran/{resolve,trans-array,trans-expr}.cc` to:
+- Finalizer regressions: **finalize_55.f90 still fails** — ctr already 12 at STOP 2 (expected 6 on way to 16). Other targeted finalizer tests (42, 49, 41, 45, constructor_1, 39) currently pass.
+- Code changes in play in `gcc/fortran/{resolve,trans-array,trans-expr}.cc`:
   - Avoid over-finalizing RHS function actuals (INTENT guard).
-  - Restore must_finalize marking for non-alloc/pointer function results in user-defined assignments.
-  - Add finalization hooks for RHS temporaries and array temps.
+  - Restore `must_finalize` marking for non-alloc/pointer function results in user-defined assignments.
+  - Finalization hooks for RHS temporaries and array temps; dependency-breaking temps now retain the originating expr for finalization.
 
 ### Tests Recently Run
 - `make -j32` (build) — ✅
 - Targeted:  
   - `make -j8 -k check-gfortran RUNTESTFLAGS="dg.exp=finalize_42.f90"` — ✅ 12 passes  
   - `... finalize_49.f90` — ✅ 2 passes  
-  - `... finalize_55.f90` — ❌ 6 unexpected failures (all OPT levels)
+  - `... finalize_55.f90` — ❌ 6 unexpected failures (all OPT levels; ctr=12 at STOP 2)
 
 ### What remains
-- Ensure array temporaries produced by elemental function results are finalized before free; no `_final` call is emitted for the result temp in GIMPLE for finalize_55.
+- Remove duplicate per-element finalization in the scalarized path for elemental RHS temporaries so ctr reaches 6 then 16.
 - After fix: rerun `finalize_*` subset then broader smoke.
 
 ### Reference compilers
