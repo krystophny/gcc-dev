@@ -1,11 +1,11 @@
 # GCC Bug 32365 - Better error message for specification statement in executable section
 
-**Status:** NEW
+**Status:** RESOLVED FIXED (merged in gcc commit 7db49bf4be2 on 2025-11-17)
 **Component:** fortran
-**Version:** 4.3.0
+**Version:** 4.3.0 (original report)
 **Importance:** P3 enhancement
 **Reported:** 2007-06-16 by Tobias Burnus
-**Last modified:** 2009-12-11
+**Last modified:** 2025-11-19 (Bugzilla closed)
 
 ## Description
 
@@ -61,7 +61,13 @@ Error: Unexpected !$OMP THREADPRIVATE statement at (1)
 Error: A specification statement cannot appear in the executable section.
 ```
 
-## Analysis
+## Resolution (2025-11-17)
+
+- Upstream commit `7db49bf4be2` (Jerry DeLisle, signed-off by Christopher Albert) enforces the rule in `parse_executable` that specification and OpenMP directive statements appearing after executable code are rejected with a precise diagnostic.
+- New regression `gcc/testsuite/gfortran.dg/spec_statement_in_exec.f90` covers DATA/COMMON/NAMELIST/OpenMP cases under `-fopenmp` and updates a dozen OpenMP/GACC tests to the stricter wording.
+- Behavior now matches reference compilers (ifx, nvfortran) and gives users a clear "specification statement cannot appear in the executable section" message.
+
+## Analysis (historic)
 
 ### Current GCC Error Messages
 - Generic: "Unexpected X statement at (1)"

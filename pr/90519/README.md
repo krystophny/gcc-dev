@@ -1,8 +1,7 @@
 # GCC PR90519 – FINAL + recursive allocatable ICE
 
-**Status:** ✅ COMPLETED — Patch `0001-fortran-Fix-ICE-and-self-assignment-bugs-with-recurs.patch`
-has been validated locally (see compile log below) and is ready for upstream
-submission.
+**Status:** ✅ MERGED UPSTREAM — Fixed in gcc commit `1eb696fc092` (2025-11-07)
+and validated locally. Patch file kept here for reference.
 
 This directory tracks the reproducer, investigation notes, and fixes for
 [GCC Bug 90519](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=90519):
@@ -59,22 +58,24 @@ an internal compiler error when a derived type has
   `CALL_EXPR` whose callee has INTEGER type instead of FUNCTION/METHOD type and
   aborts with the tree-check ICE reported in PR90519.
 
-## Fix plan
+## Upstream fix (2025-11-07)
 
-1. Give each generated FINAL wrapper its own artificial result symbol
-   (`__result_<type>`), distinct from the procedure symbol.
-2. Keep the wrapper’s return type as-is (still INTEGER(4)), but now references
-   to `__final_<type>` no longer alias the result variable and the resolver
-   correctly marks the initializer as `BT_PROCEDURE`.
-3. Add regression tests to `gcc/testsuite/gfortran.dg`:
-   - `finalizer_recursive_alloc_1.f90`: compile-only module reproducer.
-   - `finalizer_recursive_alloc_2.f90`: runtime test that exercises nested
-     recursive components and verifies finalizers actually fire.
+- `generate_finalization_wrapper` now creates a distinct result symbol for each
+  helper (`__result_<type>`), avoiding the self-referential cycle that caused
+  the gimplify ICE.
+- Parenthesized self-assignment is detected by stripping `INTRINSIC_PARENTHESES`
+  before checking for runtime lhs==rhs, preventing use-after-free in FINAL
+  calls and enabling deep-copy when needed.
+- Regression coverage added:
+  - `gfortran.dg/finalizer_recursive_alloc_1.f90` (compile-only)
+  - `gfortran.dg/finalizer_recursive_alloc_2.f90` (runtime)
+  - `gfortran.dg/finalizer_self_assign.f90` (self-assignment including a=(a))
+  - `gfortran.dg/pr112459.f90` updated expectations
 
 ## Files
 
 - `finalizer_min.f90` – ultra-minimal module that ICEs on current trunk.
 - `README.md` – this document.
 
-Use `make -C bugs finalizer` (the top-level Makefile) to rebuild all PR90519
-reproducers with the local compiler once the fix is in place.
+From the repo root, run `make 90519` to rebuild the reproducers with the
+in-tree compiler if you need to re-validate locally.

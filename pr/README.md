@@ -17,14 +17,15 @@ Each subdirectory contains a minimal reproducer, test results, and analysis for 
 
 | PR | Title | Local Status | Notes |
 |----|-------|--------------|-------|
-| [32365](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=32365) | Better specification-statement diagnostics | OPEN | Needs improved parser diagnostics when spec statements appear in executable sections (see `pr/32365/README.md`). |
-| [121472](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121472) | Constructor/finalizer ICE | OPEN | ICE in `gimplify_expr` on GCC 15.2.1 and trunk; reproducer + patches tracked in `pr/121472/`. |
+| [107721](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=107721) | Array constructor type-spec lost when parenthesized | READY FOR SUBMISSION | Patch `0001-fortran-honor-array-constructor-type-spec-during-fol.patch` passes local matrix; awaiting upstream posting (see `pr/107721/`). |
+| [121472](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121472) | Constructor/finalizer ICE | OPEN | ICE in `gimplify_expr` on GCC 15.2.1 and trunk; repro + patch tracked in `pr/121472/`. |
 
 ### Completed PRs
 
 | PR | Title | Resolution | Evidence |
 |----|-------|------------|----------|
-| [90519](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=90519) | FINAL + recursive allocatable ICE | Completed locally with patch `0001-fortran-Fix-ICE-and-self-assignment-bugs-with-recurs.patch`. | Dev gfortran compile of `pr/90519/finalizer_min.f90` succeeded (2025-11-13); see `pr/90519/README.md`. |
+| [32365](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=32365) | Better specification-statement diagnostics | Merged upstream (commit 7db49bf4be2, 2025-11-17). | New test `gfortran.dg/spec_statement_in_exec.f90` added; see `pr/32365/README.md`. |
+| [90519](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=90519) | FINAL + recursive allocatable ICE | Merged upstream (commit 1eb696fc092, 2025-11-07). | Finalizer wrapper now uses separate result symbol; tests added (`finalizer_recursive_alloc_*.f90`, `finalizer_self_assign.f90`). Details in `pr/90519/README.md`. |
 | [121628](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121628) | Recursive allocatable deep copy | Upstream fix in GCC r16-5094. | Dev gfortran compile of `pr/121628/deepcopy.f90` succeeded (2025-11-13); details in `pr/121628/README.md`. |
 | [96255](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96255) | DO CONCURRENT type-spec implementation | Merged upstream (commits 5e62a23cc3a & 1099ffffffe). | Dev gfortran compile of `pr/96255/looper.f90` succeeded (2025-11-13); see `pr/96255/README.md`. |
 
@@ -34,11 +35,11 @@ Each subdirectory contains a minimal reproducer, test results, and analysis for 
 
 ### Active Bugs
 
-**PR32365** - Better specification-statement diagnostics
-- Status: OPEN (enhancement request dating back to GCC 4.3)
-- Current behavior: generic "Unexpected XYZ statement" errors whenever a specification statement appears after executable statements, which is unhelpful for users.
-- Goal: update parser diagnostics so they clearly state that specification statements cannot appear in the executable section; see examples in `pr/32365/README.md`.
-- Next steps: prototype targeted diagnostic in `parse.c` for both data declarations and OpenMP directives.
+**PR107721** - Array constructor type-spec lost with parentheses
+- Status: READY FOR UPSTREAM (Bugzilla still open)
+- Both system GCC 15.2.1 and trunk fold parenthesized constructors without converting elements to the declared type; reference compilers (ifx, nvfortran, flang-new) are correct.
+- Patch converts constructor elements before folding and adds comprehensive regression (`array_constructor_typespec_1.f90`).
+- Action: post patch from `pr/107721/0001-fortran-honor-array-constructor-type-spec-during-fol.patch` to gcc-patches.
 
 **PR121472** - ICE with constructor and finalizer
 - Status: UNCONFIRMED (Bugzilla), ACTIVE (both compilers fail)
@@ -48,10 +49,13 @@ Each subdirectory contains a minimal reproducer, test results, and analysis for 
 
 ### Completed Bugs
 
+**PR32365** - Specification-statement diagnostics
+- Status: MERGED UPSTREAM (commit 7db49bf4be2, 2025-11-17)
+- Fix: `parse_executable` now rejects late spec/OpenMP statements unconditionally; new regression `spec_statement_in_exec.f90` exercises DATA/COMMON/NAMELIST/OpenMP cases with `-fopenmp`.
+
 **PR90519** - FINAL + recursive allocatable ICE
-- Status: COMPLETED LOCALLY (awaiting upstream submission)
-- Fix: Patch `0001-fortran-Fix-ICE-and-self-assignment-bugs-with-recurs.patch` ensures FINAL wrappers call procedure pointers instead of result symbols.
-- Evidence: `pr/90519/finalizer_min.f90` compiles cleanly with dev gfortran as of 2025-11-13.
+- Status: MERGED UPSTREAM (commit 1eb696fc092, 2025-11-07)
+- Fix: FINAL wrappers now use distinct result symbols and parenthesized self-assignment is detected via `strip_parentheses`, preventing ICE and use-after-free. Regression suite includes `finalizer_recursive_alloc_{1,2}.f90` and `finalizer_self_assign.f90`.
 
 **PR121628** - Recursive allocatable deep copy
 - Status: MERGED UPSTREAM (GCC r16-5094)
@@ -101,7 +105,7 @@ make test-all
 
 ```bash
 # Test individual PR
-make 32365
+make 107721
 make 121472
 
 # Test by number
