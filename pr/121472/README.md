@@ -1,8 +1,8 @@
 # GCC PR121472 - ICE with constructor and finalizer
 
 **Bug URL:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121472
-**Status:** UNCONFIRMED
-**Title:** ICE in gimplify_expr
+**Status:** Active (local fixes in progress)
+**Title:** ICE in gimplify_expr / finalization regressions
 
 ## Description
 
@@ -10,69 +10,29 @@ This bug triggers an internal compiler error when using a derived type with
 both a final subroutine and a constructor interface. The assignment using
 the constructor triggers the ICE during gimplification.
 
-## Expected Behavior
+## Current Status (2025-11-20)
 
-Code using constructors and finalizers together should compile cleanly.
+- ICE fixed on branch `pr121472-constructor-finalizer-ice`.
+- Finalizer regressions under investigation: **finalize_55.f90 still fails** (counter stops at 14/16). All other targeted `finalize_*` tests exercised today pass (42, 49, 41, 45, constructor_1, 39).
+- Code changes pending commit in `gcc/fortran/{resolve,trans-array,trans-expr}.cc` to:
+  - Avoid over-finalizing RHS function actuals (INTENT guard).
+  - Restore must_finalize marking for non-alloc/pointer function results in user-defined assignments.
+  - Add finalization hooks for RHS temporaries and array temps.
 
-## Actual Behavior
+### Tests Recently Run
+- `make -j32` (build) — ✅
+- Targeted:  
+  - `make -j8 -k check-gfortran RUNTESTFLAGS="dg.exp=finalize_42.f90"` — ✅ 12 passes  
+  - `... finalize_49.f90` — ✅ 2 passes  
+  - `... finalize_55.f90` — ❌ 6 unexpected failures (all OPT levels)
 
-- GCC 15.2.1: ICE in gimplify_expr at gimplify.cc:20443
-- GCC 16.0 dev: ICE in gimplify_expr at gimplify.cc:21278
-- Status: ACTIVE BUG - reproducible on current versions
+### What remains
+- Ensure array temporaries produced by elemental function results are finalized before free; no `_final` call is emitted for the result temp in GIMPLE for finalize_55.
+- After fix: rerun `finalize_*` subset then broader smoke.
 
-## Test Results
-
-### System gfortran (GNU Fortran 15.2.1)
-- Status: ICE (before fix)
-- Internal compiler error in gimplify_expr at gimplify.cc:20443
-
-### Dev gfortran (gcc-build/gcc/gfortran with PR121472 ISO-compliant fix)
-- Status: PASS
-- Compiles cleanly
-- Runtime output: `constructor: 1`, `finalizer: 2`
-- ✅ **STANDARD-COMPLIANT**: Correct Fortran 2018 behavior
-- Finalizes function result after assignment + variable at scope exit
-
-#### Full testsuite validation (2025-11-16)
-- Command: `make -j32 -k check-gfortran` from `gcc-build/gcc`
-- Result: All critical regressions resolved
-
-**Final Regression Analysis:**
-- ✅ **pr104429**: FIXED - Critical double free corruption eliminated
-- ✅ **finalize_41, finalize_42, finalize_45**: PASS - Function result finalization working
-- ⚠️ **finalize_39, finalize_48**: Minor remaining issues (low priority)
-- ⚠️ **finalize_49**: Tree dump count issue (cosmetic, not our regression)
-- ⚠️ **finalize_55**: Both GCC and Intel ifx fail (not our regression)
-
-**Fix Implementation:**
-- Clean, standards-compliant allocatable function result filtering
-- Only finalizes non-allocatable, non-pointer derived-type function results per F2018 7.5.6.3
-- Follows existing GCC patterns for allocatable/pointer detection
-- Preserves main PR 121472 ICE fix
-
-### Intel ifx 2025.2.1
-- Status: PASS
-- Compiles cleanly
-- Runtime output: `constructor: 1`, `finalizer: 2`
-- Standard-compliant: finalizes function result + variable at scope exit
-
-### NVIDIA nvfortran 25.9
-- Status: PASS
-- Compiles cleanly
-- Runtime output: `constructor: 1`, `finalizer: 2`
-- Standard-compliant: finalizes function result + variable at scope exit
-
-### LLVM Flang (flang-new 21.1.5)
-- Status: PASS
-- Compiles with warning about undefined function result (benign)
-- Runtime: no output (no finalization printed)
-- No ICE, clean compilation
-
-### LFortran
-- Status: PASS
-- Compiles cleanly with no warnings
-- Runtime: no output (no finalization printed)
-- No ICE, clean compilation
+### Reference compilers
+- System gfortran 15.2.1: no ICE; finalize_55 passes (ctr=16) — baseline to match.
+- Intel ifx / nvfortran: previously used for cross-check; not rerun today.
 
 ## Standard Compliance Analysis
 
