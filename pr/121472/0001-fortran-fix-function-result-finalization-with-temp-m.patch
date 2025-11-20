@@ -1,10 +1,7 @@
-From 920adcf4a0be1d50919c1849410d944cb8a5fe5f Mon Sep 17 00:00:00 2001
+From c681e9f85163e87e0a2e40881122472bc2d21132 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Thu, 20 Nov 2025 16:46:46 +0100
 Subject: [PATCH] fortran: fix function result finalization with temp metadata
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
 
 Track temp metadata (typespec, rank, finalizable) and use it at temp
 teardown to finalize function results exactly once, achieving ISO/IEC
@@ -12,7 +9,7 @@ teardown to finalize function results exactly once, achieving ISO/IEC
 
 This fixes over-finalization in finalize_55.f90 where elemental function
 results were finalized multiple times (counter=12) instead of once per
-result (counter=6→16 expected).
+result (counter=6->16 expected).
 
 Also guard default allocatable deep copy to skip self-descriptors used
 in assignment helpers, preventing ICE in self-referencing cases.
