@@ -32,10 +32,10 @@ test-lfortran:
 	fi
 
 run: all
-	@echo "=== Custom gfortran (should FAIL with bug) ==="
+	@echo "=== Custom gfortran (with fix) ==="
 	-./reproducer.custom.x && echo "PASS" || echo "FAIL (exit $$?)"
 	@echo ""
-	@echo "=== System gfortran (15.2.1, should PASS) ==="
+	@echo "=== System gfortran (15.2.1, unfixed) ==="
 	-./reproducer.system.x && echo "PASS" || echo "FAIL (exit $$?)"
 	@echo ""
 	@echo "=== Flang ==="
