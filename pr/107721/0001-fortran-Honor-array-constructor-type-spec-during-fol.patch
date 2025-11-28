@@ -1,4 +1,4 @@
-From daf2d3ed5384764f5880906f380ac20ec497b6e7 Mon Sep 17 00:00:00 2001
+From 2d9c1cb624a47f1b8dd760a0fc46f6ece119f33d Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Tue, 25 Nov 2025 00:13:03 +0100
 Subject: [PATCH] fortran: Honor array constructor type-spec during folding
@@ -14,6 +14,8 @@ the specified length.  This was working for simple cases but failing when:
    [character(16) :: 'a', 'b'] // '|'
 4. Nested character constructors with concatenation:
    [character(16) :: ['a', 'b']] // '|'
+5. Outer constructor without type-spec wrapping inner with type-spec:
+   [[character(16) :: ['a', 'b']]] // '|'
 
 The root cause was twofold:
 
@@ -25,7 +27,9 @@ Second, character array constructors with explicit type-spec were not being
 resolved before CONCAT operations in eval_intrinsic(), so elements retained
 their original lengths instead of being padded to the type-spec length.
 Additionally, nested array constructors needed their type-spec propagated
-from the outer constructor before resolution.
+from the outer constructor before resolution, and when an outer constructor
+has no type-spec but an inner one does, the inner's type-spec must be
+honored.
 
 The fix adds:
 - Simplification of non-constant expressions in check_constructor_type()
@@ -34,6 +38,8 @@ The fix adds:
   type-spec conversion happens before any operations on array constructors
 - Character array constructor resolution before CONCAT operations
 - Recursive type-spec propagation for nested array constructors
+- Detection of nested character constructors with explicit type-spec
+  (via length_from_typespec) when the outer constructor has no type-spec
 
 	PR fortran/107721
 	PR fortran/102417
@@ -48,6 +54,8 @@ gcc/fortran/ChangeLog:
 	character length info in result arrays.
 	* array.cc (check_constructor_type): Simplify non-constant
 	expressions before type checking to handle parenthesized elements.
+	Handle nested character array constructors with explicit type-spec
+	when outer constructor has no type-spec.
 	(gfc_resolve_character_array_constructor): Recursively propagate
 	type-spec to nested array constructors.
 
@@ -58,9 +66,9 @@ gcc/testsuite/ChangeLog:
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
  gcc/fortran/arith.cc                          |  35 +++
- gcc/fortran/array.cc                          |  68 +++--
- .../array_constructor_typespec_1.f90          | 248 ++++++++++++++++++
- 3 files changed, 332 insertions(+), 19 deletions(-)
+ gcc/fortran/array.cc                          |  91 ++++--
+ .../array_constructor_typespec_1.f90          | 261 ++++++++++++++++++
+ 3 files changed, 366 insertions(+), 21 deletions(-)
  create mode 100644 gcc/testsuite/gfortran.dg/array_constructor_typespec_1.f90
 
 diff --git a/gcc/fortran/arith.cc b/gcc/fortran/arith.cc
@@ -150,10 +158,10 @@ index 82a8b6fb995..142f1b09284 100644
      rc = reduce_unary (eval.f2, op1, &result);
    else
 diff --git a/gcc/fortran/array.cc b/gcc/fortran/array.cc
-index 57a7b134e4c..cbe8283a256 100644
+index 57a7b134e4c..740a6df6158 100644
 --- a/gcc/fortran/array.cc
 +++ b/gcc/fortran/array.cc
-@@ -1549,6 +1549,14 @@ check_constructor_type (gfc_constructor_base base, bool convert)
+@@ -1549,10 +1549,37 @@ check_constructor_type (gfc_constructor_base base, bool convert)
      {
        e = c->expr;
  
@@ -167,8 +175,33 @@ index 57a7b134e4c..cbe8283a256 100644
 +
        if (e->expr_type == EXPR_ARRAY)
  	{
- 	  if (!check_constructor_type (e->value.constructor, convert))
-@@ -2261,10 +2269,14 @@ gfc_resolve_character_array_constructor (gfc_expr *expr)
+-	  if (!check_constructor_type (e->value.constructor, convert))
+-	    return false;
++	  /* If the outer constructor has no type-spec (convert=false) and
++	     the nested array has an explicit type-spec, process it separately
++	     so its elements get converted according to its type-spec.  This
++	     handles cases like [[character(16) :: ['a','b']]] where the outer
++	     constructor has no type-spec but the inner one does.
++	     gfc_check_constructor_type will also update the global
++	     constructor_ts and cons_state which propagates the type info
++	     to the outer constructor.
++	     For character types, length_from_typespec indicates an explicit
++	     type-spec was provided.  */
++	  if (!convert && e->ts.type == BT_CHARACTER
++	      && e->ts.u.cl && e->ts.u.cl->length_from_typespec)
++	    {
++	      if (!gfc_check_constructor_type (e))
++		return false;
++	    }
++	  else
++	    {
++	      if (!check_constructor_type (e->value.constructor, convert))
++		return false;
++	    }
+ 
+ 	  continue;
+ 	}
+@@ -2261,10 +2288,14 @@ gfc_resolve_character_array_constructor (gfc_expr *expr)
  {
    gfc_constructor *p;
    HOST_WIDE_INT found_length;
@@ -183,7 +216,7 @@ index 57a7b134e4c..cbe8283a256 100644
    if (expr->ts.u.cl == NULL)
      {
        for (p = gfc_constructor_first (expr->value.constructor);
-@@ -2367,28 +2379,46 @@ got_charlen:
+@@ -2367,28 +2398,46 @@ got_charlen:
        if (found_length != -1)
  	for (p = gfc_constructor_first (expr->value.constructor);
  	     p; p = gfc_constructor_next (p))
@@ -251,10 +284,10 @@ index 57a7b134e4c..cbe8283a256 100644
    return true;
 diff --git a/gcc/testsuite/gfortran.dg/array_constructor_typespec_1.f90 b/gcc/testsuite/gfortran.dg/array_constructor_typespec_1.f90
 new file mode 100644
-index 00000000000..5ace5f1b15a
+index 00000000000..4cfa991db5a
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/array_constructor_typespec_1.f90
-@@ -0,0 +1,248 @@
+@@ -0,0 +1,261 @@
 +! { dg-do run }
 +! PR fortran/107721 - array constructor type-spec lost with parentheses
 +! PR fortran/102417 - character array constructor type-spec lost
@@ -326,12 +359,13 @@ index 00000000000..5ace5f1b15a
 +    if (charr8(1) /= 'a       ') stop 17
 +    if (charr8(2) /= 'b       ') stop 18
 +
-+    ! { dg-warning "must have the same length" "" { target *-*-* } .+1 }
++    ! Outer constructor without type-spec, inner with type-spec.
++    ! With proper type-spec propagation, no length mismatch warning is needed.
 +    charr8 = [[character(8) :: ['a', 'b']]]
 +    if (charr8(1) /= 'a       ') stop 19
 +    if (charr8(2) /= 'b       ') stop 20
 +
-+    ! { dg-warning "must have the same length" "" { target *-*-* } .+1 }
++    ! Triple-nested constructor with type-spec in middle.
 +    charr8 = [[[character(8) :: ['a', 'b']]]]
 +    if (charr8(1) /= 'a       ') stop 21
 +    if (charr8(2) /= 'b       ') stop 22
@@ -455,6 +489,18 @@ index 00000000000..5ace5f1b15a
 +    if (len(charr17) /= 17) stop 125
 +    if (charr17(1) /= 'a               |') stop 126
 +    if (charr17(2) /= 'b               |') stop 127
++
++    ! Comment #18: Outer constructor without type-spec wrapping inner with
++    ! type-spec.  The type-spec must be propagated when flattening.
++    charr17 = [[character(16) :: ['a', 'b']]] // '|'
++    if (len(charr17) /= 17) stop 128
++    if (charr17(1) /= 'a               |') stop 129
++    if (charr17(2) /= 'b               |') stop 130
++
++    charr17 = '|' // [[character(16) :: ['a', 'b']]]
++    if (len(charr17) /= 17) stop 131
++    if (charr17(1) /= '|a               ') stop 132
++    if (charr17(2) /= '|b               ') stop 133
 +
 +contains
 +
