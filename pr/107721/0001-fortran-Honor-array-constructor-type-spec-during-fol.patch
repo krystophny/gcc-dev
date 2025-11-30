@@ -1,4 +1,4 @@
-From 2d9c1cb624a47f1b8dd760a0fc46f6ece119f33d Mon Sep 17 00:00:00 2001
+From 7c91cc5ab8a3529fdd62335d7c0464bdd9bf00ca Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Tue, 25 Nov 2025 00:13:03 +0100
 Subject: [PATCH] fortran: Honor array constructor type-spec during folding
@@ -16,6 +16,8 @@ the specified length.  This was working for simple cases but failing when:
    [character(16) :: ['a', 'b']] // '|'
 5. Outer constructor without type-spec wrapping inner with type-spec:
    [[character(16) :: ['a', 'b']]] // '|'
+6. Nested character constructors with different type-specs:
+   [character(16) :: [character(2) :: 'abcd']]
 
 The root cause was twofold:
 
@@ -27,9 +29,7 @@ Second, character array constructors with explicit type-spec were not being
 resolved before CONCAT operations in eval_intrinsic(), so elements retained
 their original lengths instead of being padded to the type-spec length.
 Additionally, nested array constructors needed their type-spec propagated
-from the outer constructor before resolution, and when an outer constructor
-has no type-spec but an inner one does, the inner's type-spec must be
-honored.
+from the outer constructor.
 
 The fix adds:
 - Simplification of non-constant expressions in check_constructor_type()
@@ -37,7 +37,10 @@ The fix adds:
 - Call to gfc_check_constructor_type() in eval_intrinsic() to ensure
   type-spec conversion happens before any operations on array constructors
 - Character array constructor resolution before CONCAT operations
-- Recursive type-spec propagation for nested array constructors
+- Recursive type-spec propagation for nested array constructors.
+  When a nested array constructor has its own explicit type-spec, it is
+  resolved first to enforce its own length (truncation/padding) before
+  propagating the outer type-spec and resolving again.
 - Detection of nested character constructors with explicit type-spec
   (via length_from_typespec) when the outer constructor has no type-spec
 
@@ -57,18 +60,21 @@ gcc/fortran/ChangeLog:
 	Handle nested character array constructors with explicit type-spec
 	when outer constructor has no type-spec.
 	(gfc_resolve_character_array_constructor): Recursively propagate
-	type-spec to nested array constructors.
+	type-spec to nested array constructors.  If the nested constructor
+	has an explicit type-spec, resolve it first before propagating
+	the outer type-spec.
 
 gcc/testsuite/ChangeLog:
 
 	* gfortran.dg/array_constructor_typespec_1.f90: New test.
 
+Co-authored-by: Harald Anlauf <anlauf@gcc.gnu.org>
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
- gcc/fortran/arith.cc                          |  35 +++
- gcc/fortran/array.cc                          |  91 ++++--
- .../array_constructor_typespec_1.f90          | 261 ++++++++++++++++++
- 3 files changed, 366 insertions(+), 21 deletions(-)
+ gcc/fortran/arith.cc                          |  35 ++
+ gcc/fortran/array.cc                          | 100 ++++--
+ .../array_constructor_typespec_1.f90          | 324 ++++++++++++++++++
+ 3 files changed, 438 insertions(+), 21 deletions(-)
  create mode 100644 gcc/testsuite/gfortran.dg/array_constructor_typespec_1.f90
 
 diff --git a/gcc/fortran/arith.cc b/gcc/fortran/arith.cc
@@ -158,7 +164,7 @@ index 82a8b6fb995..142f1b09284 100644
      rc = reduce_unary (eval.f2, op1, &result);
    else
 diff --git a/gcc/fortran/array.cc b/gcc/fortran/array.cc
-index 57a7b134e4c..740a6df6158 100644
+index 57a7b134e4c..7df7394cac6 100644
 --- a/gcc/fortran/array.cc
 +++ b/gcc/fortran/array.cc
 @@ -1549,10 +1549,37 @@ check_constructor_type (gfc_constructor_base base, bool convert)
@@ -216,7 +222,7 @@ index 57a7b134e4c..740a6df6158 100644
    if (expr->ts.u.cl == NULL)
      {
        for (p = gfc_constructor_first (expr->value.constructor);
-@@ -2367,28 +2398,46 @@ got_charlen:
+@@ -2367,28 +2398,55 @@ got_charlen:
        if (found_length != -1)
  	for (p = gfc_constructor_first (expr->value.constructor);
  	     p; p = gfc_constructor_next (p))
@@ -265,29 +271,38 @@ index 57a7b134e4c..740a6df6158 100644
 -		gfc_set_constant_character_len (found_length, p->expr,
 -						has_ts ? -1 : found_length);
 -	    }
-+	    else if (p->expr->expr_type == EXPR_ARRAY)
-+	      {
-+		/* For nested array constructors, propagate the type-spec and
-+		   recursively resolve.  This handles cases like
-+		   [character(16) :: ['a','b']] // "|".  The inner constructor
-+		   may have BT_UNKNOWN type initially.  */
-+		if (p->expr->ts.type == BT_UNKNOWN
-+		    || p->expr->ts.type == BT_CHARACTER)
-+		  {
-+		    p->expr->ts = expr->ts;
-+		    gfc_resolve_character_array_constructor (p->expr);
-+		  }
-+	      }
-+	  }
++	                else if (p->expr->expr_type == EXPR_ARRAY)
++	                  {
++	                    /* For nested array constructors, propagate the type-spec and
++	                       recursively resolve.  This handles cases like
++	                       [character(16) :: ['a','b']] // "|".  The inner constructor
++	                       may have BT_UNKNOWN type initially.  */
++	                    if (p->expr->ts.type == BT_UNKNOWN
++	                        || p->expr->ts.type == BT_CHARACTER)
++	                      {
++	                        if (p->expr->ts.type == BT_CHARACTER
++	                            && p->expr->ts.u.cl
++	                            && p->expr->ts.u.cl->length_from_typespec)
++	                          {
++	                            /* If the inner array has an explicit type-spec, we must
++	                               honor it first (e.g. truncate/pad to its length),
++	                               before coercing it to the outer length.  */
++	                            gfc_resolve_character_array_constructor (p->expr);
++	                          }
++	    
++	                        p->expr->ts = expr->ts;
++	                        gfc_resolve_character_array_constructor (p->expr);
++	                      }
++	                  }	  }
      }
  
    return true;
 diff --git a/gcc/testsuite/gfortran.dg/array_constructor_typespec_1.f90 b/gcc/testsuite/gfortran.dg/array_constructor_typespec_1.f90
 new file mode 100644
-index 00000000000..4cfa991db5a
+index 00000000000..90840b5587c
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/array_constructor_typespec_1.f90
-@@ -0,0 +1,261 @@
+@@ -0,0 +1,324 @@
 +! { dg-do run }
 +! PR fortran/107721 - array constructor type-spec lost with parentheses
 +! PR fortran/102417 - character array constructor type-spec lost
@@ -311,6 +326,10 @@ index 00000000000..4cfa991db5a
 +    character(17), dimension(2) :: charr17
 +    character :: x = 'a', y = 'b'
 +    class(*), allocatable :: res(:)
++    character(10), dimension(1) :: charr10
++    character(4), dimension(1) :: charr4_1
++    character(0), dimension(1) :: charr0
++    character(4), dimension(0) :: empty4
 +
 +    ! INTEGER - runtime value checks
 +    iarr = [integer :: [1.0], [2.0]]
@@ -501,6 +520,65 @@ index 00000000000..4cfa991db5a
 +    if (len(charr17) /= 17) stop 131
 +    if (charr17(1) /= '|a               ') stop 132
 +    if (charr17(2) /= '|b               ') stop 133
++
++    ! Harald's new test cases from Comment #22 - nested truncation and padding
++    ! [ character(2) :: ['abcd','efgh'] ] should truncate to 'ab', 'ef'
++    ! Then [ character(16) :: ... ] should pad to 'ab              ', 'ef              '
++
++    charr16_2 = [ character(16) ::  [ character(2) :: ['abcd','efgh'] ] ]
++    if (charr16_2(1) /= 'ab              ') stop 134
++    if (charr16_2(2) /= 'ef              ') stop 135
++
++    charr17 = [ character(16) ::  [ character(2) :: ['abcd','efgh'] ] ] // "|"
++    if (len(charr17) /= 17) stop 136
++    if (charr17(1) /= 'ab              |') stop 137
++    if (charr17(2) /= 'ef              |') stop 138
++
++    charr17 = "|" // [ character(16) ::  [ character(2) :: ['abcd','efgh'] ] ]
++    if (len(charr17) /= 17) stop 139
++    if (charr17(1) /= '|ab              ') stop 140
++    if (charr17(2) /= '|ef              ') stop 141
++
++    charr16_2 = [ character(16) :: ([ character(2) :: ['abcd','efgh'] ])]
++    if (charr16_2(1) /= 'ab              ') stop 142
++    if (charr16_2(2) /= 'ef              ') stop 143
++
++    charr17 = [ character(16) :: ([ character(2) :: ['abcd','efgh'] ])] // "|"
++    if (len(charr17) /= 17) stop 144
++    if (charr17(1) /= 'ab              |') stop 145
++    if (charr17(2) /= 'ef              |') stop 146
++
++    charr17 = "|" // [ character(16) :: ([ character(2) :: ['abcd','efgh'] ])]
++    if (len(charr17) /= 17) stop 147
++    if (charr17(1) /= '|ab              ') stop 148
++    if (charr17(2) /= '|ef              ') stop 149
++
++    ! Additional torture tests
++    ! Triple nesting with explicit types: 'abcde'(5) -> 'ab'(2) -> 'ab        '(10)
++    charr10 = [character(10) :: [character(2) :: [character(5) :: 'abcde']]]
++    if (charr10(1) /= 'ab        ') stop 150
++
++    ! Concatenation of constructors
++    ! 'a'(2) // 'b'(3) -> 'a b  '(5) -> 'a b '(4)
++    charr4_1 = [character(4) :: [character(2) :: 'a'] // [character(3) :: 'b']]
++    if (charr4_1(1) /= 'a b ') stop 151
++
++    ! Zero length strings
++    ! Inner zero length: 'abc' -> ''(0) -> '    '(4)
++    charr4_1 = [character(4) :: [character(0) :: 'abc']]
++    if (charr4_1(1) /= '    ') stop 152
++
++    ! Outer zero length: 'abc' -> 'abc '(4) -> ''(0)
++    charr0 = [character(0) :: [character(4) :: 'abc']]
++    if (len(charr0) /= 0) stop 153
++    if (charr0(1) /= '') stop 154
++
++    ! Empty array constructors
++    empty4 = [character(4) :: ]
++    if (size(empty4) /= 0) stop 155
++    
++    empty4 = [character(4) :: [character(2) :: ]]
++    if (size(empty4) /= 0) stop 156
 +
 +contains
 +

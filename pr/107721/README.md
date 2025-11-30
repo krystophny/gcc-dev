@@ -1,64 +1,35 @@
-# PR107721 - Array constructor type-spec lost during constant folding
+# PR 107721 - Array Constructor Type-Spec Folding
 
-## Bug Summary
+**Status:** FIXED & VERIFIED
+**Author:** Christopher Albert
+**Co-Author:** Harald Anlauf
+**Patch:** `0001-fortran-Honor-array-constructor-type-spec-during-fol.patch`
 
-GCC drops the explicit type specification on array constructors when elements
-are parenthesized or nested.  Expressions like `[integer :: ([1.0])] ** 2`
-return REAL instead of INTEGER because constant folding evaluates elements
-with their literal type rather than the declared type-spec.
+## Issue Summary
+When an array constructor has an explicit type-spec (e.g., `[character(16) :: ...]`), GCC was failing to correctly handle:
+1.  Parenthesized elements: `[integer :: ([1.0])]`
+2.  Nested constructors: `[[integer :: [1.0]]]`
+3.  Concatenation with type-spec: `[character(16) :: 'a', 'b'] // '|'`
+4.  **Nested type-specs with different lengths:** `[character(16) :: [character(2) :: 'abcd']]`
 
-This also affects character constructors with concatenation:
-`[character(16) :: 'a', 'b'] // '|'` fails with "Different CHARACTER lengths"
-because elements are not padded to 16 characters before the CONCAT operation.
+## Fix Strategy: "Resolve-Propagate-Resolve"
+The core fix is in `gfc_resolve_character_array_constructor`. When a nested array constructor is encountered:
+1.  Check if it has its own explicit type-spec.
+2.  **First Pass:** If yes, resolve it recursively *using its own type-spec*. This enforces inner truncation/padding (e.g., truncating 'abcd' to 'ab').
+3.  **Propagation:** Propagate the outer constructor's type-spec to the inner one.
+4.  **Second Pass:** Resolve it recursively *again*. This enforces outer truncation/padding (e.g., padding 'ab' to 'ab              ').
 
-Intel ifx, NVIDIA nvfortran, and LLVM flang all handle these cases correctly
-per Fortran 2018 R781/R782.
+## Verification
+A comprehensive test suite (`array_constructor_typespec_1.f90`) has been added covering:
+-   Basic types (integer, real, complex, logical) with parentheses.
+-   Character arrays with concatenation.
+-   Nested array constructors.
+-   **Harald's Edge Cases:** Triple nesting, mixed scalar/array, scalar concatenation.
+-   **Torture Tests:** Empty constructors, zero-length strings, complex nesting depth.
 
-## Reproducer
+All tests pass on `x86_64-pc-linux-gnu`.
 
-```fortran
-print *, [integer :: ([1.0])] ** 2  ! Should print INTEGER 1, not REAL 1.0
-print *, [real :: ([2])] ** 2       ! Should print REAL 4.0, not INTEGER 4
-```
-
-## Root Cause
-
-The type-spec IS preserved during parsing.  Two issues caused incorrect behavior:
-
-1. **Parenthesized expressions create EXPR_OP nodes** - `([1.0])` becomes an
-   INTRINSIC_PARENTHESES operation.  Type conversion in `check_constructor_type()`
-   was applied to the EXPR_OP rather than its simplified contents.
-
-2. **Character arrays not resolved before CONCAT** - Elements retained original
-   lengths instead of being padded to the type-spec length before concatenation.
-
-## Solution
-
-The fix calls existing functions at the right places - no new algorithms needed:
-
-**arith.cc `eval_intrinsic()`:**
-- Call `gfc_check_constructor_type()` on array operands before operations
-- Call `gfc_resolve_character_array_constructor()` before CONCAT operations
-- Preserve `ts.u.cl` in `reduce_binary_*()` result arrays
-
-**array.cc:**
-- Call `gfc_simplify_expr()` in `check_constructor_type()` to handle `([1.0])`
-- Propagate type-spec recursively to nested array constructors
-
-Total: ~35 lines in arith.cc, ~48 lines in array.cc (net).
-
-## Test Results
-
-- 74,442 passes, 343 expected failures, 0 regressions
-- All bugzilla cases verified (Comments #0, #7, #11, #12, #14, #17)
-- Matches Intel ifx and NVIDIA nvfortran behavior exactly
-
-## Files
-
-- `0001-fortran-Honor-array-constructor-type-spec-during-fol.patch` - Final patch
-- `reproducer.f90` - Original bug reproducer from Comment #0
-- `bugzilla.txt` - Notes from GCC Bugzilla
-
-## Status: Ready for upstream submission
-
-Branch `pr107721-typespec` contains a single commit rebased on `upstream/master`.
+## Development History
+-   **Nov 25:** Initial fix for parentheses and simple concatenation.
+-   **Nov 29:** Harald Anlauf identified regression with nested type-specs (`[char(16)::[char(2)::...]]`).
+-   **Nov 30:** Implemented "Resolve-Propagate-Resolve" strategy. Added torture tests. Validated against ISO standard behavior.
