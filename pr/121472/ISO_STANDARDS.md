@@ -16,19 +16,19 @@ out of scope.
 - After intrinsic assignment, function result temps go out of scope
 - Therefore: function result → assign → finalize → deallocate
 
-**Application to finalize_55.f90:**
+**Application to finalize_55.f90 (with PR121472 fix):**
 ```fortran
 array(i) = elemental_func()
 ```
-- elemental_func() creates function result (VARIABLE)
-- Result assigned to array(i)
-- Result finalized exactly once
-- Result deallocated
+- `elemental_func()` creates a function result (VARIABLE).
+- Result assigned to `array(i)`.
+- Result finalized exactly once.
+- Result deallocated after assignment.
 
 **Compliance requirement:**
-- ✅ ONE finalization per function result
-- ❌ NOT multiple finalizations per result
-- ❌ NOT zero finalizations
+- ✅ ONE finalization per function result.
+- ❌ NOT multiple finalizations per result.
+- ❌ NOT zero finalizations.
 
 ## Evolution of Finalization Across Standards
 
