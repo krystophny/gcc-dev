@@ -3,7 +3,12 @@ From: Christopher Albert <albert@tugraz.at>
 Date: Tue, 2 Dec 2025 21:22:07 +0100
 Subject: [PATCH] fortran: Finalize function results per ISO F2018 7.5.6.3
 
-PR fortran/121472: finalize function results and RHS temporaries per ISO/IEC 1539-1:2018 7.5.6.3, avoid constructor-+finalizer ICE for non-allocatable types, and add regression tests for constructor interfaces and nested elemental calls.
+PR fortran/121472: finalize function results and RHS temporaries.
+
+Implements ISO/IEC 1539-1:2018 7.5.6.3 finalization rules for function
+results, avoids constructor-+finalizer ICE for non-allocatable types,
+and adds regression tests for constructor interfaces and nested
+elemental calls.
 
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
@@ -498,4 +503,3 @@ index 00000000000..ea95d0707a2
 +end program test_finalize_constructor
 -- 
 2.52.0
-
