@@ -1,4 +1,4 @@
-From 627972a9827ef3590df572eac13aa4a753bbe6a6 Mon Sep 17 00:00:00 2001
+From 3b9cb8970e1b26957c411e02fe2ed2da0686cc53 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Tue, 2 Dec 2025 21:22:07 +0100
 Subject: [PATCH] fortran: Finalize function results per ISO F2018 7.5.6.3
@@ -17,7 +17,7 @@ Signed-off-by: Christopher Albert <albert@tugraz.at>
  create mode 100644 gcc/testsuite/gfortran.dg/finalize_constructor_1.f90
 
 diff --git a/gcc/fortran/resolve.cc b/gcc/fortran/resolve.cc
-index 2390858424e..24ffe3c1a74 100644
+index 9f3ce1d2ad6..e42c71604ad 100644
 --- a/gcc/fortran/resolve.cc
 +++ b/gcc/fortran/resolve.cc
 @@ -12911,6 +12911,7 @@ resolve_ordinary_assign (gfc_code *code, gfc_namespace *ns)
