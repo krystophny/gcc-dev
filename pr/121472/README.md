@@ -1,21 +1,31 @@
 # GCC PR121472 - ICE with constructor and finalizer
 
 **Bug URL:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121472
-**Status:** UNFIXED - Original ICE remains
-**Branch:** `pr121472-constructor-finalizer-ice` (has messy history, needs rebase)
+**Status:** FIXED - ICE resolved and ISO-compliant finalization implemented
+**Branch:** `pr121472-constructor-finalizer-ice`
 **Title:** ICE in gimplify_expr with constructor interface and finalizer
 
 ## Current Status (2025-11-20)
 
-### ❌ UNFIXED - Original Bug Remains
+### ✅ FIXED - Bug and semantics resolved (2025-12-02)
 
-- ❌ **ICE NOT FIXED**: reproducer.f90 still causes `internal compiler error: in gimplify_expr, at gimplify.cc:21278`
-- ❌ **finalize_55.f90**: Already PASSES on upstream master (no bug to fix)
-- ⚠️ **False fix attempt**: Temp metadata patch was unnecessary - fixed a non-existent problem
+- ✅ **ICE FIXED**: `reproducer.f90` compiles at all optimization levels with
+  custom gfortran built from this branch; no `gimplify_expr` ICE.
+- ✅ **finalize_55.f90**: Now matches reference compilers (ctr=6 after test1,
+  ctr=16 after test2).
+- ✅ **Function result finalization**: F2018 7.5.6.3 semantics implemented for
+  intrinsic and user-defined assignments.
 
-### Test Results on Upstream Master
-- reproducer.f90: ❌ ICE (gimplify_expr crash)
-- finalize_55.f90: ✅ 12 passes (already working correctly)
+### Test Results (custom compiler vs references)
+
+- `reproducer.f90`:
+  - Custom gfortran (this branch): ✅ compiles cleanly, runs without error.
+  - System gfortran 15.2.1: ✅ compiles and runs.
+- `finalize_55.f90`:
+  - Custom gfortran: ✅ `ctr=6` after `test1`, `ctr=16` after `test2`.
+  - System gfortran 15.2.1: ✅ same counts.
+  - Intel ifx 2025.2.1: ✅ same counts.
+  - NVIDIA nvfortran 25.9: ✅ same counts.
 
 ### Reference Compilers
 - **System gfortran 15.2.1**: finalize_55 passes (ctr=16) — baseline
