@@ -1,6 +1,6 @@
-From 663b3cf91a33f25cbaf54c0cf64d9505d11ca0ce Mon Sep 17 00:00:00 2001
+From 627972a9827ef3590df572eac13aa4a753bbe6a6 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
-Date: Tue, 2 Dec 2025 21:19:47 +0100
+Date: Tue, 2 Dec 2025 21:22:07 +0100
 Subject: [PATCH] fortran: Finalize function results per ISO F2018 7.5.6.3
 
 PR fortran/121472: finalize function results and RHS temporaries per ISO/IEC 1539-1:2018 7.5.6.3, avoid constructor-+finalizer ICE for non-allocatable types, and add regression tests for constructor interfaces and nested elemental calls.
@@ -13,12 +13,8 @@ Signed-off-by: Christopher Albert <albert@tugraz.at>
  gcc/fortran/trans.cc                          |  54 ++++++-
  gcc/testsuite/gfortran.dg/finalize_45.f90     |   4 +-
  .../gfortran.dg/finalize_constructor_1.f90    |  73 +++++++++
- pr/121472/docs/FINAL_SOLUTION.md              |  79 +++++++++
- pr/121472/docs/INVESTIGATION_SUMMARY.md       |  71 +++++++++
- 8 files changed, 442 insertions(+), 55 deletions(-)
+ 6 files changed, 292 insertions(+), 55 deletions(-)
  create mode 100644 gcc/testsuite/gfortran.dg/finalize_constructor_1.f90
- create mode 100644 pr/121472/docs/FINAL_SOLUTION.md
- create mode 100644 pr/121472/docs/INVESTIGATION_SUMMARY.md
 
 diff --git a/gcc/fortran/resolve.cc b/gcc/fortran/resolve.cc
 index 2390858424e..24ffe3c1a74 100644
@@ -500,168 +496,6 @@ index 00000000000..ea95d0707a2
 +  print *, 'finalizer:', finalizer_count
 +
 +end program test_finalize_constructor
-diff --git a/pr/121472/docs/FINAL_SOLUTION.md b/pr/121472/docs/FINAL_SOLUTION.md
-new file mode 100644
-index 00000000000..8787c91dc80
---- /dev/null
-+++ b/pr/121472/docs/FINAL_SOLUTION.md
-@@ -0,0 +1,79 @@
-+# PR121472 Finalization Solution (2025-11-20)
-+
-+## Final Implementation
-+
-+Successfully implemented targeted finalization for function result temporaries following GCC coding standards and patterns.
-+
-+### Commits
-+
-+1. **94511b1d5f0**: Investigation - disabled problematic code
-+2. **647d2477689**: Cleanup - reverted broad finalization
-+3. **796aaf6efff**: Solution - targeted GFC_SS_FUNCTION finalization
-+
-+### Key Changes
-+
-+**gcc/fortran/trans-array.cc** (lines 1800-1838):
-+- Added finalization specifically for `GFC_SS_FUNCTION` temporary arrays
-+- These hold return values of array-valued or elemental functions
-+- Excluded `GFC_SS_TEMP` (dependency-breaking temps) to avoid ICEs
-+- Guards: Check for finalizable derived types before finalizing
-+- Follows F2018 7.5.6.3 requirements
-+
-+**gcc/fortran/trans-expr.cc** (lines 13529-13530):
-+- Simplified finalblock inclusion logic
-+- Removed unnecessary `gfc_expr_attr (expr2).elemental` check
-+- Now includes finalblock for all function expressions
-+
-+### Technical Approach
-+
-+The solution distinguishes between different temporary array types:
-+
-+1. **GFC_SS_FUNCTION**: Function result temps → **FINALIZE**
-+   - Created for array-valued functions
-+   - Created for elemental function results
-+   - Must be finalized per F2018 7.5.6.3
-+
-+2. **GFC_SS_TEMP**: Dependency-breaking temps → **DON'T FINALIZE**
-+   - Created for assignments like `a = a + 1`
-+   - Avoid double finalization
-+   - Prevent ICEs
-+
-+3. **Descriptor wrappers**: Parameter passing → **DON'T FINALIZE**
-+   - Temporary descriptors for existing arrays
-+   - Not actual storage, just metadata
-+   - Finalizing these caused the finalize_38a ICE
-+
-+### Test Results
-+
-+✅ **finalize_38a.f90**: ICE fixed - compiles cleanly at all -O levels  
-+✅ **finalize_42.f90**: All 12 tests pass  
-+✅ **finalize_55.f90 test1**: Passes (ctr=6)  
-+⚠️  **finalize_55.f90 test2**: Partial (ctr=14, expected 16)  
-+⚠️  **finalize_48.f90**: Pre-existing failures  
-+⚠️  **finalize_49.f90**: Pre-existing scan failure  
-+
-+### Code Quality
-+
-+- ✅ Passes `./contrib/check_GNU_style.sh` on all modified files
-+- ✅ Follows GCC coding patterns and conventions
-+- ✅ Clear comments explaining the approach
-+- ✅ No new regressions introduced
-+- ✅ Maintains 80-column limit
-+- ✅ Proper TAB formatting
-+
-+### Remaining Work
-+
-+The finalize_55.f90 test2 issue (missing 2 finalizations in nested
-+`elem2(elem(y), elem(y))` call) requires additional investigation.
-+The current fix addresses the immediate ICE and implements correct
-+finalization for the majority of cases without introducing regressions.
-+
-+### Compliance Notes
-+
-+Implementation follows:
-+- ISO/IEC 1539-1:2018 Section 7.5.6.3 (finalization requirements)
-+- GCC coding standards (GNU style, 80-column, TABs)
-+- GCC architectural patterns (targeted guards, minimal changes)
-+
-+The solution is production-ready for merging, with the test2 issue
-+documented as future work.
-diff --git a/pr/121472/docs/INVESTIGATION_SUMMARY.md b/pr/121472/docs/INVESTIGATION_SUMMARY.md
-new file mode 100644
-index 00000000000..d6f428963f7
---- /dev/null
-+++ b/pr/121472/docs/INVESTIGATION_SUMMARY.md
-@@ -0,0 +1,71 @@
-+# PR121472 finalize_55 Investigation Summary (2025-11-20)
-+
-+## Objective
-+Fix over-finalization in finalize_55.f90 per /tmp/PLAN-gcc.md
-+
-+## Investigation Findings
-+
-+### Root Cause
-+Commit 36fc73d6c14 added finalization code in `gfc_trans_create_temp_array` that was too broad:
-+- Finalized ALL temporary arrays including descriptor wrappers
-+- Caused ICEs in finalize_38a.f90: "expected class 'expression', have 'declaration' (var_decl)"
-+- The code couldn't distinguish between:
-+  1. Temp arrays holding function results (should finalize)
-+  2. Descriptor wrappers for passing arrays (should NOT finalize)
-+  3. Dependency-breaking temps (conditional finalization)
-+
-+### Commits Made
-+
-+1. **94511b1d5f0**: Disabled problematic finalization with #if 0
-+   - Documented ICE issues
-+   - Identified that both trans-array.cc and trans-expr.cc additions caused problems
-+
-+2. **647d2477689**: Reverted problematic finalization entirely  
-+   - Removed finalization code from gfc_trans_create_temp_array
-+   - Removed finalization code from gfc_trans_assignment_1
-+   - Kept trans-expr.cc change from 911056b2c91 (fsym != NULL guard)
-+   - Result: finalize_38a.f90 compiles without ICE
-+
-+### Test Results After Revert
-+
-+✅ **finalize_38a.f90**: Compiles cleanly at all optimization levels (ICE fixed)
-+⚠️  **finalize_55.f90**: Still has over-finalization issue from earlier commits
-+
-+### Technical Analysis
-+
-+The GIMPLE dumps revealed:
-+- finalize_55.f90 test1: Expected ctr=6, got ctr=12 (double finalization)
-+- Multiple `desc.XX` descriptors being finalized per element
-+- Both per-element AND array-temp finalization occurring
-+
-+The finalization needs to happen at exactly ONE of these points:
-+- Per-element in scalarized loop (for elemental results)
-+- OR array-temp level (for non-elemental results)
-+- NOT both
-+
-+### Recommended Next Steps
-+
-+1. **Redesign finalization approach**:
-+   - Add a flag to `gfc_ss_info` to explicitly mark "needs finalization"
-+   - Set flag only for temps that hold newly-created finalizable objects
-+   - Check flag in `gfc_trans_create_temp_array` before finalizing
-+
-+2. **Alternative approach**:
-+   - Move finalization to where temps are USED, not where they're created
-+   - Finalize in assignment target handling after value is copied
-+
-+3. **Guard improvements needed**:
-+   - Check `ss->info->type == GFC_SS_TEMP` (scalarizer temps only)
-+   - Verify temp holds function results, not input arrays
-+   - Avoid finalizing descriptor wrappers created for parameter passing
-+
-+### Files Modified
-+
-+- `gcc/fortran/trans-array.cc`: Removed finalization in gfc_trans_create_temp_array
-+- `gcc/fortran/trans-expr.cc`: Removed finalization in gfc_trans_assignment_1
-+
-+### Branch Status
-+
-+Branch: `pr121472-constructor-finalizer-ice`  
-+Latest commit: 647d2477689
-+Status: Clean build, finalize_38a ICE resolved, finalize_55 issue remains
 -- 
 2.52.0
 
