@@ -1,4 +1,4 @@
-From 23f65bf1af71f4f56485b03e779e640fac8f2efc Mon Sep 17 00:00:00 2001
+From 8bdb94ecc2010947759b1205df8eb41d62f87d99 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Tue, 2 Dec 2025 21:22:07 +0100
 Subject: [PATCH] fortran: Finalize function results per ISO F2018 7.5.6.3
@@ -11,11 +11,11 @@ Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
  gcc/fortran/resolve.cc                        | 28 +++++++
  gcc/fortran/trans-array.cc                    | 40 ++++++++++
- gcc/fortran/trans-expr.cc                     | 53 +++++++++-----
+ gcc/fortran/trans-expr.cc                     | 47 ++++++++----
  gcc/fortran/trans.cc                          | 59 ++++++++++++++-
  gcc/testsuite/gfortran.dg/finalize_45.f90     |  4 +-
  .../gfortran.dg/finalize_constructor_1.f90    | 73 +++++++++++++++++++
- 6 files changed, 233 insertions(+), 24 deletions(-)
+ 6 files changed, 230 insertions(+), 21 deletions(-)
  create mode 100644 gcc/testsuite/gfortran.dg/finalize_constructor_1.f90
 
 diff --git a/gcc/fortran/resolve.cc b/gcc/fortran/resolve.cc
@@ -109,7 +109,7 @@ index cd137212260..278a3dbe43b 100644
      ss = ss->parent;
  
 diff --git a/gcc/fortran/trans-expr.cc b/gcc/fortran/trans-expr.cc
-index ac85b762c7f..63b84ffe703 100644
+index ac85b762c7f..9eae394d31b 100644
 --- a/gcc/fortran/trans-expr.cc
 +++ b/gcc/fortran/trans-expr.cc
 @@ -7575,9 +7575,9 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
@@ -177,7 +177,7 @@ index ac85b762c7f..63b84ffe703 100644
        gfc_add_block_to_block (&se->post, &post);
      }
  
-@@ -13073,16 +13091,14 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
+@@ -13073,12 +13091,10 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
  	  && (gfc_expr_attr (expr2).pointer
  	      || (expr2->ts.type == BT_CLASS && CLASS_DATA (expr2)->attr.class_pointer)))
  	expr2->must_finalize = 0;
@@ -192,15 +192,8 @@ index ac85b762c7f..63b84ffe703 100644
 +	 continue finalizing constructors unless the corrected behavior is
 +	 requested via gfc_notification_std (GFC_STD_F2018_DEL).  */
        else if (gfc_notification_std (GFC_STD_F2018_DEL)
--	  && (expr2->expr_type == EXPR_STRUCTURE
--	      || expr2->expr_type == EXPR_ARRAY))
--	expr2->must_finalize = 0;
-+          && (expr2->expr_type == EXPR_STRUCTURE
-+              || expr2->expr_type == EXPR_ARRAY))
-+        expr2->must_finalize = 0;
-     }
- 
- 
+ 	  && (expr2->expr_type == EXPR_STRUCTURE
+ 	      || expr2->expr_type == EXPR_ARRAY))
 @@ -13470,10 +13486,11 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
    gfc_add_expr_to_block (&body, tmp);
  
