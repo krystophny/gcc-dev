@@ -1,39 +1,28 @@
-From 3b9cb8970e1b26957c411e02fe2ed2da0686cc53 Mon Sep 17 00:00:00 2001
+From 23f65bf1af71f4f56485b03e779e640fac8f2efc Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Tue, 2 Dec 2025 21:22:07 +0100
 Subject: [PATCH] fortran: Finalize function results per ISO F2018 7.5.6.3
 
 PR fortran/121472: finalize function results and RHS temporaries.
 
-Implements ISO/IEC 1539-1:2018 7.5.6.3 finalization rules for function
-results, avoids constructor-+finalizer ICE for non-allocatable types,
-and adds regression tests for constructor interfaces and nested
-elemental calls.
+Implements ISO/IEC 1539-1:2018 7.5.6.3 finalization rules for function results, avoids constructor-+finalizer ICE for non-allocatable types, and adds regression tests for constructor interfaces and nested elemental calls.
 
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
- gcc/fortran/resolve.cc                        |  26 +++
- gcc/fortran/trans-array.cc                    |  40 +++++
- gcc/fortran/trans-expr.cc                     | 150 ++++++++++++------
- gcc/fortran/trans.cc                          |  54 ++++++-
- gcc/testsuite/gfortran.dg/finalize_45.f90     |   4 +-
- .../gfortran.dg/finalize_constructor_1.f90    |  73 +++++++++
- 6 files changed, 292 insertions(+), 55 deletions(-)
+ gcc/fortran/resolve.cc                        | 28 +++++++
+ gcc/fortran/trans-array.cc                    | 40 ++++++++++
+ gcc/fortran/trans-expr.cc                     | 53 +++++++++-----
+ gcc/fortran/trans.cc                          | 59 ++++++++++++++-
+ gcc/testsuite/gfortran.dg/finalize_45.f90     |  4 +-
+ .../gfortran.dg/finalize_constructor_1.f90    | 73 +++++++++++++++++++
+ 6 files changed, 233 insertions(+), 24 deletions(-)
  create mode 100644 gcc/testsuite/gfortran.dg/finalize_constructor_1.f90
 
 diff --git a/gcc/fortran/resolve.cc b/gcc/fortran/resolve.cc
-index 9f3ce1d2ad6..e42c71604ad 100644
+index 9f3ce1d2ad6..8cfd1e92e69 100644
 --- a/gcc/fortran/resolve.cc
 +++ b/gcc/fortran/resolve.cc
-@@ -12911,6 +12911,7 @@ resolve_ordinary_assign (gfc_code *code, gfc_namespace *ns)
-   if (gfc_extend_assign (code, ns))
-     {
-       gfc_expr** rhsptr;
-+      gfc_expr* rhs;
- 
-       if (code->op == EXEC_ASSIGN_CALL)
- 	{
-@@ -12940,6 +12941,31 @@ resolve_ordinary_assign (gfc_code *code, gfc_namespace *ns)
+@@ -12940,6 +12940,34 @@ resolve_ordinary_assign (gfc_code *code, gfc_namespace *ns)
  	    && (lhs->symtree->n.sym == (*rhsptr)->symtree->n.sym))
  	*rhsptr = gfc_get_parentheses (*rhsptr);
  
@@ -41,22 +30,25 @@ index 9f3ce1d2ad6..e42c71604ad 100644
 +	 finalizable non-allocatable, non-pointer derived-type result, mark it
 +	 for finalization per F2018 7.5.6.3.  Allocatable or pointer function
 +	 results handle their own finalization semantics and must not be
-+	 finalized here to avoid double finalization. */
++	 finalized here to avoid double finalization.  */
 +      if (*rhsptr && (*rhsptr)->expr_type == EXPR_FUNCTION
 +	  && gfc_may_be_finalized ((*rhsptr)->ts)
 +	  && (*rhsptr)->symtree->n.sym->result)
 +	{
 +	  bool allocatable_or_pointer = false;
++	  gfc_symbol *result_sym;
 +
-+	  if ((*rhsptr)->symtree->n.sym->result->ts.type == BT_CLASS
-+	      && CLASS_DATA ((*rhsptr)->symtree->n.sym->result))
++	  result_sym = (*rhsptr)->symtree->n.sym->result;
++
++	  if (result_sym->ts.type == BT_CLASS
++	      && CLASS_DATA (result_sym))
 +	    allocatable_or_pointer
-+	      = (CLASS_DATA ((*rhsptr)->symtree->n.sym->result)->attr.allocatable
-+		 || CLASS_DATA ((*rhsptr)->symtree->n.sym->result)->attr.pointer);
++	      = (CLASS_DATA (result_sym)->attr.allocatable
++		 || CLASS_DATA (result_sym)->attr.pointer);
 +	  else
 +	    allocatable_or_pointer
-+	      = ((*rhsptr)->symtree->n.sym->result->attr.allocatable
-+		 || (*rhsptr)->symtree->n.sym->result->attr.pointer);
++	      = (result_sym->attr.allocatable
++		 || result_sym->attr.pointer);
 +
 +	  if (!allocatable_or_pointer)
 +	    (*rhsptr)->must_finalize = 1;
@@ -66,7 +58,7 @@ index 9f3ce1d2ad6..e42c71604ad 100644
      }
  
 diff --git a/gcc/fortran/trans-array.cc b/gcc/fortran/trans-array.cc
-index cd137212260..456e3c1114c 100644
+index cd137212260..278a3dbe43b 100644
 --- a/gcc/fortran/trans-array.cc
 +++ b/gcc/fortran/trans-array.cc
 @@ -1797,6 +1797,46 @@ gfc_trans_create_temp_array (stmtblock_t * pre, stmtblock_t * post, gfc_ss * ss,
@@ -75,8 +67,8 @@ index cd137212260..456e3c1114c 100644
  
 +  /* Finalize temporary arrays created for function results (GFC_SS_FUNCTION).
 +     These hold the return values of array-valued or elemental functions and
-+     must be finalized after use per F2018 7.5.6.3.  GFC_SS_TEMP (dependency-
-+     breaking temps) are not finalized here.  */
++     must be finalized after use per F2018 7.5.6.3.  GFC_SS_TEMP
++     (dependency-breaking temps) are not finalized here.  */
 +  if (dealloc && ss->info && ss->info->type == GFC_SS_FUNCTION
 +      && ss->info->expr
 +      && (ss->info->expr->ts.type == BT_DERIVED
@@ -117,129 +109,32 @@ index cd137212260..456e3c1114c 100644
      ss = ss->parent;
  
 diff --git a/gcc/fortran/trans-expr.cc b/gcc/fortran/trans-expr.cc
-index ac85b762c7f..881aef3e5d5 100644
+index ac85b762c7f..63b84ffe703 100644
 --- a/gcc/fortran/trans-expr.cc
 +++ b/gcc/fortran/trans-expr.cc
-@@ -7579,42 +7579,42 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
- 		      gfc_add_block_to_block (&parmse.post, &class_se.post);
+@@ -7575,9 +7575,9 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
+ 		      stmtblock_t *class_pre_block = defer_to_dealloc_blk
+ 						     ? &dealloc_blk
+ 						     : &parmse.pre;
+-		      gfc_add_block_to_block (class_pre_block, &class_se.pre);
+-		      gfc_add_block_to_block (&parmse.post, &class_se.post);
+-		    }
++	      gfc_add_block_to_block (class_pre_block, &class_se.pre);
++	      gfc_add_block_to_block (&parmse.post, &class_se.post);
++	    }
+ 
+ 		  if (fsym && (fsym->ts.type == BT_DERIVED
+ 			       || fsym->ts.type == BT_ASSUMED)
+@@ -7612,7 +7612,7 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
+ 			}
  		    }
  
--		  if (fsym && (fsym->ts.type == BT_DERIVED
--			       || fsym->ts.type == BT_ASSUMED)
--		      && e->ts.type == BT_CLASS
--		      && !CLASS_DATA (e)->attr.dimension
--		      && !CLASS_DATA (e)->attr.codimension)
--		    {
--		      parmse.expr = gfc_class_data_get (parmse.expr);
--		      /* The result is a class temporary, whose _data component
--			 must be freed to avoid a memory leak.  */
--		      if (e->expr_type == EXPR_FUNCTION
--			  && CLASS_DATA (e)->attr.allocatable)
--			{
--			  tree zero;
--
--			  /* Finalize the expression.  */
--			  gfc_finalize_tree_expr (&parmse, NULL,
--						  gfc_expr_attr (e), e->rank);
--			  gfc_add_block_to_block (&parmse.post,
--						  &parmse.finalblock);
--
--			  /* Then free the class _data.  */
--			  zero = build_int_cst (TREE_TYPE (parmse.expr), 0);
--			  tmp = fold_build2_loc (input_location, NE_EXPR,
--						 logical_type_node,
--						 parmse.expr, zero);
--			  tmp = build3_v (COND_EXPR, tmp,
--					  gfc_call_free (parmse.expr),
--					  build_empty_stmt (input_location));
--			  gfc_add_expr_to_block (&parmse.post, tmp);
--			  gfc_add_modify (&parmse.post, parmse.expr, zero);
--			}
--		    }
--
 -		  /* Wrap scalar variable in a descriptor. We need to convert
--		     the address of a pointer back to the pointer itself before,
--		     we can assign it to the data field.  */
-+          if (fsym && (fsym->ts.type == BT_DERIVED
-+                       || fsym->ts.type == BT_ASSUMED)
-+              && e->ts.type == BT_CLASS
-+              && !CLASS_DATA (e)->attr.dimension
-+              && !CLASS_DATA (e)->attr.codimension)
-+            {
-+              parmse.expr = gfc_class_data_get (parmse.expr);
-+              /* The result is a class temporary, whose _data component
-+                 must be freed to avoid a memory leak.  */
-+              if (e->expr_type == EXPR_FUNCTION
-+                  && CLASS_DATA (e)->attr.allocatable)
-+                {
-+                  tree zero;
-+
-+                  /* Finalize the expression.  */
-+                  gfc_finalize_tree_expr (&parmse, NULL,
-+                                          gfc_expr_attr (e), e->rank);
-+                  gfc_add_block_to_block (&parmse.post,
-+                                          &parmse.finalblock);
-+
-+                  /* Then free the class _data.  */
-+                  zero = build_int_cst (TREE_TYPE (parmse.expr), 0);
-+                  tmp = fold_build2_loc (input_location, NE_EXPR,
-+                                         logical_type_node,
-+                                         parmse.expr, zero);
-+                  tmp = build3_v (COND_EXPR, tmp,
-+                                  gfc_call_free (parmse.expr),
-+                                  build_empty_stmt (input_location));
-+                  gfc_add_expr_to_block (&parmse.post, tmp);
-+                  gfc_add_modify (&parmse.post, parmse.expr, zero);
-+                }
-+            }
-+
-+ 	  /* Wrap scalar variable in a descriptor. We need to convert
-+ 	     the address of a pointer back to the pointer itself before,
-+ 	     we can assign it to the data field.  */
++		  /* Wrap scalar variable in a descriptor.  We need to convert
+ 		     the address of a pointer back to the pointer itself before,
+ 		     we can assign it to the data field.  */
  
- 		  if (fsym && fsym->as && fsym->as->type == AS_ASSUMED_RANK
- 		      && fsym->ts.type != BT_CLASS && e->expr_type != EXPR_NULL)
-@@ -8068,6 +8068,39 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
-       if (fsym && need_interface_mapping && e)
- 	gfc_add_interface_mapping (&mapping, fsym, &parmse, e);
- 
-+      if (e && e->expr_type == EXPR_FUNCTION
-+          && e->ts.type == BT_DERIVED
-+          && fsym && fsym->ts.type != BT_CLASS
-+          && gfc_may_be_finalized (e->ts))
-+        {
-+          symbol_attribute result_attr;
-+          gfc_symbol *result_sym = NULL;
-+
-+          if (e->value.function.esym
-+              && e->value.function.esym->result)
-+            {
-+              result_sym = e->value.function.esym->result;
-+              result_attr = result_sym->attr;
-+            }
-+          else
-+            result_attr = gfc_expr_attr (e);
-+
-+          if (!result_attr.pointer)
-+            {
-+              e->must_finalize = 1;
-+              parmse.expr = gfc_evaluate_now (parmse.expr, &parmse.pre);
-+              if (TREE_CODE (parmse.expr) == ADDR_EXPR)
-+                parmse.expr = build_fold_indirect_ref_loc (input_location,
-+                                                          parmse.expr);
-+              gfc_finalize_tree_expr (&parmse, e->ts.u.derived,
-+                                      result_attr, e->rank);
-+              /* Mark as handled to avoid double finalization in outer
-+                 expression processing.  */
-+              e->must_finalize = 0;
-+              finalized = true;
-+            }
-+        }
-+
-       gfc_add_block_to_block (&se->pre, &parmse.pre);
-       gfc_add_block_to_block (&post, &parmse.post);
-       gfc_add_block_to_block (&se->finalblock, &parmse.finalblock);
-@@ -8803,7 +8836,8 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
+@@ -8803,7 +8803,8 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
    bool finalizable = der != NULL && der->ns->proc_name
  			    && gfc_is_finalizable (der, NULL);
  
@@ -249,7 +144,7 @@ index ac85b762c7f..881aef3e5d5 100644
      gfc_finalize_tree_expr (se, der, attr, expr->rank);
  
    if (!byref && sym->ts.type != BT_CHARACTER
-@@ -8870,7 +8904,8 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
+@@ -8870,7 +8871,8 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
  	      /* Bundle in the string length.  */
  	      se->string_length = len;
  
@@ -259,13 +154,13 @@ index ac85b762c7f..881aef3e5d5 100644
  		gfc_finalize_tree_expr (se, der, attr, expr->rank);
  	    }
  	  else if (ts.type == BT_CHARACTER)
-@@ -8977,6 +9012,22 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
+@@ -8977,6 +8979,22 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
  		&& attr.pointer))
  	    gfc_finalize_tree_expr (se, NULL, attr, expr->rank);
  	}
 +      /* For RHS function actuals marked for deferred finalization in
-+         user-defined assignments and intrinsic assignments, finalize after
-+         the call returns per ISO/IEC 1539-1:2018 7.5.6.3.  */
++	 user-defined assignments and intrinsic assignments, finalize after
++	 the call returns per ISO/IEC 1539-1:2018 7.5.6.3.  */
 +      else if (expr && expr->expr_type == EXPR_FUNCTION
 +	       && expr->ts.type == BT_DERIVED
 +	       && expr->must_finalize
@@ -282,7 +177,7 @@ index ac85b762c7f..881aef3e5d5 100644
        gfc_add_block_to_block (&se->post, &post);
      }
  
-@@ -13073,16 +13124,14 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
+@@ -13073,16 +13091,14 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
  	  && (gfc_expr_attr (expr2).pointer
  	      || (expr2->ts.type == BT_CLASS && CLASS_DATA (expr2)->attr.class_pointer)))
  	expr2->must_finalize = 0;
@@ -293,9 +188,9 @@ index ac85b762c7f..881aef3e5d5 100644
 -	 These finalizations were later deleted by the Combined Techical
 -	 Corrigenda 1 TO 4 for fortran 2008 (f08/0011).  */
 +      /* F2008 4.5.6.3 para 5: Structure/array constructor finalization was
-+         deleted by f08/0011. For backward compatibility with -std=f2008,
-+         continue finalizing constructors unless the corrected behavior is
-+         requested via gfc_notification_std(GFC_STD_F2018_DEL).  */
++	 deleted by f08/0011.  For backward compatibility with -std=f2008,
++	 continue finalizing constructors unless the corrected behavior is
++	 requested via gfc_notification_std (GFC_STD_F2018_DEL).  */
        else if (gfc_notification_std (GFC_STD_F2018_DEL)
 -	  && (expr2->expr_type == EXPR_STRUCTURE
 -	      || expr2->expr_type == EXPR_ARRAY))
@@ -306,7 +201,7 @@ index ac85b762c7f..881aef3e5d5 100644
      }
  
  
-@@ -13470,10 +13519,11 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
+@@ -13470,10 +13486,11 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
    gfc_add_expr_to_block (&body, tmp);
  
    /* Add the post blocks to the body.  Scalar finalization must appear before
@@ -322,15 +217,16 @@ index ac85b762c7f..881aef3e5d5 100644
        gfc_add_block_to_block (&body, &rse.finalblock);
        gfc_add_block_to_block (&body, &rse.post);
 diff --git a/gcc/fortran/trans.cc b/gcc/fortran/trans.cc
-index 47396c3cbab..fd308448416 100644
+index 47396c3cbab..ae876f8bfa7 100644
 --- a/gcc/fortran/trans.cc
 +++ b/gcc/fortran/trans.cc
-@@ -1602,6 +1602,41 @@ gfc_assignment_finalizer_call (gfc_se *lse, gfc_expr *expr1, bool init_flag)
+@@ -1602,7 +1602,42 @@ gfc_assignment_finalizer_call (gfc_se *lse, gfc_expr *expr1, bool init_flag)
  }
  
  
+-/* Finalize a TREE expression using the finalizer wrapper. The result is
 +/* Check whether a derived type actually has allocatable components that
-+   require deep copying. The attr.alloc_comp attribute can be set even when
++   require deep copying.  The attr.alloc_comp attribute can be set even when
 +   there are no truly allocatable components (e.g., for types with only
 +   non-allocatable components), which can lead to unnecessary tree code
 +   generation.  */
@@ -364,32 +260,36 @@ index 47396c3cbab..fd308448416 100644
 +}
 +
 +
- /* Finalize a TREE expression using the finalizer wrapper. The result is
++/* Finalize a TREE expression using the finalizer wrapper.  The result is
     fixed in order to prevent repeated calls.  */
  
-@@ -1618,6 +1653,21 @@ gfc_finalize_tree_expr (gfc_se *se, gfc_symbol *derived,
+ void
+@@ -1618,6 +1653,24 @@ gfc_finalize_tree_expr (gfc_se *se, gfc_symbol *derived,
    if (attr.pointer)
      return;
  
-+  /* Skip finalization for unevaluated function/constructor call results when
-+     the type doesn't actually need deep copy despite having alloc_comp set.
++  /* Skip finalization for unevaluated function or constructor call results
++     only when the type is marked with alloc_comp but does not actually have
++     allocatable components that require deep copying.
 +
 +     When se->expr is a CALL_EXPR at this point, it represents an unevaluated
-+     constructor or function result. For types with transitive alloc_comp but
-+     no actual allocatable components, attempting to finalize causes ICEs during
-+     gimplification.
++     constructor or function result.  For types with transitive alloc_comp but
++     no actual allocatable components, attempting to finalize causes ICEs
++     during gimplification.
 +
-+     Types with actual allocatable components need finalization even for
-+     CALL_EXPR to handle cases like: obj = func_returning_allocatable_type()
-+     PR121472  */
++     Types with real allocatable components still need finalization even for
++     CALL_EXPR to handle cases like:
++       obj = func_returning_allocatable_type ()
++     PR121472.  */
 +  if (se->expr && TREE_CODE (se->expr) == CALL_EXPR
-+      && derived && !gfc_derived_needs_copy (derived))
++      && derived && derived->attr.alloc_comp
++      && !gfc_derived_needs_copy (derived))
 +    return;
 +
    /* Derived type function results with components that have defined
       assignements are handled in resolve.cc(generate_component_assignments)  */
    if (derived && (derived->attr.is_c_interop
-@@ -1648,7 +1698,7 @@ gfc_finalize_tree_expr (gfc_se *se, gfc_symbol *derived,
+@@ -1648,7 +1701,7 @@ gfc_finalize_tree_expr (gfc_se *se, gfc_symbol *derived,
        else if (se->direct_byref)
  	{
  	  desc = gfc_evaluate_now (se->expr, &se->finalblock);
@@ -398,7 +298,7 @@ index 47396c3cbab..fd308448416 100644
  	    {
  	      /* Need to copy allocated components and not finalize.  */
  	      tmp = gfc_copy_alloc_comp_no_fini (derived, se->expr, desc, rank, 0);
-@@ -1659,7 +1709,7 @@ gfc_finalize_tree_expr (gfc_se *se, gfc_symbol *derived,
+@@ -1659,7 +1712,7 @@ gfc_finalize_tree_expr (gfc_se *se, gfc_symbol *derived,
  	{
  	  desc = gfc_evaluate_now (se->expr, &se->pre);
  	  se->expr = gfc_evaluate_now (desc, &se->pre);
@@ -503,3 +403,4 @@ index 00000000000..ea95d0707a2
 +end program test_finalize_constructor
 -- 
 2.52.0
+
