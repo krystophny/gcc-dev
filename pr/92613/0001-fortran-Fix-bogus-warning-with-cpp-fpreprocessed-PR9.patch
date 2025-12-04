@@ -1,4 +1,4 @@
-From cd3aa903c5cdd47e2ae52ae7bbab18f57184a9c8 Mon Sep 17 00:00:00 2001
+From b1df6be0baba511ffcf3b6f7a636d575727c9776 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Thu, 4 Dec 2025 14:08:10 +0100
 Subject: [PATCH] fortran: Fix bogus warning with -cpp -fpreprocessed [PR92613]
@@ -15,19 +15,26 @@ preprocessor, so running it through libcpp again is unnecessary and
 causes these bogus warnings.
 
 This patch fixes the issue by skipping libcpp initialization and
-tokenization when both '-cpp' and '-fpreprocessed' are specified.
-The already-preprocessed source file is loaded directly instead.
+tokenization for normal compilations when both '-cpp' and
+'-fpreprocessed' are specified, while still honoring the generic
+-fpreprocessed semantics in preprocess-only mode.
 
 	PR fortran/92613
 
 gcc/fortran/ChangeLog:
 
-	* cpp.cc (gfc_cpp_preprocess): Return false early when
-	flag_preprocessed is set to skip libcpp tokenization.
-	* f95-lang.cc (gfc_init): Skip libcpp initialization when
-	flag_preprocessed is set, even if -cpp was specified.
-	* scanner.cc (gfc_new_file): Handle gfc_cpp_preprocess returning
-	false by loading source file directly.
+	* cpp.cc (gfc_cpp_preprocess): For -cpp -fpreprocessed compilations,
+	skip libcpp tokenization and load the preprocessed source directly;
+	keep using libcpp in preprocess-only mode.
+	* f95-lang.cc (gfc_init): Gate libcpp initialization on
+	-fpreprocessed and preprocess-only mode so that normal compilations
+	of preprocessed Fortran bypass libcpp, while -E still uses it.
+	* scanner.cc (gfc_new_file): Honor gfc_cpp_preprocess return value
+	and, when it is false, load the original source file instead of the
+	libcpp temporary.
+	* invoke.texi (Preprocessing Options): Document -fpreprocessed usage
+	with -cpp and -E and clarify that normal Fortran compilations do not
+	re-preprocess already preprocessed input.
 
 gcc/testsuite/ChangeLog:
 
@@ -35,58 +42,101 @@ gcc/testsuite/ChangeLog:
 
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
- gcc/fortran/cpp.cc                    |  8 ++++++++
- gcc/fortran/f95-lang.cc               |  8 ++++++--
+ gcc/fortran/cpp.cc                    | 10 ++++++++++
+ gcc/fortran/f95-lang.cc               | 15 +++++++++++++--
+ gcc/fortran/invoke.texi               | 22 ++++++++++++++++++++++
  gcc/fortran/scanner.cc                | 14 +++++++++++---
  gcc/testsuite/gfortran.dg/pr92613.f90 | 15 +++++++++++++++
- 4 files changed, 40 insertions(+), 5 deletions(-)
+ 5 files changed, 71 insertions(+), 5 deletions(-)
  create mode 100644 gcc/testsuite/gfortran.dg/pr92613.f90
 
 diff --git a/gcc/fortran/cpp.cc b/gcc/fortran/cpp.cc
-index 15ecc7dd5fa..dbba61a31e5 100644
+index 15ecc7dd5fa..dd3de3ef48e 100644
 --- a/gcc/fortran/cpp.cc
 +++ b/gcc/fortran/cpp.cc
-@@ -679,6 +679,14 @@ gfc_cpp_preprocess (const char *source_file)
+@@ -679,6 +679,16 @@ gfc_cpp_preprocess (const char *source_file)
    if (!gfc_cpp_enabled ())
      return false;
  
-+  /* PR fortran/92613: If input is already preprocessed, skip libcpp
-+     tokenization entirely.  The C preprocessor does not understand
-+     Fortran comments (which start with !) and would incorrectly warn
-+     about apostrophes in comments like "! it's good".  Just load the
-+     already-preprocessed source directly.  */
-+  if (gfc_option.flag_preprocessed)
++  /* PR fortran/92613: For normal compilation of already preprocessed
++     Fortran (-fpreprocessed without -E), skip libcpp tokenization
++     entirely.  The C preprocessor does not understand Fortran comments
++     (which start with !) and would incorrectly warn about apostrophes
++     in comments like "! it's good".  Just load the already-preprocessed
++     source directly in that case.  For -E (preprocess-only), keep using
++     libcpp so that generic -fpreprocessed semantics still apply.  */
++  if (gfc_option.flag_preprocessed && !gfc_cpp_preprocess_only ())
 +    return false;
 +
    cpp_change_file (cpp_in, LC_RENAME, source_file);
  
    if (cpp_option->traditional)
 diff --git a/gcc/fortran/f95-lang.cc b/gcc/fortran/f95-lang.cc
-index 06ffc67357b..39e1fb04650 100644
+index 06ffc67357b..ebd1ec103b1 100644
 --- a/gcc/fortran/f95-lang.cc
 +++ b/gcc/fortran/f95-lang.cc
-@@ -274,7 +274,11 @@ gfc_be_parse_file (void)
+@@ -274,7 +274,17 @@ gfc_be_parse_file (void)
  static bool
  gfc_init (void)
  {
 -  if (!gfc_cpp_enabled ())
++  bool preprocess_only = (gfc_cpp_enabled () && gfc_cpp_preprocess_only ());
++
 +  /* PR fortran/92613: When input is already preprocessed (-fpreprocessed),
-+     skip libcpp initialization even if -cpp was specified.  The combination
-+     -cpp -fpreprocessed means the input was preprocessed separately and
-+     should be loaded directly without running it through libcpp again.  */
-+  if (!gfc_cpp_enabled () || gfc_option.flag_preprocessed)
++     skip libcpp initialization for normal compilation even if -cpp was
++     specified.  The combination -cpp -fpreprocessed without -E means the
++     input was preprocessed separately and should be loaded directly
++     without running it through libcpp again.  For -E (preprocess-only),
++     keep using libcpp so that generic -fpreprocessed semantics still
++     apply.  */
++  if (!gfc_cpp_enabled ()
++      || (gfc_option.flag_preprocessed && !preprocess_only))
      {
        linemap_add (line_table, LC_ENTER, false, gfc_source_file, 1);
        linemap_add (line_table, LC_RENAME, false, special_fname_builtin (), 0);
-@@ -285,7 +289,7 @@ gfc_init (void)
+@@ -285,7 +295,8 @@ gfc_init (void)
    gfc_init_decl_processing ();
    gfc_static_ctors = NULL_TREE;
  
 -  if (gfc_cpp_enabled ())
-+  if (gfc_cpp_enabled () && !gfc_option.flag_preprocessed)
++  if (gfc_cpp_enabled ()
++      && (!gfc_option.flag_preprocessed || preprocess_only))
      gfc_cpp_init ();
  
    gfc_init_1 ();
+diff --git a/gcc/fortran/invoke.texi b/gcc/fortran/invoke.texi
+index a65f2d1cc34..1d1c03b61ce 100644
+--- a/gcc/fortran/invoke.texi
++++ b/gcc/fortran/invoke.texi
+@@ -647,6 +647,28 @@ invoke the preprocessor on any file, use @option{-cpp}, to disable
+ preprocessing on files where the preprocessor is run automatically, use
+ @option{-nocpp}.
+ 
++When compiling a file that has already been fully preprocessed by an
++external tool, use the generic @option{-fpreprocessed} option
++(@pxref{Preprocessor Options,,Options Controlling the Preprocessor,gcc,
++Using the GNU Compiler Collection (GCC)}).  For Fortran sources this tells
++@command{gfortran} to treat the input as preprocessed Fortran with
++linemarkers and to avoid running the C preprocessor on that file
++again.  In particular, when both @option{-cpp} and @option{-fpreprocessed}
++are present, the source is not passed through the C preprocessor a
++second time; it is read directly by the Fortran front end.  This
++prevents spurious C preprocessor diagnostics about characters that
++appear inside Fortran comments, such as apostrophes.
++
++Combining @option{-fpreprocessed} with @option{-E} (for example
++@option{-cpp -fpreprocessed -E}) drives only the C preprocessor on
++input that is already marked as preprocessed; the Fortran front end
++does not perform an additional compilation pass on that output.  This
++mode is generally not useful for Fortran source, and its exact output
++is determined solely by the generic C preprocessor.  In practice, you
++should instead run the preprocessor on the original source (for
++example with @option{-cpp -E}) and then compile the resulting file
++with @option{-fpreprocessed}.
++
+ If a preprocessed file includes another file with the Fortran @code{INCLUDE}
+ statement, the included file is not preprocessed.  To preprocess included
+ files, use the equivalent preprocessor statement @code{#include}.
 diff --git a/gcc/fortran/scanner.cc b/gcc/fortran/scanner.cc
 index cd9c5283515..292bb09d61a 100644
 --- a/gcc/fortran/scanner.cc
