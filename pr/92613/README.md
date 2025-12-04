@@ -45,11 +45,25 @@ reproducer.f90:4:5:
 Warning: missing terminating ' character
 ```
 
+## Compiler Comparison (2024-12-04)
+
+| Compiler | Version | Bogus Warning? |
+|----------|---------|----------------|
+| GCC (master) | 16.0.0 20251126 | YES - bug present |
+| GCC (system) | 15.2.1 | YES - bug present |
+| Intel ifx | 2025.2.1 | NO - compiles cleanly |
+| NVIDIA nvfortran | 25.9 | NO - compiles cleanly |
+| LFortran | latest | NO - compiles cleanly |
+
+All other compilers handle `-cpp -fpreprocessed` (or equivalent flags) correctly without emitting warnings for quotes inside comments.
+
 ## Analysis
 
 The preprocessor appears to be scanning comment text for string delimiters when `-cpp -fpreprocessed` is used together. This combination may occur when using build tools like CMake (see https://gitlab.kitware.com/cmake/cmake/issues/17466).
 
 While using `-cpp` with `-fpreprocessed` may seem redundant, the warning is incorrect since the quote is part of a comment line and should be ignored entirely.
+
+The bug is GCC-specific - all other major Fortran compilers handle this case correctly.
 
 ## Related
 
