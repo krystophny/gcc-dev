@@ -1,4 +1,4 @@
-From 34b2dfab62c7623adcc0d6ac3c7cb15fe53676fb Mon Sep 17 00:00:00 2001
+From 0c61eaca5640859ee138eed3e1f3e1cc0a3af4aa Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Thu, 4 Dec 2025 14:08:10 +0100
 Subject: [PATCH] fortran: Fix bogus warning with -cpp -fpreprocessed [PR92613]
@@ -19,16 +19,19 @@ gcc/fortran/ChangeLog:
 gcc/testsuite/ChangeLog:
 
 	* gfortran.dg/pr92613.f90: New test.
+	* gfortran.dg/pr92613_2.f90: New test for -E mode.
 
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
- gcc/fortran/cpp.cc                    |  3 +++
- gcc/fortran/f95-lang.cc               |  4 ++--
- gcc/fortran/invoke.texi               |  6 ++++++
- gcc/fortran/scanner.cc                | 10 +++++++---
- gcc/testsuite/gfortran.dg/pr92613.f90 | 13 +++++++++++++
- 5 files changed, 31 insertions(+), 5 deletions(-)
+ gcc/fortran/cpp.cc                      |  3 +++
+ gcc/fortran/f95-lang.cc                 |  4 ++--
+ gcc/fortran/invoke.texi                 |  6 ++++++
+ gcc/fortran/scanner.cc                  | 10 +++++++---
+ gcc/testsuite/gfortran.dg/pr92613.f90   | 13 +++++++++++++
+ gcc/testsuite/gfortran.dg/pr92613_2.f90 | 13 +++++++++++++
+ 6 files changed, 44 insertions(+), 5 deletions(-)
  create mode 100644 gcc/testsuite/gfortran.dg/pr92613.f90
+ create mode 100644 gcc/testsuite/gfortran.dg/pr92613_2.f90
 
 diff --git a/gcc/fortran/cpp.cc b/gcc/fortran/cpp.cc
 index 15ecc7dd5fa..82ae1a079d3 100644
@@ -116,6 +119,25 @@ index 00000000000..78b462385d1
 +# 1 "<test>"
 +! PR fortran/92613
 +! { dg-do compile }
++! { dg-options "-cpp -fpreprocessed" }
++program test
++  implicit none
++  write(6,*) 'hello'
++! Comment with apostrophe: it's good!
++! Comment with double quote: "quoted"
++end program
+diff --git a/gcc/testsuite/gfortran.dg/pr92613_2.f90 b/gcc/testsuite/gfortran.dg/pr92613_2.f90
+new file mode 100644
+index 00000000000..ea9eaed5995
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr92613_2.f90
+@@ -0,0 +1,13 @@
++# 1 "<test>"
++# 1 "<built-in>"
++# 1 "<command-line>"
++# 1 "<test>"
++! PR fortran/92613
++! { dg-do preprocess }
 +! { dg-options "-cpp -fpreprocessed" }
 +program test
 +  implicit none
