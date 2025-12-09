@@ -1,18 +1,17 @@
-From 702d2d9df190d2b6e4c2ca937ec83e1ee73b16f3 Mon Sep 17 00:00:00 2001
+From 26fa99e5c6d2bc0c528df4d5c37c099aeddf807f Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Thu, 4 Dec 2025 14:08:10 +0100
 Subject: [PATCH] fortran: Fix bogus warning with -cpp -fpreprocessed [PR92613]
 
 With -fpreprocessed, gfortran skips the C preprocessor, avoiding
 spurious diagnostics about characters in Fortran comments.
-With -fpreprocessed -E, the file is copied to output unchanged.
 
 	PR fortran/92613
 
 gcc/fortran/ChangeLog:
 
 	* cpp.cc (gfc_cpp_preprocess): Skip libcpp for -fpreprocessed.
-	Copy file to output for -fpreprocessed -E.
+	Error out for -fpreprocessed -E.
 	* f95-lang.cc (gfc_init): Skip libcpp init for -fpreprocessed.
 	* scanner.cc (gfc_new_file): Load source directly if preprocessed.
 	* invoke.texi (Preprocessing Options): Document -fpreprocessed.
@@ -20,53 +19,32 @@ gcc/fortran/ChangeLog:
 gcc/testsuite/ChangeLog:
 
 	* gfortran.dg/pr92613.f90: New test.
-	* gfortran.dg/pr92613_2.f90: New test for -E mode.
+	* gfortran.dg/pr92613_2.f90: New test for -E error.
 
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
- gcc/fortran/cpp.cc                      | 28 +++++++++++++++++++++++++
+ gcc/fortran/cpp.cc                      |  7 +++++++
  gcc/fortran/f95-lang.cc                 |  4 ++--
  gcc/fortran/invoke.texi                 |  4 ++++
- gcc/fortran/scanner.cc                  | 10 ++++++---
- gcc/testsuite/gfortran.dg/pr92613.f90   | 13 ++++++++++++
- gcc/testsuite/gfortran.dg/pr92613_2.f90 | 13 ++++++++++++
- 6 files changed, 67 insertions(+), 5 deletions(-)
+ gcc/fortran/scanner.cc                  | 10 +++++++---
+ gcc/testsuite/gfortran.dg/pr92613.f90   | 13 +++++++++++++
+ gcc/testsuite/gfortran.dg/pr92613_2.f90 | 11 +++++++++++
+ 6 files changed, 44 insertions(+), 5 deletions(-)
  create mode 100644 gcc/testsuite/gfortran.dg/pr92613.f90
  create mode 100644 gcc/testsuite/gfortran.dg/pr92613_2.f90
 
 diff --git a/gcc/fortran/cpp.cc b/gcc/fortran/cpp.cc
-index 15ecc7dd5fa..a42c4e31410 100644
+index 15ecc7dd5fa..b88b541b919 100644
 --- a/gcc/fortran/cpp.cc
 +++ b/gcc/fortran/cpp.cc
-@@ -679,6 +679,34 @@ gfc_cpp_preprocess (const char *source_file)
+@@ -679,6 +679,13 @@ gfc_cpp_preprocess (const char *source_file)
    if (!gfc_cpp_enabled ())
      return false;
  
 +  if (gfc_option.flag_preprocessed)
 +    {
 +      if (gfc_cpp_preprocess_only ())
-+	{
-+	  /* -fpreprocessed -E: just copy the file to stdout.  */
-+	  FILE *outf = stdout;
-+	  if (gfc_cpp_option.output_filename)
-+	    {
-+	      outf = fopen (gfc_cpp_option.output_filename, "w");
-+	      if (outf == NULL)
-+		gfc_fatal_error ("opening output file %qs: %s",
-+				 gfc_cpp_option.output_filename,
-+				 xstrerror (errno));
-+	    }
-+	  FILE *in = fopen (source_file, "r");
-+	  if (in)
-+	    {
-+	      int c;
-+	      while ((c = getc (in)) != EOF)
-+		putc (c, outf);
-+	      fclose (in);
-+	    }
-+	  if (gfc_cpp_option.output_filename)
-+	    fclose (outf);
-+	}
++	gfc_fatal_error ("%<-E%> is not supported with %<-fpreprocessed%>");
 +      return false;
 +    }
 +
@@ -96,7 +74,7 @@ index 06ffc67357b..cf91be36ba3 100644
  
    gfc_init_1 ();
 diff --git a/gcc/fortran/invoke.texi b/gcc/fortran/invoke.texi
-index a65f2d1cc34..499a4f62f8d 100644
+index a65f2d1cc34..ef09996937d 100644
 --- a/gcc/fortran/invoke.texi
 +++ b/gcc/fortran/invoke.texi
 @@ -647,6 +647,10 @@ invoke the preprocessor on any file, use @option{-cpp}, to disable
@@ -105,7 +83,7 @@ index a65f2d1cc34..499a4f62f8d 100644
  
 +When compiling a preprocessed file, use @option{-fpreprocessed}
 +(@pxref{Preprocessor Options,,Options Controlling the Preprocessor,gcc,
-+Using the GNU Compiler Collection (GCC)}).  This option overrides @option{-cpp}.
++Using the GNU Compiler Collection (GCC)}).  This skips the C preprocessor.
 +
  If a preprocessed file includes another file with the Fortran @code{INCLUDE}
  statement, the included file is not preprocessed.  To preprocess included
@@ -152,10 +130,10 @@ index 00000000000..78b462385d1
 +end program
 diff --git a/gcc/testsuite/gfortran.dg/pr92613_2.f90 b/gcc/testsuite/gfortran.dg/pr92613_2.f90
 new file mode 100644
-index 00000000000..ea9eaed5995
+index 00000000000..8706a1dc8e6
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/pr92613_2.f90
-@@ -0,0 +1,13 @@
+@@ -0,0 +1,11 @@
 +# 1 "<test>"
 +# 1 "<built-in>"
 +# 1 "<command-line>"
@@ -163,11 +141,9 @@ index 00000000000..ea9eaed5995
 +! PR fortran/92613
 +! { dg-do preprocess }
 +! { dg-options "-cpp -fpreprocessed" }
++! { dg-error ".-E. is not supported with .-fpreprocessed." "" { target *-*-* } 0 }
++! { dg-prune-output "compilation terminated" }
 +program test
-+  implicit none
-+  write(6,*) 'hello'
-+! Comment with apostrophe: it's good!
-+! Comment with double quote: "quoted"
 +end program
 -- 
 2.52.0
