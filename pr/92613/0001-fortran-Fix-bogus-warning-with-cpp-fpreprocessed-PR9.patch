@@ -1,4 +1,4 @@
-From b1df6be0baba511ffcf3b6f7a636d575727c9776 Mon Sep 17 00:00:00 2001
+From 3e257d9ad600dc55fa5e8eb04e1b3dc8d24aae27 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Thu, 4 Dec 2025 14:08:10 +0100
 Subject: [PATCH] fortran: Fix bogus warning with -cpp -fpreprocessed [PR92613]
