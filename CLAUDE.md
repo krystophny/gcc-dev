@@ -575,6 +575,114 @@ cd /home/ert/code/gcc-dev/gcc-build/gcc && make -j32 -k check-gfortran
 ./gcc/contrib/check_GNU_style.sh gcc/fortran/<modified-file>
 ```
 
+## GCC Review Lessons Learned
+
+This section captures common pitfalls identified during upstream code review.
+These patterns should be avoided in future patches.
+
+### Code Comments - Keep Them Minimal
+
+**Problem**: Excessive comments explaining what the code does.
+
+**Reviewer feedback** (Harald Anlauf, PR92613):
+> "I find the comments in the source file a little excessive.
+> Can you formulate more concisely?"
+
+**Guidelines:**
+- One or two lines maximum for inline comments
+- Reference the PR number for context: `/* PR92613: ... */`
+- Do NOT explain what is obvious from the code
+- Do NOT repeat information available in the commit message
+- Comments explain WHY, not WHAT
+
+**Bad (too verbose):**
+```c
+  /* PR fortran/92613: For normal compilation of already preprocessed
+     Fortran (-fpreprocessed without -E), skip libcpp tokenization
+     entirely.  The C preprocessor does not understand Fortran comments
+     (which start with !) and would incorrectly warn about apostrophes
+     in comments like "! it's good".  Just load the already-preprocessed
+     source directly in that case.  For -E (preprocess-only), keep using
+     libcpp so that generic -fpreprocessed semantics still apply.  */
+```
+
+**Good (concise):**
+```c
+  /* PR92613: Skip libcpp for -fpreprocessed without -E.  */
+```
+
+### Documentation - Avoid Unnecessary Words
+
+**Problem**: Using filler words that add no meaning.
+
+**Reviewer feedback** (Harald Anlauf, PR92613):
+> "'fully' is not needed (what does it mean?)"
+
+**Guidelines:**
+- "preprocessed" not "fully preprocessed"
+- "the file" not "the file in question"
+- Remove qualifiers that do not add precision
+- Every word must earn its place
+
+### Test Cases - Avoid Useless dg-bogus Directives
+
+**Problem**: Using `dg-bogus` to test for absence of warnings that should
+never appear in the first place.
+
+**Reviewer feedback** (Harald Anlauf, PR92613):
+> "That is really bogus.  Why should one ever get a warning at all?"
+> "How do you intend to have the testcase run?  With -cpp -E, or without -E?
+> And what do you intend to test?"
+
+**Guidelines:**
+- `dg-bogus` is for testing that a SPECIFIC known-bad pattern does NOT match
+- Do NOT use `dg-bogus` to verify absence of warnings - just let the test
+  compile cleanly; any unexpected warning fails the test automatically
+- Think through what the test actually verifies
+- Consider all relevant option combinations (e.g., with/without `-E`)
+- If a warning should never appear, the test is simply: does it compile?
+
+**Bad:**
+```fortran
+! { dg-do compile }
+! { dg-options "-cpp -fpreprocessed" }
+! Comment with apostrophe { dg-bogus "missing terminating" }
+```
+
+**Good:**
+```fortran
+! { dg-do compile }
+! { dg-options "-cpp -fpreprocessed" }
+! Comment with apostrophe - no warning expected, clean compile suffices
+```
+
+### Option Interactions - Consider All Combinations
+
+**Problem**: Fixing one option combination while leaving others broken or
+poorly defined.
+
+**Reviewer feedback** (Harald Anlauf, PR92613):
+> "How do you intend to have the testcase run?  With -cpp -E, or without -E?"
+> "And I wonder if we should instead give a warning if someone combines
+> -cpp -fpreprocessed as contradicting options."
+
+**Guidelines:**
+- Map out all relevant option combinations before implementing
+- Document behavior for each combination
+- Consider whether unusual combinations should warn
+- Test edge cases, not just the primary use case
+- If an option combination is "not useful", consider whether to support it
+
+### General Review Readiness Checklist
+
+Before submitting patches, verify:
+- [ ] Comments are minimal (1-2 lines max, reference PR number)
+- [ ] No filler words in documentation
+- [ ] Test cases test something meaningful
+- [ ] No `dg-bogus` for warnings that simply should not exist
+- [ ] All relevant option combinations considered
+- [ ] Edge cases documented or tested
+
 ## Upstream Submission Policy
 
 ### 🚨 CRITICAL: NEVER Submit Patches Without Explicit User Permission
