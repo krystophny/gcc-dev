@@ -1,4 +1,4 @@
-From 0c61eaca5640859ee138eed3e1f3e1cc0a3af4aa Mon Sep 17 00:00:00 2001
+From 6b597fd7e1c25cf8c33badd62e65cdf28bb382e1 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Thu, 4 Dec 2025 14:08:10 +0100
 Subject: [PATCH] fortran: Fix bogus warning with -cpp -fpreprocessed [PR92613]
@@ -25,11 +25,11 @@ Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
  gcc/fortran/cpp.cc                      |  3 +++
  gcc/fortran/f95-lang.cc                 |  4 ++--
- gcc/fortran/invoke.texi                 |  6 ++++++
+ gcc/fortran/invoke.texi                 |  5 +++++
  gcc/fortran/scanner.cc                  | 10 +++++++---
  gcc/testsuite/gfortran.dg/pr92613.f90   | 13 +++++++++++++
  gcc/testsuite/gfortran.dg/pr92613_2.f90 | 13 +++++++++++++
- 6 files changed, 44 insertions(+), 5 deletions(-)
+ 6 files changed, 43 insertions(+), 5 deletions(-)
  create mode 100644 gcc/testsuite/gfortran.dg/pr92613.f90
  create mode 100644 gcc/testsuite/gfortran.dg/pr92613_2.f90
 
@@ -70,15 +70,14 @@ index 06ffc67357b..cf91be36ba3 100644
  
    gfc_init_1 ();
 diff --git a/gcc/fortran/invoke.texi b/gcc/fortran/invoke.texi
-index a65f2d1cc34..519387a93dc 100644
+index a65f2d1cc34..76aa82ec799 100644
 --- a/gcc/fortran/invoke.texi
 +++ b/gcc/fortran/invoke.texi
-@@ -647,6 +647,12 @@ invoke the preprocessor on any file, use @option{-cpp}, to disable
+@@ -647,6 +647,11 @@ invoke the preprocessor on any file, use @option{-cpp}, to disable
  preprocessing on files where the preprocessor is run automatically, use
  @option{-nocpp}.
  
-+When compiling a file that has already been preprocessed by an
-+external tool, use @option{-fpreprocessed}
++When compiling a preprocessed file, use @option{-fpreprocessed}
 +(@pxref{Preprocessor Options,,Options Controlling the Preprocessor,gcc,
 +Using the GNU Compiler Collection (GCC)}).  This skips the C preprocessor,
 +avoiding spurious diagnostics about characters in Fortran comments.
