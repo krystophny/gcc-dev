@@ -1,4 +1,4 @@
-From fce080ff506d46e4c03c3d9edefea64ac7862e3e Mon Sep 17 00:00:00 2001
+From 7e8c051109a9d384a7cf1644711064d430a3c2a9 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Thu, 4 Dec 2025 14:08:10 +0100
 Subject: [PATCH] fortran: Fix bogus warning with -cpp -fpreprocessed [PR92613]
@@ -70,7 +70,7 @@ index 06ffc67357b..cf91be36ba3 100644
  
    gfc_init_1 ();
 diff --git a/gcc/fortran/invoke.texi b/gcc/fortran/invoke.texi
-index a65f2d1cc34..863b35fe2b4 100644
+index a65f2d1cc34..499a4f62f8d 100644
 --- a/gcc/fortran/invoke.texi
 +++ b/gcc/fortran/invoke.texi
 @@ -647,6 +647,10 @@ invoke the preprocessor on any file, use @option{-cpp}, to disable
@@ -79,7 +79,7 @@ index a65f2d1cc34..863b35fe2b4 100644
  
 +When compiling a preprocessed file, use @option{-fpreprocessed}
 +(@pxref{Preprocessor Options,,Options Controlling the Preprocessor,gcc,
-+Using the GNU Compiler Collection (GCC)}).
++Using the GNU Compiler Collection (GCC)}).  This option overrides @option{-cpp}.
 +
  If a preprocessed file includes another file with the Fortran @code{INCLUDE}
  statement, the included file is not preprocessed.  To preprocess included
