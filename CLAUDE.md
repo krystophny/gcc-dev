@@ -1,601 +1,214 @@
 # GCC Fortran Development Meta-Repository
 
-## Repository Layout
+## Repository Structure
 
-This meta-repository tracks GCC Fortran bug reproducers, patches, and development workflows.
+This is a **meta-repository** that wraps the upstream GCC source tree and
+organizes our development workflow. The meta-repo itself is tracked on GitHub;
+the GCC source inside is a separate git repository.
 
-**Directory Structure:**
-- `/home/ert/code/gcc-dev/` - Meta-repo root (tracked on `main` branch, pushable to GitHub)
-- `/home/ert/code/gcc-dev/gcc/` - Upstream GCC repository (local branches only, never push)
-  - `/home/ert/code/gcc-dev/gcc/gcc/` - GCC source code
-  - `/home/ert/code/gcc-dev/gcc/gcc/fortran/` - Fortran frontend source
-  - `/home/ert/code/gcc-dev/gcc/gcc/testsuite/gfortran.dg/` - Fortran test suite
-- `/home/ert/code/gcc-dev/gcc-build/` - Build artifacts
-  - `/home/ert/code/gcc-dev/gcc-build/gcc/` - Run tests from here: `make check-gfortran`
-- `/home/ert/code/gcc-dev/pr/` - Bug reproducers and patches, organized by PR number
-
-**Git Command Conventions:**
-- Upstream GCC work: `git -C gcc <command>` (from meta-repo root)
-- Meta-repo work: `git <command>` (from meta-repo root)
-- **Push targets matter:**
-  - `origin` (GitHub private fork) is safe for both repos—push topic branches here whenever we need to share WIP.
-  - `upstream` (gcc.gnu.org) must NEVER receive pushes; export patches or use `git send-email` instead.
-- **Do not edit GCC ChangeLog files** - upstream regenerates them from commit metadata. NEVER touch the ChangeLog entries by hand; all ChangeLog content must come from the git commit message when patches are exported upstream.
-
-## Build and Test Workflow
-
-### Building GCC
-```bash
-cd gcc-build
-make -j32
+```
+gcc-dev/                    # META-REPO (tracked on GitHub, main branch)
+│
+├── gcc/                    # UPSTREAM GCC SOURCE (separate git repo)
+│   │                       # Local branches only - NEVER push to upstream
+│   └── gcc/
+│       ├── fortran/        # Fortran frontend source code
+│       └── testsuite/
+│           └── gfortran.dg/  # Fortran DejaGnu test suite
+│
+├── gcc-build/              # OUT-OF-TREE BUILD (not tracked)
+│   └── gcc/                # Run tests HERE: make check-gfortran
+│
+└── pr/                     # BUG WORK (tracked in meta-repo)
+    ├── 92613/              # One directory per PR number
+    │   ├── reproducer.f90  # Minimal test case
+    │   ├── Makefile        # Multi-compiler testing
+    │   ├── *.patch         # Exported patches
+    │   └── README.md       # Analysis notes
+    ├── 121472/
+    └── ...
 ```
 
-#### Reconfiguring for a non-bootstrap Fortran-only build
-If the build directory was configured differently (for instance by a prior
-bootstrap), wipe and recreate it before rebuilding:
+**Key concepts:**
+- **Meta-repo** (`gcc-dev/`): Tracks our patches, reproducers, docs. Push to GitHub.
+- **GCC source** (`gcc/`): Upstream code. Create local topic branches, export
+  patches, but NEVER push to gcc.gnu.org (use `git send-email` instead).
+- **Build dir** (`gcc-build/`): Out-of-tree build. Not version controlled.
+- **PR dirs** (`pr/<number>/`): Each bug gets its own directory with reproducer,
+  patches, and analysis.
+
+**Git conventions:**
 ```bash
-rm -rf gcc-build
-mkdir gcc-build
-cd gcc-build
+# Working with upstream GCC (from meta-repo root):
+git -C gcc status
+git -C gcc checkout -b pr12345-fix-something
+git -C gcc format-patch -1 HEAD -o ../pr/12345/
+
+# Working with meta-repo:
+git add pr/12345/
+git commit -m "pr12345: add reproducer and initial patch"
+git push origin main
+```
+
+- `origin` = GitHub fork (safe to push for both repos)
+- `upstream` = gcc.gnu.org (NEVER push, export patches instead)
+- NEVER edit ChangeLog files; content comes from commit messages
+
+## Build and Test
+
+### Building
+```bash
+cd gcc-build && make -j$(nproc)
+```
+
+### Reconfiguring (Fortran-only, non-bootstrap)
+```bash
+rm -rf gcc-build && mkdir gcc-build && cd gcc-build
 ../gcc/configure --enable-languages=fortran --disable-multilib \
   --disable-bootstrap CFLAGS='-Og -g' CXXFLAGS='-Og -g'
 ```
-This mirrors the `bootstrap.sh` helper script and produces a single-stage,
-debuggable Fortran toolchain (no bootstrap/checking, optimized with `-Og`).
 
-### Running Test Suite
-**CRITICAL: Test suite MUST be run from `gcc-build/gcc/` directory**
+### Running Tests
 
-**Correct workflow:**
+**CRITICAL: Run from `gcc-build/gcc/` only.**
+
 ```bash
-# From meta-repo root:
 cd /home/ert/code/gcc-dev/gcc-build/gcc
-
-# Run test suite in background:
-make -j32 check-gfortran > /tmp/test-output.log 2>&1 &
-
-# Alternative: use -k flag to continue on errors:
-make -j32 -k check-gfortran > /tmp/test-output.log 2>&1 &
+make -j$(nproc) -k check-gfortran > /tmp/test.log 2>&1 &
 ```
 
-**WRONG - Do NOT run from these locations:**
-- ❌ `/home/ert/code/gcc-dev/` (meta-repo root - no target)
-- ❌ `/home/ert/code/gcc-dev/gcc-build/` (build root - no target)
-- ❌ `/home/ert/code/gcc-dev/gcc/` (source tree - no target)
-- ✅ `/home/ert/code/gcc-dev/gcc-build/gcc/` (CORRECT location)
+Wrong locations: meta-repo root, `gcc-build/`, `gcc/` source tree.
 
-**Test results location:**
+**Results:**
 - Summary: `gcc-build/gcc/testsuite/gfortran/gfortran.sum`
-- Detailed log: `gcc-build/gcc/testsuite/gfortran/gfortran.log`
-- Look for: `# of expected passes`, `# of unexpected failures`
+- Log: `gcc-build/gcc/testsuite/gfortran/gfortran.log`
 
-**Analyzing test results:**
-After running the test suite, use the test summary tool for detailed analysis:
+**Analyzing results:**
 ```bash
-# From meta-repo root:
+# Concise summary of failures:
 ./gcc/contrib/test_summary
 
-# This provides a concise summary of all test problems including:
-# - Unexpected failures with test names
-# - New failures compared to baseline
-# - Grouped results by test category
-# - Easy-to-read format for quick diagnosis
+# Quick check for unexpected failures:
+grep -E "^FAIL|^XPASS" gcc-build/gcc/testsuite/gfortran/gfortran.sum
 ```
 
-**Verification checklist:**
-- Zero unexpected failures required for merge
-- All new tests passing
-- No regressions in existing tests
-- Run `./gcc/contrib/test_summary` to analyze any failures
+**Quick commands:**
+```bash
+# Single test:
+make check-gfortran RUNTESTFLAGS="finalize_45.f90"
 
-### Custom Compiler Invocation
+# Pattern:
+make check-gfortran RUNTESTFLAGS="dg.exp=finalize*.f90"
+```
+
+**Verification:** Zero unexpected failures required for merge.
+
+### Custom Compiler
 ```bash
 gcc-build/gcc/gfortran -B gcc-build/gcc <file.f90>
 ```
 
-### Reference Compilers for Behavior Validation
+## Reference Compilers
 
-**ALWAYS test bug reproducers and fixes against multiple compilers to validate behavior:**
+Always validate against multiple compilers:
 
-**Available Compilers:**
+| Compiler | Command |
+|----------|---------|
+| System gfortran | `/usr/bin/gfortran` |
+| LLVM Flang | `/usr/bin/flang-new` |
+| Intel ifx | `source /opt/intel/oneapi/setvars.sh && ifx` |
+| NVIDIA nvfortran | `/opt/nvidia/hpc_sdk/Linux_x86_64/25.9/compilers/bin/nvfortran` |
+| LFortran | `lfortran` |
 
-1. **System gfortran (GCC 15.2.1)**
-   ```bash
-   /usr/bin/gfortran <file.f90>
-   ```
-   - Primary reference for correct F2018+ behavior
-   - Validated for finalization semantics
+Intel ifx and NVIDIA nvfortran are best for F2018 compliance validation.
 
-2. **LLVM Flang (flang-new 21.1.5)**
-   ```bash
-   /usr/bin/flang-new <file.f90>
-   ```
-   - LLVM-based Fortran compiler
-   - Use for cross-compiler validation
+## Writing Test Cases
 
-3. **Intel ifx (IFX 2025.2.1)**
-   ```bash
-   # Source environment first:
-   source /opt/intel/oneapi/setvars.sh
-
-   # Then compile:
-   /opt/intel/oneapi/compiler/2025.2/bin/ifx <file.f90>
-   ```
-   - Intel oneAPI Fortran compiler
-   - Use for Intel-specific behavior and optimization validation
-
-4. **NVIDIA nvfortran (25.9-0)**
-   ```bash
-   /opt/nvidia/hpc_sdk/Linux_x86_64/25.9/compilers/bin/nvfortran <file.f90>
-   ```
-   - NVIDIA HPC SDK Fortran compiler
-   - Use for HPC/GPU Fortran validation
-   - Excellent for standards compliance testing
-
-5. **LFortran**
-   ```bash
-   lfortran <file.f90>
-   ```
-   - Interactive Fortran compiler
-   - Modern, fast compiler with good diagnostics
-   - Use for additional F2018+ feature validation
-   - Note: Some F2018 features may not be fully implemented yet
-
-**Testing Protocol:**
-- Always test reproducers with at least 2-3 compilers
-- Document which compilers show the bug
-- Document which compilers show correct behavior
-- Compare output for semantic correctness
-
-### Test Suite Conventions
-
-**Runtime Test Patterns:**
-- **PREFERRED**: Use `if (result /= expected) stop n` pattern for runtime tests
-- Provides clear pass/fail with specific error codes
-- Easier to read and maintain than pattern matching
-- Each test condition should have unique stop number (1, 2, 3, ...)
-- Exit code indicates which specific check failed
-
-**Example:**
+### Runtime Tests
+Use `if/stop` pattern with unique exit codes:
 ```fortran
 if (a%value /= 100) stop 1
 if (.not. allocated(a%next)) stop 2
-if (a%next%value /= 200) stop 3
 ```
 
-**Alternative (less preferred):**
-- Print/pattern matching with `! { dg-output "..." }`
-- Use only when actual output values need verification
-- More verbose and harder to maintain
+### DejaGnu Directives
 
-### Reproducer Testing
-PR-specific reproducers in `pr/<number>/`:
+**Do NOT use `dg-bogus` for warnings that should never appear.**
+If code should compile cleanly, just use `dg-do compile`. Any unexpected
+warning fails the test automatically.
+
+Bad:
+```fortran
+! { dg-options "-Wall" }
+! some code { dg-bogus "some warning" }
+```
+
+Good:
+```fortran
+! { dg-do compile }
+! { dg-options "-Wall" }
+! Code compiles cleanly - no dg-bogus needed
+```
+
+**Think through what the test verifies.** Consider all option combinations
+(e.g., with/without `-E`). If an option combination is not useful, question
+whether to support it at all.
+
+## Coding Standards
+
+### C vs C++
+
+Prefer C for new code. Use C++ only when modifying existing C++ code where
+C would be inconsistent. Keep data structures simple (linked lists, arrays).
+
+### GNU Style and Formatting
+
+**Line limits:**
+- Lines ≤ 80 characters (hard limit)
+- No trailing whitespace
+
+**TAB and space rules (CRITICAL):**
+- Indentation uses TABs, not spaces
+- TAB width = 8 columns
+- 8 consecutive spaces MUST be replaced with TAB
+- Mixed indent: TAB(s) first, then spaces for fine alignment
+
+**Spacing:**
+- One space between function name and `(`
+- Two spaces after `.` in comments (sentence separation)
+
+**Automated checking:**
 ```bash
-cd pr/<number>
-make              # Build with custom gfortran
-make run          # Execute
-make clean        # Clean artifacts
-```
-
-## Patch Management
-
-### Creating Patches
-From inside `gcc/` on a topic branch:
-```bash
-git format-patch -1 HEAD -o ../pr/<number>/
-```
-
-### Topic Branch Naming
-Use format: `pr<number>-<short-desc>`
-- Example: `pr90519-finalizer-ice`
-- Example: `pr121628-deep-copy-fix`
-
-### Rebasing Before Patch Export
-```bash
-git -C gcc fetch origin
-git -C gcc rebase origin/master
-```
-
-### Complete Patch Development Workflow
-
-**CRITICAL: Always maintain a single, clean commit on top of upstream base branch.**
-
-This workflow ensures patches are ready for upstream submission:
-
-1. **Create Topic Branch**
-   ```bash
-   git -C gcc checkout -b pr<number>-<short-desc>
-   ```
-
-2. **Develop and Test Iteratively**
-   - Make changes to source and test files
-   - Build: `cd gcc-build && make -j32`
-   - Test: `cd gcc-build/gcc && make -j32 -k check-gfortran`
-   - Amend commits as you iterate: `git -C gcc commit --amend`
-
-3. **Keep Single Commit with --amend**
-   ```bash
-   # After each round of changes:
-   git -C gcc add <modified-files>
-   git -C gcc commit --amend --no-edit  # Keeps same message
-   # OR
-   git -C gcc commit --amend  # Edit message
-   ```
-
-4. **Squash Multiple Commits if Needed**
-   ```bash
-   # If you accidentally created multiple commits:
-   git -C gcc reset --soft HEAD~2  # Soft reset last 2 commits
-   git -C gcc commit -s  # Create single commit
-   ```
-
-5. **Verify Commit Message Format**
-   ```bash
-   # Check TAB formatting (should show ^I):
-   git -C gcc log -1 --format=%B | cat -A
-
-   # Verify single commit on top of upstream:
-   git -C gcc log --oneline -5
-   ```
-
-6. **Export Patch**
-   ```bash
-   git -C gcc format-patch -1 HEAD -o ../pr/<number>/
-   ```
-
-7. **Track in Meta-Repo**
-   ```bash
-   git add pr/<number>/<patch-file>
-   git commit -m "pr<number>: description of patch"
-   ```
-
-**Key Principles:**
-- ✅ ONE commit per PR on topic branch
-- ✅ Commit message includes PR reference and ChangeLog
-- ✅ ChangeLog entries ONLY in commit message (NOT in files)
-- ✅ TAB formatting verified with `cat -A`
-- ✅ Signed-off-by line present
-- ✅ Tests passing before patch export
-- ❌ NEVER push to upstream remote
-- ❌ NEVER edit ChangeLog files directly
-
-### GNU Commit Message Template with Sign-off
-
-**Commit Message Format:**
-```
-<component>: <short summary (max 50 chars)>
-
-<detailed description>
-
-<issue/PR references>
-
-Signed-off-by: Name <email@example.com>
-```
-
-**Rules:**
-- Component: e.g., `fortran`, `libgfortran`, `testsuite`
-- Short summary: Present tense, no period at end
-- Detailed description: Explain WHY not just WHAT
-- Blank line between sections
-- Sign-off line is MANDATORY for all GCC contributions
-- Co-authored patches: Add `Co-authored-by:` before `Signed-off-by:`
-
-**ChangeLog Entry Formatting (CRITICAL):**
-- ChangeLog entries start with a single TAB character
-- Continuation lines use a SINGLE TAB, NOT <TAB><SPACE><SPACE>
-- Function names in parentheses followed by colon
-- Indentation: <TAB> for first level, <TAB> for continuation (NOT <TAB><SPACE><SPACE>)
-- **VERIFY WITH**: `git log -1 --format=%B | cat -A` (should show `^I` for TABs, no trailing spaces)
-- GCC filters will REJECT commits with improper ChangeLog formatting
-
-**Example Commit Message:**
-```
-fortran: Implement optional type spec for DO CONCURRENT
-
-This patch adds support for the F2018 optional integer type specification
-in DO CONCURRENT headers, allowing constructs like:
-
-  do concurrent (integer :: i=1:10)
-
-The implementation follows the same approach used for FORALL type specs,
-creating shadow variables when the type spec differs from any outer scope
-variable with the same name.
-
-	PR fortran/96255
-
-gcc/fortran/ChangeLog:
-
-	* match.cc (match_forall_header): Add type-spec parsing.
-	* resolve.cc (gfc_resolve_forall): Handle shadow variables.
-
-Co-authored-by: Steve Kargl <sgk@troutmask.apl.washington.edu>
-Signed-off-by: Christopher Albert <albert@tugraz.at>
-```
-
-**Creating Commits with Proper Authorship:**
-```bash
-# For commits authored by others (e.g., applying Jerry's patch):
-git commit --author="Jerry DeLisle <jvdelisle@charter.net>" -m "commit message"
-
-# For your own commits with sign-off:
-git commit -s -m "commit message"
-
-# The -s flag automatically adds your Signed-off-by line
-```
-
-## Coding Standards for GCC Development
-
-### CRITICAL: C vs C++ Language Choice
-
-**GCC IS TRANSITIONING FROM C++ TO C - FOLLOW THIS POLICY STRICTLY:**
-
-1. **PREFER C (NOT C++) FOR ALL NEW CODE**
-   - GCC codebase is moving away from C++ back to C
-   - Use pure ISO C for new implementations
-   - Avoid C++ STL containers (vector, map, hash_set, etc.)
-   - Avoid C++ features (auto, lambdas, templates, classes, etc.)
-
-2. **ONLY use C++ when:**
-   - Modifying existing heavily C++ code where C would be inconsistent
-   - The surrounding file/module is already predominantly C++
-   - Converting C++ to C would require massive refactoring
-
-3. **For data structures:**
-   - ✅ Use C-style linked lists, arrays, hash tables
-   - ✅ Keep it SIMPLE (KISS principle)
-   - ❌ Do NOT implement complex hash maps in C
-   - ❌ Do NOT use C++ STL containers
-   - Example: Use simple stack-based linked list instead of `hash_set`
-
-4. **When in doubt:**
-   - Check what the surrounding code uses
-   - If file is mixed, prefer C
-   - If converting C++ to C, keep it simple and equivalent
-
-### GNU Style Formatting Rules
-
-**Whitespace and Indentation:**
-- ✅ Lines ≤ 80 characters (hard limit)
-- ✅ Replace 8 consecutive spaces with TAB character
-- ✅ No trailing whitespace
-- ✅ TAB stops every 8 columns
-- ✅ ChangeLog entries: single TAB for indentation (verify with `cat -A` showing `^I`)
-
-**Spacing Conventions:**
-- ✅ Exactly one space between function name and `(`
-- ✅ No space before `[` or before closing `)`
-- ✅ Dot-space-space between sentences in comments
-- ✅ No space before dot
-
-### Code Quality Checks
-
-**Pre-Completion Review Checklist (MANDATORY):**
-
-Run style checker on ALL modified AND new files (including test cases):
-```bash
-# For modified/new source files:
 ./gcc/contrib/check_GNU_style.sh gcc/fortran/<file>
-
-# For new test cases:
-./gcc/contrib/check_GNU_style.sh gcc/testsuite/gfortran.dg/<test-file>
 ```
 
-**CRITICAL: Style checker MUST be run on:**
-- ✅ All modified source files in `gcc/fortran/`
-- ✅ All NEW source files in `gcc/fortran/`
-- ✅ All NEW test files in `gcc/testsuite/gfortran.dg/`
-- ✅ All modified files in `libgfortran/`
-
-**Verify all of these pass:**
-- ✅ No lines exceeding 80 characters
-- ✅ No blocks of 8 spaces (should be TABs)
-- ✅ No trailing whitespace
-- ✅ Proper spacing around operators and punctuation
-- ✅ ChangeLog TAB formatting correct (`git log -1 --format=%B | cat -A` shows `^I`)
-- ✅ Builds without warnings (`make -j32` in gcc-build/)
-- ✅ All tests pass (`make -j32 -k check-gfortran` in gcc-build/gcc/)
-- ✅ No regressions in test suite
-- ✅ New test cases added for bug fixes
-- ✅ Reproducer tested with reference compilers (ifx, nvfortran)
-
-## PR Directory Organization
-
-Each PR directory (`pr/<number>/`) contains:
-- Reproducer programs (`.f90` files)
-- Generated patches (`.patch` files)
-- Documentation (`README.md`, analysis files)
-- Makefile for building reproducers with multiple compilers
-
-**Compiler Testing in PR Makefiles:**
-- Custom gfortran: `../gcc-build/gcc/gfortran -B ../gcc-build/gcc`
-- System gfortran: `/usr/bin/gfortran`
-- LLVM Flang: `/usr/bin/flang-new`
-- Intel ifx: `/opt/intel/oneapi/compiler/2025.2/bin/ifx` (source setvars.sh first)
-- NVIDIA nvfortran: `/opt/nvidia/hpc_sdk/Linux_x86_64/25.9/compilers/bin/nvfortran`
-- LFortran: `lfortran`
-
-**Example Makefile pattern:**
-```makefile
-FC_CUSTOM = ../../gcc-build/gcc/gfortran -B ../../gcc-build/gcc
-FC_SYSTEM = /usr/bin/gfortran
-FC_FLANG  = /usr/bin/flang-new
-FC_IFX    = /opt/intel/oneapi/compiler/2025.2/bin/ifx
-FC_NVHPC  = /opt/nvidia/hpc_sdk/Linux_x86_64/25.9/compilers/bin/nvfortran
-FC_LFORT  = lfortran
-
-FFLAGS = -Wa,--noexecstack -Wl,-z,noexecstack
-
-all: test-custom test-system test-flang test-ifx test-nvhpc test-lfortran
-
-test-custom:
-	$(FC_CUSTOM) $(FFLAGS) reproducer.f90 -o reproducer-custom.x
-
-test-system:
-	$(FC_SYSTEM) $(FFLAGS) reproducer.f90 -o reproducer-system.x
-
-test-flang:
-	$(FC_FLANG) reproducer.f90 -o reproducer-flang.x
-
-test-ifx:
-	bash -c "source /opt/intel/oneapi/setvars.sh && $(FC_IFX) reproducer.f90 -o reproducer-ifx.x"
-
-test-nvhpc:
-	$(FC_NVHPC) reproducer.f90 -o reproducer-nvhpc.x
-
-test-lfortran:
-	@if command -v $(FC_LFORT) >/dev/null 2>&1; then \
-		$(FC_LFORT) reproducer.f90 -o reproducer-lfortran.x; \
-	else \
-		echo "LFortran not found"; \
-	fi
-
-clean:
-	rm -f *.x *.o *.mod *.smod
-```
-
-## Test Suite Execution Details
-
-### Common Mistakes to Avoid
-1. ❌ **WRONG**: Running from `gcc-build/` (no such target exists there)
-2. ❌ **WRONG**: Running from `gcc/` source directory
-3. ❌ **WRONG**: Running from meta-repo root
-4. ✅ **CORRECT**: Running from `gcc-build/gcc/` ONLY
-5. Not redirecting output to log file
-6. Not waiting for completion before reading results
-
-### Proper Execution Flow
-1. Rebuild: `cd /home/ert/code/gcc-dev/gcc-build && make -j32`
-2. Change to test directory: `cd /home/ert/code/gcc-dev/gcc-build/gcc`
-3. Launch tests: `make -j32 -k check-gfortran > /tmp/test.log 2>&1 &`
-4. Monitor: Check `/tmp/test.log` or use BashOutput tool
-5. Wait: Test suite takes ~20-30 minutes to complete
-6. Results: `grep "# of" /home/ert/code/gcc-dev/gcc-build/gcc/testsuite/gfortran/gfortran.sum`
-
-### Quick Test Commands
+**Manual verification (important for TAB/space issues):**
 ```bash
-# Full test suite from correct directory:
-cd /home/ert/code/gcc-dev/gcc-build/gcc && make -j32 -k check-gfortran
+# Show TABs as ^I, line endings as $
+cat -A <file> | head -50
 
-# Single test:
-cd /home/ert/code/gcc-dev/gcc-build/gcc && make check-gfortran RUNTESTFLAGS="finalize_45.f90"
+# Find lines with 8+ consecutive spaces (should be TABs)
+grep -n '        ' <file>
 
-# Specific test group:
-cd /home/ert/code/gcc-dev/gcc-build/gcc && make check-gfortran RUNTESTFLAGS="dg.exp=finalize*.f90"
+# Find trailing whitespace
+grep -n ' $' <file>
+
+# Find lines over 80 chars
+awk 'length > 80 {print NR": "length" chars"}' <file>
 ```
 
-## 🚨 FORTRAN STANDARDS COMPLIANCE - ABSOLUTE REQUIREMENTS 🚨
-
-**MANDATORY POLICY - ZERO TOLERANCE FOR NON-COMPLIANCE:**
-
-### ISO Standard Compliance is NON-NEGOTIABLE
-- **ALL implementations MUST match Fortran 2018 (or later) ISO standard EXACTLY**
-- **NO EXCEPTIONS** for "partial implementations" or "known limitations"
-- **NO "acceptable for now"** - non-compliance is a BUG that MUST be fixed
-- **ALWAYS document standard violations** with specific ISO section references
-- **ALWAYS mark non-compliant behavior** as ❌ NOT ACCEPTABLE in documentation
-- **ALWAYS compare against reference compilers** (Intel ifx, NVIDIA nvfortran) for correct behavior
-
-### Standards Compliance Validation Protocol
-1. **Identify ISO Standard Reference**: Cite exact section (e.g., F2018 7.5.6.3)
-2. **Test Reference Compilers**: Intel ifx, NVIDIA nvfortran (known for compliance)
-3. **Document Expected Behavior**: What ISO standard requires
-4. **Document Actual Behavior**: What GCC currently does
-5. **Mark Compliance Status**:
-   - ✅ **STANDARD-COMPLIANT**: Matches ISO standard exactly
-   - ❌ **NON-COMPLIANT**: Violates ISO standard - MUST BE FIXED
-6. **NO Compromise**: Never accept partial compliance as "good enough"
-
-### Allocatable Component Assignment (Fortran 2018)
-- Component-by-component intrinsic assignment
-- Allocatable LHS components: deallocate first, reallocate to match RHS, then copy
-- Must produce distinct storage (no aliasing with source)
-- Deep copy required for nested allocatable components
-- **Reference**: ISO/IEC 1539-1:2018 Section 7.5.2.3
-
-### Finalization (Fortran 2018)
-- FINAL procedures called when derived type objects go out of scope
-- Function results MUST be finalized after assignment (F2018 7.5.6.3)
-- Self-assignment (`a = a`) requires special handling to avoid use-after-free
-- Parenthesized expressions like `(a)` create INTRINSIC_PARENTHESES operator nodes
-- Finalizer wrappers must not create self-referencing result symbols
-- **Reference**: ISO/IEC 1539-1:2018 Section 7.5.6.3
-
-### Common Expression Tree Patterns in trans-expr.cc
-- **INTRINSIC_PARENTHESES**: Created by `(expr)` - defeats simple variable checks
-- Use helper functions to strip parentheses when checking for self-assignment
-- Check both `gfc_dep_compare_expr` (compile-time) and runtime pointer equality
-- `gfc_expr_is_variable(expr)` returns false for parenthesized variables
-- Always strip parentheses before enabling `deep_copy` flag in assignments
-
-## Debugging and Validation Techniques
-
-### Multi-Compiler Validation Strategy - MANDATORY FOR ALL FIXES
-
-**CRITICAL: ALL bug fixes MUST be validated against ISO standard behavior:**
-
-1. **Identify Reference Implementation (MANDATORY):**
-   - **ALWAYS test with Intel ifx and NVIDIA nvfortran** (best F2018+ compliance)
-   - Test with LLVM Flang and LFortran when available
-   - Document which compilers show ISO-compliant behavior
-   - **Reference compilers are the source of truth**, not GCC current behavior
-
-2. **Create Minimal Reproducer:**
-   - Strip down to smallest test case showing the bug
-   - Test both simple (`a = a`) and parenthesized (`a = (a)`) cases
-   - Use if/stop pattern for clear pass/fail indication
-
-3. **Document ISO Standard Requirements:**
-   - Cite exact ISO standard section (e.g., ISO/IEC 1539-1:2018 Section 7.5.6.3)
-   - Document what standard REQUIRES (not what GCC currently does)
-   - Mark any deviation from standard as ❌ NON-COMPLIANT
-
-4. **Trace Execution Path:**
-   - Add temporary debug output in trans-expr.cc to trace code paths
-   - Check which flags are set (deep_copy, finalize, etc.)
-   - Verify expression tree structure (EXPR_VARIABLE vs EXPR_OP)
-
-5. **Verify Fix Completeness (STRICT):**
-   - Test all related expression patterns
-   - Run full test suite to catch regressions
-   - **MANDATORY**: Compare behavior with reference compilers
-   - **MANDATORY**: Match ISO standard exactly - NO partial compliance
-   - If fix doesn't achieve full compliance, document as ❌ INCOMPLETE
-
-### Commit Message Verification
-Before finalizing commits:
+**ChangeLog TAB verification:**
 ```bash
-# Check ChangeLog formatting (should show ^I for TABs):
+# TABs should show as ^I at start of ChangeLog lines
 git log -1 --format=%B | cat -A
-
-# Verify commit compiles and tests pass:
-cd /home/ert/code/gcc-dev/gcc-build && make -j32
-cd /home/ert/code/gcc-dev/gcc-build/gcc && make -j32 -k check-gfortran
-
-# Run style checker:
-./gcc/contrib/check_GNU_style.sh gcc/fortran/<modified-file>
 ```
 
-## GCC Review Lessons Learned
+### Code Comments
 
-This section captures common pitfalls identified during upstream code review.
-These patterns should be avoided in future patches.
+**Keep comments minimal.** One or two lines maximum. Reference the PR number.
+Do not explain what is obvious from the code or repeat the commit message.
 
-### Code Comments - Keep Them Minimal
-
-**Problem**: Excessive comments explaining what the code does.
-
-**Reviewer feedback** (Harald Anlauf, PR92613):
-> "I find the comments in the source file a little excessive.
-> Can you formulate more concisely?"
-
-**Guidelines:**
-- One or two lines maximum for inline comments
-- Reference the PR number for context: `/* PR92613: ... */`
-- Do NOT explain what is obvious from the code
-- Do NOT repeat information available in the commit message
-- Comments explain WHY, not WHAT
-
-**Bad (too verbose):**
+Bad:
 ```c
   /* PR fortran/92613: For normal compilation of already preprocessed
      Fortran (-fpreprocessed without -E), skip libcpp tokenization
@@ -606,119 +219,116 @@ These patterns should be avoided in future patches.
      libcpp so that generic -fpreprocessed semantics still apply.  */
 ```
 
-**Good (concise):**
+Good:
 ```c
   /* PR92613: Skip libcpp for -fpreprocessed without -E.  */
 ```
 
-### Documentation - Avoid Unnecessary Words
+### Documentation
 
-**Problem**: Using filler words that add no meaning.
+Avoid filler words. "preprocessed" not "fully preprocessed". Every word
+must earn its place.
 
-**Reviewer feedback** (Harald Anlauf, PR92613):
-> "'fully' is not needed (what does it mean?)"
+## Patch Development
 
-**Guidelines:**
-- "preprocessed" not "fully preprocessed"
-- "the file" not "the file in question"
-- Remove qualifiers that do not add precision
-- Every word must earn its place
+### Workflow
 
-### Test Cases - Avoid Useless dg-bogus Directives
+1. Create topic branch: `git -C gcc checkout -b pr<number>-<short-desc>`
+2. Develop iteratively, amending the single commit
+3. Verify: `git -C gcc log -1 --format=%B | cat -A` (TABs show as `^I`)
+4. Export: `git -C gcc format-patch -1 HEAD -o ../pr/<number>/`
+5. Track: `git add pr/<number>/ && git commit -m "pr<number>: description"`
 
-**Problem**: Using `dg-bogus` to test for absence of warnings that should
-never appear in the first place.
+**Principles:**
+- ONE commit per PR
+- ChangeLog in commit message only (never in files)
+- TAB formatting verified
+- Signed-off-by present
+- Tests passing
 
-**Reviewer feedback** (Harald Anlauf, PR92613):
-> "That is really bogus.  Why should one ever get a warning at all?"
-> "How do you intend to have the testcase run?  With -cpp -E, or without -E?
-> And what do you intend to test?"
+### Commit Message Format
 
-**Guidelines:**
-- `dg-bogus` is for testing that a SPECIFIC known-bad pattern does NOT match
-- Do NOT use `dg-bogus` to verify absence of warnings - just let the test
-  compile cleanly; any unexpected warning fails the test automatically
-- Think through what the test actually verifies
-- Consider all relevant option combinations (e.g., with/without `-E`)
-- If a warning should never appear, the test is simply: does it compile?
+```
+fortran: Short summary (max 50 chars)
 
-**Bad:**
-```fortran
-! { dg-do compile }
-! { dg-options "-cpp -fpreprocessed" }
-! Comment with apostrophe { dg-bogus "missing terminating" }
+Detailed description explaining WHY.
+
+	PR fortran/NNNNN
+
+gcc/fortran/ChangeLog:
+
+	* file.cc (function): Change description.
+
+Signed-off-by: Name <email>
 ```
 
-**Good:**
-```fortran
-! { dg-do compile }
-! { dg-options "-cpp -fpreprocessed" }
-! Comment with apostrophe - no warning expected, clean compile suffices
-```
+ChangeLog lines start with TAB. Verify with `cat -A`.
 
-### Option Interactions - Consider All Combinations
-
-**Problem**: Fixing one option combination while leaving others broken or
-poorly defined.
-
-**Reviewer feedback** (Harald Anlauf, PR92613):
-> "How do you intend to have the testcase run?  With -cpp -E, or without -E?"
-> "And I wonder if we should instead give a warning if someone combines
-> -cpp -fpreprocessed as contradicting options."
-
-**Guidelines:**
-- Map out all relevant option combinations before implementing
-- Document behavior for each combination
-- Consider whether unusual combinations should warn
-- Test edge cases, not just the primary use case
-- If an option combination is "not useful", consider whether to support it
-
-### General Review Readiness Checklist
-
-Before submitting patches, verify:
-- [ ] Comments are minimal (1-2 lines max, reference PR number)
-- [ ] No filler words in documentation
-- [ ] Test cases test something meaningful
-- [ ] No `dg-bogus` for warnings that simply should not exist
-- [ ] All relevant option combinations considered
-- [ ] Edge cases documented or tested
-
-## Upstream Submission Policy
-
-### 🚨 CRITICAL: NEVER Submit Patches Without Explicit User Permission
-
-**ABSOLUTE PROHIBITION - ZERO TOLERANCE:**
-- **NEVER send emails to GCC mailing lists** (fortran@gcc.gnu.org, gcc-patches@gcc.gnu.org)
-- **NEVER post patches to GCC Bugzilla** without explicit user instruction
-- **NEVER create pull requests or submissions** to any GCC upstream channels
-- **ALWAYS prepare patches** and get user approval before ANY upstream interaction
-
-**Permitted Actions:**
-- ✅ Prepare patch files with `git format-patch`
-- ✅ Generate commit messages with proper ChangeLog format
-- ✅ Run local tests and validation
-- ✅ Export patches to `pr/<number>/` directory
-- ✅ Document submission readiness
-
-**Requiring Explicit User Permission:**
-- ❌ Posting to mailing lists
-- ❌ Updating Bugzilla
-- ❌ Any external communication about patches
-- ❌ Sending emails on behalf of the user
-
-**Rationale:**
-- User controls timing and content of all upstream submissions
-- User owns the relationship with GCC community
-- User determines when patches are ready for public review
-- User handles any required legal/authorization processes
-
-## Meta-Repository Commits
-
-Track documentation, reproducer updates, and organizational changes in the meta-repo:
+**Authorship:**
 ```bash
-git add pr/ CLAUDE.md <files>
-git commit -m "description"
-git push origin main
+# For commits authored by others:
+git commit --author="Name <email>" -m "message"
+
+# For your own commits with sign-off:
+git commit -s -m "message"
 ```
 
-Keep meta-repo commits separate from GCC upstream patches.
+### Pre-Submission Checklist
+
+**Style and formatting:**
+- [ ] `./gcc/contrib/check_GNU_style.sh` passes on all modified/new files
+- [ ] Lines ≤ 80 characters
+- [ ] TABs not spaces (8-column stops)
+- [ ] No trailing whitespace
+- [ ] ChangeLog TAB formatting verified (`git log -1 --format=%B | cat -A`)
+
+**Code quality:**
+- [ ] Comments minimal (1-2 lines, PR number reference)
+- [ ] No filler words in documentation
+- [ ] Builds without warnings (`make -j$(nproc)`)
+- [ ] All tests pass (`make -j$(nproc) -k check-gfortran`)
+- [ ] No regressions in test suite
+- [ ] New test case added for bug fix
+
+**Design considerations:**
+- [ ] All relevant option combinations mapped out
+- [ ] Edge cases considered and tested
+- [ ] Unusual option combinations: warn, error, or support silently?
+- [ ] Test case verifies something meaningful (no useless `dg-bogus`)
+- [ ] Reproducer tested with reference compilers (ifx, nvfortran)
+
+## Fortran Standards Compliance
+
+All implementations must match ISO/IEC 1539-1:2018 exactly. No partial
+compliance. Reference compilers (ifx, nvfortran) define correct behavior.
+
+Key areas:
+- Allocatable assignment: deallocate, reallocate, deep copy (7.5.2.3)
+- Finalization: function results finalized after assignment (7.5.6.3)
+- Self-assignment: special handling to avoid use-after-free
+
+## PR Directory Organization
+
+Each `pr/<number>/` contains:
+- Reproducer programs (`.f90`)
+- Patches (`.patch`)
+- Makefile for multi-compiler testing
+
+## Upstream Submission
+
+**NEVER submit without explicit user permission.**
+
+**Permitted (no approval needed):**
+- Prepare patch files with `git format-patch`
+- Generate commit messages with proper ChangeLog format
+- Run local tests and validation
+- Export patches to `pr/<number>/` directory
+- Document submission readiness
+
+**Requires explicit user permission:**
+- Posting to mailing lists (fortran@gcc.gnu.org, gcc-patches@gcc.gnu.org)
+- Updating Bugzilla
+- Any external communication about patches
+- Sending emails on behalf of the user
+
+User controls timing and content of all upstream submissions.
