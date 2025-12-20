@@ -297,6 +297,136 @@ git commit -s -m "message"
 - [ ] Test case verifies something meaningful (no useless `dg-bogus`)
 - [ ] Reproducer tested with reference compilers (ifx, nvfortran)
 
+## Fix Development Methodology
+
+These rules prevent over-engineering and ensure minimal, correct fixes.
+
+### 1. Start with the failing condition
+
+Before writing any code, identify the EXACT condition that fails and what it
+should be. Write it down:
+
+```
+CURRENT:  if (!derived->components)     -- catches empty types
+FAILING:  type with empty components    -- has components, but zero size
+CORRECT:  if (TYPE_SIZE_UNIT == 0)      -- catches ALL zero-size types
+```
+
+If you cannot write this down clearly, you do not understand the bug yet.
+
+### 2. Minimal fix first, infrastructure later
+
+**WRONG order:** Design infrastructure → implement → hope it fixes the bug
+**RIGHT order:** Find minimal condition fix → verify it works → consider if
+infrastructure is even needed
+
+Most bugs are single-condition fixes. Multi-file infrastructure patches are
+rarely necessary and often indicate the bug is not yet understood.
+
+| Symptom | Likely reality |
+|---------|----------------|
+| Fix touches 3+ files | Probably over-engineered |
+| Fix adds new parameters | Probably should refine existing condition |
+| Fix adds new struct fields | Probably checking at wrong level |
+| Fix requires "threading" changes through call sites | Probably wrong approach |
+
+### 3. Check at the right level
+
+| Level | Examples | Use when |
+|-------|----------|----------|
+| Fortran symbol | `derived->components`, `attr.allocatable` | Source-level semantics |
+| Fortran f2k | `f2k_derived->tb_op[...]` | Type-bound procedures |
+| Tree | `TYPE_SIZE_UNIT`, `TREE_TYPE` | Compiled representation |
+| Gimple | gimplifier behavior | Low-level codegen issues |
+
+**Rule:** If the bug manifests at level N, the fix usually needs level N info.
+
+Gimplifier ICE? Check tree-level properties, not Fortran symbols.
+Type-bound procedure issue? Check f2k_derived, not just symbol attributes.
+
+### 4. Understand existing checks before adding new ones
+
+Read the existing code and comments. Ask:
+- What case was this check trying to handle?
+- Why doesn't it catch my case?
+- Can I extend it rather than add a parallel check?
+
+**WRONG:**
+```c
+// Existing check
+if (!derived->components) handle_zero_size();
+// My new check (parallel, redundant)
+if (TYPE_SIZE_UNIT == 0) handle_zero_size();
+```
+
+**RIGHT:**
+```c
+// Replace with more general check
+if (TYPE_SIZE_UNIT == 0) handle_zero_size();
+```
+
+### 5. Refine conditions, don't add bypass parameters
+
+When a condition is too broad, make it more precise. Don't add parameters
+to bypass it.
+
+**WRONG:**
+```c
+// Added parameter to bypass check
+void func(..., bool bypass_check) {
+  if (!bypass_check && some_condition)
+    return;
+}
+```
+
+**RIGHT:**
+```c
+// Refined the condition itself
+void func(...) {
+  if (more_precise_condition)
+    return;
+}
+```
+
+Parameters create API surface, require call-site changes, and hide the
+real problem. Refined conditions fix the logic where it belongs.
+
+### 6. Preserve existing comments when logic is unchanged
+
+If you're changing HOW something is detected but not WHAT is done about it,
+keep the original comment. It explains the reasoning that still applies.
+
+```c
+// KEEP this comment - still explains WHY we create a dummy var
+/* Any attempt to assign zero length entities, causes the gimplifier
+   all manner of problems. Instead, a variable is created to act as
+   as the argument for the final call.  */
+desc = gfc_create_var (type, "zero");
+```
+
+Only the detection changed (components → size), not the handling.
+
+### 7. One logical change per patch
+
+A patch should do ONE thing:
+- Fix the ICE, OR
+- Improve finalization semantics, OR
+- Add infrastructure for future work
+
+NOT all three. If you find yourself writing a patch that "fixes X and also
+improves Y and adds infrastructure for Z", split it up or reconsider whether
+Y and Z are actually needed.
+
+### 8. Verify the fix matches the bug
+
+After implementing, verify:
+1. The original reproducer now works
+2. The fix triggers for exactly the right cases (add debug print if needed)
+3. No unrelated tests regress
+
+If the fix is correct but seems to require touching many files, you likely
+misidentified the root cause.
+
 ## Fortran Standards Compliance
 
 All implementations must match ISO/IEC 1539-1:2018 exactly. No partial
