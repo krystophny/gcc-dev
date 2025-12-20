@@ -28,3 +28,10 @@ __pycache__/
 # Temporary files
 *.tmp
 *~
+
+# GCC/gfortran dump artifacts (never track)
+*.original
+*.earlydebug
+*.debug
+*.statistics
+*.profile_estimate

@@ -1,0 +1,233 @@
+From d274067034164379c9c99327b1b96f1d2be24894 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Sat, 20 Dec 2025 14:01:18 +0100
+Subject: [PATCH] fortran: Finalize function result in defined assignment
+ [PR121475]
+
+F2003 4.5.5.2 requires that function results be finalized after
+execution of the innermost executable construct.  When the function
+result is passed to a user-defined assignment, the finalization was
+being skipped because of an early return in gfc_finalize_tree_expr
+for types with defined_assign_comp.
+
+This patch marks BT_DERIVED function results with defined_assign_comp
+for finalization in gfc_extend_assign, then handles the finalization
+in gfc_conv_procedure_call with a new parameter to bypass the
+defined_assign_comp check in gfc_finalize_tree_expr.
+
+	PR fortran/121475
+
+gcc/fortran/ChangeLog:
+
+	* interface.cc (gfc_extend_assign): Mark RHS function results
+	with defined_assign_comp for deferred finalization.
+	* trans-expr.cc (gfc_conv_procedure_call): Finalize BT_DERIVED
+	function results with defined_assign_comp per F2003 4.5.5.2.
+	* trans.cc (gfc_finalize_tree_expr): Add finalize_func_result
+	parameter to bypass defined_assign_comp check.
+	* trans.h (gfc_finalize_tree_expr): Update declaration.
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/finalize_61.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/interface.cc                  | 20 +++++++
+ gcc/fortran/trans-expr.cc                 | 16 +++++
+ gcc/fortran/trans.cc                      |  8 +--
+ gcc/fortran/trans.h                       |  3 +-
+ gcc/testsuite/gfortran.dg/finalize_61.f90 | 73 +++++++++++++++++++++++
+ 5 files changed, 115 insertions(+), 5 deletions(-)
+ create mode 100644 gcc/testsuite/gfortran.dg/finalize_61.f90
+
+diff --git a/gcc/fortran/interface.cc b/gcc/fortran/interface.cc
+index ef5a17d0af4..ee817f346b1 100644
+--- a/gcc/fortran/interface.cc
++++ b/gcc/fortran/interface.cc
+@@ -5145,6 +5145,16 @@ gfc_extend_assign (gfc_code *c, gfc_namespace *ns)
+       c->expr1->where = c->loc;
+       c->expr2 = NULL;
+       c->op = EXEC_COMPCALL;
++
++      /* PR121475: Mark function result for finalization.  */
++      if (rhs->expr_type == EXPR_FUNCTION
++	  && rhs->ts.type == BT_DERIVED
++	  && rhs->ts.u.derived
++	  && rhs->ts.u.derived->attr.defined_assign_comp
++	  && gfc_is_finalizable (rhs->ts.u.derived, NULL)
++	  && !gfc_expr_attr (rhs).pointer)
++	rhs->must_finalize = 1;
++
+       return true;
+     }
+ 
+@@ -5164,6 +5174,16 @@ gfc_extend_assign (gfc_code *c, gfc_namespace *ns)
+       c->expr1 = NULL;
+       c->expr2 = NULL;
+       c->ext.actual = actual;
++
++      /* PR121475: Mark function result for finalization.  */
++      if (rhs->expr_type == EXPR_FUNCTION
++	  && rhs->ts.type == BT_DERIVED
++	  && rhs->ts.u.derived
++	  && rhs->ts.u.derived->attr.defined_assign_comp
++	  && gfc_is_finalizable (rhs->ts.u.derived, NULL)
++	  && !gfc_expr_attr (rhs).pointer)
++	rhs->must_finalize = 1;
++
+       return true;
+     }
+ 
+diff --git a/gcc/fortran/trans-expr.cc b/gcc/fortran/trans-expr.cc
+index ac85b762c7f..84e9a397a1b 100644
+--- a/gcc/fortran/trans-expr.cc
++++ b/gcc/fortran/trans-expr.cc
+@@ -8977,6 +8977,22 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
+ 		&& attr.pointer))
+ 	    gfc_finalize_tree_expr (se, NULL, attr, expr->rank);
+ 	}
++      /* PR121475: Finalize function results with defined_assign_comp.  */
++      else if (expr && expr->expr_type == EXPR_FUNCTION
++	       && expr->ts.type == BT_DERIVED
++	       && expr->must_finalize
++	       && expr->ts.u.derived
++	       && expr->ts.u.derived->attr.defined_assign_comp
++	       && gfc_is_finalizable (expr->ts.u.derived, NULL))
++	{
++	  se->expr = gfc_evaluate_now (se->expr, &se->pre);
++	  attr = expr->value.function.esym
++		 ? expr->value.function.esym->result->attr
++		 : expr->symtree->n.sym->attr;
++	  if (!attr.pointer)
++	    gfc_finalize_tree_expr (se, expr->ts.u.derived, attr, expr->rank,
++				    true);
++	}
+       gfc_add_block_to_block (&se->post, &post);
+     }
+ 
+diff --git a/gcc/fortran/trans.cc b/gcc/fortran/trans.cc
+index 47396c3cbab..38799274172 100644
+--- a/gcc/fortran/trans.cc
++++ b/gcc/fortran/trans.cc
+@@ -1607,7 +1607,8 @@ gfc_assignment_finalizer_call (gfc_se *lse, gfc_expr *expr1, bool init_flag)
+ 
+ void
+ gfc_finalize_tree_expr (gfc_se *se, gfc_symbol *derived,
+-			symbol_attribute attr, int rank)
++			symbol_attribute attr, int rank,
++			bool finalize_func_result)
+ {
+   tree vptr, final_fndecl, desc, tmp, size, is_final;
+   tree data_ptr, data_null, cond;
+@@ -1618,12 +1619,11 @@ gfc_finalize_tree_expr (gfc_se *se, gfc_symbol *derived,
+   if (attr.pointer)
+     return;
+ 
+-  /* Derived type function results with components that have defined
+-     assignements are handled in resolve.cc(generate_component_assignments)  */
++  /* PR121475: Skip C interop; for defined_assign_comp, skip unless forced.  */
+   if (derived && (derived->attr.is_c_interop
+ 		  || derived->attr.is_iso_c
+ 		  || derived->attr.is_bind_c
+-		  || derived->attr.defined_assign_comp))
++		  || (!finalize_func_result && derived->attr.defined_assign_comp)))
+     return;
+ 
+   if (is_class)
+diff --git a/gcc/fortran/trans.h b/gcc/fortran/trans.h
+index 52cebf51d79..0174b40f364 100644
+--- a/gcc/fortran/trans.h
++++ b/gcc/fortran/trans.h
+@@ -457,7 +457,8 @@ tree gfc_get_vptr_from_expr (tree);
+ tree gfc_copy_class_to_class (tree, tree, tree, bool);
+ bool gfc_add_finalizer_call (stmtblock_t *, gfc_expr *, tree = NULL_TREE);
+ bool gfc_add_comp_finalizer_call (stmtblock_t *, tree, gfc_component *, bool);
+-void gfc_finalize_tree_expr (gfc_se *, gfc_symbol *, symbol_attribute, int);
++void gfc_finalize_tree_expr (gfc_se *, gfc_symbol *, symbol_attribute, int,
++			     bool = false);
+ bool gfc_assignment_finalizer_call (gfc_se *, gfc_expr *, bool);
+ 
+ void gfc_class_array_data_assign (stmtblock_t *, tree, tree, bool);
+diff --git a/gcc/testsuite/gfortran.dg/finalize_61.f90 b/gcc/testsuite/gfortran.dg/finalize_61.f90
+new file mode 100644
+index 00000000000..ae9fcb8d0f9
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/finalize_61.f90
+@@ -0,0 +1,73 @@
++! { dg-do run }
++!
++! PR fortran/121475 - Function result not finalized when passed to
++! user-defined assignment.
++!
++! F2003 4.5.5.2 requires that function results be finalized after
++! execution of the innermost executable construct.  When the function
++! result is passed to a user-defined assignment, the finalization was
++! being skipped because of early return for types with defined_assign_comp.
++
++module m
++  implicit none
++  integer :: final_count = 0
++
++  type :: base
++  contains
++    procedure :: assign
++    generic :: assignment(=) => assign
++  end type
++
++  type, extends(base) :: derived
++    integer :: val
++  contains
++    final :: finalize
++  end type
++
++  interface derived
++    module procedure constructor
++  end interface
++
++contains
++
++  subroutine finalize(self)
++    type(derived), intent(inout) :: self
++    final_count = final_count + 1
++  end subroutine
++
++  function constructor() result(self)
++    type(derived) :: self
++    self%val = 0
++  end function
++
++  subroutine assign(to, from)
++    class(base), intent(out) :: to
++    class(base), intent(in) :: from
++    select type (to)
++    type is (derived)
++      select type (from)
++      type is (derived)
++        to%val = from%val
++      end select
++    end select
++  end subroutine
++
++end module
++
++program test
++  use m
++  implicit none
++
++  block
++    type(derived) :: obj
++
++    final_count = 0
++    obj = derived()
++
++    ! Function result and intermediate temporaries finalized
++    if (final_count /= 2) stop 1
++  end block
++
++  ! obj goes out of scope, finalized again
++  if (final_count /= 3) stop 2
++end program
+-- 
+2.52.0
+

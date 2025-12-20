@@ -26,7 +26,6 @@ gcc-dev/                    # META-REPO (tracked on GitHub, main branch)
     │   ├── *.patch         # Exported patches
     │   └── README.md       # Analysis notes
     ├── 121472/
-    └── ...
 ```
 
 **Key concepts:**
@@ -35,7 +34,8 @@ gcc-dev/                    # META-REPO (tracked on GitHub, main branch)
   patches, but NEVER push to gcc.gnu.org (use `git send-email` instead).
 - **Build dir** (`gcc-build/`): Out-of-tree build. Not version controlled.
 - **PR dirs** (`pr/<number>/`): Each bug gets its own directory with reproducer,
-  patches, and analysis.
+  patches, and analysis. Each `pr/<number>/` typically contains a reproducer,
+  exported patch files, and (optionally) a Makefile for multi-compiler testing.
 
 **Git conventions:**
 ```bash
@@ -53,6 +53,49 @@ git push origin main
 - `origin` = GitHub fork (safe to push for both repos)
 - `upstream` = gcc.gnu.org (NEVER push, export patches instead)
 - NEVER edit ChangeLog files; content comes from commit messages
+
+## Scope and Expertise
+
+This repository focuses on a small, well-exercised subset of gfortran. Treat
+work outside this scope as an explicit learning task (more archaeology, more
+review), not as a quick patch.
+
+### Strongest Areas (patches + regressions exist)
+
+- Finalization lowering and ICEs: `trans.cc:gfc_finalize_tree_expr`,
+  assignment/finalization interactions in `trans-expr.cc` and `interface.cc`.
+  Evidence: PR90519, PR121472, PR121475.
+- Recursive allocatable components: deep copy, recursion, and self-assignment
+  hazards in `trans-array.cc` and related helpers. Evidence: PR90519, PR121628.
+- Array constructors with explicit type-spec and folding: type conversion and
+  character length propagation across parentheses, nesting, and CONCAT in
+  `array.cc`, `arith.cc`, and `resolve.cc`. Evidence: PR107721.
+- Preprocessing modes: interactions between `-cpp`, `-E`, and `-fpreprocessed`
+  in `cpp.cc`, `scanner.cc`, and `f95-lang.cc`. Evidence: PR92613.
+- Parsing/diagnostics and constrained semantics: targeted `match.cc`,
+  `resolve.cc`, and `parse.cc` fixes with focused regressions. Evidence:
+  PR32365, PR96255.
+
+### Familiar but Not Yet Deep
+
+- Polymorphism/CLASS lowering beyond the paths exercised by the PRs above.
+- Interface/overload resolution beyond defined assignment interactions.
+- Runtime/library behavior (`libgfortran`) except when needed to validate
+  frontend semantics.
+
+### Out of Scope by Default
+
+- GCC middle-end/back-end work (GIMPLE/RTL optimizations, codegen), except when
+  the frontend must satisfy a concrete tree-level contract.
+- Broad refactors or new infrastructure without a minimal reproducer and a
+  regression test.
+
+### Extending Scope Safely
+
+- Start with a minimal reproducer in `pr/<number>/reproducer.f90`.
+- Identify the failing contract at the right level (symbol/f2k/tree/gimple)
+  and apply the smallest condition fix that matches it.
+- Add a DejaGnu regression that fails before and passes after.
 
 ## Build and Test
 
@@ -73,7 +116,7 @@ rm -rf gcc-build && mkdir gcc-build && cd gcc-build
 **CRITICAL: Run from `gcc-build/gcc/` only.**
 
 ```bash
-cd /home/ert/code/gcc-dev/gcc-build/gcc
+cd gcc-build/gcc
 make -j$(nproc) -k check-gfortran > /tmp/test.log 2>&1 &
 ```
 
@@ -114,13 +157,17 @@ Always validate against multiple compilers:
 
 | Compiler | Command |
 |----------|---------|
-| System gfortran | `/usr/bin/gfortran` |
-| LLVM Flang | `/usr/bin/flang-new` |
+| System gfortran | `gfortran` |
+| LLVM Flang | `flang-new` |
 | Intel ifx | `source /opt/intel/oneapi/setvars.sh && ifx` |
-| NVIDIA nvfortran | `/opt/nvidia/hpc_sdk/Linux_x86_64/25.9/compilers/bin/nvfortran` |
+| NVIDIA nvfortran | `nvfortran` (often under `/opt/nvidia/` on Linux) |
 | LFortran | `lfortran` |
 
-Intel ifx and NVIDIA nvfortran are best for F2018 compliance validation.
+Intel ifx and NVIDIA nvfortran are best for standards compliance validation.
+
+Note: on many Linux systems, vendor compilers are installed under `/opt/`
+(commonly `/opt/intel/` and `/opt/nvidia/`). Prefer using the compiler on
+`PATH`, but look under `/opt/` when setting up your environment.
 
 ## Writing Test Cases
 
@@ -133,21 +180,24 @@ if (.not. allocated(a%next)) stop 2
 
 ### DejaGnu Directives
 
-**Do NOT use `dg-bogus` for warnings that should never appear.**
-If code should compile cleanly, just use `dg-do compile`. Any unexpected
-warning fails the test automatically.
+If a test must compile without warnings under specific options (e.g. `-Wall`),
+make warnings actionable:
+- Prefer `-Werror` when it is appropriate for the test.
+- Use `dg-bogus` only when you must keep warnings non-fatal but still want to
+  assert that a specific diagnostic does not appear.
 
-Bad:
+Patterns:
 ```fortran
-! { dg-options "-Wall" }
-! some code { dg-bogus "some warning" }
+! { dg-do compile }
+! { dg-options "-Wall -Werror" }
+! Code must compile without warnings
 ```
 
-Good:
 ```fortran
 ! { dg-do compile }
 ! { dg-options "-Wall" }
-! Code compiles cleanly - no dg-bogus needed
+! { dg-bogus "Unused variable '_i' declared" }
+! Use dg-bogus when you need to assert absence without -Werror
 ```
 
 **Think through what the test verifies.** Consider all option combinations
@@ -205,8 +255,9 @@ git log -1 --format=%B | cat -A
 
 ### Code Comments
 
-**Keep comments minimal.** One or two lines maximum. Reference the PR number.
-Do not explain what is obvious from the code or repeat the commit message.
+**Keep comments minimal.** One or two lines maximum. Do not explain what is
+obvious from the code or repeat the commit message. Keep PR numbers out of
+inline source code comments; put PR numbers in commit messages and tests.
 
 Bad:
 ```c
@@ -221,7 +272,7 @@ Bad:
 
 Good:
 ```c
-  /* PR92613: Skip libcpp for -fpreprocessed without -E.  */
+  /* Skip libcpp for -fpreprocessed without -E.  */
 ```
 
 ### Documentation
@@ -335,7 +386,7 @@ rarely necessary and often indicate the bug is not yet understood.
 | Level | Examples | Use when |
 |-------|----------|----------|
 | Fortran symbol | `derived->components`, `attr.allocatable` | Source-level semantics |
-| Fortran f2k | `f2k_derived->tb_op[...]` | Type-bound procedures |
+| Fortran f2k | `f2k_derived->tb_op` | Type-bound procedures |
 | Tree | `TYPE_SIZE_UNIT`, `TREE_TYPE` | Compiled representation |
 | Gimple | gimplifier behavior | Low-level codegen issues |
 
@@ -373,7 +424,7 @@ to bypass it.
 **WRONG:**
 ```c
 // Added parameter to bypass check
-void func(..., bool bypass_check) {
+void func (tree expr, bool bypass_check) {
   if (!bypass_check && some_condition)
     return;
 }
@@ -382,7 +433,7 @@ void func(..., bool bypass_check) {
 **RIGHT:**
 ```c
 // Refined the condition itself
-void func(...) {
+void func (tree expr) {
   if (more_precise_condition)
     return;
 }
@@ -455,7 +506,8 @@ is metadata tracked elsewhere.
 
 **Current standard:** ISO/IEC 1539-1:2023 (Fortran 2023)
 
-**Standard text files:** `/home/ert/code/standard/validation/pdfs/`
+**Standard text files:** set `STANDARD_DIR` to your local checkout of the
+standard text files (one-time per shell).
 
 | Standard | Text file |
 |----------|-----------|
@@ -468,7 +520,8 @@ is metadata tracked elsewhere.
 
 Use `grep` to search for specific clauses:
 ```bash
-grep -n "7.5.6.3" /home/ert/code/standard/validation/pdfs/Fortran2023_J3_22-007.txt
+export STANDARD_DIR="$HOME/code/standard/validation/pdfs"
+grep -n "7.5.6.3" "$STANDARD_DIR/Fortran2023_J3_22-007.txt"
 ```
 
 All implementations must match ISO/IEC 1539-1:2023 exactly. No partial
@@ -502,161 +555,125 @@ source and target overlap.
 This section documents patterns learned from working on PRs 32365, 90519,
 92613, 96255, 107721, 121472, 121475, and 121628.
 
-### Source File Map
+### Key Files
 
-| File | Responsibility | Common fixes |
-|------|----------------|--------------|
-| `trans.cc` | Tree expression translation, finalization | Finalization conditions, zero-size handling |
-| `trans-expr.cc` | Expression translation, assignments | Assignment semantics, procedure calls |
-| `trans-array.cc` | Array operations, deep copy | Allocatable component handling, temp arrays |
-| `resolve.cc` | Semantic resolution | Type checking, constraint enforcement |
-| `match.cc` | Parsing, syntax matching | New syntax features, statement recognition |
-| `parse.cc` | Statement parsing, ordering | Statement sequence validation |
-| `interface.cc` | Procedure interfaces | Defined assignment, operator resolution |
-| `class.cc` | CLASS/polymorphic handling | Vtable, finalization wrappers |
-| `scanner.cc` | Source file reading | Preprocessing, include handling |
-| `cpp.cc` | C preprocessor interface | Preprocessing modes |
-| `gfortran.h` | Data structures | New flags, struct fields |
+- `trans.cc`: tree expression translation; finalization lowering.
+- `trans-expr.cc`: expression translation; assignments and procedure calls.
+- `trans-array.cc`: array operations; deep copy and allocatable components.
+- `arith.cc`: constant folding; intrinsic evaluation.
+- `array.cc`: array constructors; type-spec propagation and conversion.
+- `resolve.cc`: semantic resolution; constraint enforcement.
+- `match.cc`: syntax matching; statement recognition.
+- `parse.cc`: statement parsing; ordering diagnostics.
+- `interface.cc`: procedure interfaces; defined assignment and operators.
+- `class.cc`: CLASS/polymorphic handling; vtables and wrappers.
+- `scanner.cc`: source file reading; preprocessing integration.
+- `cpp.cc`: C preprocessor interface; preprocessing modes.
+- `gfortran.h`: frontend data structures.
 
-### Bug Categories and Where to Fix
+### Where To Look First
 
-#### 1. ICE in Gimplifier
+| Symptom | First files to inspect | Key entry points / checks | Notes |
+|---------|------------------------|---------------------------|-------|
+| ICE in gimplifier | `trans.cc`, `trans-expr.cc`, `trans-array.cc` | Tree generation assumptions; shape/size properties | If gimplifier fails, the frontend built an invalid tree. |
+| Missing/double finalization | `trans.cc`, `trans-expr.cc`, `class.cc`, `interface.cc` | `gfc_finalize_tree_expr` early returns; defined assignment interactions | Use tree-level checks for tree-level problems. |
+| Deep copy / allocatable comps | `trans-array.cc`, `trans-expr.cc` | `structure_alloc_comps`, `duplicate_allocatable`, `gfc_copy_alloc_comp` | Self-assignment needs overlap protection. |
+| Folding / array constructors | `arith.cc`, `array.cc`, `resolve.cc` | `eval_intrinsic`, `check_constructor_type`, `gfc_check_constructor_type`, `gfc_resolve_character_array_constructor` | Simplify wrapper nodes (e.g. parentheses) before conversion; preserve character length metadata. |
+| Parse / new syntax | `match.cc`, `resolve.cc`, `gfortran.h` | `gfc_match_*` paths; new fields and semantic checks | New syntax usually touches parsing + data + resolution. |
+| Diagnostics | `parse.cc`, `resolve.cc`, `error.cc` | Statement ordering and constraint checks | Prefer targeted cases over new infrastructure. |
+| Preprocessing | `cpp.cc`, `scanner.cc`, `f95-lang.cc` | `gfc_cpp_enabled`, `gfc_option.flag_preprocessed`, `gfc_cpp_preprocess_only` | Option combinations matter (`-E`, `-cpp`, `-fpreprocessed`). |
 
-**Symptoms:** `internal compiler error: in gimplify_expr` or similar
+### Typical Change Points (by domain)
 
-**Cause:** Invalid tree generated by Fortran frontend
+These are the places we most often change code successfully, based on the PRs
+tracked in `pr/`.
 
-**Where to look:**
-- `trans.cc` - Check conditions before generating trees
-- `trans-expr.cc` - Check expression translation
-- `trans-array.cc` - Check array/allocatable handling
+#### Finalization and derived-type lowering
 
-**Example (PR121472):** Zero-size derived type caused gimplifier failure.
-Fix was in `trans.cc:gfc_finalize_tree_expr` - check `TYPE_SIZE_UNIT`
-instead of `derived->components`.
+- Change points:
+  - Refine early-return conditions in `gfc_finalize_tree_expr` (skip only when
+    semantics require skipping).
+  - Use tree-level properties when the failure is tree-level (e.g. size/shape
+    checks) rather than Fortran-symbol heuristics.
+  - Keep handling logic stable when only detection changes.
+- Avoid:
+  - Adding bypass parameters to thread through call sites.
+  - Adding broad new metadata tracking when the failing condition is a single
+    missing check.
 
-**Pattern:** If gimplifier fails, the bug is in tree generation, not
-gimplifier. Check what tree properties the frontend assumes vs. provides.
+#### Recursive allocatable components and deep copy
 
-#### 2. Finalization Issues
+- Change points:
+  - Ensure deep copy recurses through nested allocatable components in
+    `structure_alloc_comps`.
+  - Handle self-assignment/overlap before deallocation or deep copy.
+  - Prefer non-trampoline helper generation over nested functions.
+- Avoid:
+  - Creating executable-stack requirements (nested wrappers/trampolines).
+  - Relying on superficial pointer comparisons without stripping syntactic
+    wrappers.
 
-**Symptoms:** Missing destructor calls, double finalization, memory leaks
+#### Array constructors, type-spec, and folding
 
-**Key function:** `gfc_finalize_tree_expr` in `trans.cc`
+- Change points:
+  - Simplify wrapper nodes (parentheses, expression operators) before
+    conversion/type checking in constructor validation paths.
+  - Ensure type-spec conversion runs before folding/operations like CONCAT.
+  - Preserve character length information when building result expressions.
+  - For nested constructors with their own type-spec, resolve inner semantics
+    first, then propagate outer semantics and resolve again.
+- Avoid:
+  - Converting the wrapper node while leaving the wrapped expression untouched.
+  - Doing folding that drops type-spec-derived length information.
 
-**Early return conditions (lines ~1620-1630):**
-```c
-if (attr.pointer) return;
-if (derived->attr.is_c_interop || ... || derived->attr.defined_assign_comp)
-  return;
-```
+#### Preprocessing modes (`-cpp`, `-E`, `-fpreprocessed`)
 
-**Common mistakes:**
-- Early return too broad (PR121475: `defined_assign_comp` blocked valid cases)
-- Early return too narrow (PR121472: `!derived->components` missed some cases)
+- Change points:
+  - Make option combinations explicit (preprocess-only vs normal compilation).
+  - Skip libcpp when the input is already preprocessed and the driver is not
+    in preprocess-only mode.
+- Avoid:
+  - Treating `-fpreprocessed` as a request to run the preprocessor anyway.
+  - Adding warning-suppression tests; prefer fixing the behavior so warnings do
+    not occur.
 
-**Fix pattern:** Refine conditions to match exactly when finalization should
-be skipped. Use tree-level checks for tree-level issues.
+#### Parsing, resolution, and diagnostics
 
-#### 3. Deep Copy / Allocatable Components
+- Change points:
+  - Implement syntax in `match.cc` with tight backtracking.
+  - Enforce constraints and typing in `resolve.cc` with a regression that
+    exercises the semantic rule.
+  - Improve diagnostics in `parse.cc` with a targeted case; keep it narrow.
+- Avoid:
+  - New global state or new infrastructure when a single case in an existing
+    switch can enforce the rule.
+  - Vague tests that only check that something compiles.
 
-**Key files:**
-- `trans-array.cc:structure_alloc_comps` - Recursive component traversal
-- `trans-array.cc:duplicate_allocatable` - Allocation + memcpy
-- `trans-array.cc:gfc_copy_alloc_comp` - Public API
+### What Not To Do (hard-won defaults)
 
-**Trampoline issue (PR121628):** Nested function wrappers required executable
-stack. Fix: Use top-level function generation instead of `push_function_context`.
+- Do not add new infrastructure until the failing condition is written down
+  precisely and a minimal reproducer exists.
+- Do not add bypass parameters; refine the condition where the logic belongs.
+- Do not duplicate checks; replace the old one with a strictly more general
+  check when appropriate.
+- Do not rely on line numbers or local paths in documentation and commands.
+- Do not use `dg-bogus` to paper over warnings that should not exist; prefer
+  making warnings actionable (often with `-Werror`) when that matches the test.
 
-**Self-assignment:** Must check `lhs == rhs` at runtime before deep copy to
-avoid use-after-free. Strip `INTRINSIC_PARENTHESES` before comparing.
+Examples (for quick recall):
+- PR107721: fixed folding for array constructors with explicit type-spec (parentheses, nesting, CONCAT); resolved nested type-specs before propagation.
+- PR121472: zero-size derived type ICE fixed by checking size properties, not component presence.
+- PR121475: refined overly broad finalization early-return condition for defined assignment.
+- PR121628: avoided nested function trampolines by generating top-level helpers.
+- PR96255: DO CONCURRENT type-spec required coordinated `match.cc` + `resolve.cc` + `gfortran.h` updates.
+- PR32365: improved statement-ordering diagnostic in `parse.cc`.
+- PR92613: preprocessing mode interaction fixed by skipping libcpp for already-preprocessed input.
 
-#### 4. Parsing / New Syntax Features
-
-**Key file:** `match.cc`
-
-**Example (PR96255):** DO CONCURRENT type-spec required:
-1. Match optional `integer ::` prefix in `match_forall_header`
-2. Create shadow variables when type differs from outer scope
-3. Update `gfortran.h` with new struct fields
-
-**Pattern:** New syntax = `match.cc` changes + `gfortran.h` data structures
-+ `resolve.cc` semantic checks.
-
-#### 5. Diagnostics / Error Messages
-
-**Key file:** `parse.cc` for statement ordering errors
-
-**Example (PR32365):** Improved "specification statement in executable
-section" message. Fix was in `parse_executable` - catch specification
-statements after executable statements and give clear error.
-
-**Pattern:** Better diagnostics rarely need new infrastructure. Usually
-it's adding a specific case to an existing switch statement.
-
-#### 6. Preprocessing Issues
-
-**Key files:** `cpp.cc`, `scanner.cc`, `f95-lang.cc`
-
-**Example (PR92613):** `-fpreprocessed` with `-cpp` caused bogus warnings.
-Fix: Skip libcpp entirely for `-fpreprocessed` mode.
-
-**Coordination points:**
-- `gfc_cpp_enabled()` - Is preprocessor active?
-- `gfc_option.flag_preprocessed` - Is input already preprocessed?
-- `gfc_cpp_preprocess_only()` - Is this `-E` mode?
-
-### Anti-Patterns We Learned to Avoid
-
-#### 1. Adding Infrastructure Before Understanding the Bug
-
-**PR121472 complex fix:** 6 files, 212 lines, temp metadata tracking
-**PR121472 simple fix:** 1 file, 3 lines, condition change
-
-The complex fix assumed the problem was temp tracking. The actual bug was
-a single condition checking component existence instead of type size.
-
-**Rule:** Find the minimal condition fix first.
-
-#### 2. Adding Parameters to Bypass Checks
-
-**PR121475 complex fix:** Added `finalize_func_result` parameter to bypass
-`defined_assign_comp` check.
-
-**PR121475 simple fix:** Refined the condition itself to be more precise
-about when defined assignment actually applies.
-
-**Rule:** Refine conditions, don't add bypass parameters.
-
-#### 3. Checking at Wrong Abstraction Level
-
-| Bug level | Wrong check | Right check |
-|-----------|-------------|-------------|
-| Gimplifier | `derived->components` | `TYPE_SIZE_UNIT` |
-| Type-bound procedure | `attr.defined_assign_comp` | `f2k_derived->tb_op` |
-| Source syntax | Tree properties | Symbol attributes |
-
-**Rule:** Match check level to bug manifestation level.
-
-#### 4. Parallel Checks Instead of Unified Check
-
-**Wrong:**
-```c
-if (new_condition) handle();
-else if (old_condition) handle();  // Redundant
-```
-
-**Right:**
-```c
-if (general_condition_that_covers_both) handle();
-```
-
-If your new check subsumes an existing check, replace don't add.
-
-#### 5. Over-Commenting with PR Numbers
-
-PR numbers in code clutter the source. The commit message and test file
-have the PR number. Code comments should explain the logic timelessly.
+Anti-pattern reminders (see Fix Development Methodology above):
+- Prefer minimal condition fixes over new infrastructure.
+- Refine conditions instead of adding bypass parameters.
+- Match the check level to where the bug manifests.
+- Replace subsumed checks; do not add parallel checks.
 
 ### Code Structure Patterns
 
@@ -692,58 +709,11 @@ checks.
 
 #### match_* Functions Pattern
 
-```c
-gfc_match_result
-gfc_match_xxx (void)
-{
-  // Save position for backtrack
-  old_loc = gfc_current_locus;
-
-  // Try to match syntax
-  m = gfc_match ("keyword");
-  if (m != MATCH_YES) {
-    gfc_current_locus = old_loc;
-    return MATCH_NO;
-  }
-
-  // Build AST structures
-  // ...
-
-  return MATCH_YES;
-}
-```
-
-### Quick Reference: Common Fixes by Symptom
-
-| Symptom | First place to look |
-|---------|---------------------|
-| ICE in gimplify | `trans*.cc` - tree generation |
-| Missing finalization | `trans.cc:gfc_finalize_tree_expr` early returns |
-| Double finalization | Same, plus `trans-expr.cc` assignment handling |
-| Wrong deep copy | `trans-array.cc:structure_alloc_comps` |
-| Parse error | `match.cc` or `parse.cc` |
-| Bad diagnostic | `parse.cc`, `resolve.cc`, or `error.cc` |
-| Preprocessing | `cpp.cc`, `scanner.cc` |
-
-### Files Changed Per PR (Reference)
-
-| PR | Files | Topic |
-|----|-------|-------|
-| 32365 | parse.cc | Error messages |
-| 90519 | class.cc, trans-expr.cc | Finalizer + recursive alloc |
-| 92613 | cpp.cc, scanner.cc, f95-lang.cc | Preprocessing |
-| 96255 | match.cc, resolve.cc, gfortran.h | DO CONCURRENT syntax |
-| 107721 | resolve.cc (character arrays) | Array constructor |
-| 121472 | trans.cc | Finalization + zero-size |
-| 121475 | trans.cc, interface.cc | Defined assignment + finalization |
-| 121628 | trans-array.cc | Deep copy trampolines |
-
-## PR Directory Organization
-
-Each `pr/<number>/` contains:
-- Reproducer programs (`.f90`)
-- Patches (`.patch`)
-- Makefile for multi-compiler testing
+Checklist:
+- Save `gfc_current_locus` for backtracking.
+- Match tokens in small steps; on failure restore the locus and return `MATCH_NO`.
+- Only build AST nodes after a successful syntactic match.
+- Keep one logical syntax change per patch; add semantic enforcement in `resolve.cc` when needed.
 
 ## Upstream Submission
 
