@@ -427,15 +427,75 @@ After implementing, verify:
 If the fix is correct but seems to require touching many files, you likely
 misidentified the root cause.
 
+### 9. Keep PR numbers out of inline code comments
+
+PR numbers belong in:
+- Commit messages (required)
+- Test file comments (e.g., `! PR fortran/121472`)
+- README documentation
+
+PR numbers do NOT belong in:
+- Inline source code comments
+
+The code comment should explain WHAT/WHY in timeless terms. The PR number
+is metadata tracked elsewhere.
+
+**WRONG:**
+```c
+/* PR121472: Zero-length entities cause gimplifier problems.  */
+```
+
+**RIGHT:**
+```c
+/* Zero-length entities cause the gimplifier problems.  Create
+   a variable to act as the argument for the final call.  */
+```
+
 ## Fortran Standards Compliance
 
-All implementations must match ISO/IEC 1539-1:2018 exactly. No partial
+**Current standard:** ISO/IEC 1539-1:2023 (Fortran 2023)
+
+**Standard text files:** `/home/ert/code/standard/validation/pdfs/`
+
+| Standard | Text file |
+|----------|-----------|
+| Fortran 2023 | `Fortran2023_J3_22-007.txt` |
+| Fortran 2018 | `Fortran2018_J3_15-007.txt` |
+| Fortran 2008 | `Fortran2008_J3_08-007.txt` |
+| Fortran 2003 | `Fortran2003_J3_03-007.txt` |
+| Fortran 95 | `Fortran95_WG5_N1191.txt` |
+| Fortran 90 | `Fortran90_WG5_N692.txt` |
+
+Use `grep` to search for specific clauses:
+```bash
+grep -n "7.5.6.3" /home/ert/code/standard/validation/pdfs/Fortran2023_J3_22-007.txt
+```
+
+All implementations must match ISO/IEC 1539-1:2023 exactly. No partial
 compliance. Reference compilers (ifx, nvfortran) define correct behavior.
 
-Key areas:
-- Allocatable assignment: deallocate, reallocate, deep copy (7.5.2.3)
-- Finalization: function results finalized after assignment (7.5.6.3)
-- Self-assignment: special handling to avoid use-after-free
+**Key sections for derived type semantics:**
+
+| Section | Topic |
+|---------|-------|
+| 7.5.4 | Components |
+| 7.5.5 | Type-bound procedures |
+| 7.5.6 | Final subroutines |
+| 7.5.6.2 | The finalization process |
+| 7.5.6.3 | When finalization occurs |
+| 7.5.6.4 | Entities that are not finalized |
+| 10.2.1.2 | Intrinsic assignment statement |
+| 10.2.1.3 | Interpretation of intrinsic assignments |
+| 10.2.1.4 | Defined assignment statement |
+
+**Finalization rules (7.5.6.3):**
+- Function results finalized after execution of innermost executable construct
+- Intent(out) arguments finalized on entry
+- Allocated allocatables finalized on deallocation
+- Pointers are NOT finalized (only targets when deallocated)
+
+**Self-assignment:** Requires special handling to avoid use-after-free when
+source and target overlap.
 
 ## PR Directory Organization
 
