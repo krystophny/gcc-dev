@@ -1,0 +1,95 @@
+From 334a57da9d6e6965c71bcef5467ce2c3aaffb756 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Sat, 20 Dec 2025 21:22:18 +0100
+Subject: [PATCH] fortran: Fix ICE with constructor for finalized zero-size
+ type [PR121472]
+
+When a derived type has a final subroutine and a constructor interface,
+but is effectively zero-sized, the gimplifier fails on the finalization
+code.  The existing check for empty types (!derived->components) only
+catches completely empty types, not types with empty components.
+Replace with a tree-level TYPE_SIZE_UNIT check that catches all
+zero-size cases.
+
+	PR fortran/121472
+
+gcc/fortran/ChangeLog:
+
+	* trans.cc (gfc_finalize_tree_expr): Replace !derived->components
+	check with TYPE_SIZE_UNIT check for zero-size types.
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/pr121472.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/trans.cc                   |  7 ++++--
+ gcc/testsuite/gfortran.dg/pr121472.f90 | 33 ++++++++++++++++++++++++++
+ 2 files changed, 38 insertions(+), 2 deletions(-)
+ create mode 100644 gcc/testsuite/gfortran.dg/pr121472.f90
+
+diff --git a/gcc/fortran/trans.cc b/gcc/fortran/trans.cc
+index 47396c3cbab..ba579894bbc 100644
+--- a/gcc/fortran/trans.cc
++++ b/gcc/fortran/trans.cc
+@@ -1638,12 +1638,15 @@ gfc_finalize_tree_expr (gfc_se *se, gfc_symbol *derived,
+     }
+   else if (derived && gfc_is_finalizable (derived, NULL))
+     {
+-      if (!derived->components && (!rank || attr.elemental))
++      tree type = TREE_TYPE (se->expr);
++      if (type && TYPE_SIZE_UNIT (type)
++	  && integer_zerop (TYPE_SIZE_UNIT (type))
++	  && (!rank || attr.elemental))
+ 	{
+ 	  /* Any attempt to assign zero length entities, causes the gimplifier
+ 	     all manner of problems. Instead, a variable is created to act as
+ 	     as the argument for the final call.  */
+-	  desc = gfc_create_var (TREE_TYPE (se->expr), "zero");
++	  desc = gfc_create_var (type, "zero");
+ 	}
+       else if (se->direct_byref)
+ 	{
+diff --git a/gcc/testsuite/gfortran.dg/pr121472.f90 b/gcc/testsuite/gfortran.dg/pr121472.f90
+new file mode 100644
+index 00000000000..00c990cd267
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr121472.f90
+@@ -0,0 +1,33 @@
++! { dg-do compile }
++! PR fortran/121472 - ICE with constructor for finalized zero-size type
++
++module pr121472_m
++    implicit none
++    type r
++    end type
++
++    type ip
++        type(r) :: r_member
++    contains
++        final :: ipd
++    end type
++
++    interface ip
++        module procedure ipc
++    end interface
++contains
++    subroutine ipd(this)
++        type(ip), intent(inout) :: this
++    end subroutine
++
++    function ipc() result(res)
++        type(ip) :: res
++    end function
++end module
++
++program test
++    use pr121472_m
++    implicit none
++    type(ip) :: p
++    p = ip()
++end program
+-- 
+2.52.0
+
