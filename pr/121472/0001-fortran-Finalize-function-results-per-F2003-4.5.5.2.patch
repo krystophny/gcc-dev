@@ -1,28 +1,51 @@
-From 8bdb94ecc2010947759b1205df8eb41d62f87d99 Mon Sep 17 00:00:00 2001
+From a73c2aae65177b32ddb176c6e23078b7854ed7a1 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Tue, 2 Dec 2025 21:22:07 +0100
-Subject: [PATCH] fortran: Finalize function results per ISO F2018 7.5.6.3
+Subject: [PATCH] fortran: Finalize function results per F2003 4.5.5.2
 
-PR fortran/121472: finalize function results and RHS temporaries.
+Implements Fortran 2003 4.5.5.2 finalization rule: function results
+are finalized after execution of the innermost executable construct.
+Fixes constructor/finalizer ICE for non-allocatable types.
 
-Implements ISO/IEC 1539-1:2018 7.5.6.3 finalization rules for function results, avoids constructor-+finalizer ICE for non-allocatable types, and adds regression tests for constructor interfaces and nested elemental calls.
+	PR fortran/121472
+
+gcc/fortran/ChangeLog:
+
+	* resolve.cc (resolve_ordinary_assign): Mark function results
+	for finalization when used in assignments.
+	* trans-array.cc (gfc_trans_create_temp_array): Finalize
+	temporary arrays for function results.
+	* trans-expr.cc (gfc_conv_procedure_call): Skip finalization
+	for expressions marked must_finalize.  Finalize deferred RHS
+	function actuals.
+	(gfc_trans_assignment_1): Update finalization logic for
+	function expressions.
+	* trans.cc (gfc_derived_needs_copy): New function to check for
+	actual allocatable components.
+	(gfc_finalize_tree_expr): Skip finalization for unevaluated
+	CALL_EXPR with no actual allocatable components.
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/finalize_45.f90: Update comment.
+	* gfortran.dg/finalize_constructor_1.f90: New test.
 
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
  gcc/fortran/resolve.cc                        | 28 +++++++
- gcc/fortran/trans-array.cc                    | 40 ++++++++++
- gcc/fortran/trans-expr.cc                     | 47 ++++++++----
- gcc/fortran/trans.cc                          | 59 ++++++++++++++-
+ gcc/fortran/trans-array.cc                    | 37 ++++++++++
+ gcc/fortran/trans-expr.cc                     | 43 +++++++----
+ gcc/fortran/trans.cc                          | 44 ++++++++++-
  gcc/testsuite/gfortran.dg/finalize_45.f90     |  4 +-
  .../gfortran.dg/finalize_constructor_1.f90    | 73 +++++++++++++++++++
- 6 files changed, 230 insertions(+), 21 deletions(-)
+ 6 files changed, 209 insertions(+), 20 deletions(-)
  create mode 100644 gcc/testsuite/gfortran.dg/finalize_constructor_1.f90
 
 diff --git a/gcc/fortran/resolve.cc b/gcc/fortran/resolve.cc
-index 9f3ce1d2ad6..8cfd1e92e69 100644
+index db6b52f3076..112776a2230 100644
 --- a/gcc/fortran/resolve.cc
 +++ b/gcc/fortran/resolve.cc
-@@ -12940,6 +12940,34 @@ resolve_ordinary_assign (gfc_code *code, gfc_namespace *ns)
+@@ -12942,6 +12942,34 @@ resolve_ordinary_assign (gfc_code *code, gfc_namespace *ns)
  	    && (lhs->symtree->n.sym == (*rhsptr)->symtree->n.sym))
  	*rhsptr = gfc_get_parentheses (*rhsptr);
  
@@ -58,17 +81,14 @@ index 9f3ce1d2ad6..8cfd1e92e69 100644
      }
  
 diff --git a/gcc/fortran/trans-array.cc b/gcc/fortran/trans-array.cc
-index cd137212260..278a3dbe43b 100644
+index cd137212260..579a9e2032c 100644
 --- a/gcc/fortran/trans-array.cc
 +++ b/gcc/fortran/trans-array.cc
-@@ -1797,6 +1797,46 @@ gfc_trans_create_temp_array (stmtblock_t * pre, stmtblock_t * post, gfc_ss * ss,
+@@ -1797,6 +1797,43 @@ gfc_trans_create_temp_array (stmtblock_t * pre, stmtblock_t * post, gfc_ss * ss,
    gfc_trans_allocate_array_storage (pre, post, info, size, nelem, initial,
  				    dynamic, dealloc);
  
-+  /* Finalize temporary arrays created for function results (GFC_SS_FUNCTION).
-+     These hold the return values of array-valued or elemental functions and
-+     must be finalized after use per F2018 7.5.6.3.  GFC_SS_TEMP
-+     (dependency-breaking temps) are not finalized here.  */
++  /* PR121472: Finalize function result temps per F2018 7.5.6.3.  */
 +  if (dealloc && ss->info && ss->info->type == GFC_SS_FUNCTION
 +      && ss->info->expr
 +      && (ss->info->expr->ts.type == BT_DERIVED
@@ -109,7 +129,7 @@ index cd137212260..278a3dbe43b 100644
      ss = ss->parent;
  
 diff --git a/gcc/fortran/trans-expr.cc b/gcc/fortran/trans-expr.cc
-index ac85b762c7f..9eae394d31b 100644
+index ac85b762c7f..b686c15e90a 100644
 --- a/gcc/fortran/trans-expr.cc
 +++ b/gcc/fortran/trans-expr.cc
 @@ -7575,9 +7575,9 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
@@ -125,15 +145,6 @@ index ac85b762c7f..9eae394d31b 100644
  
  		  if (fsym && (fsym->ts.type == BT_DERIVED
  			       || fsym->ts.type == BT_ASSUMED)
-@@ -7612,7 +7612,7 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
- 			}
- 		    }
- 
--		  /* Wrap scalar variable in a descriptor. We need to convert
-+		  /* Wrap scalar variable in a descriptor.  We need to convert
- 		     the address of a pointer back to the pointer itself before,
- 		     we can assign it to the data field.  */
- 
 @@ -8803,7 +8803,8 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
    bool finalizable = der != NULL && der->ns->proc_name
  			    && gfc_is_finalizable (der, NULL);
@@ -194,14 +205,12 @@ index ac85b762c7f..9eae394d31b 100644
        else if (gfc_notification_std (GFC_STD_F2018_DEL)
  	  && (expr2->expr_type == EXPR_STRUCTURE
  	      || expr2->expr_type == EXPR_ARRAY))
-@@ -13470,10 +13486,11 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
+@@ -13470,10 +13486,9 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
    gfc_add_expr_to_block (&body, tmp);
  
    /* Add the post blocks to the body.  Scalar finalization must appear before
 -     the post block in case any dellocations are done.  */
-+     the post block in case any dellocations are done.  For function
-+     expressions (including elemental), always add finalblock to ensure
-+     function results are finalized per F2018 7.5.6.3.  */
++     the post block in case any dellocations are done.  PR121472.  */
    if (rse.finalblock.head
 -      && (!l_is_temp || (expr2->expr_type == EXPR_FUNCTION
 -			 && gfc_expr_attr (expr2).elemental)))
@@ -210,19 +219,15 @@ index ac85b762c7f..9eae394d31b 100644
        gfc_add_block_to_block (&body, &rse.finalblock);
        gfc_add_block_to_block (&body, &rse.post);
 diff --git a/gcc/fortran/trans.cc b/gcc/fortran/trans.cc
-index 47396c3cbab..ae876f8bfa7 100644
+index 47396c3cbab..4bba4af5ec2 100644
 --- a/gcc/fortran/trans.cc
 +++ b/gcc/fortran/trans.cc
-@@ -1602,7 +1602,42 @@ gfc_assignment_finalizer_call (gfc_se *lse, gfc_expr *expr1, bool init_flag)
+@@ -1602,7 +1602,38 @@ gfc_assignment_finalizer_call (gfc_se *lse, gfc_expr *expr1, bool init_flag)
  }
  
  
 -/* Finalize a TREE expression using the finalizer wrapper. The result is
-+/* Check whether a derived type actually has allocatable components that
-+   require deep copying.  The attr.alloc_comp attribute can be set even when
-+   there are no truly allocatable components (e.g., for types with only
-+   non-allocatable components), which can lead to unnecessary tree code
-+   generation.  */
++/* PR121472: Check if type has actual allocatable components.  */
 +
 +static bool
 +gfc_derived_needs_copy (gfc_symbol *derived)
@@ -257,23 +262,12 @@ index 47396c3cbab..ae876f8bfa7 100644
     fixed in order to prevent repeated calls.  */
  
  void
-@@ -1618,6 +1653,24 @@ gfc_finalize_tree_expr (gfc_se *se, gfc_symbol *derived,
+@@ -1618,6 +1649,13 @@ gfc_finalize_tree_expr (gfc_se *se, gfc_symbol *derived,
    if (attr.pointer)
      return;
  
-+  /* Skip finalization for unevaluated function or constructor call results
-+     only when the type is marked with alloc_comp but does not actually have
-+     allocatable components that require deep copying.
-+
-+     When se->expr is a CALL_EXPR at this point, it represents an unevaluated
-+     constructor or function result.  For types with transitive alloc_comp but
-+     no actual allocatable components, attempting to finalize causes ICEs
-+     during gimplification.
-+
-+     Types with real allocatable components still need finalization even for
-+     CALL_EXPR to handle cases like:
-+       obj = func_returning_allocatable_type ()
-+     PR121472.  */
++  /* PR121472: Skip finalization for unevaluated CALL_EXPR with transitive
++     alloc_comp but no actual allocatable components to avoid ICE.  */
 +  if (se->expr && TREE_CODE (se->expr) == CALL_EXPR
 +      && derived && derived->attr.alloc_comp
 +      && !gfc_derived_needs_copy (derived))
@@ -282,7 +276,7 @@ index 47396c3cbab..ae876f8bfa7 100644
    /* Derived type function results with components that have defined
       assignements are handled in resolve.cc(generate_component_assignments)  */
    if (derived && (derived->attr.is_c_interop
-@@ -1648,7 +1701,7 @@ gfc_finalize_tree_expr (gfc_se *se, gfc_symbol *derived,
+@@ -1648,7 +1686,7 @@ gfc_finalize_tree_expr (gfc_se *se, gfc_symbol *derived,
        else if (se->direct_byref)
  	{
  	  desc = gfc_evaluate_now (se->expr, &se->finalblock);
@@ -291,7 +285,7 @@ index 47396c3cbab..ae876f8bfa7 100644
  	    {
  	      /* Need to copy allocated components and not finalize.  */
  	      tmp = gfc_copy_alloc_comp_no_fini (derived, se->expr, desc, rank, 0);
-@@ -1659,7 +1712,7 @@ gfc_finalize_tree_expr (gfc_se *se, gfc_symbol *derived,
+@@ -1659,7 +1697,7 @@ gfc_finalize_tree_expr (gfc_se *se, gfc_symbol *derived,
  	{
  	  desc = gfc_evaluate_now (se->expr, &se->pre);
  	  se->expr = gfc_evaluate_now (desc, &se->pre);
