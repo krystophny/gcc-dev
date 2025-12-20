@@ -15,9 +15,9 @@ FFLAGS_INTEL = -warn all -stand f18
 
 INTEL_SETVARS = /opt/intel/oneapi/setvars.sh
 
-PR_DIRS = 90519 121628 113885 114535 110987 82622 116669 85002 104684 103716 103368 121472 122191
+PR_DIRS = 102430 107721 121472 121475 121628 32365 90519 92613 96255
 
-COARRAY_PRS = 85002 104684
+COARRAY_PRS =
 
 all: test-dev
 
@@ -76,12 +76,17 @@ test-compiler:
 			echo "  [SKIP] No reproducer found"; \
 			continue; \
 		fi; \
+		if grep -qiE '^[[:space:]]*![$$]omp' "$$reproducer" || grep -q 'dg-options.*-fopenmp' "$$reproducer"; then \
+			openmp_flag="-fopenmp"; \
+		else \
+			openmp_flag=""; \
+		fi; \
 		if echo " $(COARRAY_PRS) " | grep -q " $$pr "; then \
 			coarray_flag="-fcoarray=single"; \
 		else \
 			coarray_flag=""; \
 		fi; \
-		if $(FC) $(FFLAGS) $$coarray_flag -c $$reproducer -o /tmp/test_$$pr_$(SUFFIX).o > /tmp/test_$$pr_$(SUFFIX).log 2>&1; then \
+		if $(FC) $(FFLAGS) $$coarray_flag $$openmp_flag -c $$reproducer -o /tmp/test_$$pr_$(SUFFIX).o > /tmp/test_$$pr_$(SUFFIX).log 2>&1; then \
 			echo "  [PASS] Compilation successful"; \
 		else \
 			exit_code=$$?; \
@@ -112,44 +117,8 @@ summary:
 		fi; \
 	done
 
-90519:
-	@$(MAKE) test-pr PR=90519
-
-121628:
-	@$(MAKE) test-pr PR=121628
-
-113885:
-	@$(MAKE) test-pr PR=113885
-
-114535:
-	@$(MAKE) test-pr PR=114535
-
-110987:
-	@$(MAKE) test-pr PR=110987
-
-82622:
-	@$(MAKE) test-pr PR=82622
-
-116669:
-	@$(MAKE) test-pr PR=116669
-
-85002:
-	@$(MAKE) test-pr PR=85002 COARRAY="-fcoarray=single"
-
-104684:
-	@$(MAKE) test-pr PR=104684 COARRAY="-fcoarray=single"
-
-103716:
-	@$(MAKE) test-pr PR=103716
-
-103368:
-	@$(MAKE) test-pr PR=103368
-
-121472:
-	@$(MAKE) test-pr PR=121472
-
-122191:
-	@$(MAKE) test-pr PR=122191
+$(PR_DIRS):
+	@$(MAKE) test-pr PR=$@
 
 test-pr:
 	@echo "=========================================="
@@ -160,9 +129,14 @@ test-pr:
 		echo "[SKIP] No reproducer found"; \
 		exit 0; \
 	fi; \
+	if grep -qiE '^[[:space:]]*![$$]omp' "$$reproducer" || grep -q 'dg-options.*-fopenmp' "$$reproducer"; then \
+		openmp_flag="-fopenmp"; \
+	else \
+		openmp_flag=""; \
+	fi; \
 	echo ""; \
 	echo "System gfortran:"; \
-	if $(FC_SYSTEM) $(FFLAGS_SYSTEM) $(COARRAY) -c $$reproducer -o /tmp/pr$(PR)_system.o > /tmp/pr$(PR)_system.log 2>&1; then \
+	if $(FC_SYSTEM) $(FFLAGS_SYSTEM) $(COARRAY) $$openmp_flag -c $$reproducer -o /tmp/pr$(PR)_system.o > /tmp/pr$(PR)_system.log 2>&1; then \
 		echo "  [PASS]"; \
 	else \
 		if grep -q "internal compiler error" /tmp/pr$(PR)_system.log; then \
@@ -173,7 +147,7 @@ test-pr:
 	fi; \
 	echo ""; \
 	echo "Dev gfortran:"; \
-	if $(FC_DEV) $(FFLAGS_DEV) $(COARRAY) -c $$reproducer -o /tmp/pr$(PR)_dev.o > /tmp/pr$(PR)_dev.log 2>&1; then \
+	if $(FC_DEV) $(FFLAGS_DEV) $(COARRAY) $$openmp_flag -c $$reproducer -o /tmp/pr$(PR)_dev.o > /tmp/pr$(PR)_dev.log 2>&1; then \
 		echo "  [PASS]"; \
 	else \
 		if grep -q "internal compiler error" /tmp/pr$(PR)_dev.log; then \
@@ -185,7 +159,7 @@ test-pr:
 	echo ""; \
 	echo "Intel ifx:"; \
 	if which ifx > /dev/null 2>&1; then \
-		if ifx $(FFLAGS_INTEL) $(COARRAY) -c $$reproducer -o /tmp/pr$(PR)_intel.o > /tmp/pr$(PR)_intel.log 2>&1; then \
+		if ifx $(FFLAGS_INTEL) $(COARRAY) $$openmp_flag -c $$reproducer -o /tmp/pr$(PR)_intel.o > /tmp/pr$(PR)_intel.log 2>&1; then \
 			echo "  [PASS]"; \
 		else \
 			echo "  [FAIL]"; \
@@ -203,4 +177,4 @@ clean:
 	@echo "Clean complete"
 
 .PHONY: all help test-system test-dev test-ifx test-all test-compiler summary clean \
-        90519 121628 113885 114535 110987 82622 116669 85002 104684 103716 103368 121472 122191 test-pr
+        $(PR_DIRS) test-pr

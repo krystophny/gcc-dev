@@ -17,6 +17,7 @@ Each subdirectory contains a minimal reproducer, test results, and analysis for 
 
 | PR | Title | Local Status | Notes |
 |----|-------|--------------|-------|
+| [102430](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102430) | OpenMP `linear` on arrays ICE / missing support | OPEN | `parallel do linear(a)` with `a` an array: GCC historically ICEs in OpenMP expansion; tracked in `pr/102430/`. |
 | [107721](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=107721) | Array constructor type-spec lost when parenthesized | READY FOR SUBMISSION | Patch `0001-fortran-honor-array-constructor-type-spec-during-fol.patch` passes local matrix; awaiting upstream posting (see `pr/107721/`). |
 | [121472](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121472) | Constructor/finalizer ICE | OPEN | ICE in `gimplify_expr` on GCC 15.2.1 and trunk; repro + patch tracked in `pr/121472/`. |
 
@@ -34,6 +35,12 @@ Each subdirectory contains a minimal reproducer, test results, and analysis for 
 ## Analysis
 
 ### Active Bugs
+
+**PR102430** - OpenMP `linear` clause on arrays
+- Status: OPEN
+- GCC accepted `linear(a)` with `a` an array on `parallel do`, but the OpenMP
+  worksharing-loop lowering historically did not implement array-linear, leading
+  to an ICE during OpenMP expansion. See `pr/102430/` for reproducer and notes.
 
 **PR107721** - Array constructor type-spec lost with parentheses
 - Status: READY FOR UPSTREAM (Bugzilla still open)
