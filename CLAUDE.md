@@ -156,6 +156,14 @@ gcc-build/gcc/gfortran -B gcc-build/gcc <file.f90>
 This meta-repo also supports building a local GCC with NVPTX offload
 (OpenACC/OpenMP) into `/opt/gcc16`.
 
+### Common runtime pitfalls
+
+- If you run with `OMP_TARGET_OFFLOAD=MANDATORY` and see only the host device,
+  you are likely loading the system `libgomp` instead of `/opt/gcc16/lib64/libgomp.so`.
+  Fix by setting `LD_LIBRARY_PATH=/opt/gcc16/lib64` (or adding an rpath in your build).
+- OpenMP target offload on NVPTX requires the `mgomp` multilib (provides `__nvptx_uni`).
+  Do not configure the NVPTX accelerator with `--disable-multilib`.
+
 ### Build and install
 
 ```bash
