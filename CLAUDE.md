@@ -167,12 +167,16 @@ This script:
 - builds/installs nvptx-tools to `/opt/gcc16/nvptx`
 - builds/installs the NVPTX accelerator (including `libgfortran.a`)
 - builds/installs the host compiler with `--enable-offload-targets=nvptx-none`
-- runs a small OpenACC offload smoke test (logs under `/tmp`)
+- runs small OpenACC + OpenMP target offload smoke tests (logs under `/tmp`)
+
+Note: OpenMP target offload requires the NVPTX `mgomp` multilib (for `__nvptx_uni`);
+do not configure the NVPTX accelerator with `--disable-multilib`.
 
 ### Smoke test only
 
 ```bash
 ./scripts/openacc_nvptx_smoke.sh
+./scripts/openmp_nvptx_smoke.sh
 ```
 
 ## Reference Compilers

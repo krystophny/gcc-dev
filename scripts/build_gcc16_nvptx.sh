@@ -29,7 +29,7 @@ Notes:
 
 Options:
   --clean         Remove build directories under ${build_root} first.
-  --no-smoke      Skip OpenACC offload smoke test.
+  --no-smoke      Skip OpenACC/OpenMP offload smoke tests.
   --sm-default    Default nvptx arch for configure (default: ${sm_default}).
 EOF
 }
@@ -120,7 +120,6 @@ mkdir -p "${accel_build}" "${host_build}"
     --prefix="${prefix}" \
     --enable-as-accelerator-for=x86_64-pc-linux-gnu \
     --enable-languages=c,c++,fortran,lto \
-    --disable-multilib \
     --disable-nls \
     --enable-checking=release \
     --with-newlib \
@@ -152,4 +151,5 @@ mkdir -p "${accel_build}" "${host_build}"
 
 if [[ "${do_smoke}" == "1" ]]; then
   "${root_dir}/scripts/openacc_nvptx_smoke.sh"
+  "${root_dir}/scripts/openmp_nvptx_smoke.sh"
 fi
