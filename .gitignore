@@ -1,6 +1,8 @@
 # Generated build directories
 /gcc/
 /gcc-build/
+/gcc-offload-build/
+/third_party/
 
 # Compiled artifacts
 *.o
