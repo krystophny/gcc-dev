@@ -32,6 +32,11 @@ Compile with OpenMP enabled:
 ./gcc-build/gcc/gfortran -B ./gcc-build/gcc -fopenmp -c pr/102430/reproducer.f90
 ```
 
+## Patch
+
+- GCC branch: `pr102430-linear-sorry`
+- Exported patch: `0001-fortran-Reject-array-allocatable-LINEAR-on-DO-PR1024.patch`
+
 ## Local status (2025-12-20)
 
 - System `gfortran -fopenmp`: ICE during GIMPLE pass `ompexp` in
