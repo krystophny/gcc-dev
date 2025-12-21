@@ -151,6 +151,30 @@ make check-gfortran RUNTESTFLAGS="dg.exp=finalize*.f90"
 gcc-build/gcc/gfortran -B gcc-build/gcc <file.f90>
 ```
 
+## OpenACC NVPTX (GCC16 in /opt)
+
+This meta-repo also supports building a local GCC with NVPTX offload
+(OpenACC/OpenMP) into `/opt/gcc16`.
+
+### Build and install
+
+```bash
+./scripts/build_gcc16_nvptx.sh --clean
+```
+
+This script:
+- clones `third_party/newlib-cygwin` and `third_party/nvptx-tools`
+- builds/installs nvptx-tools to `/opt/gcc16/nvptx`
+- builds/installs the NVPTX accelerator (including `libgfortran.a`)
+- builds/installs the host compiler with `--enable-offload-targets=nvptx-none`
+- runs a small OpenACC offload smoke test (logs under `/tmp`)
+
+### Smoke test only
+
+```bash
+./scripts/openacc_nvptx_smoke.sh
+```
+
 ## Reference Compilers
 
 Always validate against multiple compilers:
