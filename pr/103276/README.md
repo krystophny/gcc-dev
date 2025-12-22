@@ -57,7 +57,7 @@ This repository includes a candidate fix exported from the GCC source checkout:
 - `0001-omp-avoid-taking-address-of-reference-in-map.patch`
 
 The corresponding GCC topic branch is `pr103276-openacc-enter-data-refmap`
-(commit `f994c479a5861c5c6ac57c78da7b8c4ca4c77386`).
+(commit `91a76052bda4e7bbe8aa3083441e0669641a7194`).
 
 The patch applies cleanly to upstream `master` (see
 `/tmp/pr103276_patch_applies_upstream_master.log`).
