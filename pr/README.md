@@ -1,6 +1,10 @@
 # GCC Fortran Bug Reproducers
 
-This directory contains minimal reproducers for GCC Fortran bugs, primarily focusing on internal compiler errors related to finalizers, allocatable components, parameterized derived types, and coarrays.
+This directory contains minimal reproducers for GCC Fortran bugs, primarily
+focusing on internal compiler errors related to finalizers, allocatable
+components, parameterized derived types, and coarrays.  It also tracks a small
+number of Fortran-triggered runtime issues (e.g. OpenACC/libgomp) when the
+reproducer is useful for GCC debugging.
 
 ## Purpose
 
@@ -19,6 +23,8 @@ Each subdirectory contains a minimal reproducer, test results, and analysis for 
 |----|-------|--------------|-------|
 | [102430](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102430) | OpenMP `linear` on arrays ICE / missing support | SUBMITTED | Patch exported to `pr/102430/` and pushed to GCC fork branch `pr102430-linear-sorry`. |
 | [107721](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=107721) | Array constructor type-spec lost when parenthesized | READY FOR SUBMISSION | Patch `0001-fortran-honor-array-constructor-type-spec-during-fol.patch` passes local matrix; awaiting upstream posting (see `pr/107721/`). |
+| [103276](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=103276) | OpenACC ENTER DATA duplicate mapping | REPRO ONLY | OpenACC mapping/OMP lowering issue; `make 103276` compiles only; see `pr/103276/` (GitHub issue #10). |
+| [123252](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123252) | OpenACC scalar member wrong when mapping array component | PATCH READY | Patch `0001-gimplify-map-Fortran-DT-scalars-for-OpenACC-enter-da.patch` passes local NVPTX repro; tracked in `pr/123252/`. |
 | [121472](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121472) | Constructor/finalizer ICE | OPEN | ICE in `gimplify_expr` on GCC 15.2.1 and trunk; repro + patch tracked in `pr/121472/`. |
 
 ### Completed PRs
