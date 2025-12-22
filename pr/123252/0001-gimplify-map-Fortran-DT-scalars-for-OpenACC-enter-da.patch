@@ -1,4 +1,4 @@
-From 853cd89ae61b42fe1bd4e872c46e1e4911f4d399 Mon Sep 17 00:00:00 2001
+From 33e0d85dd50ef865b6a533522afe2f936f5e5f72 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Mon, 22 Dec 2025 11:18:59 +0100
 Subject: [PATCH] gimplify: map Fortran DT scalars for OpenACC enter data
@@ -26,15 +26,15 @@ gcc/testsuite/ChangeLog:
 
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
- gcc/gimplify.cc                               | 179 ++++++++++++++++--
+ gcc/gimplify.cc                               | 158 ++++++++++++++++--
  .../goacc/pr123252-scalar-field-mapping.f90   |  37 ++++
  ...123255-allocatable-component-map-order.f90 |  25 +++
- 3 files changed, 227 insertions(+), 14 deletions(-)
+ 3 files changed, 206 insertions(+), 14 deletions(-)
  create mode 100644 gcc/testsuite/gfortran.dg/goacc/pr123252-scalar-field-mapping.f90
  create mode 100644 gcc/testsuite/gfortran.dg/goacc/pr123255-allocatable-component-map-order.f90
 
 diff --git a/gcc/gimplify.cc b/gcc/gimplify.cc
-index 95506f1682f..fa738bba59a 100644
+index 273c4046d5d..cf63225c04a 100644
 --- a/gcc/gimplify.cc
 +++ b/gcc/gimplify.cc
 @@ -12693,6 +12693,17 @@ omp_accumulate_sibling_list (enum omp_region_type region_type,
@@ -87,7 +87,7 @@ index 95506f1682f..fa738bba59a 100644
  	{
  	  gcc_assert (*grp_start_p == grp_end);
  	  if (reprocessing_struct)
-@@ -12814,14 +12825,154 @@ omp_accumulate_sibling_list (enum omp_region_type region_type,
+@@ -12814,14 +12825,133 @@ omp_accumulate_sibling_list (enum omp_region_type region_type,
  	      *insert_node_pos = l;
  	      *added_tail = &OMP_CLAUSE_CHAIN (alloc_node);
  	    }
@@ -103,40 +103,44 @@ index 95506f1682f..fa738bba59a 100644
 +	  if (TREE_CODE (type) == REFERENCE_TYPE)
 +	    type = TREE_TYPE (type);
 +
++	  tree *member_start_p = &OMP_CLAUSE_CHAIN (l);
++	  while (*member_start_p
++		 && (OMP_CLAUSE_MAP_KIND (*member_start_p)
++		     == GOMP_MAP_FIRSTPRIVATE_POINTER
++		     || OMP_CLAUSE_MAP_KIND (*member_start_p)
++			== GOMP_MAP_FIRSTPRIVATE_REFERENCE))
++	    member_start_p = &OMP_CLAUSE_CHAIN (*member_start_p);
++
++	  unsigned HOST_WIDE_INT n_members = tree_to_uhwi (OMP_CLAUSE_SIZE (l));
++
++	  auto field_bytepos = [] (tree clause) -> HOST_WIDE_INT
++	  {
++	    tree d = OMP_CLAUSE_DECL (clause);
++	    if (TREE_CODE (d) == COMPONENT_REF)
++	      return int_byte_position (TREE_OPERAND (d, 1));
++	    return HOST_WIDE_INT_MAX;
++	  };
++
++	  auto member_has_field = [&] (tree field) -> bool
++	  {
++	    tree member = *member_start_p;
++	    for (unsigned HOST_WIDE_INT i = 0; i < n_members && member;
++		 i++, member = OMP_CLAUSE_CHAIN (member))
++	      {
++		tree mdecl = OMP_CLAUSE_DECL (member);
++		if (TREE_CODE (mdecl) == COMPONENT_REF
++		    && TREE_OPERAND (mdecl, 1) == field)
++		  return true;
++	      }
++	    return false;
++	  };
++
 +	  if (RECORD_OR_UNION_TYPE_P (type))
 +	    for (tree field = TYPE_FIELDS (type); field;
 +		 field = DECL_CHAIN (field))
 +	      {
 +		if (TREE_CODE (field) != FIELD_DECL
 +		    || DECL_ARTIFICIAL (field))
-+		  continue;
-+
-+		bool already_mapped = false;
-+		{
-+		  tree *member_start_p = &OMP_CLAUSE_CHAIN (l);
-+		  while (*member_start_p
-+			 && (OMP_CLAUSE_MAP_KIND (*member_start_p)
-+			     == GOMP_MAP_FIRSTPRIVATE_POINTER
-+			     || OMP_CLAUSE_MAP_KIND (*member_start_p)
-+				== GOMP_MAP_FIRSTPRIVATE_REFERENCE))
-+		    member_start_p = &OMP_CLAUSE_CHAIN (*member_start_p);
-+
-+		  unsigned HOST_WIDE_INT n_members
-+		    = tree_to_uhwi (OMP_CLAUSE_SIZE (l));
-+		  tree member = *member_start_p;
-+		  for (unsigned HOST_WIDE_INT i = 0; i < n_members && member;
-+		       i++, member = OMP_CLAUSE_CHAIN (member))
-+		    {
-+		      tree mdecl = OMP_CLAUSE_DECL (member);
-+		      if (TREE_CODE (mdecl) == COMPONENT_REF
-+			  && TREE_OPERAND (mdecl, 1) == field)
-+			{
-+			  already_mapped = true;
-+			  break;
-+			}
-+		    }
-+		}
-+		if (already_mapped)
 +		  continue;
 +
 +		tree ftype = TREE_TYPE (field);
@@ -149,37 +153,29 @@ index 95506f1682f..fa738bba59a 100644
 +		    && !SCALAR_FLOAT_TYPE_P (ftype))
 +		  continue;
 +
-+			if (!TYPE_SIZE_UNIT (ftype)
-+			    || TREE_CODE (TYPE_SIZE_UNIT (ftype)) != INTEGER_CST)
-+			  continue;
++		if (!TYPE_SIZE_UNIT (ftype)
++		    || TREE_CODE (TYPE_SIZE_UNIT (ftype)) != INTEGER_CST)
++		  continue;
 +
-+			tree cref = build3_loc (OMP_CLAUSE_LOCATION (grp_end),
-+						COMPONENT_REF, ftype,
-+						unshare_expr (base), field,
-+						NULL_TREE);
-+			tree c2 = build_omp_clause (OMP_CLAUSE_LOCATION (grp_end),
-+						    OMP_CLAUSE_MAP);
-+			OMP_CLAUSE_SET_MAP_KIND (c2, GOMP_MAP_TO);
-+			OMP_CLAUSE_DECL (c2) = cref;
-+			OMP_CLAUSE_SIZE (c2) = TYPE_SIZE_UNIT (ftype);
-+			OMP_CLAUSE_CHAIN (c2) = NULL_TREE;
-+			*scalar_tail = c2;
-+			scalar_tail = &OMP_CLAUSE_CHAIN (c2);
-+			scalar_count++;
-+		      }
++		if (member_has_field (field))
++		  continue;
++
++		tree cref = build3_loc (OMP_CLAUSE_LOCATION (grp_end),
++					COMPONENT_REF, ftype,
++					unshare_expr (base), field, NULL_TREE);
++		tree c2 = build_omp_clause (OMP_CLAUSE_LOCATION (grp_end),
++					    OMP_CLAUSE_MAP);
++		OMP_CLAUSE_SET_MAP_KIND (c2, GOMP_MAP_TO);
++		OMP_CLAUSE_DECL (c2) = cref;
++		OMP_CLAUSE_SIZE (c2) = TYPE_SIZE_UNIT (ftype);
++		OMP_CLAUSE_CHAIN (c2) = NULL_TREE;
++		*scalar_tail = c2;
++		scalar_tail = &OMP_CLAUSE_CHAIN (c2);
++		scalar_count++;
++	      }
 +
 +	  if (scalar_first)
 +	    {
-+	      tree *member_start_p = &OMP_CLAUSE_CHAIN (l);
-+	      while (*member_start_p
-+		     && (OMP_CLAUSE_MAP_KIND (*member_start_p)
-+			 == GOMP_MAP_FIRSTPRIVATE_POINTER
-+			 || OMP_CLAUSE_MAP_KIND (*member_start_p)
-+			    == GOMP_MAP_FIRSTPRIVATE_REFERENCE))
-+		member_start_p = &OMP_CLAUSE_CHAIN (*member_start_p);
-+
-+	      unsigned HOST_WIDE_INT n_members
-+		= tree_to_uhwi (OMP_CLAUSE_SIZE (l));
 +	      tree *extra_start_p = member_start_p;
 +	      for (unsigned HOST_WIDE_INT i = 0;
 +		   i < n_members && *extra_start_p; i++)
@@ -188,49 +184,32 @@ index 95506f1682f..fa738bba59a 100644
 +	      tree extra = *extra_start_p;
 +	      *extra_start_p = NULL_TREE;
 +
-+	      auto field_bytepos = [] (tree c) -> HOST_WIDE_INT
-+	      {
-+		tree d = OMP_CLAUSE_DECL (c);
-+		if (TREE_CODE (d) == COMPONENT_REF)
-+		  return int_byte_position (TREE_OPERAND (d, 1));
-+		return HOST_WIDE_INT_MAX;
-+	      };
-+
-+	      tree merged = NULL_TREE;
-+	      tree *merged_tail = &merged;
-+	      tree member = *member_start_p;
-+	      tree scalar = scalar_first;
-+	      while (member || scalar)
++	      for (tree scalar = scalar_first; scalar; )
 +		{
-+		  tree take;
-+		  if (!scalar)
++		  tree next = OMP_CLAUSE_CHAIN (scalar);
++		  HOST_WIDE_INT pos = field_bytepos (scalar);
++
++		  tree *ins = member_start_p;
++		  for (unsigned HOST_WIDE_INT i = 0; i < n_members && *ins; i++)
 +		    {
-+		      take = member;
-+		      member = OMP_CLAUSE_CHAIN (member);
-+		    }
-+		  else if (!member)
-+		    {
-+		      take = scalar;
-+		      scalar = OMP_CLAUSE_CHAIN (scalar);
-+		    }
-+		  else if (field_bytepos (scalar) < field_bytepos (member))
-+		    {
-+		      take = scalar;
-+		      scalar = OMP_CLAUSE_CHAIN (scalar);
-+		    }
-+		  else
-+		    {
-+		      take = member;
-+		      member = OMP_CLAUSE_CHAIN (member);
++		      if (field_bytepos (*ins) > pos)
++			break;
++		      ins = &OMP_CLAUSE_CHAIN (*ins);
 +		    }
 +
-+		  OMP_CLAUSE_CHAIN (take) = NULL_TREE;
-+		  *merged_tail = take;
-+		  merged_tail = &OMP_CLAUSE_CHAIN (take);
++		  OMP_CLAUSE_CHAIN (scalar) = *ins;
++		  *ins = scalar;
++		  n_members++;
++
++		  scalar = next;
 +		}
 +
-+	      *merged_tail = extra;
-+	      *member_start_p = merged;
++	      extra_start_p = member_start_p;
++	      for (unsigned HOST_WIDE_INT i = 0;
++		   i < n_members && *extra_start_p; i++)
++		extra_start_p = &OMP_CLAUSE_CHAIN (*extra_start_p);
++	      *extra_start_p = extra;
++
 +	      OMP_CLAUSE_SIZE (l)
 +		= size_binop (PLUS_EXPR, OMP_CLAUSE_SIZE (l),
 +			      size_int (scalar_count));
