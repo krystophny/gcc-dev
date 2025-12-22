@@ -53,19 +53,22 @@ is missing the `@` prefix required for global variable references.
 ## Trigger Conditions
 
 The bug requires ALL of the following:
-1. OpenACC compilation (`-acc` flag)
-2. GPU target (`-gpu=cc89` or similar)
-3. External `.mod` files (inline module definitions don't trigger it)
-4. Include statement structure (not inline code)
-5. Two namelists sharing the same variables:
+1. nvfortran 25.11 (tested - bug occurs with or without OpenACC flags)
+2. External precompiled `.mod` files from nvfortran (inline module definitions don't trigger it)
+3. Include statement structure (not inline code)
+4. Two namelists sharing the same variables:
    ```fortran
    namelist / nmlGenericScheduler / loadBalancing, buffersize, verbose, activateMPE
    namelist / parallel / loadBalancing, buffersize, verbose, activateMPE
    ```
 
+Note: The bug is NOT specific to OpenACC - it occurs in the LLVM IR generation
+for regular CPU compilation as well. It was discovered during OpenACC builds
+because that's when the scheduler_module was first compiled with nvfortran.
+
 ## Workaround
 
-None known. The bug prevents building libneo's MyMPILib with OpenACC on nvfortran 25.11.
+None known. The bug prevents building libneo's MyMPILib with nvfortran 25.11.
 
 ## Environment
 
