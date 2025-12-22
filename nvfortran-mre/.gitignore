@@ -1,0 +1,8 @@
+# Compiled module files
+*.mod
+
+# Object files
+*.o
+
+# Temporary files
+*.ll
