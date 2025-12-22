@@ -1,12 +1,19 @@
 # nvfortran 25.11 LLVM IR bug MRE
 #
-# Prerequisites: .mod files from a nvfortran libneo build
-#   cp /path/to/libneo/build-nvfortran/*.mod .
-#   cp /opt/nvidia/hpc_sdk/.../ompi/lib/mpi.mod .
-#
-# Then: make
+# Usage: make all
+# (Requires libneo built with nvfortran at /home/ert/code/libneo/build-nvfortran)
 
 FC = nvfortran
+
+# Default paths - adjust as needed
+LIBNEO_BUILD = /home/ert/code/libneo/build-nvfortran
+MPI_MOD_PATH = /opt/nvidia/hpc_sdk/Linux_x86_64/25.11/comm_libs/13.0/hpcx/hpcx-2.25.1/ompi/lib
+
+all: setup bug
+
+setup:
+	cp $(LIBNEO_BUILD)/*.mod .
+	cp $(MPI_MOD_PATH)/mpi.mod .
 
 bug:
 	$(FC) -c test_header_only.f90
