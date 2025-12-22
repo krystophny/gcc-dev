@@ -1,6 +1,8 @@
 GCC_BUILD_DIR = /home/ert/code/gcc-dev/gcc-build
 GCC_SRC_DIR = /home/ert/code/gcc-dev/gcc
 
+LIBGOMP_MOD_DIR = $(GCC_BUILD_DIR)/x86_64-pc-linux-gnu/libgomp
+
 FC_SYSTEM = gfortran
 FC_DEV = $(GCC_BUILD_DIR)/gcc/gfortran
 FC_INTEL = ifx
@@ -8,6 +10,7 @@ FC_INTEL = ifx
 FFLAGS_SYSTEM = -Wall -Wextra -std=f2018 -Wa,--noexecstack -Wl,-z,noexecstack
 FFLAGS_DEV = -Wall -Wextra -std=f2018 -Wa,--noexecstack \
              -B$(GCC_BUILD_DIR)/gcc \
+             -I$(LIBGOMP_MOD_DIR) \
              -L$(GCC_BUILD_DIR)/x86_64-pc-linux-gnu/libgfortran/.libs \
              -Wl,-rpath,$(GCC_BUILD_DIR)/x86_64-pc-linux-gnu/libgfortran/.libs \
              -Wl,-z,noexecstack
@@ -15,7 +18,7 @@ FFLAGS_INTEL = -warn all -stand f18
 
 INTEL_SETVARS = /opt/intel/oneapi/setvars.sh
 
-PR_DIRS = 102430 107721 121472 121475 121628 32365 90519 92613 96255
+PR_DIRS = 102430 103276 107721 121472 121475 121628 123252 32365 90519 92613 96255
 
 COARRAY_PRS =
 
@@ -71,7 +74,10 @@ test-compiler:
 	@for pr in $(PR_DIRS); do \
 		echo ""; \
 		echo "Testing PR$$pr..."; \
-		reproducer=$$(ls $$pr/*.f90 2>/dev/null | head -1); \
+		reproducer=$$pr/reproducer.f90; \
+		if [ ! -f "$$reproducer" ]; then \
+			reproducer=$$(ls $$pr/*.f90 2>/dev/null | head -1); \
+		fi; \
 		if [ -z "$$reproducer" ]; then \
 			echo "  [SKIP] No reproducer found"; \
 			continue; \
@@ -81,17 +87,34 @@ test-compiler:
 		else \
 			openmp_flag=""; \
 		fi; \
+		if grep -qiE '^[[:space:]]*![$$]acc' "$$reproducer" || grep -q 'dg-options.*-fopenacc' "$$reproducer"; then \
+			openacc_flag="-fopenacc"; \
+		else \
+			openacc_flag=""; \
+		fi; \
 		if echo " $(COARRAY_PRS) " | grep -q " $$pr "; then \
 			coarray_flag="-fcoarray=single"; \
 		else \
 			coarray_flag=""; \
 		fi; \
-		if $(FC) $(FFLAGS) $$coarray_flag $$openmp_flag -c $$reproducer -o /tmp/test_$$pr_$(SUFFIX).o > /tmp/test_$$pr_$(SUFFIX).log 2>&1; then \
+		log=/tmp/test_$${pr}_$(SUFFIX).log; \
+		if $(FC) $(FFLAGS) $$coarray_flag $$openmp_flag $$openacc_flag -c $$reproducer -o /tmp/test_$${pr}_$(SUFFIX).o > $$log 2>&1; then \
 			echo "  [PASS] Compilation successful"; \
 		else \
 			exit_code=$$?; \
-			if grep -q "internal compiler error" /tmp/test_$$pr_$(SUFFIX).log; then \
+			expected_regex=""; \
+			case "$(SUFFIX):$$pr" in \
+				system:102430) expected_regex="internal compiler error" ;; \
+				dev:102430) expected_regex="Error: Sorry" ;; \
+				system:32365) expected_regex='Unexpected !\$$OMP THREADPRIVATE statement' ;; \
+				dev:32365) expected_regex="cannot appear after executable statements" ;; \
+			esac; \
+			if [ -n "$$expected_regex" ] && grep -qE "$$expected_regex" "$$log"; then \
+				echo "  [XFAIL] Expected diagnostic"; \
+			elif grep -q "internal compiler error" "$$log"; then \
 				echo "  [ICE] Internal compiler error"; \
+			elif grep -qi "Error: Sorry" "$$log" || grep -qi "^Sorry," "$$log"; then \
+				echo "  [SORRY] Feature not supported"; \
 			else \
 				echo "  [FAIL] Compilation failed (exit code: $$exit_code)"; \
 			fi; \
@@ -124,7 +147,10 @@ test-pr:
 	@echo "=========================================="
 	@echo "Testing PR$(PR)"
 	@echo "=========================================="
-	@reproducer=$$(ls $(PR)/*.f90 2>/dev/null | head -1); \
+	@reproducer=$(PR)/reproducer.f90; \
+	if [ ! -f "$$reproducer" ]; then \
+		reproducer=$$(ls $(PR)/*.f90 2>/dev/null | head -1); \
+	fi; \
 	if [ -z "$$reproducer" ]; then \
 		echo "[SKIP] No reproducer found"; \
 		exit 0; \
@@ -134,24 +160,48 @@ test-pr:
 	else \
 		openmp_flag=""; \
 	fi; \
+	if grep -qiE '^[[:space:]]*![$$]acc' "$$reproducer" || grep -q 'dg-options.*-fopenacc' "$$reproducer"; then \
+		openacc_flag="-fopenacc"; \
+	else \
+		openacc_flag=""; \
+	fi; \
+	if echo " $(COARRAY_PRS) " | grep -q " $(PR) "; then \
+		coarray_flag="-fcoarray=single"; \
+	else \
+		coarray_flag=""; \
+	fi; \
+	expected_system_regex=""; \
+	expected_dev_regex=""; \
+	case "$(PR)" in \
+		102430) expected_system_regex="internal compiler error"; expected_dev_regex="Error: Sorry" ;; \
+		32365) expected_system_regex='Unexpected !\$$OMP THREADPRIVATE statement'; expected_dev_regex="cannot appear after executable statements" ;; \
+	esac; \
 	echo ""; \
 	echo "System gfortran:"; \
-	if $(FC_SYSTEM) $(FFLAGS_SYSTEM) $(COARRAY) $$openmp_flag -c $$reproducer -o /tmp/pr$(PR)_system.o > /tmp/pr$(PR)_system.log 2>&1; then \
+	if $(FC_SYSTEM) $(FFLAGS_SYSTEM) $$coarray_flag $$openmp_flag $$openacc_flag -c $$reproducer -o /tmp/pr$(PR)_system.o > /tmp/pr$(PR)_system.log 2>&1; then \
 		echo "  [PASS]"; \
 	else \
-		if grep -q "internal compiler error" /tmp/pr$(PR)_system.log; then \
+		if [ -n "$$expected_system_regex" ] && grep -qE "$$expected_system_regex" /tmp/pr$(PR)_system.log; then \
+			echo "  [XFAIL]"; \
+		elif grep -q "internal compiler error" /tmp/pr$(PR)_system.log; then \
 			echo "  [ICE]"; \
+		elif grep -qi "Error: Sorry" /tmp/pr$(PR)_system.log || grep -qi "^Sorry," /tmp/pr$(PR)_system.log; then \
+			echo "  [SORRY]"; \
 		else \
 			echo "  [FAIL]"; \
 		fi; \
 	fi; \
 	echo ""; \
 	echo "Dev gfortran:"; \
-	if $(FC_DEV) $(FFLAGS_DEV) $(COARRAY) $$openmp_flag -c $$reproducer -o /tmp/pr$(PR)_dev.o > /tmp/pr$(PR)_dev.log 2>&1; then \
+	if $(FC_DEV) $(FFLAGS_DEV) $$coarray_flag $$openmp_flag $$openacc_flag -c $$reproducer -o /tmp/pr$(PR)_dev.o > /tmp/pr$(PR)_dev.log 2>&1; then \
 		echo "  [PASS]"; \
 	else \
-		if grep -q "internal compiler error" /tmp/pr$(PR)_dev.log; then \
+		if [ -n "$$expected_dev_regex" ] && grep -qE "$$expected_dev_regex" /tmp/pr$(PR)_dev.log; then \
+			echo "  [XFAIL]"; \
+		elif grep -q "internal compiler error" /tmp/pr$(PR)_dev.log; then \
 			echo "  [ICE]"; \
+		elif grep -qi "Error: Sorry" /tmp/pr$(PR)_dev.log || grep -qi "^Sorry," /tmp/pr$(PR)_dev.log; then \
+			echo "  [SORRY]"; \
 		else \
 			echo "  [FAIL]"; \
 		fi; \
@@ -159,7 +209,7 @@ test-pr:
 	echo ""; \
 	echo "Intel ifx:"; \
 	if which ifx > /dev/null 2>&1; then \
-		if ifx $(FFLAGS_INTEL) $(COARRAY) $$openmp_flag -c $$reproducer -o /tmp/pr$(PR)_intel.o > /tmp/pr$(PR)_intel.log 2>&1; then \
+		if ifx $(FFLAGS_INTEL) $$coarray_flag $$openmp_flag $$openacc_flag -c $$reproducer -o /tmp/pr$(PR)_intel.o > /tmp/pr$(PR)_intel.log 2>&1; then \
 			echo "  [PASS]"; \
 		else \
 			echo "  [FAIL]"; \
