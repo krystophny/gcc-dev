@@ -50,6 +50,18 @@ rg -n \"\\.omp_data_arr|&var|pointer assign\" /tmp/pr103276_reproducer.*.omplowe
 Both target the same symptom: ENTER DATA on derived types leading to duplicate
 mapping errors in libgomp.
 
+## Patch (local)
+
+This repository includes a candidate fix exported from the GCC source checkout:
+
+- `0001-omp-avoid-taking-address-of-reference-in-map.patch`
+
+The corresponding GCC topic branch is `pr103276-openacc-enter-data-refmap`
+(commit `033be94559a71372a7668616fb561b36cd1a814c`).
+
+The patch applies cleanly to upstream `master` (see
+`/tmp/pr103276_patch_applies_upstream_master.log`).
+
 ## Build / Run (NVPTX example)
 
 This is a runtime/offload issue; compiling to an object file is not sufficient.
