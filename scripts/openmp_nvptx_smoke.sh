@@ -36,7 +36,13 @@ EOF
     "${tmp_dir}/omp_target_smoke.out"
 } 2>&1 | tee "${log_path}"
 
-if ! rg -n '^[[:space:]]*2\\.0' "${log_path}" >/dev/null; then
+if command -v rg >/dev/null 2>&1; then
+  match_cmd=(rg -n '^[[:space:]]*2\.0' "${log_path}")
+else
+  match_cmd=(grep -nE '^[[:space:]]*2\.0' "${log_path}")
+fi
+
+if ! "${match_cmd[@]}" >/dev/null; then
   echo "Smoke test failed: expected output 2.0 in ${log_path}" >&2
   exit 1
 fi

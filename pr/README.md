@@ -24,7 +24,9 @@ Each subdirectory contains a minimal reproducer, test results, and analysis for 
 | [102430](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102430) | OpenMP `linear` on arrays ICE / missing support | SUBMITTED | Patch exported to `pr/102430/` and pushed to GCC fork branch `pr102430-linear-sorry`. |
 | [107721](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=107721) | Array constructor type-spec lost when parenthesized | READY FOR SUBMISSION | Patch `0001-fortran-honor-array-constructor-type-spec-during-fol.patch` passes local matrix; awaiting upstream posting (see `pr/107721/`). |
 | [103276](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=103276) | OpenACC ENTER DATA duplicate mapping | REPRO ONLY | OpenACC mapping/OMP lowering issue; `make 103276` compiles only; see `pr/103276/` (GitHub issue #10). |
-| [123252](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123252) | OpenACC scalar member wrong when mapping array component | PATCH READY | Patch `0001-gimplify-map-Fortran-DT-scalars-for-OpenACC-enter-da.patch` passes local NVPTX repro; tracked in `pr/123252/`. |
+| [123252](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123252) | OpenACC scalar member wrong when mapping array component | PATCH READY | Patch `0001-gimplify-map-Fortran-DT-scalars-for-OpenACC-enter-da.patch` passes local NVPTX repro and also fixes a struct-member ordering regression tracked as PR123255; see `pr/123252/`. |
+| [123254](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123254) | OpenACC SIGSEGV with present() on DT dummy arg | WORKSFORME | No longer reproduces locally as of 2025-12-22 (see `/tmp/pr123254_run_host.log`, `/tmp/pr123254_run_nvptx.log`). |
+| [123255](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123255) | OpenACC allocatable component copyin wrong size | REGRESSION FIXED | Does not reproduce on upstream `master` base `7690418227…`; reproduced only with initial local PR123252 patch and fixed by the updated PR123252 patch; see `pr/123255/`. |
 | [121472](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121472) | Constructor/finalizer ICE | OPEN | ICE in `gimplify_expr` on GCC 15.2.1 and trunk; repro + patch tracked in `pr/121472/`. |
 
 ### Completed PRs

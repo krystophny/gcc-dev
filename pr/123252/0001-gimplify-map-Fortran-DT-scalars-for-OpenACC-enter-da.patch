@@ -1,33 +1,40 @@
-From 42475cae6d7cce30aabfac660a55c2d9e5b38e68 Mon Sep 17 00:00:00 2001
+From 853cd89ae61b42fe1bd4e872c46e1e4911f4d399 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Mon, 22 Dec 2025 11:18:59 +0100
 Subject: [PATCH] gimplify: map Fortran DT scalars for OpenACC enter data
 
-When OpenACC enter data maps only an allocatable component, gimplify
-creates a struct mapping for the containing derived type.  Ensure scalar
-non-pointer fields of the derived type are also copied to the device so
-later kernels can read them reliably.
+When OpenACC enter data maps only an allocatable component, gimplify creates a
+struct mapping for the containing derived type.  Ensure scalar non-pointer
+fields of the derived type are also copied to the device so later kernels can
+read them reliably.
+
+For Fortran descriptors, keep the struct member list in ascending field order
+and do not split descriptor-related nodes that follow the member list.
 
 	PR fortran/123252
+	PR fortran/123255
 
 gcc/ChangeLog:
 
-	* gimplify.cc (omp_accumulate_sibling_list): For OpenACC enter
-	data in Fortran, add map(to:) clauses for scalar fields.
+	* gimplify.cc (omp_accumulate_sibling_list): Insert added scalar field
+	mappings into the GOMP_MAP_STRUCT member list in field order.
 
 gcc/testsuite/ChangeLog:
 
 	* gfortran.dg/goacc/pr123252-scalar-field-mapping.f90: New test.
+	* gfortran.dg/goacc/pr123255-allocatable-component-map-order.f90: New test.
 
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
- gcc/gimplify.cc                               | 109 +++++++++++++++---
- .../goacc/pr123252-scalar-field-mapping.f90   |  37 ++++++
- 2 files changed, 131 insertions(+), 15 deletions(-)
+ gcc/gimplify.cc                               | 179 ++++++++++++++++--
+ .../goacc/pr123252-scalar-field-mapping.f90   |  37 ++++
+ ...123255-allocatable-component-map-order.f90 |  25 +++
+ 3 files changed, 227 insertions(+), 14 deletions(-)
  create mode 100644 gcc/testsuite/gfortran.dg/goacc/pr123252-scalar-field-mapping.f90
+ create mode 100644 gcc/testsuite/gfortran.dg/goacc/pr123255-allocatable-component-map-order.f90
 
 diff --git a/gcc/gimplify.cc b/gcc/gimplify.cc
-index 95506f1682f..0710492daa4 100644
+index 95506f1682f..fa738bba59a 100644
 --- a/gcc/gimplify.cc
 +++ b/gcc/gimplify.cc
 @@ -12693,6 +12693,17 @@ omp_accumulate_sibling_list (enum omp_region_type region_type,
@@ -80,40 +87,67 @@ index 95506f1682f..0710492daa4 100644
  	{
  	  gcc_assert (*grp_start_p == grp_end);
  	  if (reprocessing_struct)
-@@ -12814,14 +12825,82 @@ omp_accumulate_sibling_list (enum omp_region_type region_type,
+@@ -12814,14 +12825,154 @@ omp_accumulate_sibling_list (enum omp_region_type region_type,
  	      *insert_node_pos = l;
  	      *added_tail = &OMP_CLAUSE_CHAIN (alloc_node);
  	    }
 -	  else
 -	    grp_start_p = omp_siblist_insert_node_after (l, insert_node_pos);
--	}
 +		  else
 +		    grp_start_p = omp_siblist_insert_node_after (l, insert_node_pos);
 +		}
 +
-+	      if (scalar_copy)
++      if (scalar_copy)
++	{
++	  tree type = TREE_TYPE (base);
++	  if (TREE_CODE (type) == REFERENCE_TYPE)
++	    type = TREE_TYPE (type);
++
++	  if (RECORD_OR_UNION_TYPE_P (type))
++	    for (tree field = TYPE_FIELDS (type); field;
++		 field = DECL_CHAIN (field))
++	      {
++		if (TREE_CODE (field) != FIELD_DECL
++		    || DECL_ARTIFICIAL (field))
++		  continue;
++
++		bool already_mapped = false;
 +		{
-+		  tree type = TREE_TYPE (base);
-+		  if (TREE_CODE (type) == REFERENCE_TYPE)
-+		    type = TREE_TYPE (type);
++		  tree *member_start_p = &OMP_CLAUSE_CHAIN (l);
++		  while (*member_start_p
++			 && (OMP_CLAUSE_MAP_KIND (*member_start_p)
++			     == GOMP_MAP_FIRSTPRIVATE_POINTER
++			     || OMP_CLAUSE_MAP_KIND (*member_start_p)
++				== GOMP_MAP_FIRSTPRIVATE_REFERENCE))
++		    member_start_p = &OMP_CLAUSE_CHAIN (*member_start_p);
 +
-+		  if (RECORD_OR_UNION_TYPE_P (type))
-+		    for (tree field = TYPE_FIELDS (type); field;
-+			 field = DECL_CHAIN (field))
-+		      {
-+			if (TREE_CODE (field) != FIELD_DECL
-+			    || DECL_ARTIFICIAL (field))
-+			  continue;
++		  unsigned HOST_WIDE_INT n_members
++		    = tree_to_uhwi (OMP_CLAUSE_SIZE (l));
++		  tree member = *member_start_p;
++		  for (unsigned HOST_WIDE_INT i = 0; i < n_members && member;
++		       i++, member = OMP_CLAUSE_CHAIN (member))
++		    {
++		      tree mdecl = OMP_CLAUSE_DECL (member);
++		      if (TREE_CODE (mdecl) == COMPONENT_REF
++			  && TREE_OPERAND (mdecl, 1) == field)
++			{
++			  already_mapped = true;
++			  break;
++			}
++		    }
++		}
++		if (already_mapped)
++		  continue;
 +
-+			tree ftype = TREE_TYPE (field);
-+			if (POINTER_TYPE_P (ftype)
-+			    || TREE_CODE (ftype) == ARRAY_TYPE
-+			    || RECORD_OR_UNION_TYPE_P (ftype))
-+			  continue;
++		tree ftype = TREE_TYPE (field);
++		if (POINTER_TYPE_P (ftype)
++		    || TREE_CODE (ftype) == ARRAY_TYPE
++		    || RECORD_OR_UNION_TYPE_P (ftype))
++		  continue;
 +
-+			if (!INTEGRAL_TYPE_P (ftype)
-+			    && !SCALAR_FLOAT_TYPE_P (ftype))
-+			  continue;
++		if (!INTEGRAL_TYPE_P (ftype)
++		    && !SCALAR_FLOAT_TYPE_P (ftype))
++		  continue;
 +
 +			if (!TYPE_SIZE_UNIT (ftype)
 +			    || TREE_CODE (TYPE_SIZE_UNIT (ftype)) != INTEGER_CST)
@@ -134,30 +168,74 @@ index 95506f1682f..0710492daa4 100644
 +			scalar_count++;
 +		      }
 +
-+		  if (scalar_first)
++	  if (scalar_first)
++	    {
++	      tree *member_start_p = &OMP_CLAUSE_CHAIN (l);
++	      while (*member_start_p
++		     && (OMP_CLAUSE_MAP_KIND (*member_start_p)
++			 == GOMP_MAP_FIRSTPRIVATE_POINTER
++			 || OMP_CLAUSE_MAP_KIND (*member_start_p)
++			    == GOMP_MAP_FIRSTPRIVATE_REFERENCE))
++		member_start_p = &OMP_CLAUSE_CHAIN (*member_start_p);
++
++	      unsigned HOST_WIDE_INT n_members
++		= tree_to_uhwi (OMP_CLAUSE_SIZE (l));
++	      tree *extra_start_p = member_start_p;
++	      for (unsigned HOST_WIDE_INT i = 0;
++		   i < n_members && *extra_start_p; i++)
++		extra_start_p = &OMP_CLAUSE_CHAIN (*extra_start_p);
++
++	      tree extra = *extra_start_p;
++	      *extra_start_p = NULL_TREE;
++
++	      auto field_bytepos = [] (tree c) -> HOST_WIDE_INT
++	      {
++		tree d = OMP_CLAUSE_DECL (c);
++		if (TREE_CODE (d) == COMPONENT_REF)
++		  return int_byte_position (TREE_OPERAND (d, 1));
++		return HOST_WIDE_INT_MAX;
++	      };
++
++	      tree merged = NULL_TREE;
++	      tree *merged_tail = &merged;
++	      tree member = *member_start_p;
++	      tree scalar = scalar_first;
++	      while (member || scalar)
++		{
++		  tree take;
++		  if (!scalar)
 +		    {
-+		      tree *insert = &OMP_CLAUSE_CHAIN (l);
-+		      while (*insert
-+			     && (OMP_CLAUSE_MAP_KIND (*insert)
-+				 == GOMP_MAP_FIRSTPRIVATE_POINTER
-+				 || OMP_CLAUSE_MAP_KIND (*insert)
-+				    == GOMP_MAP_FIRSTPRIVATE_REFERENCE
-+				 || OMP_CLAUSE_MAP_KIND (*insert)
-+				    == GOMP_MAP_ATTACH_DETACH))
-+			insert = &OMP_CLAUSE_CHAIN (*insert);
-+
-+		      unsigned HOST_WIDE_INT elems
-+			= tree_to_uhwi (OMP_CLAUSE_SIZE (l));
-+		      for (unsigned HOST_WIDE_INT i = 0; i < elems && *insert; i++)
-+			insert = &OMP_CLAUSE_CHAIN (*insert);
-+
-+		      *scalar_tail = *insert;
-+		      *insert = scalar_first;
-+		      OMP_CLAUSE_SIZE (l)
-+			= size_binop (PLUS_EXPR, OMP_CLAUSE_SIZE (l),
-+				      size_int (scalar_count));
++		      take = member;
++		      member = OMP_CLAUSE_CHAIN (member);
 +		    }
++		  else if (!member)
++		    {
++		      take = scalar;
++		      scalar = OMP_CLAUSE_CHAIN (scalar);
++		    }
++		  else if (field_bytepos (scalar) < field_bytepos (member))
++		    {
++		      take = scalar;
++		      scalar = OMP_CLAUSE_CHAIN (scalar);
++		    }
++		  else
++		    {
++		      take = member;
++		      member = OMP_CLAUSE_CHAIN (member);
++		    }
++
++		  OMP_CLAUSE_CHAIN (take) = NULL_TREE;
++		  *merged_tail = take;
++		  merged_tail = &OMP_CLAUSE_CHAIN (take);
 +		}
++
++	      *merged_tail = extra;
++	      *member_start_p = merged;
++	      OMP_CLAUSE_SIZE (l)
++		= size_binop (PLUS_EXPR, OMP_CLAUSE_SIZE (l),
++			      size_int (scalar_count));
++	    }
+ 	}
  
 -      unsigned last_access = base_token + 1;
 +	      unsigned last_access = base_token + 1;
@@ -212,6 +290,37 @@ index 00000000000..01424529241
 +! { dg-final { scan-tree-dump "oacc_enter_data" "omplower" } }
 +! { dg-final { scan-tree-dump "map\\(to:c\\.flag" "omplower" } }
 +! { dg-final { scan-tree-dump "map\\(to:c\\.n" "omplower" } }
+diff --git a/gcc/testsuite/gfortran.dg/goacc/pr123255-allocatable-component-map-order.f90 b/gcc/testsuite/gfortran.dg/goacc/pr123255-allocatable-component-map-order.f90
+new file mode 100644
+index 00000000000..c1d38199dd7
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/goacc/pr123255-allocatable-component-map-order.f90
+@@ -0,0 +1,25 @@
++! { dg-do compile }
++! { dg-options "-O2 -fopenacc -fdump-tree-omplower" }
++!
++! PR fortran/123255
++! Verify that mapping a later allocatable component also maps earlier scalar
++! components in field order without splitting descriptor-related nodes.
++
++program pr123255
++  implicit none
++
++  type :: container_t
++    integer :: n
++    real(8), allocatable :: data(:)
++  end type container_t
++
++  type(container_t) :: c
++
++  c%n = 2
++  allocate (c%data(c%n))
++
++  !$acc enter data copyin(c%data)
++  !$acc exit data delete(c%data)
++end program pr123255
++
++! { dg-final { scan-tree-dump-times "oacc_enter_data.*map\\\\(to:c\\\\.n \\\\[len: \\\\[0-9\\\\]+\\\\]\\\\).*map\\\\(to:c\\\\.data \\\\[pointer set, len: \\\\[0-9\\\\]+\\\\]\\\\)" 1 "omplower" } }
 -- 
 2.52.0
 
