@@ -50,9 +50,9 @@ Exported from `gcc` repo:
 After applying the patch and rebuilding/installing the NVPTX offload toolchain:
 
 - `pr/123252/reproducer.f90` prints `PASS` with `ACC_DEVICE_TYPE=nvidia`:
-  `/tmp/pr123252_after_pr123255_fix_run.log`
+  `/tmp/pr123252_v2_repro_123252_run.log`
 - OpenACC/OpenMP NVPTX smoke tests:
-  `/tmp/pr123255_fix_openacc_smoke.log`, `/tmp/pr123255_fix_openmp_smoke.log`
+  `/tmp/pr123252_v2_openacc_smoke.log`, `/tmp/pr123252_v2_openmp_smoke.log`
 
 This patch also includes a field-ordering fix for Fortran derived types with
 descriptors and adds a compile-only regression for that ordering (PR123255):
