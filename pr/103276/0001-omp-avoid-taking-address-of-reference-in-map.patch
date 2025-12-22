@@ -1,4 +1,4 @@
-From 033be94559a71372a7668616fb561b36cd1a814c Mon Sep 17 00:00:00 2001
+From f994c479a5861c5c6ac57c78da7b8c4ca4c77386 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Mon, 22 Dec 2025 09:12:05 +0100
 Subject: [PATCH] omp: avoid taking address of reference in map
@@ -29,7 +29,7 @@ Signed-off-by: Christopher Albert <albert@tugraz.at>
  create mode 100644 gcc/testsuite/gfortran.dg/goacc/pr103276-enter-data-refmap.f90
 
 diff --git a/gcc/omp-low.cc b/gcc/omp-low.cc
-index 4540a25d1ad..07fb27ad2b6 100644
+index 4540a25d1ad..1841c224333 100644
 --- a/gcc/omp-low.cc
 +++ b/gcc/omp-low.cc
 @@ -6937,7 +6937,8 @@ lower_rec_input_clauses (tree clauses, gimple_seq *ilist, gimple_seq *dlist,
@@ -37,8 +37,8 @@ index 4540a25d1ad..07fb27ad2b6 100644
  	  gimple_seq_add_seq (dlist, llist[2]);
  
 -	  g = gimple_build_assign (simt_lane, LSHIFT_EXPR, simt_lane, integer_one_node);
-+		  g = gimple_build_assign (simt_lane, LSHIFT_EXPR, simt_lane,
-+					   integer_one_node);
++	  g = gimple_build_assign (simt_lane, LSHIFT_EXPR, simt_lane,
++				   integer_one_node);
  	  gimple_seq_add_stmt (dlist, g);
  
  	  gimple_seq_add_stmt (dlist, gimple_build_label (header));
