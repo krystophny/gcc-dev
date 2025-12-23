@@ -13,10 +13,12 @@ kernel when only array component is mapped
 
 ## Summary
 
-Mapping only an allocatable array component of a derived type with OpenACC
-(`enter data copyin(c%arr(...))`) and then reading a scalar component (`c%flag`)
-in a device kernel can yield the wrong result: the device observes `c%flag` as
-false/garbage and takes the wrong branch.
+When an OpenACC enter data maps only an allocatable component of a Fortran
+derived type (for example `enter data copyin(c%arr(...))`), gimplify still
+creates a `GOMP_MAP_STRUCT` mapping for the enclosing derived object.  Before
+this change, that struct mapping did not also copy scalar, non-pointer
+components such as `c%flag` or `c%n`, so later device kernels could read those
+scalar fields as garbage and take the wrong branch.
 
 The reproducer is `reproducer.f90`.  It prints `PASS` when `c%flag` is observed
 as true on the device and prints `FAIL` and exits non-zero otherwise.
@@ -41,20 +43,23 @@ Built and ran with NVPTX offloading using the local trunk toolchain; logs:
 
 ## Patch (local)
 
-Exported from `gcc` repo:
+Exported from `gcc` repo, v3 (frontend fix in trans-openmp.cc):
 
-- `0001-gimplify-map-Fortran-DT-scalars-for-OpenACC-enter-da.patch`
+- `0001-fortran-Map-scalar-fields-on-OpenACC-enter-data-PR12.patch`
+
+Previous approaches (gimplify.cc) did not work because GOMP_MAP_TO_PSET clauses
+skip the call to omp_accumulate_sibling_list where scalar field synthesis was
+attempted.  The current approach adds scalar field synthesis directly in the
+Fortran frontend (trans-openmp.cc), similar to the PR 103276 fix.
 
 ## Verification (local)
 
-After applying the patch and rebuilding/installing the NVPTX offload toolchain:
+Compile-only regression test passes:
 
-- `pr/123252/reproducer.f90` prints `PASS` with `ACC_DEVICE_TYPE=nvidia`:
-  `/tmp/pr123252_squash_repro_123252_run.log`
-- OpenACC/OpenMP NVPTX smoke tests:
-  `/tmp/pr123252_squash_openacc_smoke.log`, `/tmp/pr123252_squash_openmp_smoke.log`
+```
+PASS: gfortran.dg/goacc/pr123252.f90   -O  (test for excess errors)
+PASS: gfortran.dg/goacc/pr123252.f90   -O   scan-tree-dump omplower "map\(to:c\.flag"
+PASS: gfortran.dg/goacc/pr123252.f90   -O   scan-tree-dump omplower "map\(to:c\.n"
+```
 
-This patch also includes a field-ordering fix for Fortran derived types with
-descriptors and adds a compile-only regression for that ordering (PR123255):
-
-- `gcc/testsuite/gfortran.dg/goacc/pr123255-allocatable-component-map-order.f90`
+All goacc tests pass (3950 expected passes, 281 expected failures).
