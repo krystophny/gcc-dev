@@ -351,6 +351,7 @@ README.md header format:
 | 103276 | Skip pointer mapping for pass-by-ref in ENTER/EXIT DATA |
 | 123252 | Map scalar fields on enter data for components |
 | 123280 | Fix acc_is_present for assumed-shape and pointers |
+| 123282 | Fix OpenACC refcount for Fortran allocatable array descriptors |
 
 **Merged upstream:** 32365, 90519, 92613, 96080, 96255, 107721, 121472, 121475, 121628
 
