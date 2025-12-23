@@ -1,0 +1,109 @@
+From 91ab0d475071ce8de39bae65a16e613b945a1d14 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Tue, 23 Dec 2025 09:14:02 +0100
+Subject: [PATCH] fortran: Skip pointer mapping for pass-by-ref in ENTER/EXIT
+ DATA [PR103276]
+
+For ENTER/EXIT DATA (both OpenMP and OpenACC), avoid creating a
+GOMP_MAP_POINTER mapping for variables that are only pointer types
+at tree level due to Fortran pass-by-reference semantics, but are
+not actual POINTER, ALLOCATABLE, or Cray pointee variables.
+
+Previously, the frontend would generate a mapping that takes the
+address of the reference slot (&var where var is already a reference),
+which incorrectly maps the local stack frame address instead of the
+referenced data.  When the subroutine returns and the stack is reused,
+this causes conflicts in libgomp's splay tree structures:
+
+  libgomp: Trying to map into device [...] object when [...] is
+  already mapped
+
+The fix refines the condition for creating node4 (the pointer mapping)
+to only apply when the variable is an actual POINTER/ALLOCATABLE (at
+Fortran level), not just pass-by-reference.
+
+	PR fortran/103276
+
+gcc/fortran/ChangeLog:
+
+	* trans-openmp.cc (gfc_trans_omp_clauses): For ENTER/EXIT DATA,
+	skip GOMP_MAP_POINTER mapping for pass-by-reference scalars that
+	are not actual POINTER/ALLOCATABLE variables.
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/goacc/pr103276.f90: New test.
+
+Co-authored-by: Tobias Burnus <burnus@gcc.gnu.org>
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/trans-openmp.cc                  | 18 ++++++++++---
+ gcc/testsuite/gfortran.dg/goacc/pr103276.f90 | 27 ++++++++++++++++++++
+ 2 files changed, 42 insertions(+), 3 deletions(-)
+ create mode 100644 gcc/testsuite/gfortran.dg/goacc/pr103276.f90
+
+diff --git a/gcc/fortran/trans-openmp.cc b/gcc/fortran/trans-openmp.cc
+index d7f3c281823..7f98b934191 100644
+--- a/gcc/fortran/trans-openmp.cc
++++ b/gcc/fortran/trans-openmp.cc
+@@ -4247,9 +4247,21 @@ gfc_trans_omp_clauses (stmtblock_t *block, gfc_omp_clauses *clauses,
+ 							     cond, tmp,
+ 							     NULL_TREE));
+ 			}
+-		      /* For descriptor types, the unmapping happens below.  */
+-		      if (op != EXEC_OMP_TARGET_EXIT_DATA
+-			  || !GFC_DESCRIPTOR_TYPE_P (TREE_TYPE (decl)))
++		      /* For descriptor types, the unmapping happens below.
++			 For ENTER/EXIT DATA on pass-by-reference scalars
++			 that are not actual POINTER/ALLOCATABLE, skip the
++			 pointer mapping - it would incorrectly map the
++			 local reference slot instead of the data.  */
++		      if ((op != EXEC_OMP_TARGET_EXIT_DATA
++			   && op != EXEC_OMP_TARGET_ENTER_DATA
++			   && op != EXEC_OACC_ENTER_DATA
++			   && op != EXEC_OACC_EXIT_DATA)
++			  || (!GFC_DESCRIPTOR_TYPE_P (TREE_TYPE (decl))
++			      && (GFC_DECL_GET_SCALAR_POINTER (decl)
++				  || GFC_DECL_GET_SCALAR_ALLOCATABLE (decl)
++				  || GFC_DECL_CRAY_POINTEE (decl)
++				  || pointer
++				  || allocatable)))
+ 			{
+ 			  enum gomp_map_kind gmk = GOMP_MAP_POINTER;
+ 			  if (op == EXEC_OMP_TARGET_EXIT_DATA
+diff --git a/gcc/testsuite/gfortran.dg/goacc/pr103276.f90 b/gcc/testsuite/gfortran.dg/goacc/pr103276.f90
+new file mode 100644
+index 00000000000..8eb2f85bccb
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/goacc/pr103276.f90
+@@ -0,0 +1,27 @@
++! { dg-do compile }
++! { dg-options "-O2 -fopenacc -fdump-tree-omplower" }
++!
++! PR fortran/103276
++! OpenACC ENTER DATA on a derived-type dummy argument must not take the
++! address of the reference slot (which lives on the current stack frame).
++! The mapping should use the reference value directly, not &var.
++
++module m
++  implicit none
++
++  type :: t
++    integer :: v
++  end type t
++
++contains
++
++  subroutine copyin_scalar (var)
++    type(t), intent(inout) :: var
++    !$acc enter data copyin(var)
++  end subroutine copyin_scalar
++
++end module m
++
++! Verify that the lowered code does not contain "&var" assignment to
++! .omp_data_arr, which would indicate taking address of reference slot.
++! { dg-final { scan-tree-dump-not "\\.omp_data_arr\\..*= &var" "omplower" } }
+-- 
+2.52.0
+
