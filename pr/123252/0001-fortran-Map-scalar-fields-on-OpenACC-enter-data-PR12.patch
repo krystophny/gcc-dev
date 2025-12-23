@@ -1,0 +1,157 @@
+From 5ceb43929fceaac9db83d91cd1ef3836ac0a4186 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Tue, 23 Dec 2025 10:15:54 +0100
+Subject: [PATCH] fortran: Map scalar fields on OpenACC enter data [PR123252]
+
+When OpenACC enter data maps only an allocatable component of a
+derived type (e.g., c%arr), the scalar fields of the parent type
+(e.g., c%flag, c%n) must also be mapped so they are available on
+the device in subsequent parallel regions.
+
+Without this fix, accessing scalar fields like loop bounds or flags
+inside a parallel region would use uninitialized device memory, since
+only the explicitly mapped component data was copied.
+
+The fix detects when an allocatable component is being mapped for
+OACC_ENTER_DATA and synthesizes additional map(to:) clauses for all
+scalar fields of the parent derived type.
+
+	PR fortran/123252
+
+gcc/fortran/ChangeLog:
+
+	* trans-openmp.cc (gfc_trans_omp_clauses): For OpenACC enter
+	data, also map scalar fields of derived type when mapping an
+	allocatable component.
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/goacc/pr123252.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/trans-openmp.cc                  | 62 ++++++++++++++++++++
+ gcc/testsuite/gfortran.dg/goacc/pr123252.f90 | 38 ++++++++++++
+ 2 files changed, 100 insertions(+)
+ create mode 100644 gcc/testsuite/gfortran.dg/goacc/pr123252.f90
+
+diff --git a/gcc/fortran/trans-openmp.cc b/gcc/fortran/trans-openmp.cc
+index d7f3c281823..af44c06ebc8 100644
+--- a/gcc/fortran/trans-openmp.cc
++++ b/gcc/fortran/trans-openmp.cc
+@@ -4976,6 +4976,68 @@ gfc_trans_omp_clauses (stmtblock_t *block, gfc_omp_clauses *clauses,
+ 	      else
+ 		sorry_at (gfc_get_location (&n->where), "unhandled expression");
+ 
++	      /* For OpenACC enter data on an allocatable component, also map
++		 scalar fields of the parent derived type so they are available
++		 on the device.  Without this, only the explicitly mapped
++		 component is copied, leaving other scalar fields uninitialized
++		 when accessed in a subsequent parallel region.  */
++	      if (openacc && op == EXEC_OACC_ENTER_DATA
++		  && n->expr && n->expr->ref
++		  && n->sym->ts.type == BT_DERIVED
++		  && lastref && lastref->type == REF_ARRAY)
++		{
++		  gfc_symbol *derived_sym = n->sym;
++		  gfc_component *mapped_comp = NULL;
++
++		  /* Find the component being mapped.  */
++		  for (gfc_ref *ref = n->expr->ref; ref; ref = ref->next)
++		    if (ref->type == REF_COMPONENT)
++		      mapped_comp = ref->u.c.component;
++
++		  if (mapped_comp != NULL)
++		    {
++		      tree base = gfc_maybe_dereference_var (derived_sym, decl);
++
++		      for (gfc_component *comp = derived_sym->ts.u.derived->components;
++			   comp; comp = comp->next)
++			{
++			  /* Skip the component being explicitly mapped.  */
++			  if (comp == mapped_comp)
++			    continue;
++
++			  /* Skip pointer, allocatable, and array components.  */
++			  if (comp->attr.pointer || comp->attr.allocatable
++			      || comp->attr.dimension)
++			    continue;
++
++			  /* Only map scalar fields.  */
++			  if (comp->ts.type != BT_INTEGER
++			      && comp->ts.type != BT_REAL
++			      && comp->ts.type != BT_LOGICAL
++			      && comp->ts.type != BT_COMPLEX)
++			    continue;
++
++			  /* Ensure backend_decl exists.  */
++			  if (comp->backend_decl == NULL_TREE)
++			    gfc_get_derived_type (derived_sym);
++
++			  if (comp->backend_decl == NULL_TREE)
++			    continue;
++
++			  tree field = comp->backend_decl;
++			  tree ftype = TREE_TYPE (field);
++			  tree cref = fold_build3_loc (input_location,
++						       COMPONENT_REF, ftype,
++						       base, field, NULL_TREE);
++			  tree c = build_omp_clause (map_loc, OMP_CLAUSE_MAP);
++			  OMP_CLAUSE_SET_MAP_KIND (c, GOMP_MAP_TO);
++			  OMP_CLAUSE_DECL (c) = cref;
++			  OMP_CLAUSE_SIZE (c) = TYPE_SIZE_UNIT (ftype);
++			  omp_clauses = gfc_trans_add_clause (c, omp_clauses);
++			}
++		    }
++		}
++
+ 	      finalize_map_clause:
+ 
+ 	      omp_clauses = gfc_trans_add_clause (node, omp_clauses);
+diff --git a/gcc/testsuite/gfortran.dg/goacc/pr123252.f90 b/gcc/testsuite/gfortran.dg/goacc/pr123252.f90
+new file mode 100644
+index 00000000000..02f92a812fb
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/goacc/pr123252.f90
+@@ -0,0 +1,38 @@
++! { dg-do compile }
++! { dg-options "-O2 -fopenacc -fdump-tree-omplower" }
++!
++! PR fortran/123252
++! When OpenACC enter data maps only an allocatable component, scalar
++! fields of the derived type must also be mapped so they are available
++! on the device.
++
++program pr123252
++  implicit none
++
++  type :: container_t
++    real(8), allocatable :: arr(:)
++    logical :: flag
++    integer :: n
++  end type container_t
++
++  type(container_t) :: c
++  integer :: i
++
++  c%n = 8
++  c%flag = .true.
++  allocate(c%arr(c%n))
++
++  !$acc enter data copyin(c%arr(1:c%n))
++
++  !$acc parallel loop present(c%arr)
++  do i = 1, c%n
++    if (c%flag) then
++      c%arr(i) = c%arr(i) + 1.0d0
++    end if
++  end do
++  !$acc end parallel loop
++end program pr123252
++
++! Verify scalar fields are mapped alongside the allocatable component.
++! { dg-final { scan-tree-dump "map\\(to:c\\.flag" "omplower" } }
++! { dg-final { scan-tree-dump "map\\(to:c\\.n" "omplower" } }
+-- 
+2.52.0
+
