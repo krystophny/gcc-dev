@@ -193,12 +193,30 @@ case GOMP_MAP_STRUCT_UNORD:
   break;  // <-- NO CLEANUP
 ```
 
-This was introduced in GCC 10.1 (2020-06-05, Thomas Schwinge & Julian Brown) with the
-changelog: "Remove 'GOMP_MAP_STRUCT' mapping from OpenACC 'exit data' directives."
+**Original commit** `1afc4672561a41dfbf4e3f2c1f35f7a5b7a20339` (2020-05-20) by
+Thomas Schwinge & Julian Brown:
 
-The design assumption was that GOMP_MAP_STRUCT is a "no-op" that doesn't need cleanup.
-However, in repeated alloc/dealloc cycles with multiple parallel loops, this creates
-stale struct mapping state that corrupts pointer attachments on iteration 2+.
+```
+[OpenACC 'exit data'] Strip 'GOMP_MAP_STRUCT' mappings
+
+These are not itself necessary for OpenACC 'exit data' directives, and are
+skipped over (now) in libgomp.  We might as well not emit them to start with,
+in line with the equivalent OpenMP directive.  We keep the no-op handling in
+libgomp for the reason of backward compatibility.
+```
+
+**Rationale at the time:**
+1. libgomp already skipped GOMP_MAP_STRUCT on exit - considered a "no-op"
+2. OpenMP already had this removal for OMP_TARGET_EXIT_DATA
+3. "Might as well not emit them" - optimization to reduce overhead
+
+**Why the assumption was wrong:**
+The assumption was that GOMP_MAP_STRUCT is purely a "grouping marker" with no
+persistent state. However, on enter_data it creates struct mapping state in
+the runtime splay tree, and without the corresponding struct on exit_data,
+this state isn't properly cleaned up. In repeated alloc/dealloc cycles with
+multiple parallel loops, this creates stale struct mapping state that corrupts
+pointer attachments on iteration 2+.
 
 ### Potential Fix Locations (Clean, Targeted, Minimal)
 
