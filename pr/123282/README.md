@@ -1,9 +1,9 @@
-# OpenACC: Illegal memory access with derived type component in repeated alloc/dealloc cycle
+# PR123282: OpenACC illegal memory access with derived type in repeated alloc/dealloc cycle
 
 ## Status
 - **Confirmed**: Bug in GCC 16.0.0 (trunk)
 - **Fixed**: libgomp/oacc-mem.c refcount handling
-- **Bugzilla PR**: TBD
+- **Bugzilla PR**: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123282
 
 ## Summary
 

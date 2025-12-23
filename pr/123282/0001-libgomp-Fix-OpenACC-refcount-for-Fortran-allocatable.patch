@@ -1,8 +1,8 @@
-From 935e802e4e6a5044eb9b58ccff3aab970fdb0343 Mon Sep 17 00:00:00 2001
+From 946fe28c770d8c1764bbd3d5c8b9fe7a72de71ad Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Wed, 24 Dec 2025 00:04:32 +0100
 Subject: [PATCH] libgomp: Fix OpenACC refcount for Fortran allocatable array
- descriptors
+ descriptors [PR123282]
 
 For Fortran allocatable arrays, TO_PSET + POINTER mapping groups create
 multiple tgt->list entries that reference the same splay tree key (the
@@ -22,6 +22,8 @@ The fix tracks duplicate keys in goacc_enter_data_internal and:
 1. Only increments dynamic_refcount once per unique key
 2. Decrements refcount for duplicates to compensate
 
+	PR libgomp/123282
+
 libgomp/ChangeLog:
 
 	* oacc-mem.c (goacc_enter_data_internal): Track duplicate splay
@@ -30,7 +32,6 @@ libgomp/ChangeLog:
 	* testsuite/libgomp.oacc-fortran/allocatable-component-realloc-1.f90:
 	New test.
 
-Signed-off-by: Philipp Orsini <orsini@cp.tum.de>
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
  libgomp/oacc-mem.c                            | 26 ++++++++-
