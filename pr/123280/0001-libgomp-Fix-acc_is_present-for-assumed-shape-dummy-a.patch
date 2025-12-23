@@ -1,0 +1,112 @@
+From a9073a3268f37bd57b9707797fac9abb92eed8e3 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Tue, 23 Dec 2025 15:51:16 +0100
+Subject: [PATCH] libgomp: Fix acc_is_present for assumed-shape dummy arguments
+ [PR123280]
+
+The acc_is_present_array_h function had 'contiguous' on its assumed-rank
+dummy argument.  When an assumed-shape array was passed, gfortran would
+create a temporary copy to satisfy the contiguity requirement.  This
+caused acc_is_present to check the address of the copy rather than the
+original data, returning false even when the original data was present
+on the device.
+
+Remove the contiguous attribute since acc_is_present only needs the
+base address and size for the lookup, not a guarantee of contiguous
+storage.
+
+	PR libgomp/123280
+
+libgomp/ChangeLog:
+
+	* openacc.f90 (acc_is_present_array_h): Remove contiguous
+	attribute from assumed-rank dummy argument.
+	* testsuite/libgomp.oacc-fortran/pr123280.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ libgomp/openacc.f90                           |  4 +-
+ .../libgomp.oacc-fortran/pr123280.f90         | 49 +++++++++++++++++++
+ 2 files changed, 51 insertions(+), 2 deletions(-)
+ create mode 100644 libgomp/testsuite/libgomp.oacc-fortran/pr123280.f90
+
+diff --git a/libgomp/openacc.f90 b/libgomp/openacc.f90
+index 1d944275833..cee15831f28 100644
+--- a/libgomp/openacc.f90
++++ b/libgomp/openacc.f90
+@@ -383,7 +383,7 @@ module openacc_internal
+ 
+     function acc_is_present_array_h (a)
+       logical acc_is_present_array_h
+-      type (*), dimension (..), contiguous :: a
++      type (*), dimension (..) :: a
+     end function
+ 
+     subroutine acc_copyin_async_32_h (a, len, async)
+@@ -1671,7 +1671,7 @@ end function
+ function acc_is_present_array_h (a)
+   use openacc_internal, only: acc_is_present_l
+   logical acc_is_present_array_h
+-  type (*), dimension (..), contiguous :: a
++  type (*), dimension (..) :: a
+   acc_is_present_array_h = acc_is_present_l (a, sizeof (a)) /= 0
+ end function
+ 
+diff --git a/libgomp/testsuite/libgomp.oacc-fortran/pr123280.f90 b/libgomp/testsuite/libgomp.oacc-fortran/pr123280.f90
+new file mode 100644
+index 00000000000..238f842d95e
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.oacc-fortran/pr123280.f90
+@@ -0,0 +1,49 @@
++! PR libgomp/123280
++! { dg-do run }
++! { dg-skip-if "" { *-*-* } { "*" } { "-DACC_MEM_SHARED=0" } }
++!
++! Test that acc_is_present works correctly for assumed-shape dummy arguments.
++! Before the fix, passing an assumed-shape array to acc_is_present would
++! create a copy (due to the contiguous attribute), causing the lookup to fail.
++
++program pr123280
++  use openacc
++  implicit none
++
++  real, allocatable :: arr(:)
++  integer, parameter :: n = 100
++
++  allocate(arr(n))
++  arr = 1.0
++
++  !$acc enter data copyin(arr)
++
++  ! Direct check should pass
++  if (.not. acc_is_present(arr)) stop 1
++
++  ! Check via subroutine with assumed-shape should also pass
++  call check_present(arr)
++
++  ! Check via subroutine with explicit contiguous should also pass
++  call check_present_contiguous(arr)
++
++  !$acc exit data delete(arr)
++
++contains
++
++  subroutine check_present(x)
++    real, intent(in) :: x(:)
++
++    ! This used to fail because gfortran created a copy of the array
++    ! to satisfy the contiguous requirement in acc_is_present_array_h.
++    if (.not. acc_is_present(x)) stop 2
++  end subroutine check_present
++
++  subroutine check_present_contiguous(x)
++    real, intent(in), contiguous :: x(:)
++
++    ! With explicit contiguous on the dummy, no copy should be needed.
++    if (.not. acc_is_present(x)) stop 3
++  end subroutine check_present_contiguous
++
++end program pr123280
+-- 
+2.52.0
+
