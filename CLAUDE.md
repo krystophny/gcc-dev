@@ -75,6 +75,8 @@ review), not as a quick patch.
 - Parsing/diagnostics and constrained semantics: targeted `match.cc`,
   `resolve.cc`, and `parse.cc` fixes with focused regressions. Evidence:
   PR32365, PR96255.
+- OpenACC/OpenMP mapping: ENTER/EXIT DATA clause translation, pointer vs
+  pass-by-reference handling in `trans-openmp.cc`. Evidence: PR103276, PR123252.
 
 ### Familiar but Not Yet Deep
 
@@ -589,13 +591,14 @@ source and target overlap.
 ## GCC Fortran Codebase Analysis
 
 This section documents patterns learned from working on PRs 32365, 90519,
-92613, 96255, 107721, 121472, 121475, and 121628.
+92613, 96255, 103276, 107721, 121472, 121475, 121628, and 123252.
 
 ### Key Files
 
 - `trans.cc`: tree expression translation; finalization lowering.
 - `trans-expr.cc`: expression translation; assignments and procedure calls.
 - `trans-array.cc`: array operations; deep copy and allocatable components.
+- `trans-openmp.cc`: OpenACC/OpenMP directive translation; map clause handling.
 - `arith.cc`: constant folding; intrinsic evaluation.
 - `array.cc`: array constructors; type-spec propagation and conversion.
 - `resolve.cc`: semantic resolution; constraint enforcement.
@@ -618,6 +621,7 @@ This section documents patterns learned from working on PRs 32365, 90519,
 | Parse / new syntax | `match.cc`, `resolve.cc`, `gfortran.h` | `gfc_match_*` paths; new fields and semantic checks | New syntax usually touches parsing + data + resolution. |
 | Diagnostics | `parse.cc`, `resolve.cc`, `error.cc` | Statement ordering and constraint checks | Prefer targeted cases over new infrastructure. |
 | Preprocessing | `cpp.cc`, `scanner.cc`, `f95-lang.cc` | `gfc_cpp_enabled`, `gfc_option.flag_preprocessed`, `gfc_cpp_preprocess_only` | Option combinations matter (`-E`, `-cpp`, `-fpreprocessed`). |
+| OpenACC/OpenMP mapping | `trans-openmp.cc` | `gfc_trans_omp_clauses`, node/node2/node3/node4 creation | Distinguish Fortran POINTER/ALLOCATABLE from tree-level pointer types due to pass-by-reference. |
 
 ### Typical Change Points (by domain)
 
@@ -685,6 +689,23 @@ tracked in `pr/`.
     switch can enforce the rule.
   - Vague tests that only check that something compiles.
 
+#### OpenACC/OpenMP clause translation (`trans-openmp.cc`)
+
+- Change points:
+  - Refine conditions for creating mapping nodes (node, node2, node3, node4)
+    in `gfc_trans_omp_clauses` based on Fortran-level semantics.
+  - Distinguish actual POINTER/ALLOCATABLE (use `GFC_DECL_GET_SCALAR_POINTER`,
+    `GFC_DECL_GET_SCALAR_ALLOCATABLE`) from pass-by-reference pointer types.
+  - Handle ENTER/EXIT DATA differently from TARGET regions when appropriate.
+- Avoid:
+  - Middle-end fixes (`omp-low.cc`) when the issue is Fortran-specific semantics
+    that should be handled in the frontend.
+  - Taking `&var` for pass-by-reference parameters in ENTER/EXIT DATA mappings
+    (maps the stack slot instead of the data).
+- Key insight: Fortran pass-by-reference creates pointer types at tree level,
+  but these are not Fortran POINTER variables. Check `GFC_DECL_GET_SCALAR_*`
+  macros to distinguish.
+
 ### What Not To Do (hard-won defaults)
 
 - Do not add new infrastructure until the failing condition is written down
@@ -704,6 +725,7 @@ Examples (for quick recall):
 - PR96255: DO CONCURRENT type-spec required coordinated `match.cc` + `resolve.cc` + `gfortran.h` updates.
 - PR32365: improved statement-ordering diagnostic in `parse.cc`.
 - PR92613: preprocessing mode interaction fixed by skipping libcpp for already-preprocessed input.
+- PR103276: ENTER/EXIT DATA pointer mapping fixed by checking `GFC_DECL_GET_SCALAR_POINTER` to distinguish actual POINTER from pass-by-reference.
 
 Anti-pattern reminders (see Fix Development Methodology above):
 - Prefer minimal condition fixes over new infrastructure.

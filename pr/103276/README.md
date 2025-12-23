@@ -50,17 +50,31 @@ rg -n \"\\.omp_data_arr|&var|pointer assign\" /tmp/pr103276_reproducer.*.omplowe
 Both target the same symptom: ENTER DATA on derived types leading to duplicate
 mapping errors in libgomp.
 
-## Patch (local)
+## Patches
 
-This repository includes a candidate fix exported from the GCC source checkout:
+Two approaches exist:
 
-- `0001-omp-avoid-taking-address-of-reference-in-map.patch`
+1. **Frontend fix (recommended):**
+   `0001-fortran-Skip-pointer-mapping-for-pass-by-ref-in-ENTE.patch`
 
-The corresponding GCC topic branch is `pr103276-openacc-enter-data-refmap`
-(commit `91a76052bda4e7bbe8aa3083441e0669641a7194`).
+   Fixes the root cause in `gcc/fortran/trans-openmp.cc` by skipping
+   GOMP_MAP_POINTER mappings for ENTER/EXIT DATA on variables that are
+   only pointers at tree level due to Fortran pass-by-reference, not
+   actual POINTER/ALLOCATABLE variables.  This follows Tobias Burnus's
+   analysis in Bugzilla comment #8-9.
 
-The patch applies cleanly to upstream `master` (see
-`/tmp/pr103276_patch_applies_upstream_master.log`).
+   GCC topic branch: `pr103276-avoid-pset-map`
+
+2. **Middle-end fix (original):**
+   `0001-omp-avoid-taking-address-of-reference-in-map.patch`
+
+   Modifies `gcc/omp-low.cc` to avoid `build_fold_addr_expr` for
+   reference types.  This treats the symptom at GIMPLE lowering level.
+
+   GCC topic branch: `pr103276-openacc-enter-data-refmap`
+
+The frontend fix is preferred because it addresses the root cause and
+preserves correct behavior for actual POINTER/ALLOCATABLE variables.
 
 ## Build / Run (NVPTX example)
 
