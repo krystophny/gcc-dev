@@ -1,10 +1,11 @@
 # GCC PR90519 – FINAL + recursive allocatable ICE
 
-**Status:** ✅ MERGED UPSTREAM — Fixed in gcc commit `1eb696fc092` (2025-11-07)
-and validated locally. Patch file kept here for reference.
+- **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=90519
+- **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/4
+- **Status:** MERGED (gcc commit 1eb696fc092, 2025-11-07)
 
 This directory tracks the reproducer, investigation notes, and fixes for
-[GCC Bug 90519](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=90519):
+GCC Bug 90519:
 an internal compiler error when a derived type has
 
 1. a recursive allocatable component of the same type, and

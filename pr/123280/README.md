@@ -1,8 +1,10 @@
 # Bug 123280 + 96080: acc_is_present fails for assumed-shape and pointers
 
-- **URL:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123280
-- **URL:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96080
-- **Status:** FIXED (patch ready)
+- **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123280
+- **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96080
+- **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/12
+- **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/13
+- **Status:** PENDING (patch on fork, awaiting upstream submission)
 - **Note:** Single patch fixes both PRs
 
 ## Summary

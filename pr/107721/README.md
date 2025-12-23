@@ -1,6 +1,9 @@
 # PR 107721 - Array Constructor Type-Spec Folding
 
-**Status:** FIXED & VERIFIED
+- **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=107721
+- **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/6
+- **Status:** MERGED (gcc commit c50d263beff)
+
 **Author:** Christopher Albert
 **Co-Author:** Harald Anlauf
 **Patch:** `0001-fortran-Honor-array-constructor-type-spec-during-fol.patch`

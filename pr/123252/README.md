@@ -1,15 +1,13 @@
 # PR123252 - OpenACC: derived-type scalar reads wrong on device
 
+- **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123252
+- **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/11
+- **Status:** PENDING (patch on fork, awaiting upstream submission)
+
 **Title:** OpenACC: derived-type scalar component has wrong value in device
 kernel when only array component is mapped
 
-**Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123252
-
 **Component:** fortran (OpenACC)
-
-**Status:** UNCONFIRMED (Bugzilla); tracked locally for reproduction.
-
-**Tracking issue:** https://github.com/krystophny/gcc-dev/issues/11
 
 ## Summary
 

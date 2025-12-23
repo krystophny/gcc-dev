@@ -1,6 +1,8 @@
 # PR96255: Fortran DO CONCURRENT Type-Spec Implementation
 
-**Status:** ✅ MERGED UPSTREAM
+- **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96255
+- **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/1
+- **Status:** MERGED (gcc commits 5e62a23cc3a, 1099ffffffe)
 
 **Upstream Commits:**
 - 5e62a23cc3a - fortran: Implement optional type spec for DO CONCURRENT [PR96255]

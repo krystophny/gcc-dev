@@ -1,6 +1,9 @@
 # GCC PR102430 – OpenMP linear(array) ICE / missing support
 
-**Status:** OPEN
+- **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102430
+- **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/9
+- **Status:** PENDING (patch on fork, awaiting upstream submission)
+
 **Title:** OpenMP linear clause accepts arrays on worksharing loops
 
 ## Summary

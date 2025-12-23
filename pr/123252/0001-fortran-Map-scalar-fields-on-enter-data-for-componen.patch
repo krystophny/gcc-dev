@@ -1,28 +1,35 @@
-From 5ceb43929fceaac9db83d91cd1ef3836ac0a4186 Mon Sep 17 00:00:00 2001
+From f97452a16ea94c0dc0327fb4c532cc3003a0b34e Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Tue, 23 Dec 2025 10:15:54 +0100
-Subject: [PATCH] fortran: Map scalar fields on OpenACC enter data [PR123252]
+Subject: [PATCH] fortran: Map scalar fields on enter data for components
+ [PR123252]
 
-When OpenACC enter data maps only an allocatable component of a
-derived type (e.g., c%arr), the scalar fields of the parent type
-(e.g., c%flag, c%n) must also be mapped so they are available on
-the device in subsequent parallel regions.
+When enter data maps only an allocatable component of a derived type
+(e.g., c%arr), the scalar fields of the parent type (e.g., c%flag,
+c%n) must also be mapped so they are available on the device in
+subsequent parallel regions.
 
 Without this fix, accessing scalar fields like loop bounds or flags
 inside a parallel region would use uninitialized device memory, since
 only the explicitly mapped component data was copied.
 
 The fix detects when an allocatable component is being mapped for
-OACC_ENTER_DATA and synthesizes additional map(to:) clauses for all
-scalar fields of the parent derived type.
+enter data and synthesizes additional map(to:) clauses for all scalar
+fields of the parent derived type.  This applies to both OpenACC
+(OACC_ENTER_DATA) and OpenMP (OMP_TARGET_ENTER_DATA).
+
+Limitations: The fix handles simple cases like c%arr and nested
+component access like a%b%arr, but skips complex cases with array
+indexing in the path (e.g., a(1)%b%arr) to avoid ICEs.
 
 	PR fortran/123252
 
 gcc/fortran/ChangeLog:
 
-	* trans-openmp.cc (gfc_trans_omp_clauses): For OpenACC enter
-	data, also map scalar fields of derived type when mapping an
-	allocatable component.
+	* trans-openmp.cc (gfc_trans_omp_clauses): For enter data,
+	also map scalar fields of derived type when mapping an
+	allocatable component.  Handle nested components and add
+	BT_CHARACTER to supported scalar types.
 
 gcc/testsuite/ChangeLog:
 
@@ -30,42 +37,81 @@ gcc/testsuite/ChangeLog:
 
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
- gcc/fortran/trans-openmp.cc                  | 62 ++++++++++++++++++++
- gcc/testsuite/gfortran.dg/goacc/pr123252.f90 | 38 ++++++++++++
- 2 files changed, 100 insertions(+)
+ gcc/fortran/trans-openmp.cc                  | 102 +++++++++++++++++++
+ gcc/testsuite/gfortran.dg/goacc/pr123252.f90 |  38 +++++++
+ 2 files changed, 140 insertions(+)
  create mode 100644 gcc/testsuite/gfortran.dg/goacc/pr123252.f90
 
 diff --git a/gcc/fortran/trans-openmp.cc b/gcc/fortran/trans-openmp.cc
-index d7f3c281823..af44c06ebc8 100644
+index d7f3c281823..1940779d0ab 100644
 --- a/gcc/fortran/trans-openmp.cc
 +++ b/gcc/fortran/trans-openmp.cc
-@@ -4976,6 +4976,68 @@ gfc_trans_omp_clauses (stmtblock_t *block, gfc_omp_clauses *clauses,
+@@ -4976,6 +4976,108 @@ gfc_trans_omp_clauses (stmtblock_t *block, gfc_omp_clauses *clauses,
  	      else
  		sorry_at (gfc_get_location (&n->where), "unhandled expression");
  
-+	      /* For OpenACC enter data on an allocatable component, also map
-+		 scalar fields of the parent derived type so they are available
-+		 on the device.  Without this, only the explicitly mapped
-+		 component is copied, leaving other scalar fields uninitialized
-+		 when accessed in a subsequent parallel region.  */
-+	      if (openacc && op == EXEC_OACC_ENTER_DATA
++	      /* For enter data on allocatable components, also map scalar
++		 fields so they are available on the device.  */
++	      if ((op == EXEC_OACC_ENTER_DATA || op == EXEC_OMP_TARGET_ENTER_DATA)
 +		  && n->expr && n->expr->ref
-+		  && n->sym->ts.type == BT_DERIVED
 +		  && lastref && lastref->type == REF_ARRAY)
 +		{
-+		  gfc_symbol *derived_sym = n->sym;
-+		  gfc_component *mapped_comp = NULL;
++		  gfc_ref *parent_ref = NULL;
++		  gfc_ref *mapped_ref = NULL;
 +
-+		  /* Find the component being mapped.  */
++		  /* Find the component ref before the array ref.  */
 +		  for (gfc_ref *ref = n->expr->ref; ref; ref = ref->next)
 +		    if (ref->type == REF_COMPONENT)
-+		      mapped_comp = ref->u.c.component;
++		      {
++			parent_ref = mapped_ref;
++			mapped_ref = ref;
++		      }
 +
-+		  if (mapped_comp != NULL)
++		  if (mapped_ref != NULL)
 +		    {
-+		      tree base = gfc_maybe_dereference_var (derived_sym, decl);
++		      gfc_symbol *parent_sym;
++		      tree base;
 +
-+		      for (gfc_component *comp = derived_sym->ts.u.derived->components;
++		      if (parent_ref != NULL)
++			{
++			  /* Skip if path to parent has array refs.  */
++			  bool has_array_ref = false;
++			  for (gfc_ref *ref = n->expr->ref; ref != mapped_ref;
++			       ref = ref->next)
++			    if (ref->type == REF_ARRAY)
++			      {
++				has_array_ref = true;
++				break;
++			      }
++			  if (has_array_ref)
++			    goto finalize_map_clause;
++
++			  parent_sym = parent_ref->u.c.component->ts.u.derived;
++			  /* Build base expression up to parent component.  */
++			  gfc_se base_se;
++			  gfc_init_se (&base_se, NULL);
++			  base_se.expr = gfc_maybe_dereference_var (n->sym, decl);
++			  for (gfc_ref *ref = n->expr->ref; ref != mapped_ref;
++			       ref = ref->next)
++			    if (ref->type == REF_COMPONENT)
++			      gfc_conv_component_ref (&base_se, ref);
++			  base = base_se.expr;
++			}
++		      else
++			{
++			  /* Skip if first ref is an array ref.  */
++			  if (n->expr->ref->type == REF_ARRAY)
++			    goto finalize_map_clause;
++			  parent_sym = n->sym->ts.u.derived;
++			  base = gfc_maybe_dereference_var (n->sym, decl);
++			}
++
++		      if (parent_sym == NULL)
++			goto finalize_map_clause;
++
++		      gfc_component *mapped_comp = mapped_ref->u.c.component;
++
++		      for (gfc_component *comp = parent_sym->components;
 +			   comp; comp = comp->next)
 +			{
 +			  /* Skip the component being explicitly mapped.  */
@@ -81,12 +127,13 @@ index d7f3c281823..af44c06ebc8 100644
 +			  if (comp->ts.type != BT_INTEGER
 +			      && comp->ts.type != BT_REAL
 +			      && comp->ts.type != BT_LOGICAL
-+			      && comp->ts.type != BT_COMPLEX)
++			      && comp->ts.type != BT_COMPLEX
++			      && comp->ts.type != BT_CHARACTER)
 +			    continue;
 +
 +			  /* Ensure backend_decl exists.  */
 +			  if (comp->backend_decl == NULL_TREE)
-+			    gfc_get_derived_type (derived_sym);
++			    gfc_get_derived_type (parent_sym);
 +
 +			  if (comp->backend_decl == NULL_TREE)
 +			    continue;

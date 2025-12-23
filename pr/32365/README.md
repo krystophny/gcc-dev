@@ -1,6 +1,9 @@
 # GCC Bug 32365 - Better error message for specification statement in executable section
 
-**Status:** RESOLVED FIXED (merged in gcc commit 7db49bf4be2 on 2025-11-17)
+- **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=32365
+- **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/3
+- **Status:** MERGED (gcc commit 7db49bf4be2, 2025-11-17)
+
 **Component:** fortran
 **Version:** 4.3.0 (original report)
 **Importance:** P3 enhancement
