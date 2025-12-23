@@ -1,14 +1,15 @@
-# Bug 123280: acc_is_present fails for assumed-shape dummy argument
+# Bug 123280 + 96080: acc_is_present fails for assumed-shape and pointers
 
 - **URL:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123280
+- **URL:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96080
 - **Status:** FIXED (patch ready)
-- **Related:** Bug 96080 (similar issue with Fortran pointers)
+- **Note:** Single patch fixes both PRs
 
 ## Summary
 
-When an array is mapped to the device by a caller using OpenACC directives, and then
-passed to a subroutine as an assumed-shape dummy argument, `acc_is_present()` inside
-the subroutine fails to detect that the data is present on the device.
+`acc_is_present()` fails to detect mapped data when called with:
+- Assumed-shape dummy arguments (PR 123280)
+- Fortran pointers to mapped targets (PR 96080)
 
 ## Root Cause
 
