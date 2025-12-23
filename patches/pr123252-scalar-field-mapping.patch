@@ -1,0 +1,309 @@
+From 452470a580516fd31a0f9ca2a917a0404da7611e Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Tue, 23 Dec 2025 19:29:39 +0100
+Subject: [PATCH] fortran: Map scalar fields on enter/exit data for components
+ [PR123252]
+
+When enter data maps only an allocatable component of a derived type
+(e.g., c%arr), the scalar fields of the parent type (e.g., c%flag,
+c%n) are also mapped so they are available on the device in subsequent
+parallel regions.
+
+Symmetrically, when exit data unmaps the component, the scalar fields
+are also unmapped.  This keeps the structure element mapping state
+consistent and allows the component to be deallocated, reallocated,
+and remapped without errors from libgomp.
+
+The gimplifier groups these element mappings into a GOMP_MAP_STRUCT
+with unified reference counting, ensuring all elements are handled
+together as a unit.
+
+	PR fortran/123252
+
+gcc/fortran/ChangeLog:
+
+	* trans-openmp.cc (gfc_trans_omp_clauses): For enter/exit data,
+	also map/unmap scalar fields of derived type when mapping an
+	allocatable component.
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/goacc/pr123252.f90: New compile-time test.
+
+libgomp/ChangeLog:
+
+	* testsuite/libgomp.oacc-fortran/pr123252-scalar-access.f90: New
+	runtime test for scalar field access in parallel regions.
+	* testsuite/libgomp.oacc-fortran/pr123252-realloc.f90: New
+	runtime test for remapping after reallocation.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/trans-openmp.cc                   | 101 ++++++++++++++++++
+ gcc/testsuite/gfortran.dg/goacc/pr123252.f90  |  35 ++++++
+ .../libgomp.oacc-fortran/pr123252-realloc.f90 |  48 +++++++++
+ .../pr123252-scalar-access.f90                |  43 ++++++++
+ 4 files changed, 227 insertions(+)
+ create mode 100644 gcc/testsuite/gfortran.dg/goacc/pr123252.f90
+ create mode 100644 libgomp/testsuite/libgomp.oacc-fortran/pr123252-realloc.f90
+ create mode 100644 libgomp/testsuite/libgomp.oacc-fortran/pr123252-scalar-access.f90
+
+diff --git a/gcc/fortran/trans-openmp.cc b/gcc/fortran/trans-openmp.cc
+index d7f3c281823..96677c84384 100644
+--- a/gcc/fortran/trans-openmp.cc
++++ b/gcc/fortran/trans-openmp.cc
+@@ -4976,6 +4976,107 @@ gfc_trans_omp_clauses (stmtblock_t *block, gfc_omp_clauses *clauses,
+ 	      else
+ 		sorry_at (gfc_get_location (&n->where), "unhandled expression");
+ 
++	      /* For enter/exit data on allocatable components, also map/unmap
++		 scalar fields of the parent derived type.  This ensures:
++		 1. Scalars are available on device in parallel regions
++		 2. Mapping state stays consistent for remapping after realloc
++		 The gimplifier groups these into GOMP_MAP_STRUCT with unified
++		 refcount, so all elements are mapped/unmapped together.  */
++	      if ((op == EXEC_OACC_ENTER_DATA || op == EXEC_OMP_TARGET_ENTER_DATA
++		   || op == EXEC_OACC_EXIT_DATA || op == EXEC_OMP_TARGET_EXIT_DATA)
++		  && n->expr && n->expr->ref
++		  && lastref && lastref->type == REF_ARRAY)
++		{
++		  gfc_ref *parent_ref = NULL;
++		  gfc_ref *mapped_ref = NULL;
++
++		  /* Find the component ref before the array ref.  */
++		  for (gfc_ref *ref = n->expr->ref; ref; ref = ref->next)
++		    if (ref->type == REF_COMPONENT)
++		      {
++			parent_ref = mapped_ref;
++			mapped_ref = ref;
++		      }
++
++		  if (mapped_ref != NULL)
++		    {
++		      gfc_symbol *parent_sym;
++		      tree base;
++
++		      if (parent_ref != NULL)
++			{
++			  /* Skip if path to parent has array refs.  */
++			  bool has_array_ref = false;
++			  for (gfc_ref *ref = n->expr->ref; ref != mapped_ref;
++			       ref = ref->next)
++			    if (ref->type == REF_ARRAY)
++			      {
++				has_array_ref = true;
++				break;
++			      }
++			  if (has_array_ref)
++			    goto finalize_map_clause;
++
++			  parent_sym = parent_ref->u.c.component->ts.u.derived;
++			  gfc_se base_se;
++			  gfc_init_se (&base_se, NULL);
++			  base_se.expr = gfc_maybe_dereference_var (n->sym, decl);
++			  for (gfc_ref *ref = n->expr->ref; ref != mapped_ref;
++			       ref = ref->next)
++			    if (ref->type == REF_COMPONENT)
++			      gfc_conv_component_ref (&base_se, ref);
++			  base = base_se.expr;
++			}
++		      else
++			{
++			  if (n->expr->ref->type == REF_ARRAY)
++			    goto finalize_map_clause;
++			  parent_sym = n->sym->ts.u.derived;
++			  base = gfc_maybe_dereference_var (n->sym, decl);
++			}
++
++		      if (parent_sym == NULL)
++			goto finalize_map_clause;
++
++		      gfc_component *mapped_comp = mapped_ref->u.c.component;
++		      bool is_exit = (op == EXEC_OACC_EXIT_DATA
++				      || op == EXEC_OMP_TARGET_EXIT_DATA);
++
++		      for (gfc_component *comp = parent_sym->components;
++			   comp; comp = comp->next)
++			{
++			  if (comp == mapped_comp)
++			    continue;
++			  if (comp->attr.pointer || comp->attr.allocatable
++			      || comp->attr.dimension)
++			    continue;
++			  if (comp->ts.type != BT_INTEGER
++			      && comp->ts.type != BT_REAL
++			      && comp->ts.type != BT_LOGICAL
++			      && comp->ts.type != BT_COMPLEX
++			      && comp->ts.type != BT_CHARACTER)
++			    continue;
++
++			  if (comp->backend_decl == NULL_TREE)
++			    gfc_get_derived_type (parent_sym);
++			  if (comp->backend_decl == NULL_TREE)
++			    continue;
++
++			  tree field = comp->backend_decl;
++			  tree ftype = TREE_TYPE (field);
++			  tree cref = fold_build3_loc (input_location,
++						       COMPONENT_REF, ftype,
++						       base, field, NULL_TREE);
++			  tree c = build_omp_clause (map_loc, OMP_CLAUSE_MAP);
++			  OMP_CLAUSE_SET_MAP_KIND (c, is_exit ? GOMP_MAP_DELETE
++							      : GOMP_MAP_TO);
++			  OMP_CLAUSE_DECL (c) = cref;
++			  OMP_CLAUSE_SIZE (c) = TYPE_SIZE_UNIT (ftype);
++			  omp_clauses = gfc_trans_add_clause (c, omp_clauses);
++			}
++		    }
++		}
++
+ 	      finalize_map_clause:
+ 
+ 	      omp_clauses = gfc_trans_add_clause (node, omp_clauses);
+diff --git a/gcc/testsuite/gfortran.dg/goacc/pr123252.f90 b/gcc/testsuite/gfortran.dg/goacc/pr123252.f90
+new file mode 100644
+index 00000000000..00d73a41a5c
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/goacc/pr123252.f90
+@@ -0,0 +1,35 @@
++! { dg-do compile }
++! { dg-options "-O2 -fopenacc -fdump-tree-omplower" }
++!
++! PR fortran/123252
++! When OpenACC enter/exit data maps an allocatable component, scalar
++! fields of the parent derived type are also mapped/unmapped.  This
++! ensures scalars are available on device and mapping state stays
++! consistent for remapping after reallocation.
++
++program pr123252
++  implicit none
++
++  type :: container_t
++    real(8), allocatable :: arr(:)
++    logical :: flag
++    integer :: n
++  end type container_t
++
++  type(container_t) :: c
++
++  c%n = 8
++  c%flag = .true.
++  allocate(c%arr(c%n))
++
++  !$acc enter data copyin(c%arr)
++  !$acc exit data delete(c%arr)
++end program pr123252
++
++! Verify scalar fields are mapped on enter data.
++! { dg-final { scan-tree-dump "map\\(to:c\\.flag" "omplower" } }
++! { dg-final { scan-tree-dump "map\\(to:c\\.n" "omplower" } }
++
++! Verify scalar fields are unmapped on exit data.
++! { dg-final { scan-tree-dump "map\\(delete:c\\.flag" "omplower" } }
++! { dg-final { scan-tree-dump "map\\(delete:c\\.n" "omplower" } }
+diff --git a/libgomp/testsuite/libgomp.oacc-fortran/pr123252-realloc.f90 b/libgomp/testsuite/libgomp.oacc-fortran/pr123252-realloc.f90
+new file mode 100644
+index 00000000000..3eddc815d94
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.oacc-fortran/pr123252-realloc.f90
+@@ -0,0 +1,48 @@
++! { dg-do run }
++!
++! PR fortran/123252
++! Test that allocatable components can be unmapped, deallocated,
++! reallocated, and remapped without errors.  Scalar fields are
++! mapped on enter data and unmapped on exit data to keep the
++! structure element mapping state consistent.
++
++program test_realloc_component
++  use openacc
++  implicit none
++
++  type :: container_t
++    integer :: scalar_field
++    real(8), allocatable :: data(:)
++  end type
++
++  type(container_t), save :: c
++  integer :: iter, n, i
++
++  n = 10
++  do iter = 1, 3
++    ! Cleanup from previous iteration
++    if (allocated(c%data)) then
++      if (acc_is_present(c%data)) then
++        !$acc exit data delete(c%data)
++      end if
++      deallocate(c%data)
++    end if
++
++    ! Set scalar and allocate component
++    c%scalar_field = iter
++    allocate(c%data(n))
++
++    ! Map component to device - must work on all iterations
++    !$acc enter data create(c%data)
++
++    !$acc parallel loop present(c%data)
++    do i = 1, n
++      c%data(i) = real(i + iter, 8)
++    end do
++
++    !$acc update self(c%data)
++    !$acc exit data delete(c%data)
++
++    if (abs(c%data(1) - real(1 + iter, 8)) > 1.0d-10) stop 1
++  end do
++end program
+diff --git a/libgomp/testsuite/libgomp.oacc-fortran/pr123252-scalar-access.f90 b/libgomp/testsuite/libgomp.oacc-fortran/pr123252-scalar-access.f90
+new file mode 100644
+index 00000000000..529de34f6d1
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.oacc-fortran/pr123252-scalar-access.f90
+@@ -0,0 +1,43 @@
++! { dg-do run }
++!
++! PR fortran/123252
++! Test that scalar fields of a derived type are available on device
++! when only an allocatable component is explicitly mapped.
++
++program test_scalar_access
++  implicit none
++
++  type :: container_t
++    real(8), allocatable :: arr(:)
++    logical :: flag
++    integer :: n
++  end type container_t
++
++  type(container_t) :: c
++  integer :: i
++
++  c%n = 10
++  c%flag = .true.
++  allocate(c%arr(c%n))
++  c%arr = 0.0d0
++
++  !$acc enter data copyin(c%arr)
++
++  ! Access scalar fields c%n and c%flag inside parallel region
++  !$acc parallel loop present(c%arr)
++  do i = 1, c%n
++    if (c%flag) then
++      c%arr(i) = real(i, 8)
++    end if
++  end do
++
++  !$acc update self(c%arr)
++  !$acc exit data delete(c%arr)
++
++  ! Verify results
++  do i = 1, c%n
++    if (abs(c%arr(i) - real(i, 8)) > 1.0d-10) stop 1
++  end do
++
++  deallocate(c%arr)
++end program
+-- 
+2.52.0
+
