@@ -1,0 +1,105 @@
+From 901a1ae398af02e135d7174055cb3c5a5690a510 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Tue, 23 Dec 2025 22:34:25 +0100
+Subject: [PATCH] middle-end: Preserve GOMP_MAP_STRUCT in OpenACC exit data
+ [PR?????]
+
+GOMP_MAP_STRUCT was being stripped from OpenACC exit_data directives
+in gimplify_adjust_omp_clauses, causing asymmetric enter/exit handling.
+This led to stale struct mapping state that corrupted pointer attachments
+in repeated allocate/map/unmap/deallocate cycles with derived types.
+
+The removal was introduced in GCC 10.1 (2020-06-05) for both OpenMP and
+OpenACC exit_data, with the assumption that GOMP_MAP_STRUCT is a "no-op"
+on exit.  However, without symmetric handling for OpenACC, the runtime's
+struct state persists incorrectly across iterations, causing illegal
+memory access on the second iteration when non-struct parallel loops
+run before struct-using parallel loops.
+
+The fix restricts GOMP_MAP_STRUCT removal to OMP_TARGET_EXIT_DATA only,
+preserving it for OACC_EXIT_DATA to restore symmetric enter/exit handling.
+The runtime already handles GOMP_MAP_STRUCT on exit gracefully (skips it
+for GCC 10.1 compatibility), so this change is safe and causes no memory
+leaks.
+
+	PR middle-end/?????
+
+gcc/ChangeLog:
+
+	* gimplify.cc (gimplify_adjust_omp_clauses): Restrict
+	GOMP_MAP_STRUCT removal to OMP_TARGET_EXIT_DATA only, preserving
+	it for OACC_EXIT_DATA.
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/goacc/pr-struct-realloc.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/gimplify.cc                               |  2 +-
+ .../gfortran.dg/goacc/pr-struct-realloc.f90   | 40 +++++++++++++++++++
+ 2 files changed, 41 insertions(+), 1 deletion(-)
+ create mode 100644 gcc/testsuite/gfortran.dg/goacc/pr-struct-realloc.f90
+
+diff --git a/gcc/gimplify.cc b/gcc/gimplify.cc
+index 95506f1682f..aca8f49ebb0 100644
+--- a/gcc/gimplify.cc
++++ b/gcc/gimplify.cc
+@@ -15948,7 +15948,7 @@ gimplify_adjust_omp_clauses (gimple_seq *pre_p, gimple_seq body, tree *list_p,
+ 	    }
+ 	  if ((OMP_CLAUSE_MAP_KIND (c) == GOMP_MAP_STRUCT
+ 	       || OMP_CLAUSE_MAP_KIND (c) == GOMP_MAP_STRUCT_UNORD)
+-	      && (code == OMP_TARGET_EXIT_DATA || code == OACC_EXIT_DATA))
++	      && code == OMP_TARGET_EXIT_DATA)
+ 	    {
+ 	      remove = true;
+ 	      goto end_adjust_omp_map_clause;
+diff --git a/gcc/testsuite/gfortran.dg/goacc/pr-struct-realloc.f90 b/gcc/testsuite/gfortran.dg/goacc/pr-struct-realloc.f90
+new file mode 100644
+index 00000000000..235b8112bca
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/goacc/pr-struct-realloc.f90
+@@ -0,0 +1,40 @@
++! { dg-do compile }
++! { dg-options "-fopenacc -fdump-tree-omplower" }
++!
++! PR middle-end/XXXXX
++! Test that GOMP_MAP_STRUCT is preserved in exit data directives.
++! Previously, gimplify.cc stripped GOMP_MAP_STRUCT from exit_data,
++! causing asymmetric enter/exit handling that corrupted mappings
++! in repeated alloc/dealloc cycles.
++
++module m
++    use, intrinsic :: iso_fortran_env, only: dp => real64
++    type :: t
++        real(dp), allocatable :: c(:)
++    end type
++end module
++
++program p
++    use m
++    implicit none
++    type(t) :: s
++    real(dp), allocatable :: w1(:,:,:)
++    integer :: i
++
++    allocate(s%c(8), w1(8,8,0:1))
++
++    !$acc enter data create(s%c, w1)
++
++    !$acc parallel loop present(w1, s%c)
++    do i = 1, 8
++        s%c(i) = w1(1,i,0)
++    end do
++
++    !$acc exit data delete(w1, s%c)
++
++    deallocate(w1, s%c)
++end program
++
++! Verify GOMP_MAP_STRUCT is present in BOTH enter and exit data
++! { dg-final { scan-tree-dump "oacc_enter_data map\\(struct:s" "omplower" } }
++! { dg-final { scan-tree-dump "oacc_exit_data .* map\\(struct:s" "omplower" } }
+-- 
+2.52.0
+
