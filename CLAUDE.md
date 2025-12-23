@@ -267,6 +267,30 @@ components but those components are zero-size.
 
 **Evidence:** PR121472.
 
+### Pattern 5: Refcount Double-Counting for Duplicate Splay Tree Keys
+
+**Symptom:** Illegal memory access on iteration 2+ of alloc/enter/exit/dealloc
+cycles with Fortran allocatable arrays. Order-dependent: only triggers when
+first parallel loop does NOT use a derived type component.
+
+**Root cause:** TO_PSET + POINTER mapping groups create multiple `tgt->list`
+entries pointing to the SAME splay tree key (descriptor address).
+`gomp_map_vars_internal` sets `refcount=2` (one per entry), and
+`goacc_enter_data_internal` incremented `dynamic_refcount` for every entry.
+But `exit_data` only sends ONE release per descriptor, decrementing by 1.
+Result: `refcount=1, dynamic_refcount=1` after exit - mapping never removed.
+
+**Fix:** Track duplicate keys in `goacc_enter_data_internal`:
+- Only increment `dynamic_refcount` once per unique key
+- Decrement `refcount` for duplicates to compensate
+
+**Key lesson:** Initial hypothesis (GOMP_MAP_STRUCT stripping in gimplify.cc)
+was WRONG. Deep debugging with runtime tracing revealed the actual issue was
+in libgomp refcount handling, not middle-end. Always verify fixes with actual
+testing before assuming root cause is correct.
+
+**Evidence:** PR123282.
+
 ## Fix Development Rules
 
 ### DO
@@ -276,6 +300,9 @@ components but those components are zero-size.
 3. **Check at the right level** - tree-level bugs need tree-level checks
 4. **Refine conditions** - make checks more precise, don't add bypass params
 5. **Test with nvfortran** - it defines correct OpenACC behavior
+6. **Add debug tracing when stuck** - fprintf in runtime reveals actual state
+7. **Verify fix actually works** - rebuild, reinstall, test with real reproducer
+8. **Question initial hypothesis** - first plausible explanation often wrong
 
 ### DON'T
 
@@ -284,6 +311,9 @@ components but those components are zero-size.
 3. **Add new infrastructure** for single-condition fixes
 4. **Trust POINTER_TYPE_P alone** - distinguish real POINTER from pass-by-ref
 5. **Add contiguous unnecessarily** - it causes copies for assumed-shape
+6. **Assume tree dumps tell the whole story** - runtime behavior may differ
+7. **Skip runtime testing** - compile-time analysis misses refcount/state bugs
+8. **Trust asymmetric enter/exit** - if enter does X, exit should undo X
 
 ## Patch Workflow
 
