@@ -78,7 +78,7 @@ Fortran-only, debug build for quick iteration:
 mkdir -p gcc-build && cd gcc-build
 ../gcc/configure --enable-languages=fortran --disable-multilib \
   --disable-bootstrap CFLAGS='-Og -g' CXXFLAGS='-Og -g'
-make -j$(nproc)
+make -j32
 ```
 
 ### Rebuilding libgomp Only
@@ -87,7 +87,7 @@ After editing libgomp sources (e.g., openacc.f90), rebuild just libgomp:
 
 ```bash
 cd gcc-build/x86_64-pc-linux-gnu/libgomp
-make -j$(nproc)
+make -j32
 ```
 
 Then test with the local build:
@@ -106,7 +106,7 @@ gcc-build/gcc/gfortran -B gcc-build/gcc \
 
 ```bash
 cd gcc-build/gcc
-make -j$(nproc) -k check-gfortran > /tmp/test.log 2>&1 &
+make -j32 -k check-gfortran > /tmp/test.log 2>&1 &
 ```
 
 **Results:**
@@ -292,7 +292,7 @@ components but those components are zero-size.
 git -C gcc checkout -b pr<number>-fix
 
 # 2. Make changes, test
-cd gcc-build/gcc && make -j$(nproc)
+cd gcc-build/gcc && make -j32
 make check-gfortran RUNTESTFLAGS="dg.exp=pr<number>.f90"
 
 # 3. Commit with proper format
