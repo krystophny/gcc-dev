@@ -23,8 +23,8 @@ Each subdirectory contains a minimal reproducer, test results, and analysis for 
 |----|-------|--------------|-------|
 | [102430](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102430) | OpenMP `linear` on arrays ICE / missing support | SUBMITTED | Patch exported to `pr/102430/` and pushed to GCC fork branch `pr102430-linear-sorry`. |
 | [107721](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=107721) | Array constructor type-spec lost when parenthesized | READY FOR SUBMISSION | Patch `0001-fortran-honor-array-constructor-type-spec-during-fol.patch` passes local matrix; awaiting upstream posting (see `pr/107721/`). |
-| [103276](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=103276) | OpenACC ENTER DATA duplicate mapping | PATCH READY | Patch `0001-omp-avoid-taking-address-of-reference-in-map.patch` on GCC branch `pr103276-openacc-enter-data-refmap` (commit `91a76052bda…`) fixes incorrect mapping of a reference slot; see `pr/103276/` (GitHub issue #10). |
-| [123252](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123252) | OpenACC scalar member wrong when mapping array component | PATCH READY | Patch `0001-gimplify-map-Fortran-DT-scalars-for-OpenACC-enter-da.patch` passes local NVPTX repro and also fixes a struct-member ordering regression tracked as PR123255; see `pr/123252/`. |
+| [103276](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=103276) | OpenACC ENTER DATA duplicate mapping | SUBMITTED | Frontend fix `0001-fortran-Skip-pointer-mapping-for-pass-by-ref-in-ENTE.patch` on GCC branch `pr103276-avoid-pset-map` (commit `91ab0d47507`); see `pr/103276/` (GitHub issue #10). |
+| [123252](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123252) | OpenACC scalar member wrong when mapping array component | SUBMITTED | Patch `0001-fortran-Map-scalar-fields-on-enter-data-for-componen.patch` on GCC branch `pr123252-clean-v3` (commit `f97452a16ea`); also fixes PR123255; see `pr/123252/`. |
 | [121472](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121472) | Constructor/finalizer ICE | OPEN | ICE in `gimplify_expr` on GCC 15.2.1 and trunk; repro + patch tracked in `pr/121472/`. |
 
 ### Completed PRs
