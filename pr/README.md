@@ -1,258 +1,62 @@
 # GCC Fortran Bug Reproducers
 
-This directory contains minimal reproducers for GCC Fortran bugs, primarily
-focusing on internal compiler errors related to finalizers, allocatable
-components, parameterized derived types, and coarrays.  It also tracks a small
-number of Fortran-triggered runtime issues (e.g. OpenACC/libgomp) when the
-reproducer is useful for GCC debugging.
+Minimal reproducers and patches for GCC Fortran and libgomp bugs.
 
-## Purpose
+## Pending Patches (on fork, awaiting upstream)
 
-Track and test GCC Fortran compiler regressions across multiple compiler versions:
-- System gfortran 15.2.1
-- Development gfortran 16.0 (local build)
-- Intel ifx 2025.2.1 (reference implementation)
+| PR | Title | GitHub Issue |
+|----|-------|--------------|
+| [102430](102430/) | OpenMP linear(array) ICE | [#9](https://github.com/krystophny/gcc-dev/issues/9) |
+| [103276](103276/) | OpenACC ENTER DATA duplicate mapping | [#10](https://github.com/krystophny/gcc-dev/issues/10) |
+| [123252](123252/) | OpenACC scalar member wrong value | [#11](https://github.com/krystophny/gcc-dev/issues/11) |
+| [123280](123280/) | acc_is_present fails for assumed-shape | [#12](https://github.com/krystophny/gcc-dev/issues/12) |
+| [96080](96080/) | acc_is_present fails for pointers | [#13](https://github.com/krystophny/gcc-dev/issues/13) |
 
-Each subdirectory contains a minimal reproducer, test results, and analysis for a specific bug report from GCC Bugzilla.
+## Merged Upstream
 
-## Status Summary
-
-### Open PRs
-
-| PR | Title | Local Status | Notes |
-|----|-------|--------------|-------|
-| [102430](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102430) | OpenMP `linear` on arrays ICE / missing support | SUBMITTED | Patch exported to `pr/102430/` and pushed to GCC fork branch `pr102430-linear-sorry`. |
-| [107721](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=107721) | Array constructor type-spec lost when parenthesized | READY FOR SUBMISSION | Patch `0001-fortran-honor-array-constructor-type-spec-during-fol.patch` passes local matrix; awaiting upstream posting (see `pr/107721/`). |
-| [103276](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=103276) | OpenACC ENTER DATA duplicate mapping | SUBMITTED | Frontend fix `0001-fortran-Skip-pointer-mapping-for-pass-by-ref-in-ENTE.patch` on GCC branch `pr103276-avoid-pset-map` (commit `91ab0d47507`); see `pr/103276/` (GitHub issue #10). |
-| [123252](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123252) | OpenACC scalar member wrong when mapping array component | SUBMITTED | Patch `0001-fortran-Map-scalar-fields-on-enter-data-for-componen.patch` on GCC branch `pr123252-clean-v3` (commit `f97452a16ea`); also fixes PR123255; see `pr/123252/`. |
-| [121472](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121472) | Constructor/finalizer ICE | OPEN | ICE in `gimplify_expr` on GCC 15.2.1 and trunk; repro + patch tracked in `pr/121472/`. |
-
-### Completed PRs
-
-| PR | Title | Resolution | Evidence |
-|----|-------|------------|----------|
-| [123255](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123255) | OpenACC allocatable component copyin wrong size | Fixed by PR123252 patch | Does not reproduce on upstream master; fixed by updated PR123252 patch; see `pr/123255/`. |
-| [123254](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123254) | OpenACC SIGSEGV with present() on DT dummy arg | WORKSFORME | No longer reproduces as of 2025-12-22; see `pr/123254/`. |
-| [32365](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=32365) | Better specification-statement diagnostics | Merged upstream (commit 7db49bf4be2, 2025-11-17). | New test `gfortran.dg/spec_statement_in_exec.f90` added; see `pr/32365/README.md`. |
-| [90519](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=90519) | FINAL + recursive allocatable ICE | Merged upstream (commit 1eb696fc092, 2025-11-07). | Finalizer wrapper now uses separate result symbol; tests added (`finalizer_recursive_alloc_*.f90`, `finalizer_self_assign.f90`). Details in `pr/90519/README.md`. |
-| [121628](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121628) | Recursive allocatable deep copy | Upstream fix in GCC r16-5094. | Dev gfortran compile of `pr/121628/deepcopy.f90` succeeded (2025-11-13); details in `pr/121628/README.md`. |
-| [96255](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96255) | DO CONCURRENT type-spec implementation | Merged upstream (commits 5e62a23cc3a & 1099ffffffe). | Dev gfortran compile of `pr/96255/looper.f90` succeeded (2025-11-13); see `pr/96255/README.md`. |
-
-*Coarray tests are still expected to fail on ifx because it lacks gfortran's `-fcoarray=single` semantics.*
-
-## Analysis
-
-### Active Bugs
-
-**PR102430** - OpenMP `linear` clause on arrays
-- Status: SUBMITTED
-- GCC accepted `linear(a)` with `a` an array on `parallel do`, but the OpenMP
-  worksharing-loop lowering historically did not implement array-linear, leading
-  to an ICE during OpenMP expansion. See `pr/102430/` for reproducer and notes.
-- Tracking issue: https://github.com/krystophny/gcc-dev/issues/9
-
-**PR107721** - Array constructor type-spec lost with parentheses
-- Status: READY FOR UPSTREAM (Bugzilla still open)
-- Both system GCC 15.2.1 and trunk fold parenthesized constructors without converting elements to the declared type; reference compilers (ifx, nvfortran, flang-new) are correct.
-- Patch converts constructor elements before folding and adds comprehensive regression (`array_constructor_typespec_1.f90`).
-- Action: post patch from `pr/107721/0001-fortran-honor-array-constructor-type-spec-during-fol.patch` to gcc-patches.
-
-**PR121472** - ICE with constructor and finalizer
-- Status: UNCONFIRMED (Bugzilla), ACTIVE (both compilers fail)
-- System GCC 15.2.1: ICE in gimplify_expr at gimplify.cc:20443
-- Dev GCC 16.0: ICE in gimplify_expr at gimplify.cc:21278
-- Priority: HIGH - affects both released and development versions; reproducer + logging available in `pr/121472/`.
-
-### Completed Bugs
-
-**PR32365** - Specification-statement diagnostics
-- Status: MERGED UPSTREAM (commit 7db49bf4be2, 2025-11-17)
-- Fix: `parse_executable` now rejects late spec/OpenMP statements unconditionally; new regression `spec_statement_in_exec.f90` exercises DATA/COMMON/NAMELIST/OpenMP cases with `-fopenmp`.
-
-**PR90519** - FINAL + recursive allocatable ICE
-- Status: MERGED UPSTREAM (commit 1eb696fc092, 2025-11-07)
-- Fix: FINAL wrappers now use distinct result symbols and parenthesized self-assignment is detected via `strip_parentheses`, preventing ICE and use-after-free. Regression suite includes `finalizer_recursive_alloc_{1,2}.f90` and `finalizer_self_assign.f90`.
-
-**PR121628** - Recursive allocatable deep copy
-- Status: MERGED UPSTREAM (GCC r16-5094)
-- Fix: Runtime deep-copy helper plus compiler integration now shipped on trunk; reproducer builds cleanly (see `pr/121628/README.md`).
-
-**PR96255** - DO CONCURRENT type-spec implementation
-- Status: MERGED UPSTREAM (commits 5e62a23cc3a & 1099ffffffe)
-- Fix: Optional type-spec parsing and iterator-marking logic; `pr/96255/looper.f90` compiles with current trunk build.
-
-### Fixed but Bugzilla Shows Open
-
-None currently - all resolved bugs have been properly closed in Bugzilla.
-
-### Fixed and Closed
-
-The following bugs are marked RESOLVED FIXED in Bugzilla and pass in both compiler versions:
-- **PR113885** - Finalization block placement (fixed GCC 15+)
-- **PR114535** - Elemental finalizer across modules (fixed GCC 15+)
-- **PR110987** - Segfault with temporary finalization (fixed GCC 14+)
-- **PR82622** - PDT allocation null pointer (fixed in modern GCC)
-- **PR116669** - Circular derived type detection (fixed GCC 15+, Jan 2025)
-- **PR85002** - Coarray deep copy (fixed GCC 16+, Sep 2024)
-- **PR104684** - Coarray gimple verification (fixed GCC 16+)
-- **PR103716** - Character length inquiry (fixed GCC 14+)
-- **PR103368** - Class(*) structure constructor (fixed GCC 14+)
-- **PR122191** - PDT interface body (fixed Oct 2025)
-
-## Usage
-
-### Test All Bugs
-
-```bash
-# Test with system compiler
-make test-system
-
-# Test with development compiler
-make test-dev
-
-# Test with Intel ifx
-make test-ifx
-
-# Test with all compilers
-make test-all
-```
-
-### Test Specific Bug
-
-```bash
-# Test individual PR
-make 107721
-make 121472
-
-# Test by number
-make <PR-number>
-```
-
-### View Summary
-
-```bash
-make summary
-```
-
-### Clean Build Artifacts
-
-```bash
-make clean
-```
-
-## Special Compilation Requirements
-
-### Coarray Features
-
-PRs 85002 and 104684 require `-fcoarray=single` flag. The Makefile automatically applies this flag for these specific bugs.
-
-### Custom Compiler Build
-
-Development compiler tests use:
-- Compiler: `/home/ert/code/gcc-dev/gcc-build/gcc/gfortran`
-- Flags: `-B` for driver, `-L` and `-Wl,-rpath` for libgfortran
-- Security: `-Wa,--noexecstack -Wl,-z,noexecstack`
+| PR | Title | GCC Commit | GitHub Issue |
+|----|-------|------------|--------------|
+| [32365](32365/) | Spec-statement diagnostics | 7db49bf4be2 | [#3](https://github.com/krystophny/gcc-dev/issues/3) |
+| [90519](90519/) | FINAL + recursive allocatable ICE | 1eb696fc092 | [#4](https://github.com/krystophny/gcc-dev/issues/4) |
+| [92613](92613/) | -cpp -fpreprocessed warning | 15ffee4e129 | [#7](https://github.com/krystophny/gcc-dev/issues/7) |
+| [96255](96255/) | DO CONCURRENT type-spec | 5e62a23cc3a | [#1](https://github.com/krystophny/gcc-dev/issues/1) |
+| [107721](107721/) | Array constructor type-spec | c50d263beff | [#6](https://github.com/krystophny/gcc-dev/issues/6) |
+| [121472](121472/) | Constructor/finalizer ICE | 5bb465a7896 | [#2](https://github.com/krystophny/gcc-dev/issues/2) |
+| [121475](121475/) | Function result finalization | a30b5f23b58 | [#8](https://github.com/krystophny/gcc-dev/issues/8) |
+| [121628](121628/) | Recursive allocatable deep copy | a1fe2cfa896 | [#5](https://github.com/krystophny/gcc-dev/issues/5) |
 
 ## Directory Structure
 
-Each PR subdirectory contains:
-- `reproducer.f90` or `<name>.f90` - Minimal test case that triggers the bug
-- `README.md` - Bug description, Bugzilla status, test results, fix details
-- `*.patch` - Fix patches (where applicable)
-- `*.o`, `*.x` - Compiled artifacts (not tracked)
+Each PR directory contains:
 
-### Example: pr/90519/
 ```
-90519/
-├── finalizer_min.f90              # Minimal reproducer
-├── 0001-fortran-Fix-ICE-*.patch   # Proposed fix
-└── README.md                      # Full analysis and fix plan
+pr/<number>/
+├── README.md           # Links, status, analysis
+├── reproducer.f90      # Minimal test case
+├── 0001-*.patch        # Exported patch (if applicable)
+└── Makefile            # Optional multi-compiler testing
+```
+
+## Usage
+
+```bash
+# Test specific PR with dev compiler
+cd pr/123280 && make test-dev
+
+# Test all PRs
+make test-all
 ```
 
 ## Adding New Reproducers
 
-1. Create subdirectory named `<PR-number>/`
-2. Add minimal Fortran reproducer as `reproducer.f90`
-3. Create `README.md` with:
-   - Bug URL
-   - Bugzilla status
-   - Bug description
-   - Expected vs actual behavior
-   - Test results (system/dev/intel)
-   - Fix details (if known)
-4. Update `PR_DIRS` in top-level `Makefile`
-5. Add coarray flag to `COARRAY_PRS` if needed
-6. Test with `make <PR-number>`
+1. Create `pr/<number>/`
+2. Add `reproducer.f90` (minimal test case)
+3. Add `README.md` with links and analysis
+4. Test with reference compilers (nvfortran for OpenACC)
+5. Export patch: `git -C ../gcc format-patch -1 HEAD -o .`
 
-## Test Result Interpretation
+## Links
 
-- **PASS** - Compilation succeeds without errors
-- **ICE** - Internal compiler error detected
-- **FAIL** - Compilation fails with error messages (not ICE)
-- **SKIP** - Test not run (missing compiler, no reproducer)
-
-## Compiler Versions
-
-### System gfortran
-```
-GNU Fortran (GCC) 15.2.1 20250405
-```
-
-### Dev gfortran
-```
-GNU Fortran (GCC) 16.0.0 20251107 (experimental)
-Location: /home/ert/code/gcc-dev/gcc-build/gcc/gfortran
-```
-
-### Intel ifx
-```
-Intel(R) Fortran Compiler 2025.2.1 (2025.2.1.20251128)
-```
-
-Note: Intel ifx does not support `-fcoarray=single` the same way as gfortran, so coarray tests (PR85002, PR104684) fail as expected.
-
-## Related Documentation
-
-- `/home/ert/code/gcc-dev/CLAUDE.md` - AI agent analysis methodology
-- `/home/ert/code/gcc-dev/pr/121628/ALLOCATABLE_DEEPCOPY_PLAYBOOK.md` - Deep copy analysis
-- `/home/ert/code/gcc-dev/gcc/` - Upstream GCC repository (local clone)
-
-## Notes
-
-- Do not push the `gcc/` repository - export patches instead
-- Do not edit GCC ChangeLog files - maintainers regenerate from commits
-- Run `./gcc/contrib/check_GNU_style.sh` on modified GCC sources
-- All paths in commands should be absolute from repo root
-- Stack protection flags required for all test compilations
-
-## Test Automation
-
-The top-level Makefile provides parallel testing infrastructure:
-- Sequential testing of each PR
-- Automatic ICE detection via log parsing
-- Conditional coarray flag application
-- Compiler availability checking
-- Temporary file isolation in `/tmp/`
-
-## Bug Categories
-
-### Finalizer Issues (6 PRs)
-Bugs related to FINAL procedures, wrapper generation, and cleanup timing.
-
-### Allocatable Components (2 PRs)
-Deep copy semantics for recursive allocatable structures.
-
-### Parameterized Derived Types (2 PRs)
-PDT allocation, interface bodies, and component handling.
-
-### Coarray Features (2 PRs)
-Parallel programming constructs with allocatable components.
-
-### Type Resolution (1 PR)
-Circular dependency detection in derived types.
-
-### Character Handling (1 PR)
-Length inquiry for assumed-length arrays.
-
-### Polymorphic Types (1 PR)
-Class(*) unlimited polymorphic components.
+- [GCC Bugzilla](https://gcc.gnu.org/bugzilla/)
+- [GitHub Issues](https://github.com/krystophny/gcc-dev/issues)
+- [Development Guide](../CLAUDE.md)

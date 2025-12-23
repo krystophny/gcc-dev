@@ -1,8 +1,8 @@
 # PR92613: Bogus warning with -cpp and -fpreprocessed
 
-**GCC Bugzilla**: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92613
-
-**Status**: NEW (unassigned)
+- **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92613
+- **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/7
+- **Status:** MERGED (gcc commit 15ffee4e129)
 
 **Component**: fortran
 

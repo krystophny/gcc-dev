@@ -1,8 +1,9 @@
 # Bug 96080: OpenACC runtime library routines vs Fortran pointer semantics
 
-- **URL:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96080
-- **Status:** FIXED by PR 123280 patch
-- **Related:** PR 123280 (same root cause)
+- **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96080
+- **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/13
+- **Status:** PENDING (fixed by PR 123280 patch, awaiting upstream submission)
+- **Related:** PR 123280 (same root cause, same patch)
 
 ## Summary
 
