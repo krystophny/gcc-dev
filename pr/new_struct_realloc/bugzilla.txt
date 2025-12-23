@@ -1,6 +1,6 @@
 Title: [OpenACC] Illegal memory access with derived type in repeated alloc/dealloc cycle
 
-Component: middle-end
+Component: libgomp
 Version: 16.0
 Keywords: openacc, wrong-code
 Target: nvptx-none
@@ -53,29 +53,61 @@ ERROR: libgomp: cuStreamSynchronize error: an illegal memory access was encounte
 
 ANALYSIS
 
-Using -fdump-tree-omplower shows asymmetric struct handling:
+Fortran allocatable arrays generate TO_PSET + POINTER mapping groups.
+When goacc_map_vars creates the device mapping, it adds multiple list
+entries that can point to the SAME splay tree key (the descriptor address):
 
-  enter data: map(struct:s [len: 1]) map(to:s.c ...) ...
-  exit data:  map(release:s.c ...) ...  [NO map(struct:s)]
+  list[0] = descriptor key (TO_PSET)
+  list[1] = same descriptor key (POINTER)
 
-GOMP_MAP_STRUCT is stripped from OACC_EXIT_DATA in gimplify.cc:15949-15955,
-introduced by commit 1afc4672561a (2020-05-20, Thomas Schwinge):
+gomp_map_vars_internal sets refcount = 2 (one per list entry).
 
-  [OpenACC 'exit data'] Strip 'GOMP_MAP_STRUCT' mappings
-  These are not itself necessary for OpenACC 'exit data' directives...
+In goacc_enter_data_internal (oacc-mem.c:1284-1289), the code increments
+dynamic_refcount for EVERY list entry:
 
-The assumption was GOMP_MAP_STRUCT is a no-op. However, enter_data creates
-struct state in the runtime splay tree that isn't cleaned up without the
-corresponding struct on exit_data, causing stale state in repeated cycles.
+  for (j = 0; j < tgt->list_count; j++)
+    if (tgt->list[j].key && !tgt->list[j].is_attach)
+      tgt->list[j].key->dynamic_refcount++;
+
+This results in: refcount=2, dynamic_refcount=2.
+
+But exit_data only sends ONE RELEASE mapping per descriptor, so only
+decrements by 1. This leaves: refcount=1, dynamic_refcount=1.
+
+The mapping is never removed from the splay tree. On iteration 2:
+1. Host deallocates and reallocates arrays (may get different addresses)
+2. enter_data creates new device allocations
+3. Stale mapping with old device addresses corrupts pointer attachment
+4. Kernel accesses invalid device memory -> CRASH
 
 FIX
 
-Remove OACC_EXIT_DATA from the condition that strips GOMP_MAP_STRUCT
-(keep stripping for OMP_TARGET_EXIT_DATA as OpenMP requires):
+In goacc_enter_data_internal, track duplicate keys and:
+1. Only increment dynamic_refcount once per UNIQUE key
+2. Decrement refcount for duplicates to compensate
 
-  if ((OMP_CLAUSE_MAP_KIND (c) == GOMP_MAP_STRUCT ...)
--     && (code == OMP_TARGET_EXIT_DATA || code == OACC_EXIT_DATA))
-+     && code == OMP_TARGET_EXIT_DATA)
+  splay_tree_key prev_key = NULL;
+  for (size_t j = 0; j < tgt->list_count; j++)
+    {
+      n = tgt->list[j].key;
+      if (n && !tgt->list[j].is_attach)
+        {
+          if (n != prev_key)
+            {
+              n->dynamic_refcount++;
+              prev_key = n;
+            }
+          else
+            {
+              /* Duplicate key: adjust refcount down to compensate
+                 for gomp_map_vars_internal counting it twice.  */
+              if (n->refcount != REFCOUNT_INFINITY
+                  && n->refcount != REFCOUNT_ACC_MAP_DATA
+                  && n->refcount > 1)
+                n->refcount--;
+            }
+        }
+    }
 
 TESTED
 
