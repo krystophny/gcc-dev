@@ -4,6 +4,8 @@
 
 **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123255
 
+**Status:** RESOLVED FIXED (fixed by PR123252 patch)
+
 ## Summary
 
 On upstream `master` at `769041822723208bf85a91ac409b9b0bdae3fff0`, the
