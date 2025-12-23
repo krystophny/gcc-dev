@@ -122,10 +122,21 @@ if ((OMP_CLAUSE_MAP_KIND (c) == GOMP_MAP_STRUCT
   }
 ```
 
-The 2020 changelog states: "Remove 'GOMP_MAP_STRUCT' mapping from OpenACC
-'exit data' directives." The assumption was that struct is a "no-op" that
-doesn't need cleanup. However, in repeated alloc/dealloc cycles with multiple
-parallel loops, this creates stale struct mapping state.
+**Original commit** `1afc4672561a41dfbf4e3f2c1f35f7a5b7a20339` (2020-05-20)
+by Thomas Schwinge & Julian Brown:
+
+```
+[OpenACC 'exit data'] Strip 'GOMP_MAP_STRUCT' mappings
+
+These are not itself necessary for OpenACC 'exit data' directives, and are
+skipped over (now) in libgomp.  We might as well not emit them to start with,
+in line with the equivalent OpenMP directive.
+```
+
+The assumption was that GOMP_MAP_STRUCT is purely a "grouping marker" with no
+persistent state. However, on enter_data it creates struct mapping state in
+the runtime splay tree, and without the corresponding struct on exit_data,
+this state isn't properly cleaned up in repeated alloc/dealloc cycles.
 
 **Runtime handling (oacc-mem.c:1372-1378):**
 ```c
