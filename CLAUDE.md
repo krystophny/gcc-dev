@@ -387,12 +387,16 @@ README.md header format:
 
 ## Upstream Submission
 
-**NEVER submit without explicit user permission.**
+**ABSOLUTELY FORBIDDEN without explicit user permission:**
+- `git send-email` to gcc-patches@gcc.gnu.org
+- Posting to any GCC mailing list
+- Updating Bugzilla
+- Any external communication
+
+**NEVER use git send-email or contact gcc-patches@ - this is a HARD RULE.**
 
 Permitted without approval:
 - Prepare patches, run tests, document readiness
-
-Requires permission:
-- Post to gcc-patches@gcc.gnu.org
-- Update Bugzilla
-- Any external communication
+- Push to origin (krystophny/gcc fork)
+- Create PRs in the fork
+- Export patches with `git format-patch`
