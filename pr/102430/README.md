@@ -40,16 +40,16 @@ Compile with OpenMP enabled:
 - GCC branch: `pr102430-linear-sorry`
 - Exported patch: `0001-fortran-Reject-array-allocatable-LINEAR-on-DO-PR1024.patch`
 
-## Local status (2025-12-20)
+## Status (2026-01-13)
 
-- System `gfortran -fopenmp`: ICE during GIMPLE pass `ompexp` in
-  `fold_convert_loc`.
-- In-tree `gcc-build/gcc/gfortran -fopenmp`: same ICE.
+- **Priority:** P2 regression (GCC 13/14/15/16)
+- **Patch attached to Bugzilla:** 2025-12-21
+- **Rebased on upstream/master:** 2026-01-13
+- **Mailing list submission:** Not yet submitted to gcc-patches
+- **Stage 4 candidate:** Yes - regression fix with minimal scope
 
-## Likely fix direction
+## Fix approach
 
-One of:
-
-1. Reject or `sorry` for array/allocatable items in `linear(...)` on worksharing
-   loops in the Fortran front end; or
-2. Implement array-linear lowering for OMP_FOR in the OpenMP expansion paths.
+Rejects array/allocatable items in `linear(...)` on worksharing loops in the
+Fortran front end with a "Sorry, not yet supported" error. This prevents the
+ICE during OpenMP expansion while leaving the door open for future implementation.

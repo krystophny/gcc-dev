@@ -1,4 +1,4 @@
-From 5424fef298bff8b69a351dde8ab2a6b7c46af9ab Mon Sep 17 00:00:00 2001
+From 236ac063d1e9dd137adbacd86bd6fa171250af26 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Sun, 21 Dec 2025 00:33:11 +0100
 Subject: [PATCH] fortran: Reject array/allocatable LINEAR on DO [PR102430]
@@ -26,10 +26,10 @@ Signed-off-by: Christopher Albert <albert@tugraz.at>
  create mode 100644 gcc/testsuite/gfortran.dg/gomp/pr102430.f90
 
 diff --git a/gcc/fortran/openmp.cc b/gcc/fortran/openmp.cc
-index 76c601952a7..71bbce13758 100644
+index 5823ac41fa5..1cbacda7283 100644
 --- a/gcc/fortran/openmp.cc
 +++ b/gcc/fortran/openmp.cc
-@@ -10435,6 +10435,41 @@ resolve_omp_clauses (gfc_code *code, gfc_omp_clauses *omp_clauses,
+@@ -10476,6 +10476,41 @@ resolve_omp_clauses (gfc_code *code, gfc_omp_clauses *omp_clauses,
  		      }
  		    break;
  		  case OMP_LIST_LINEAR:
@@ -89,5 +89,5 @@ index 00000000000..73c8c3f1dec
 +  end do
 +end program p
 -- 
-2.52.0
+2.39.5
 
