@@ -1,4 +1,4 @@
-From 236ac063d1e9dd137adbacd86bd6fa171250af26 Mon Sep 17 00:00:00 2001
+From d498fe6e01953ad22efdc704311bb95b81f8b10d Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Sun, 21 Dec 2025 00:33:11 +0100
 Subject: [PATCH] fortran: Reject array/allocatable LINEAR on DO [PR102430]
@@ -6,6 +6,8 @@ Subject: [PATCH] fortran: Reject array/allocatable LINEAR on DO [PR102430]
 The middle-end does not implement array/allocatable LINEAR for OpenMP
 worksharing loops, which can ICE during OpenMP expansion.  Diagnose this
 case in the Fortran front end with a sorry message instead.
+
+Tested on x86_64-pc-linux-gnu.
 
 	PR fortran/102430
 
