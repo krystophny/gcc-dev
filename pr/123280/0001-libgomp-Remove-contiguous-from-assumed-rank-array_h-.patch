@@ -1,0 +1,462 @@
+From b0f856d678ff1744d4d3dd6f632ea9ae77e85b00 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Tue, 23 Dec 2025 15:51:16 +0100
+Subject: [PATCH] libgomp: Remove contiguous from assumed-rank array_h routines
+ [PR96080, PR123280]
+
+All OpenACC Fortran runtime library routines with assumed-rank dummy
+arguments (acc_copyin_array_h, acc_create_array_h, acc_copyout_array_h,
+acc_delete_array_h, acc_is_present_array_h, and their async/finalize
+variants) had 'contiguous' on the dummy argument.  When a non-contiguous
+array was passed (assumed-shape dummy, Fortran pointer), gfortran
+created a temporary copy to satisfy the contiguity requirement.  This
+caused the runtime to operate on the copy's address rather than the
+original data.
+
+For acc_is_present this meant returning false for data that was actually
+present on the device.  For acc_copyin/acc_create this meant mapping a
+temporary that gets freed after the call.  For acc_copyout/acc_delete
+this meant failing to find the original mapping.
+
+Remove the contiguous attribute from all affected routines.  They only
+pass the base address and size to the underlying C functions, so
+contiguous storage is not required.
+
+	PR libgomp/96080
+	PR libgomp/123280
+
+libgomp/ChangeLog:
+
+	* openacc.f90: Remove contiguous attribute from assumed-rank
+	dummy argument in all array_h routines and their interfaces.
+	* testsuite/libgomp.oacc-fortran/pr123280.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ libgomp/openacc.f90                           | 76 +++++++++----------
+ .../libgomp.oacc-fortran/pr123280.f90         | 67 ++++++++++++++++
+ 2 files changed, 105 insertions(+), 38 deletions(-)
+ create mode 100644 libgomp/testsuite/libgomp.oacc-fortran/pr123280.f90
+
+diff --git a/libgomp/openacc.f90 b/libgomp/openacc.f90
+index dfac1b00151..f720e6a7234 100644
+--- a/libgomp/openacc.f90
++++ b/libgomp/openacc.f90
+@@ -176,7 +176,7 @@ module openacc_internal
+     end subroutine
+ 
+     subroutine acc_copyin_array_h (a)
+-      type (*), dimension (..), contiguous :: a
++      type (*), dimension (..) :: a
+     end subroutine
+ 
+     subroutine acc_present_or_copyin_32_h (a, len)
+@@ -194,7 +194,7 @@ module openacc_internal
+     end subroutine
+ 
+     subroutine acc_present_or_copyin_array_h (a)
+-      type (*), dimension (..), contiguous :: a
++      type (*), dimension (..) :: a
+     end subroutine
+ 
+     subroutine acc_create_32_h (a, len)
+@@ -212,7 +212,7 @@ module openacc_internal
+     end subroutine
+ 
+     subroutine acc_create_array_h (a)
+-      type (*), dimension (..), contiguous :: a
++      type (*), dimension (..) :: a
+     end subroutine
+ 
+     subroutine acc_present_or_create_32_h (a, len)
+@@ -230,7 +230,7 @@ module openacc_internal
+     end subroutine
+ 
+     subroutine acc_present_or_create_array_h (a)
+-      type (*), dimension (..), contiguous :: a
++      type (*), dimension (..) :: a
+     end subroutine
+ 
+     subroutine acc_copyout_32_h (a, len)
+@@ -248,7 +248,7 @@ module openacc_internal
+     end subroutine
+ 
+     subroutine acc_copyout_array_h (a)
+-      type (*), dimension (..), contiguous :: a
++      type (*), dimension (..) :: a
+     end subroutine
+ 
+     subroutine acc_copyout_finalize_32_h (a, len)
+@@ -266,7 +266,7 @@ module openacc_internal
+     end subroutine
+ 
+     subroutine acc_copyout_finalize_array_h (a)
+-      type (*), dimension (..), contiguous :: a
++      type (*), dimension (..) :: a
+     end subroutine
+ 
+     subroutine acc_copyout_finalize_async_32_h (a, len, async)
+@@ -289,7 +289,7 @@ module openacc_internal
+ 
+     subroutine acc_copyout_finalize_async_array_h (a, async)
+       use openacc_kinds, only: acc_handle_kind
+-      type (*), dimension (..), contiguous :: a
++      type (*), dimension (..) :: a
+       integer (acc_handle_kind) async
+     end subroutine
+ 
+@@ -308,7 +308,7 @@ module openacc_internal
+     end subroutine
+ 
+     subroutine acc_delete_array_h (a)
+-      type (*), dimension (..), contiguous :: a
++      type (*), dimension (..) :: a
+     end subroutine
+ 
+     subroutine acc_delete_finalize_32_h (a, len)
+@@ -326,7 +326,7 @@ module openacc_internal
+     end subroutine
+ 
+     subroutine acc_delete_finalize_array_h (a)
+-      type (*), dimension (..), contiguous :: a
++      type (*), dimension (..) :: a
+     end subroutine
+ 
+     subroutine acc_update_device_32_h (a, len)
+@@ -344,7 +344,7 @@ module openacc_internal
+     end subroutine
+ 
+     subroutine acc_update_device_array_h (a)
+-      type (*), dimension (..), contiguous :: a
++      type (*), dimension (..) :: a
+     end subroutine
+ 
+     subroutine acc_update_self_32_h (a, len)
+@@ -362,7 +362,7 @@ module openacc_internal
+     end subroutine
+ 
+     subroutine acc_update_self_array_h (a)
+-      type (*), dimension (..), contiguous :: a
++      type (*), dimension (..) :: a
+     end subroutine
+ 
+     function acc_is_present_32_h (a, len)
+@@ -383,7 +383,7 @@ module openacc_internal
+ 
+     function acc_is_present_array_h (a)
+       logical acc_is_present_array_h
+-      type (*), dimension (..), contiguous :: a
++      type (*), dimension (..) :: a
+     end function
+ 
+     subroutine acc_copyin_async_32_h (a, len, async)
+@@ -406,7 +406,7 @@ module openacc_internal
+ 
+     subroutine acc_copyin_async_array_h (a, async)
+       use openacc_kinds, only: acc_handle_kind
+-      type (*), dimension (..), contiguous :: a
++      type (*), dimension (..) :: a
+       integer (acc_handle_kind) async
+     end subroutine
+ 
+@@ -430,7 +430,7 @@ module openacc_internal
+ 
+     subroutine acc_create_async_array_h (a, async)
+       use openacc_kinds, only: acc_handle_kind
+-      type (*), dimension (..), contiguous :: a
++      type (*), dimension (..) :: a
+       integer (acc_handle_kind) async
+     end subroutine
+ 
+@@ -454,7 +454,7 @@ module openacc_internal
+ 
+     subroutine acc_copyout_async_array_h (a, async)
+       use openacc_kinds, only: acc_handle_kind
+-      type (*), dimension (..), contiguous :: a
++      type (*), dimension (..) :: a
+       integer (acc_handle_kind) async
+     end subroutine
+ 
+@@ -478,7 +478,7 @@ module openacc_internal
+ 
+     subroutine acc_delete_async_array_h (a, async)
+       use openacc_kinds, only: acc_handle_kind
+-      type (*), dimension (..), contiguous :: a
++      type (*), dimension (..) :: a
+       integer (acc_handle_kind) async
+     end subroutine
+ 
+@@ -502,7 +502,7 @@ module openacc_internal
+ 
+     subroutine acc_delete_finalize_async_array_h (a, async)
+       use openacc_kinds, only: acc_handle_kind
+-      type (*), dimension (..), contiguous :: a
++      type (*), dimension (..) :: a
+       integer (acc_handle_kind) async
+     end subroutine
+ 
+@@ -526,7 +526,7 @@ module openacc_internal
+ 
+     subroutine acc_update_device_async_array_h (a, async)
+       use openacc_kinds, only: acc_handle_kind
+-      type (*), dimension (..), contiguous :: a
++      type (*), dimension (..) :: a
+       integer (acc_handle_kind) async
+     end subroutine
+ 
+@@ -550,7 +550,7 @@ module openacc_internal
+ 
+     subroutine acc_update_self_async_array_h (a, async)
+       use openacc_kinds, only: acc_handle_kind
+-      type (*), dimension (..), contiguous :: a
++      type (*), dimension (..) :: a
+       integer (acc_handle_kind) async
+     end subroutine
+   end interface
+@@ -1394,7 +1394,7 @@ end subroutine
+ 
+ subroutine acc_copyin_array_h (a)
+   use openacc_internal, only: acc_copyin_l
+-  type (*), dimension (..), contiguous :: a
++  type (*), dimension (..) :: a
+   call acc_copyin_l (a, sizeof (a))
+ end subroutine
+ 
+@@ -1418,7 +1418,7 @@ end subroutine
+ 
+ subroutine acc_present_or_copyin_array_h (a)
+   use openacc_internal, only: acc_present_or_copyin_l
+-  type (*), dimension (..), contiguous :: a
++  type (*), dimension (..) :: a
+   call acc_present_or_copyin_l (a, sizeof (a))
+ end subroutine
+ 
+@@ -1442,7 +1442,7 @@ end subroutine
+ 
+ subroutine acc_create_array_h (a)
+   use openacc_internal, only: acc_create_l
+-  type (*), dimension (..), contiguous :: a
++  type (*), dimension (..) :: a
+   call acc_create_l (a, sizeof (a))
+ end subroutine
+ 
+@@ -1466,7 +1466,7 @@ end subroutine
+ 
+ subroutine acc_present_or_create_array_h (a)
+   use openacc_internal, only: acc_present_or_create_l
+-  type (*), dimension (..), contiguous :: a
++  type (*), dimension (..) :: a
+   call acc_present_or_create_l (a, sizeof (a))
+ end subroutine
+ 
+@@ -1490,7 +1490,7 @@ end subroutine
+ 
+ subroutine acc_copyout_array_h (a)
+   use openacc_internal, only: acc_copyout_l
+-  type (*), dimension (..), contiguous :: a
++  type (*), dimension (..) :: a
+   call acc_copyout_l (a, sizeof (a))
+ end subroutine
+ 
+@@ -1514,7 +1514,7 @@ end subroutine
+ 
+ subroutine acc_copyout_finalize_array_h (a)
+   use openacc_internal, only: acc_copyout_finalize_l
+-  type (*), dimension (..), contiguous :: a
++  type (*), dimension (..) :: a
+   call acc_copyout_finalize_l (a, sizeof (a))
+ end subroutine
+ 
+@@ -1546,7 +1546,7 @@ subroutine acc_copyout_finalize_async_array_h (a, async)
+   use iso_c_binding, only: c_int
+   use openacc_internal, only: acc_copyout_finalize_async_l
+   use openacc_kinds, only: acc_handle_kind
+-  type (*), dimension (..), contiguous :: a
++  type (*), dimension (..) :: a
+   integer (acc_handle_kind) async
+   call acc_copyout_finalize_async_l (a, sizeof (a), int (async, kind = c_int))
+ end subroutine
+@@ -1572,7 +1572,7 @@ end subroutine
+ 
+ subroutine acc_delete_array_h (a)
+   use openacc_internal, only: acc_delete_l
+-  type (*), dimension (..), contiguous :: a
++  type (*), dimension (..) :: a
+   call acc_delete_l (a, sizeof (a))
+ end subroutine
+ 
+@@ -1596,7 +1596,7 @@ end subroutine
+ 
+ subroutine acc_delete_finalize_array_h (a)
+   use openacc_internal, only: acc_delete_finalize_l
+-  type (*), dimension (..), contiguous :: a
++  type (*), dimension (..) :: a
+   call acc_delete_finalize_l (a, sizeof (a))
+ end subroutine
+ 
+@@ -1620,7 +1620,7 @@ end subroutine
+ 
+ subroutine acc_update_device_array_h (a)
+   use openacc_internal, only: acc_update_device_l
+-  type (*), dimension (..), contiguous :: a
++  type (*), dimension (..) :: a
+   call acc_update_device_l (a, sizeof (a))
+ end subroutine
+ 
+@@ -1644,7 +1644,7 @@ end subroutine
+ 
+ subroutine acc_update_self_array_h (a)
+   use openacc_internal, only: acc_update_self_l
+-  type (*), dimension (..), contiguous :: a
++  type (*), dimension (..) :: a
+   call acc_update_self_l (a, sizeof (a))
+ end subroutine
+ 
+@@ -1671,7 +1671,7 @@ end function
+ function acc_is_present_array_h (a)
+   use openacc_internal, only: acc_is_present_l
+   logical acc_is_present_array_h
+-  type (*), dimension (..), contiguous :: a
++  type (*), dimension (..) :: a
+   acc_is_present_array_h = acc_is_present_l (a, sizeof (a)) /= 0
+ end function
+ 
+@@ -1701,7 +1701,7 @@ subroutine acc_copyin_async_array_h (a, async)
+   use iso_c_binding, only: c_int
+   use openacc_internal, only: acc_copyin_async_l
+   use openacc_kinds, only: acc_handle_kind
+-  type (*), dimension (..), contiguous :: a
++  type (*), dimension (..) :: a
+   integer (acc_handle_kind) async
+   call acc_copyin_async_l (a, sizeof (a), int (async, kind = c_int))
+ end subroutine
+@@ -1732,7 +1732,7 @@ subroutine acc_create_async_array_h (a, async)
+   use iso_c_binding, only: c_int
+   use openacc_internal, only: acc_create_async_l
+   use openacc_kinds, only: acc_handle_kind
+-  type (*), dimension (..), contiguous :: a
++  type (*), dimension (..) :: a
+   integer (acc_handle_kind) async
+   call acc_create_async_l (a, sizeof (a), int (async, kind = c_int))
+ end subroutine
+@@ -1763,7 +1763,7 @@ subroutine acc_copyout_async_array_h (a, async)
+   use iso_c_binding, only: c_int
+   use openacc_internal, only: acc_copyout_async_l
+   use openacc_kinds, only: acc_handle_kind
+-  type (*), dimension (..), contiguous :: a
++  type (*), dimension (..) :: a
+   integer (acc_handle_kind) async
+   call acc_copyout_async_l (a, sizeof (a), int (async, kind = c_int))
+ end subroutine
+@@ -1794,7 +1794,7 @@ subroutine acc_delete_async_array_h (a, async)
+   use iso_c_binding, only: c_int
+   use openacc_internal, only: acc_delete_async_l
+   use openacc_kinds, only: acc_handle_kind
+-  type (*), dimension (..), contiguous :: a
++  type (*), dimension (..) :: a
+   integer (acc_handle_kind) async
+   call acc_delete_async_l (a, sizeof (a), int (async, kind = c_int))
+ end subroutine
+@@ -1827,7 +1827,7 @@ subroutine acc_delete_finalize_async_array_h (a, async)
+   use iso_c_binding, only: c_int
+   use openacc_internal, only: acc_delete_finalize_async_l
+   use openacc_kinds, only: acc_handle_kind
+-  type (*), dimension (..), contiguous :: a
++  type (*), dimension (..) :: a
+   integer (acc_handle_kind) async
+   call acc_delete_finalize_async_l (a, sizeof (a), int (async, kind = c_int))
+ end subroutine
+@@ -1858,7 +1858,7 @@ subroutine acc_update_device_async_array_h (a, async)
+   use iso_c_binding, only: c_int
+   use openacc_internal, only: acc_update_device_async_l
+   use openacc_kinds, only: acc_handle_kind
+-  type (*), dimension (..), contiguous :: a
++  type (*), dimension (..) :: a
+   integer (acc_handle_kind) async
+   call acc_update_device_async_l (a, sizeof (a), int (async, kind = c_int))
+ end subroutine
+@@ -1889,7 +1889,7 @@ subroutine acc_update_self_async_array_h (a, async)
+   use iso_c_binding, only: c_int
+   use openacc_internal, only: acc_update_self_async_l
+   use openacc_kinds, only: acc_handle_kind
+-  type (*), dimension (..), contiguous :: a
++  type (*), dimension (..) :: a
+   integer (acc_handle_kind) async
+   call acc_update_self_async_l (a, sizeof (a), int (async, kind = c_int))
+ end subroutine
+diff --git a/libgomp/testsuite/libgomp.oacc-fortran/pr123280.f90 b/libgomp/testsuite/libgomp.oacc-fortran/pr123280.f90
+new file mode 100644
+index 00000000000..6ed6a714c30
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.oacc-fortran/pr123280.f90
+@@ -0,0 +1,67 @@
++! PR libgomp/123280, PR libgomp/96080
++! { dg-do run }
++! { dg-skip-if "" { *-*-* } { "*" } { "-DACC_MEM_SHARED=0" } }
++!
++! Test that acc_is_present works correctly for assumed-shape dummy arguments
++! and Fortran pointers. Before the fix, these cases would create a copy
++! (due to the contiguous attribute), causing the lookup to fail.
++
++program pr123280
++  use openacc
++  implicit none
++
++  real, allocatable, target :: arr(:)
++  real, pointer :: ptr(:)
++  integer, parameter :: n = 100
++
++  allocate(arr(n))
++  arr = 1.0
++  ptr => arr
++
++  !$acc enter data copyin(arr)
++
++  ! Test 1: Direct check should pass
++  if (.not. acc_is_present(arr)) stop 1
++
++  ! Test 2: Check via subroutine with assumed-shape should pass
++  call check_assumed_shape(arr)
++
++  ! Test 3: Check via subroutine with explicit contiguous should pass
++  call check_contiguous(arr)
++
++  ! Test 4: Check pointer to mapped target (PR 96080)
++  if (.not. acc_is_present(ptr)) stop 4
++
++  ! Test 5: Check pointer in subroutine
++  call check_pointer(ptr)
++
++  ! Test 6: Check pointer passed as assumed-shape
++  call check_assumed_shape(ptr)
++
++  !$acc exit data delete(arr)
++
++contains
++
++  subroutine check_assumed_shape(x)
++    real, intent(in) :: x(:)
++
++    ! This used to fail because gfortran created a copy of the array
++    ! to satisfy the contiguous requirement in acc_is_present_array_h.
++    if (.not. acc_is_present(x)) stop 2
++  end subroutine check_assumed_shape
++
++  subroutine check_contiguous(x)
++    real, intent(in), contiguous :: x(:)
++
++    ! With explicit contiguous on the dummy, no copy should be needed.
++    if (.not. acc_is_present(x)) stop 3
++  end subroutine check_contiguous
++
++  subroutine check_pointer(p)
++    real, pointer, intent(in) :: p(:)
++
++    ! Pointer argument should detect mapped target (PR 96080).
++    if (.not. acc_is_present(p)) stop 5
++  end subroutine check_pointer
++
++end program pr123280
+-- 
+2.53.0
+

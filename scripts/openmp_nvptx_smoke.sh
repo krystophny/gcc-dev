@@ -2,7 +2,7 @@
 set -euo pipefail
 
 root_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-prefix="/opt/gcc16"
+prefix="${root_dir}/gcc-offload-build/install"
 
 log_path="/tmp/openmp_nvptx_smoke_$(date +%F).log"
 

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-prefix="/opt/gcc16"
+root_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+prefix="${root_dir}/gcc-offload-build/install"
 
 cat > /tmp/openacc_nvptx_smoke.f90 <<'EOF'
 program openacc_nvptx_smoke

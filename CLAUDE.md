@@ -12,7 +12,8 @@ gcc-dev/                    # META-REPO (GitHub: krystophny/gcc-dev)
 ├── gcc-master-build/       # Upstream master build (not tracked)
 ├── pr/                     # Bug work directories (tracked)
 │   └── <number>/           # reproducer.f90, *.patch, README.md
-└── scripts/                # Build scripts for /opt/gcc16*
+├── gcc-offload-build/      # NVPTX offload build + install (not tracked)
+└── scripts/                # Build scripts for offload compiler
 ```
 
 **Git remotes in gcc/:**
@@ -27,35 +28,27 @@ git -C gcc format-patch -1 HEAD -o ../pr/<number>/       # export patch
 
 ## Installed Compilers
 
-### /opt/gcc16 (Offload Build)
+### Offload Build (gcc-offload-build/install)
 
 Full GCC 16 with NVPTX offload support for OpenACC/OpenMP GPU testing.
+Built by `scripts/build_gcc16_nvptx.sh`, installs into `gcc-offload-build/install/`.
 
 ```bash
+OFFLOAD=$PWD/gcc-offload-build/install
+
 # Compile with GPU offload
-/opt/gcc16/bin/gfortran -fopenacc -foffload=nvptx-none test.f90 -o test
+$OFFLOAD/bin/gfortran -fopenacc -foffload=nvptx-none test.f90 -o test
 
 # CRITICAL: Use matching libgomp at runtime
-LD_LIBRARY_PATH=/opt/gcc16/lib64 ./test
+LD_LIBRARY_PATH=$OFFLOAD/lib64 ./test
 
 # Or compile with rpath
-/opt/gcc16/bin/gfortran -fopenacc -foffload=nvptx-none \
-  -Wl,-rpath,/opt/gcc16/lib64 test.f90 -o test
+$OFFLOAD/bin/gfortran -fopenacc -foffload=nvptx-none \
+  -Wl,-rpath,$OFFLOAD/lib64 test.f90 -o test
 ```
 
 **Common pitfall:** Running GPU code but seeing only host device means you loaded
-system libgomp instead of /opt/gcc16/lib64/libgomp.so.
-
-### /opt/gcc16-master (Upstream Master)
-
-Vanilla upstream master without local patches. Use to verify behavior before/after
-fixes and confirm bugs exist upstream.
-
-```bash
-# Test with upstream master
-/opt/gcc16-master/bin/gfortran -fopenacc test.f90 -o test_upstream
-LD_LIBRARY_PATH=/opt/gcc16-master/lib64 ./test_upstream
-```
+system libgomp instead of `gcc-offload-build/install/lib64/libgomp.so`.
 
 ### Reference Compilers
 
@@ -126,11 +119,12 @@ OpenACC runtime tests require actual GPU offload. Tests marked with
 when ACC_MEM_SHARED=0 (real GPU, not unified memory).
 
 In gcc-build without NVPTX offload, these tests show as UNSUPPORTED.
-Verify manually with /opt/gcc16:
+Verify manually with the offload build:
 
 ```bash
-/opt/gcc16/bin/gfortran -fopenacc -foffload=nvptx-none test.f90 -o test
-LD_LIBRARY_PATH=/opt/gcc16/lib64 ./test
+OFFLOAD=$PWD/gcc-offload-build/install
+$OFFLOAD/bin/gfortran -fopenacc -foffload=nvptx-none test.f90 -o test
+LD_LIBRARY_PATH=$OFFLOAD/lib64 ./test
 ```
 
 ### Writing Test Cases
@@ -396,18 +390,17 @@ README.md header format:
 
 ## Current Patch Status
 
-**On origin/master (awaiting upstream):**
+**On origin (individual branches + integration branch `openacc`):**
 
-| PR | Description |
-|----|-------------|
-| 102430 | Reject array/allocatable LINEAR on DO |
-| 103276 | Skip pointer mapping for pass-by-ref in ENTER/EXIT DATA |
-| 123252 | Map scalar fields on enter data for components |
-| 123280 | Fix acc_is_present for assumed-shape and pointers |
-| 123282 | Fix OpenACC refcount for Fortran allocatable array descriptors |
-| 123868 | Fix memory leak on assignment with nested allocatable components |
+| PR | Branch | Description |
+|----|--------|-------------|
+| 102430 | `origin/master` | Reject array/allocatable LINEAR on DO |
+| 123280+96080 | `pr123280-fix` | Fix acc_is_present for assumed-shape and pointers |
+| 103276 | `pr103276-fix` | Skip pointer mapping for pass-by-ref in ENTER/EXIT DATA |
+| 123252 | `pr123252-fix` | Map scalar fields on enter data for components |
+| 123282 | `pr123282-fix` | Fix OpenACC refcount for Fortran allocatable array descriptors |
 
-**Merged upstream:** 32365, 90519, 92613, 96080, 96255, 107721, 121472, 121475, 121628
+**Merged upstream:** 32365, 90519, 92613, 96255, 107721, 121472, 121475, 121628, 123868
 
 ## Upstream Submission
 
