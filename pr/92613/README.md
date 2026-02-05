@@ -2,13 +2,11 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92613
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/7
-- **Status:** MERGED (gcc commit 15ffee4e129)
+- **Status:** MERGED (gcc commit 15ffee4e129, r16-6285, 2025-12-19)
 
 **Component**: fortran
 
 **Reported**: 2019-11-21 by Ignacio Fernández Galván
-
-**Last Modified**: 2023-12-04
 
 ## Summary
 

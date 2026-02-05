@@ -2,7 +2,7 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123868
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/47
-- **Status:** PATCH READY (on pr123868-fix branch)
+- **Status:** MERGED (gcc commit ca448bc5e435)
 
 ## Summary
 

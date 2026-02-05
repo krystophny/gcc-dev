@@ -4,7 +4,7 @@
 
 **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123255
 
-**Status:** RESOLVED FIXED (fixed by PR123252 patch)
+**Status:** RESOLVED WORKSFORME (transient regression from intermediate PR123252 patch; does not reproduce on upstream master or with final PR123252 patch)
 
 ## Summary
 
