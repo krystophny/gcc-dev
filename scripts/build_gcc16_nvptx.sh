@@ -3,7 +3,7 @@ set -euo pipefail
 
 root_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 
-prefix="/opt/gcc16"
+prefix="${root_dir}/gcc-offload-build/install"
 build_root="${root_dir}/gcc-offload-build"
 gcc_src="${root_dir}/gcc"
 
@@ -101,9 +101,10 @@ ln -s "../third_party/newlib-cygwin/newlib" "${gcc_src}/newlib"
 
 (cd "${nvptx_tools_repo}" && log gcc16_nvptx_tools_configure ./configure --prefix="${prefix}/nvptx")
 (cd "${nvptx_tools_repo}" && log gcc16_nvptx_tools_make make -j"$(nproc)")
-(cd "${nvptx_tools_repo}" && log gcc16_nvptx_tools_install sudo make install)
+(cd "${nvptx_tools_repo}" && log gcc16_nvptx_tools_install make install)
 
-sudo ln -snf "${prefix}/nvptx/nvptx-none/bin" "${prefix}/nvptx-none/bin"
+mkdir -p "${prefix}/nvptx-none"
+ln -snf "${prefix}/nvptx/nvptx-none/bin" "${prefix}/nvptx-none/bin"
 
 accel_build="${build_root}/accel-nvptx"
 host_build="${build_root}/host-gcc16"
@@ -132,7 +133,7 @@ mkdir -p "${accel_build}" "${host_build}"
     CXXFLAGS='-O2 -pipe')
 
 (cd "${accel_build}" && log gcc16_accel_nvptx_make make -j"$(nproc)")
-(cd "${accel_build}" && log gcc16_accel_nvptx_install sudo make install)
+(cd "${accel_build}" && log gcc16_accel_nvptx_install make install)
 
 (cd "${host_build}" && log gcc16_host_configure \
   ../../gcc/configure \
@@ -147,7 +148,7 @@ mkdir -p "${accel_build}" "${host_build}"
     CXXFLAGS='-O2 -pipe')
 
 (cd "${host_build}" && log gcc16_host_make make -j"$(nproc)")
-(cd "${host_build}" && log gcc16_host_install sudo make install)
+(cd "${host_build}" && log gcc16_host_install make install)
 
 if [[ "${do_smoke}" == "1" ]]; then
   "${root_dir}/scripts/openacc_nvptx_smoke.sh"

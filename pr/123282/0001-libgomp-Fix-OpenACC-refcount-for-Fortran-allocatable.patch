@@ -1,4 +1,4 @@
-From 946fe28c770d8c1764bbd3d5c8b9fe7a72de71ad Mon Sep 17 00:00:00 2001
+From 83aaef2c20fd072af182090d192b4d2283f80dc6 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Wed, 24 Dec 2025 00:04:32 +0100
 Subject: [PATCH] libgomp: Fix OpenACC refcount for Fortran allocatable array
@@ -40,7 +40,7 @@ Signed-off-by: Christopher Albert <albert@tugraz.at>
  create mode 100644 libgomp/testsuite/libgomp.oacc-fortran/allocatable-component-realloc-1.f90
 
 diff --git a/libgomp/oacc-mem.c b/libgomp/oacc-mem.c
-index 5b8ba7e1072..1e7f61847ba 100644
+index 738281f5701..2d0da08d8a3 100644
 --- a/libgomp/oacc-mem.c
 +++ b/libgomp/oacc-mem.c
 @@ -1281,11 +1281,35 @@ goacc_enter_data_internal (struct gomp_device_descr *acc_dev, size_t mapnum,
@@ -143,5 +143,5 @@ index 00000000000..f5735e9287d
 +  end do
 +end program
 -- 
-2.52.0
+2.53.0
 

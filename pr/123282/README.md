@@ -1,9 +1,9 @@
-# PR123282: OpenACC illegal memory access with derived type in repeated alloc/dealloc cycle
+# Bug 123282: OpenACC illegal memory access with derived type in repeated alloc/dealloc cycle
 
-## Status
-- **Confirmed**: Bug in GCC 16.0.0 (trunk)
-- **Fixed**: libgomp/oacc-mem.c refcount handling
-- **Bugzilla PR**: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123282
+- **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123282
+- **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/14
+- **Branch:** `pr123282-fix` (also on integration branch `openacc`)
+- **Status:** PENDING (patch on fork, awaiting upstream submission)
 
 ## Summary
 
@@ -88,8 +88,7 @@ for (size_t j = 0; j < tgt->list_count; j++)
             /* Duplicate key: adjust refcount down to compensate
                for gomp_map_vars_internal counting it twice.  */
             if (n->refcount != REFCOUNT_INFINITY
-                && n->refcount != REFCOUNT_ACC_MAP_DATA
-                && n->refcount > 1)
+                && n->refcount != REFCOUNT_ACC_MAP_DATA)
               n->refcount--;
           }
       }
@@ -145,16 +144,18 @@ end program
 ## Build Commands
 
 ```bash
+OFFLOAD=$PWD/gcc-offload-build/install
+
 # gfortran with nvptx (crashes without fix)
-/opt/gcc16/bin/gfortran -O3 -fopenacc -foffload=nvptx-none mre.f90 -o mre
-LD_LIBRARY_PATH=/opt/gcc16/lib64 ./mre
+$OFFLOAD/bin/gfortran -O3 -fopenacc -foffload=nvptx-none mre.f90 -o mre
+LD_LIBRARY_PATH=$OFFLOAD/lib64 ./mre
 
 # nvfortran (passes - reference behavior)
 nvfortran -O3 -acc=gpu mre.f90 -o mre_nv
 ./mre_nv
 
 # gfortran host fallback (passes)
-ACC_DEVICE_TYPE=host LD_LIBRARY_PATH=/opt/gcc16/lib64 ./mre
+ACC_DEVICE_TYPE=host LD_LIBRARY_PATH=$OFFLOAD/lib64 ./mre
 ```
 
 ## Workarounds

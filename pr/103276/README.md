@@ -2,6 +2,7 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=103276
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/10
+- **Branch:** `pr103276-fix` (also on integration branch `openacc`)
 - **Status:** PENDING (patch on fork, awaiting upstream submission)
 
 **Title:** [openacc] Trying to map already mapped data
@@ -48,6 +49,15 @@ rg -n \"\\.omp_data_arr|&var|pointer assign\" /tmp/pr103276_reproducer.*.omplowe
 Both target the same symptom: ENTER DATA on derived types leading to duplicate
 mapping errors in libgomp.
 
+## Verification (regression test on integration branch)
+
+```
+PASS: gfortran.dg/goacc/pr103276.f90   -O  (test for excess errors)
+PASS: gfortran.dg/goacc/pr103276.f90   -O   scan-tree-dump-not omplower "\.omp_data_arr\..*= &var"
+```
+
+Full check-gfortran: 75,147 passes, 0 regressions (6 pre-existing bessel_6 failures).
+
 ## Patch
 
 `0001-fortran-Skip-pointer-mapping-for-pass-by-ref-in-ENTE.patch`
@@ -69,5 +79,5 @@ gfortran -O2 -fopenacc -foffload=nvptx-none pr/103276/reproducer.f90 -o /tmp/pr1
 /tmp/pr103276.x
 ```
 
-If using a non-default GCC install (e.g. `/opt/gcc16`), ensure the matching
-`libgomp` is used at runtime (via `LD_LIBRARY_PATH` or rpath).
+If using the offload build, ensure the matching `libgomp` is used at runtime
+(via `LD_LIBRARY_PATH` or rpath).

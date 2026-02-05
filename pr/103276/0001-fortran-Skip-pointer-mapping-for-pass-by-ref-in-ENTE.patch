@@ -1,4 +1,4 @@
-From 91ab0d475071ce8de39bae65a16e613b945a1d14 Mon Sep 17 00:00:00 2001
+From 7febefcf0bd98040e168359e23b76a020fb1f5e3 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Tue, 23 Dec 2025 09:14:02 +0100
 Subject: [PATCH] fortran: Skip pointer mapping for pass-by-ref in ENTER/EXIT
@@ -43,7 +43,7 @@ Signed-off-by: Christopher Albert <albert@tugraz.at>
  create mode 100644 gcc/testsuite/gfortran.dg/goacc/pr103276.f90
 
 diff --git a/gcc/fortran/trans-openmp.cc b/gcc/fortran/trans-openmp.cc
-index d7f3c281823..7f98b934191 100644
+index 86f83e6bb1f..181e12e902c 100644
 --- a/gcc/fortran/trans-openmp.cc
 +++ b/gcc/fortran/trans-openmp.cc
 @@ -4247,9 +4247,21 @@ gfc_trans_omp_clauses (stmtblock_t *block, gfc_omp_clauses *clauses,
@@ -105,5 +105,5 @@ index 00000000000..8eb2f85bccb
 +! .omp_data_arr, which would indicate taking address of reference slot.
 +! { dg-final { scan-tree-dump-not "\\.omp_data_arr\\..*= &var" "omplower" } }
 -- 
-2.52.0
+2.53.0
 
