@@ -2,7 +2,7 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=32365
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/3
-- **Status:** MERGED (gcc commit 7db49bf4be2, 2025-11-17)
+- **Status:** MERGED (gcc commits 7db49bf4be2 + 0ec9191dae0, 2025-11-17)
 
 **Component:** fortran
 **Version:** 4.3.0 (original report)

@@ -37,7 +37,7 @@ an internal compiler error when a derived type has
    ./gcc-build/gcc/gfortran -B ./gcc-build/gcc \
      -L ./gcc-build/x86_64-pc-linux-gnu/libgfortran/.libs \
      -Wl,-rpath,$(pwd)/gcc-build/x86_64-pc-linux-gnu/libgfortran/.libs \
-     -c bugs/90519/finalizer_min.f90
+     -c pr/90519/finalizer_min.f90
    ```
 
    The current trunk ICEs in `gimplify_call_expr` because the compiler tries to

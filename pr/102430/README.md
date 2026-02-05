@@ -40,11 +40,13 @@ Compile with OpenMP enabled:
 - GCC branch: `pr102430-linear-sorry`
 - Exported patch: `0001-fortran-Reject-array-allocatable-LINEAR-on-DO-PR1024.patch`
 
-## Status (2026-01-13)
+## Status (2026-02-05)
 
 - **Priority:** P2 regression (GCC 13/14/15/16)
+- **Bugzilla status:** NEW (no reviewer feedback yet)
 - **Patch attached to Bugzilla:** 2025-12-21
 - **Rebased on upstream/master:** 2026-01-13
+- **Fork branch:** `pr102430-linear-sorry` (commit d498fe6e019)
 - **Mailing list submission:** Not yet submitted to gcc-patches
 - **Stage 4 candidate:** Yes - regression fix with minimal scope
 

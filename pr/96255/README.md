@@ -2,11 +2,13 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96255
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/1
-- **Status:** MERGED (gcc commits 5e62a23cc3a, 1099ffffffe)
+- **Status:** MERGED (gcc commits 5e62a23cc3a, 0ef98bf3351, 1099ffffffe, a892a2dac6b)
 
 **Upstream Commits:**
 - 5e62a23cc3a - fortran: Implement optional type spec for DO CONCURRENT [PR96255]
+- 0ef98bf3351 - Fortran: Remove unused variable. [PR 96255]
 - 1099ffffffe - Fortran: Mark type-spec iterators referenced
+- a892a2dac6b - Fortran: Remove dg-bogus from test case
 
 **Test Results:** All tests passing (0 unexpected failures)
 
@@ -22,7 +24,7 @@ do concurrent (integer(kind=4) :: i = 1:10)
 end do
 ```
 
-**MERGED:** Upstream as commit 5e62a23cc3a (Main implementation) and 1099ffffffe (Mark iterators referenced)
+**MERGED:** Upstream as commits 5e62a23cc3a (main implementation), 0ef98bf3351 (unused variable cleanup), 1099ffffffe (mark iterators referenced), a892a2dac6b (test cleanup). Bugzilla RESOLVED FIXED 2025-11-13.
 
 The implementation is split between two major patches:
 
@@ -212,10 +214,18 @@ grep "# of" /home/ert/code/gcc-dev/gcc-build/gcc/testsuite/gfortran/gfortran.sum
 - Files: gfortran.h, match.cc, resolve.cc
 - Added type-spec parsing and shadow variable creation
 
-### Follow-up Fix (1099ffffffe)
+### Remove Unused Variable (0ef98bf3351)
+- Fortran: Remove unused variable. [PR 96255]
+- Cleanup of unused variable introduced in main implementation
+
+### Mark Iterators Referenced (1099ffffffe)
 - Fortran: Mark type-spec iterators referenced
 - Files: resolve.cc
 - Ensures proper reference tracking for iterators
+
+### Remove dg-bogus from Test (a892a2dac6b)
+- Fortran: Remove dg-bogus from test case
+- Test cleanup after iterator marking fix made dg-bogus unnecessary
 
 ## Local Patch Files (for reference/archival)
 

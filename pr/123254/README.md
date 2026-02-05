@@ -4,8 +4,12 @@
 for derived type dummy argument
 
 **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123254
+**Status:** CLOSED (WORKSFORME) - no patch needed
 
 ## Status
+
+Bugzilla resolution: WORKSFORME. The crash was a transient issue that
+resolved itself through other OpenACC fixes. No patch was submitted.
 
 This no longer reproduces locally as of 2025-12-22 using trunk based on
 `upstream/master` commit `769041822723208bf85a91ac409b9b0bdae3fff0`.
