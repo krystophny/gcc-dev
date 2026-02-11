@@ -1,0 +1,154 @@
+From 8db905292250ccd08eeb129968d361a2fdac9c10 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Thu, 12 Feb 2026 00:06:13 +0100
+Subject: [PATCH] fortran: Fix DO CONCURRENT nested-in-block iterator counting
+ [PR123943]
+
+Fix iterator-depth pre-counting in gfc_resolve_forall for nested
+DO CONCURRENT/FORALL constructs inside block arms (e.g. IF/ELSE,
+SELECT CASE).  The previous logic only scanned a flat next-chain,
+which could undercount and trigger an ICE assertion.
+
+Add a regression test based on a reduced testcase from Harald Anlauf.
+Adjust wording in one comment to avoid GNU-style checker complaints.
+
+	PR fortran/123943
+
+Co-authored-by: Harald Anlauf <anlauf@gcc.gnu.org>
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/resolve.cc                 | 53 +++++++++++++++++---------
+ gcc/testsuite/gfortran.dg/pr123943.f90 | 48 +++++++++++++++++++++++
+ 2 files changed, 83 insertions(+), 18 deletions(-)
+ create mode 100644 gcc/testsuite/gfortran.dg/pr123943.f90
+
+diff --git a/gcc/fortran/resolve.cc b/gcc/fortran/resolve.cc
+index e5b36234d7e..d98c2d65476 100644
+--- a/gcc/fortran/resolve.cc
++++ b/gcc/fortran/resolve.cc
+@@ -12433,33 +12433,50 @@ gfc_resolve_forall_body (gfc_code *code, int nvar, gfc_expr **var_expr)
+    nested forall constructs. This is used to allocate the needed memory
+    in gfc_resolve_forall.  */
+ 
++static int gfc_count_forall_iterators (gfc_code *code);
++
++/* Return the deepest nested FORALL/DO CONCURRENT iterator count in CODE's
++   next-chain, descending into block arms such as IF/ELSE branches.  */
++
++static int
++gfc_max_forall_iterators_in_chain (gfc_code *code)
++{
++  int max_iters = 0;
++
++  for (gfc_code *c = code; c; c = c->next)
++    {
++      int sub_iters = 0;
++
++      if (c->op == EXEC_FORALL || c->op == EXEC_DO_CONCURRENT)
++	sub_iters = gfc_count_forall_iterators (c);
++      else if (c->block)
++	for (gfc_code *b = c->block; b; b = b->block)
++	  {
++	    int arm_iters = gfc_max_forall_iterators_in_chain (b->next);
++	    if (arm_iters > sub_iters)
++	      sub_iters = arm_iters;
++	  }
++
++      if (sub_iters > max_iters)
++	max_iters = sub_iters;
++    }
++
++  return max_iters;
++}
++
++
+ static int
+ gfc_count_forall_iterators (gfc_code *code)
+ {
+-  int max_iters, sub_iters, current_iters;
++  int current_iters = 0;
+   gfc_forall_iterator *fa;
+ 
+   gcc_assert (code->op == EXEC_FORALL || code->op == EXEC_DO_CONCURRENT);
+-  max_iters = 0;
+-  current_iters = 0;
+ 
+   for (fa = code->ext.concur.forall_iterator; fa; fa = fa->next)
+-    current_iters ++;
+-
+-  code = code->block->next;
+-
+-  while (code)
+-    {
+-      if (code->op == EXEC_FORALL || code->op == EXEC_DO_CONCURRENT)
+-        {
+-          sub_iters = gfc_count_forall_iterators (code);
+-          if (sub_iters > max_iters)
+-            max_iters = sub_iters;
+-        }
+-      code = code->next;
+-    }
++    current_iters++;
+ 
+-  return current_iters + max_iters;
++  return current_iters + gfc_max_forall_iterators_in_chain (code->block->next);
+ }
+ 
+ 
+diff --git a/gcc/testsuite/gfortran.dg/pr123943.f90 b/gcc/testsuite/gfortran.dg/pr123943.f90
+new file mode 100644
+index 00000000000..6d6461317c2
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr123943.f90
+@@ -0,0 +1,48 @@
++! { dg-do compile }
++! PR fortran/123943
++!
++! Nested DO CONCURRENT in block constructs must not ICE in gfc_resolve_forall.
++! Reduced testcase by Harald Anlauf <anlauf@gcc.gnu.org>
++
++subroutine nested_in_if
++  implicit none
++  integer :: k, l
++
++  do concurrent (k = 1:5)
++    if (k == 3) then
++      do concurrent (l = 1:4)
++      end do
++    end if
++  end do
++end subroutine nested_in_if
++
++
++subroutine nested_in_if_else
++  implicit none
++  integer :: k, l
++
++  do concurrent (k = 1:5)
++    if (k == 3) then
++      do concurrent (l = 1:4)
++      end do
++    else
++      do concurrent (l = 1:2)
++      end do
++    end if
++  end do
++end subroutine nested_in_if_else
++
++
++subroutine nested_in_select_case
++  implicit none
++  integer :: k, l
++
++  do concurrent (k = 1:5)
++    select case (k)
++    case (3)
++      do concurrent (l = 1:4)
++      end do
++    case default
++    end select
++  end do
++end subroutine nested_in_select_case
+-- 
+2.53.0
+
