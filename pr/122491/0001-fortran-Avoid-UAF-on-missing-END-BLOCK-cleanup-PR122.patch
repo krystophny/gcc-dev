@@ -1,0 +1,44 @@
+From b2937e05eddf3670be733a4df832bf330f33555c Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Wed, 18 Feb 2026 00:08:20 +0100
+Subject: [PATCH] fortran: Avoid UAF on missing END BLOCK cleanup [PR122491]
+
+In gfc_match_end cleanup for COMP_BLOCK, the parser freed the current
+namespace immediately after a malformed END statement. That namespace can
+still be referenced by parser state and code nodes during error recovery,
+triggering heap-use-after-free with sanitizer-instrumented compilers.
+
+Keep the existing recovery flow (unlink + unwind to parent state), but
+defer namespace lifetime to normal block unwinding/cleanup.
+
+	PR fortran/122491
+
+gcc/fortran/ChangeLog:
+
+	* decl.cc (gfc_match_end): Do not free current BLOCK namespace
+	during malformed END cleanup.
+
+Reported-by: Filip Kastl <fkastl@suse.cz>
+Suggested-by: Jakub Jelinek <jakub@redhat.com>
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/decl.cc | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/gcc/fortran/decl.cc b/gcc/fortran/decl.cc
+index cb6bd6f8cc0..b5128580548 100644
+--- a/gcc/fortran/decl.cc
++++ b/gcc/fortran/decl.cc
+@@ -9267,7 +9267,8 @@ cleanup:
+ 	  ns = ns->sibling;
+ 	}
+ 
+-      gfc_free_namespace (gfc_current_ns);
++      /* The namespace can still be referenced by parser state and code nodes;
++	 let normal block unwinding/freeing own its lifetime.  */
+       gfc_current_ns = parent_ns;
+       gfc_state_stack = gfc_state_stack->previous;
+       state = gfc_current_state ();
+-- 
+2.53.0
+

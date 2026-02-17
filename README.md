@@ -27,6 +27,7 @@ LD_LIBRARY_PATH=/opt/gcc16/lib64 ./a.out
 **Pending patches (on fork):**
 - [PR102430](pr/102430/) - OpenMP linear(array) ICE
 - [PR103276](pr/103276/) - OpenACC ENTER DATA mapping
+- [PR122491](pr/122491/) - [16 regression] ASAN UAF in missing END BLOCK recovery
 - [PR123252](pr/123252/) - Derived type scalar fields
 - [PR123280](pr/123280/) - acc_is_present for assumed-shape
 

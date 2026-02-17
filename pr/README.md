@@ -8,6 +8,7 @@ Minimal reproducers and patches for GCC Fortran and libgomp bugs.
 |----|-------|--------------|
 | [102430](102430/) | OpenMP linear(array) ICE | [#9](https://github.com/krystophny/gcc-dev/issues/9) |
 | [103276](103276/) | OpenACC ENTER DATA duplicate mapping | [#10](https://github.com/krystophny/gcc-dev/issues/10) |
+| [122491](122491/) | [16 Regression] ASAN UAF in missing END BLOCK recovery | [#50](https://github.com/krystophny/gcc-dev/issues/50) |
 | [123252](123252/) | OpenACC scalar member wrong value | [#11](https://github.com/krystophny/gcc-dev/issues/11) |
 | [123280](123280/) | acc_is_present fails for assumed-shape | [#12](https://github.com/krystophny/gcc-dev/issues/12) |
 | [96080](96080/) | acc_is_present fails for pointers | [#13](https://github.com/krystophny/gcc-dev/issues/13) |
