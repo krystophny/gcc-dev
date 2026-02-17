@@ -1,0 +1,188 @@
+From 2b144e4a498a8dbd8f294dcceb421f18efc4130e Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Tue, 17 Feb 2026 23:44:24 +0100
+Subject: [PATCH] fortran: Fix PDT ICE with large KIND values [PR123949]
+
+Use full integer string encoding for PDT instance naming rather than
+32-bit extraction, which caused ICEs for valid large KIND values.
+
+Also add regression tests for the PR123949 ICE and for distinct large-
+KIND PDT instance selection.
+
+	PR fortran/123949
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/decl.cc                    | 24 ++++++++++++------
+ gcc/testsuite/gfortran.dg/pdt_85.f03   | 35 ++++++++++++++++++++++++++
+ gcc/testsuite/gfortran.dg/pr123949.f90 | 28 +++++++++++++++++++++
+ 3 files changed, 79 insertions(+), 8 deletions(-)
+ create mode 100644 gcc/testsuite/gfortran.dg/pdt_85.f03
+ create mode 100644 gcc/testsuite/gfortran.dg/pr123949.f90
+
+diff --git a/gcc/fortran/decl.cc b/gcc/fortran/decl.cc
+index cb6bd6f8cc0..d298f7c427e 100644
+--- a/gcc/fortran/decl.cc
++++ b/gcc/fortran/decl.cc
+@@ -3960,16 +3960,15 @@ gfc_get_pdt_instance (gfc_actual_arglist *param_list, gfc_symbol **sym,
+   /* Pointers to the parameter specification being used.  */
+   gfc_actual_arglist *actual_param;
+   gfc_actual_arglist *tail = NULL;
+-  /* Used to build up the name of the PDT instance. The prefix uses 3
+-     characters and each KIND parameter 2 more.  Allow 8 of the latter. */
+-  char name[GFC_MAX_SYMBOL_LEN + PDT_PREFIX_LEN + 16];
++  /* Used to build up the name of the PDT instance.  */
++  char *name;
+   bool name_seen = (param_list == NULL);
+   bool assumed_seen = false;
+   bool deferred_seen = false;
+   bool spec_error = false;
+   bool alloc_seen = false;
+   bool ptr_seen = false;
+-  int kind_value, i;
++  int i;
+   gfc_expr *kind_expr;
+   gfc_component *c1, *c2;
+   match m;
+@@ -3979,7 +3978,6 @@ gfc_get_pdt_instance (gfc_actual_arglist *param_list, gfc_symbol **sym,
+ 
+   type_param_name_list = pdt->formal;
+   actual_param = param_list;
+-  sprintf (name, "%s%s", PDT_PREFIX, pdt->name);
+ 
+   /* Prevent a PDT component of the same type as the template from being
+      converted into an instance. Doing this results in the component being
+@@ -3994,6 +3992,8 @@ gfc_get_pdt_instance (gfc_actual_arglist *param_list, gfc_symbol **sym,
+       return MATCH_YES;
+     }
+ 
++  name = xasprintf ("%s%s", PDT_PREFIX, pdt->name);
++
+   /* Run through the parameter name list and pick up the actual
+      parameter values or use the default values in the PDT declaration.  */
+   for (; type_param_name_list;
+@@ -4156,17 +4156,22 @@ gfc_get_pdt_instance (gfc_actual_arglist *param_list, gfc_symbol **sym,
+ 	  goto error_return;
+ 	}
+ 
+-      kind_value = 0;
+       /* This can come about during the parsing of nested pdt_templates. An
+ 	 error arises because the KIND parameter expression has not been
+ 	 provided. Use the template instead of an incorrect instance.  */
+-      if (gfc_extract_int (kind_expr, &kind_value))
++      if (kind_expr->expr_type != EXPR_CONSTANT
++	  || kind_expr->ts.type != BT_INTEGER)
+ 	{
+ 	  gfc_free_actual_arglist (type_param_spec_list);
++	  free (name);
+ 	  return MATCH_YES;
+ 	}
+ 
+-      sprintf (name + strlen (name), "_%d", kind_value);
++      char *kind_value = mpz_get_str (NULL, 10, kind_expr->value.integer);
++      char *old_name = name;
++      name = xasprintf ("%s_%s", old_name, kind_value);
++      free (old_name);
++      free (kind_value);
+ 
+       if (!name_seen && actual_param)
+ 	actual_param = actual_param->next;
+@@ -4217,6 +4222,7 @@ gfc_get_pdt_instance (gfc_actual_arglist *param_list, gfc_symbol **sym,
+         *ext_param_list = type_param_spec_list;
+       *sym = instance;
+       gfc_commit_symbols ();
++      free (name);
+       return m;
+     }
+ 
+@@ -4533,10 +4539,12 @@ gfc_get_pdt_instance (gfc_actual_arglist *param_list, gfc_symbol **sym,
+   if (ext_param_list)
+     *ext_param_list = type_param_spec_list;
+   *sym = instance;
++  free (name);
+   return m;
+ 
+ error_return:
+   gfc_free_actual_arglist (type_param_spec_list);
++  free (name);
+   return MATCH_ERROR;
+ }
+ 
+diff --git a/gcc/testsuite/gfortran.dg/pdt_85.f03 b/gcc/testsuite/gfortran.dg/pdt_85.f03
+new file mode 100644
+index 00000000000..e22d18be981
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pdt_85.f03
+@@ -0,0 +1,35 @@
++! { dg-do compile }
++!
++! Verify that large KIND values create distinct PDT instances.
++!
++module m
++  implicit none
++  integer(8), parameter :: k1 = 2147483648_8 + 100_8
++  integer(8), parameter :: k2 = k1 + 4294967296_8
++
++  type t(k)
++    integer(8), kind :: k
++    integer :: v
++  end type
++
++  interface chk
++    module procedure chk1, chk2
++  end interface
++contains
++  subroutine chk1(x)
++    type(t(k1)), intent(in) :: x
++  end subroutine
++
++  subroutine chk2(x)
++    type(t(k2)), intent(in) :: x
++  end subroutine
++end module
++
++program p
++  use m
++  implicit none
++  type(t(k1)) :: a
++  type(t(k2)) :: b
++  call chk(a)
++  call chk(b)
++end program
+diff --git a/gcc/testsuite/gfortran.dg/pr123949.f90 b/gcc/testsuite/gfortran.dg/pr123949.f90
+new file mode 100644
+index 00000000000..ad4855cff04
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr123949.f90
+@@ -0,0 +1,28 @@
++! { dg-do compile }
++!
++! PR fortran/123949
++! ICE in gfc_match_decl_type_spec with large KIND parameter values.
++!
++module pr123949_mod
++  implicit none
++  integer(8), parameter :: big_k = 2147483647_8 + 12345_8
++
++  type cell(k)
++    integer(8), kind :: k
++    integer(8) :: stamp = -k
++  end type
++
++  type(cell(big_k)) :: base
++contains
++  subroutine make_item(item)
++    type(cell(big_k)), allocatable, intent(out) :: item
++    allocate (cell(big_k) :: item)
++  end subroutine
++end module
++
++program pr123949
++  use pr123949_mod
++  implicit none
++  type(cell(big_k)), allocatable :: dyn
++  call make_item(dyn)
++end program
+-- 
+2.53.0
+
