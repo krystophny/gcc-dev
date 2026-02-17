@@ -12,6 +12,13 @@ Minimal reproducers and patches for GCC Fortran and libgomp bugs.
 | [123280](123280/) | acc_is_present fails for assumed-shape | [#12](https://github.com/krystophny/gcc-dev/issues/12) |
 | [96080](96080/) | acc_is_present fails for pointers | [#13](https://github.com/krystophny/gcc-dev/issues/13) |
 
+## Open Tracking (no patch yet)
+
+| PR | Title | GitHub Issue |
+|----|-------|--------------|
+| [123947](123947/) | [16 regression] ICE in `gfc_build_addr_expr` | [#48](https://github.com/krystophny/gcc-dev/issues/48) |
+| [123949](123949/) | [16 regression] [PDT] ICE in `gfc_match_decl_type_spec` | [#49](https://github.com/krystophny/gcc-dev/issues/49) |
+
 ## Merged Upstream
 
 | PR | Title | GCC Commit | GitHub Issue |
