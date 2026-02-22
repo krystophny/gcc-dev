@@ -1,0 +1,184 @@
+From 1a78fca24f43b8a08de3eafe1f97230630532636 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Sun, 22 Feb 2026 01:16:52 +0100
+Subject: [PATCH] fortran: Fix recursive deep-copy helper generation [PR123947]
+
+After rebasing on current upstream/master, PR123947 still crashed on the\nfull testcase and the previous cache approach was also reported to trigger\nverify_gimple failures on another testcase.\n\nKeep the direct self-recursion guard for recursive allocatable array helpers,\nbut rework wrapper reuse to cache FUNCTION_DECL per derived type and rebuild\nADDR_EXPR at each use site. This avoids reusing context-sensitive tree\nexpressions and also prevents wrapper-generation ping-pong in mutually\nrecursive type graphs.\n\nAlso add a second regression testcase that exercises SOURCE-allocation deep\ncopy in multiple procedures without importing external tests verbatim.\n\n\tPR fortran/123947\n\t* fortran/trans-array.cc (copy_helper_wrappers): Reuse cached\n\thelper FUNCTION_DECLs and rebuild ADDR_EXPR at use sites.\n\t(generate_element_copy_wrapper): Return cached wrappers by type\n\tand register wrapper decl before recursive body generation.\n\t(structure_alloc_comps): Keep direct-self helper gating and use\n\twrapper generator/cache path without current_function_decl reuse.\n\t* testsuite/gfortran.dg/pr123947_2.f90: New test.\n
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/trans-array.cc               | 47 ++++++++----------------
+ gcc/testsuite/gfortran.dg/pr123947_2.f90 | 47 ++++++++++++++++++++++++
+ 2 files changed, 62 insertions(+), 32 deletions(-)
+ create mode 100644 gcc/testsuite/gfortran.dg/pr123947_2.f90
+
+diff --git a/gcc/fortran/trans-array.cc b/gcc/fortran/trans-array.cc
+index 8175f488927..15b20a6ec06 100644
+--- a/gcc/fortran/trans-array.cc
++++ b/gcc/fortran/trans-array.cc
+@@ -10033,7 +10033,6 @@ enum {DEALLOCATE_ALLOC_COMP = 1, NULLIFY_ALLOC_COMP,
+       BCAST_ALLOC_COMP};
+ 
+ static gfc_actual_arglist *pdt_param_list;
+-static bool generating_copy_helper;
+ static hash_set<gfc_symbol *> seen_derived_types;
+ static hash_map<gfc_symbol *, tree> copy_helper_wrappers;
+ 
+@@ -10044,7 +10043,11 @@ static tree structure_alloc_comps (gfc_symbol *, tree, tree, int, int, int,
+ /* Generate a wrapper function that performs element-wise deep copy for
+    recursive allocatable array components. This wrapper is passed as a
+    function pointer to the runtime helper _gfortran_cfi_deep_copy_array,
+-   allowing recursion to happen at runtime instead of compile time.  */
++   allowing recursion to happen at runtime instead of compile time.
++
++   Wrappers are cached by derived type.  The cache stores the wrapper
++   FUNCTION_DECL and each use-site rebuilds a fresh ADDR_EXPR to avoid
++   reusing context-sensitive expression trees across functions.  */
+ 
+ static tree
+ get_copy_helper_function_type (void)
+@@ -10071,6 +10074,10 @@ static tree
+ generate_element_copy_wrapper (gfc_symbol *der_type, tree comp_type,
+ 				int purpose, int caf_mode)
+ {
++  tree *cached = copy_helper_wrappers.get (der_type);
++  if (cached)
++    return build1 (ADDR_EXPR, get_copy_helper_pointer_type (), *cached);
++
+   tree fndecl, fntype, result_decl;
+   tree dest_parm, src_parm, dest_typed, src_typed;
+   tree der_type_ptr;
+@@ -10094,6 +10101,7 @@ generate_element_copy_wrapper (gfc_symbol *der_type, tree comp_type,
+   DECL_CONTEXT (fndecl) = NULL_TREE;
+   DECL_INITIAL (fndecl) = make_node (BLOCK);
+   BLOCK_SUPERCONTEXT (DECL_INITIAL (fndecl)) = fndecl;
++  copy_helper_wrappers.put (der_type, fndecl);
+ 
+   result_decl = build_decl (input_location, RESULT_DECL, NULL_TREE,
+ 			    void_type_node);
+@@ -10123,9 +10131,6 @@ generate_element_copy_wrapper (gfc_symbol *der_type, tree comp_type,
+   pushlevel ();
+   gfc_init_block (&block);
+ 
+-  bool saved_generating = generating_copy_helper;
+-  generating_copy_helper = true;
+-
+   /* When generating a wrapper, we need a fresh type tracking state to
+      avoid inheriting the parent context's seen_derived_types, which would
+      cause infinite recursion when the wrapper tries to handle the same
+@@ -10153,7 +10158,6 @@ generate_element_copy_wrapper (gfc_symbol *der_type, tree comp_type,
+   for (unsigned i = 0; i < saved_symbols.length (); i++)
+     seen_derived_types.add (saved_symbols[i]);
+   saved_symbols.release ();
+-  generating_copy_helper = saved_generating;
+ 
+   body = gfc_finish_block (&block);
+   decls = getdecls ();
+@@ -10335,8 +10339,6 @@ structure_alloc_comps (gfc_symbol * der_type, tree decl, tree dest,
+ 	      && seen_derived_types.contains (CLASS_DATA (c)->ts.u.derived));
+       bool direct_self_recursive
+ 	= (c->ts.type == BT_DERIVED && c->ts.u.derived == der_type);
+-      bool inside_wrapper = generating_copy_helper;
+-
+       bool is_pdt_type = IS_PDT (c);
+ 
+       cdecl = c->backend_decl;
+@@ -11013,7 +11015,7 @@ structure_alloc_comps (gfc_symbol * der_type, tree decl, tree dest,
+ 	  /* Special case: recursive allocatable array components require
+ 	     runtime helpers to avoid compile-time infinite recursion.  Generate
+ 	     a call to _gfortran_cfi_deep_copy_array with an element copy
+-	     wrapper.  When inside a wrapper, reuse current_function_decl.  */
++	     wrapper.  */
+ 	  else if (c->attr.allocatable && c->as && cmp_has_alloc_comps
+ 		   && direct_self_recursive
+ 		   && purpose == COPY_ALLOC_COMP && !c->attr.proc_pointer
+@@ -11041,29 +11043,10 @@ structure_alloc_comps (gfc_symbol * der_type, tree decl, tree dest,
+ 							     comp_rank);
+ 	      gfc_add_expr_to_block (&fnblock, alloc_expr);
+ 
+-	      /* Generate or reuse the element copy helper.  Inside an
+-		 existing helper we can reuse the current function to
+-		 prevent recursive generation.  */
+-	      if (inside_wrapper)
+-		copy_wrapper
+-		  = gfc_build_addr_expr (NULL_TREE, current_function_decl);
+-	      else
+-		{
+-		  tree *cached = NULL;
+-		  if (caf_mode == 0)
+-		    cached = copy_helper_wrappers.get (c->ts.u.derived);
+-		  if (cached)
+-		    copy_wrapper = *cached;
+-		  else
+-		    {
+-		      copy_wrapper
+-			= generate_element_copy_wrapper (c->ts.u.derived,
+-							 elem_type, purpose,
+-							 caf_mode);
+-		      if (caf_mode == 0)
+-			copy_helper_wrappers.put (c->ts.u.derived, copy_wrapper);
+-		    }
+-		}
++	      /* Generate or reuse the element copy helper.  */
++	      copy_wrapper
++		= generate_element_copy_wrapper (c->ts.u.derived, elem_type,
++						 purpose, caf_mode);
+ 	      copy_wrapper = fold_convert (helper_ptr_type, copy_wrapper);
+ 
+ 	      /* Build addresses of descriptors.  */
+diff --git a/gcc/testsuite/gfortran.dg/pr123947_2.f90 b/gcc/testsuite/gfortran.dg/pr123947_2.f90
+new file mode 100644
+index 00000000000..d6c26c48b06
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr123947_2.f90
+@@ -0,0 +1,47 @@
++! { dg-do compile }
++! { dg-options "-O2" }
++!
++! PR fortran/123947
++! Keep recursive allocatable array deep-copy helper generation valid when
++! SOURCE allocation is expanded in more than one procedure.
++
++module pr123947_mod
++  type :: node_t
++    integer, allocatable :: value
++    type(node_t), allocatable :: next(:)
++  end type node_t
++
++  type :: holder_t
++    type(node_t), allocatable :: src(:)
++    type(node_t), allocatable :: dst(:)
++  end type holder_t
++contains
++  subroutine seed_graph(a)
++    type(node_t), allocatable, intent(out) :: a(:)
++    allocate (a(3))
++    allocate (a(1)%value)
++    allocate (a(2)%value)
++    allocate (a(2)%next(1))
++    allocate (a(2)%next(1)%value)
++    allocate (a(3)%next(2))
++    allocate (a(3)%next(2)%next(2))
++  end subroutine seed_graph
++
++  subroutine clone_part_one()
++    type(holder_t) :: h
++    call seed_graph(h%src)
++    allocate (h%dst, source=h%src(1:2))
++  end subroutine clone_part_one
++
++  subroutine clone_part_two()
++    type(holder_t) :: h
++    call seed_graph(h%src)
++    allocate (h%dst, source=h%src(2:3))
++  end subroutine clone_part_two
++end module pr123947_mod
++
++program pr123947_2
++  use pr123947_mod
++  call clone_part_one()
++  call clone_part_two()
++end program pr123947_2
+-- 
+2.53.0
+
