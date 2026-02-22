@@ -69,6 +69,31 @@ differences expose the UB). Not reproducible with debug builds.
 **Fix:** `0001-fortran-Initialize-gfc_se-in-PDT-component-allocatio.patch`
 on fork branch `origin/pr123949-init-se-fix` (commit `05159b27621`).
 
+### aarch64 LTO bootstrap verification (2026-02-23)
+
+Tested on Hetzner Cloud CAX41 (16 ARM cores, 32 GB RAM, aarch64).
+GCC source at upstream commit `3a17cc11c` with fix applied to
+`trans-array.cc`.
+
+```
+$ uname -m
+aarch64
+
+$ gcc-build-lto/gcc/gfortran --version | head -1
+GNU Fortran (GCC) 16.0.1 20260220 (experimental)
+
+$ make -j16 bootstrap  # --with-build-config=bootstrap-lto
+EXIT: 0
+
+$ cd gcc-build-lto/gcc
+$ make check-gfortran RUNTESTFLAGS="dg.exp=pr123949.f90"
+PASS: gfortran.dg/pr123949.f90   -O  (test for excess errors)
+
+# of expected passes		1
+```
+
+Unfixed build (same commit, no `gfc_init_se` patch) pending on second VM.
+
 ## Notes
 
 - Bugzilla comment #1 reports an earlier related crash location with snapshot
