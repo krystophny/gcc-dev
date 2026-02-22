@@ -449,10 +449,17 @@ source ~/.secrets
 # Spin up CAX41 (16 ARM cores, 32 GB, ~0.05 EUR/hr)
 scripts/hcloud-vm.sh create
 
-# Build GCC at a specific commit
-scripts/hcloud-vm.sh ssh  # then on VM:
-cd /root/gcc-dev/gcc && git checkout <commit>
-cd /root/gcc-dev/gcc-build && make -j$(nproc)
+# Clone GCC at a specific commit (uses git://gcc.gnu.org)
+scripts/hcloud-vm.sh clone <commit>    # or omit commit for master HEAD
+
+# Debug build (fast, no bootstrap)
+scripts/hcloud-vm.sh build
+
+# OR: LTO bootstrap (slow, ~3-4 hrs, runs in tmux)
+scripts/hcloud-vm.sh bootstrap-lto
+
+# Monitor tmux build progress
+scripts/hcloud-vm.sh tail
 
 # Run a single test
 scripts/hcloud-vm.sh test pr123949.f90
@@ -460,17 +467,26 @@ scripts/hcloud-vm.sh test pr123949.f90
 # Run full check-gfortran (in tmux)
 scripts/hcloud-vm.sh check
 
-# Interactive SSH
+# Interactive SSH (with agent forwarding for GitHub)
 scripts/hcloud-vm.sh ssh
 
 # Tear down (immediate)
 scripts/hcloud-vm.sh destroy
 ```
 
-**VM layout mirrors local:** `/root/gcc-dev/{gcc,gcc-build}` with same
-configure flags (Fortran-only, debug, no bootstrap).
+**Multiple VMs:** Override `HCLOUD_VM_NAME` to manage parallel VMs:
+```bash
+HCLOUD_VM_NAME=gcc-aarch64-nofix scripts/hcloud-vm.sh create
+HCLOUD_VM_NAME=gcc-aarch64-nofix scripts/hcloud-vm.sh tail
+HCLOUD_VM_NAME=gcc-aarch64-nofix scripts/hcloud-vm.sh destroy
+```
 
-**SSH key:** `ert-workstation` registered on Hetzner, uses `~/.ssh/id_rsa.pub`.
+**VM layout mirrors local:** `/root/gcc-dev/{gcc,gcc-build,gcc-build-lto}`.
+`build` creates `gcc-build` (debug, no bootstrap); `bootstrap-lto` creates
+`gcc-build-lto` (LTO bootstrap). `test` and `check` auto-detect which exists.
+
+**SSH key:** `ert-workstation` must be pre-registered on Hetzner Cloud.
+SSH agent forwarding (`-A`) is used throughout for GitHub fork access.
 
 ## Upstream Submission
 

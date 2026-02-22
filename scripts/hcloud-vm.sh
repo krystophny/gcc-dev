@@ -9,7 +9,7 @@ set -euo pipefail
 VM_NAME="${HCLOUD_VM_NAME:-gcc-aarch64-test}"
 VM_TYPE="${HCLOUD_VM_TYPE:-cax41}"    # 16 ARM cores, 32 GB RAM
 VM_IMAGE="ubuntu-24.04"
-VM_LOCATION="nbg1"                    # Nuremberg (fallback: hel1)
+VM_LOCATION="${HCLOUD_VM_LOCATION:-nbg1}"  # Nuremberg; override with hel1 if unavailable
 SSH_KEY_NAME="ert-workstation"
 
 # Ensure SSH agent is available for forwarding
