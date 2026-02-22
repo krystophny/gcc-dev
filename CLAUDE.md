@@ -332,40 +332,74 @@ are essential for spotting double allocations.
 7. **Skip runtime testing** - compile-time analysis misses refcount/state bugs
 8. **Trust asymmetric enter/exit** - if enter does X, exit should undo X
 
-## Patch Workflow
+## Patch Workflow (MANDATORY)
+
+### Prerequisites (one-time setup in gcc/)
 
 ```bash
-# 1. Create branch in gcc/
+cd gcc
+
+# Install GCC git aliases and prepare-commit-msg hook
+bash contrib/gcc-git-customization.sh
+# Answer: name, email, upstream=origin, account=ert, prefix=me, hook=yes
+
+# Verify user.name is correct (not truncated)
+git config user.name   # Must show "Christopher Albert"
+git config user.email  # Must show "albert@tugraz.at"
+
+# Required Python packages for mklog and gcc-verify
+pip install --user --break-system-packages unidiff GitPython
+```
+
+### Creating patches
+
+```bash
+# 1. Create branch off upstream/master in gcc/
+git -C gcc checkout upstream/master
 git -C gcc checkout -b pr<number>-fix
 
-# 2. Make changes, test
+# 2. Make changes, rebuild, test
 cd gcc-build/gcc && make -j32
 make check-gfortran RUNTESTFLAGS="dg.exp=pr<number>.f90"
 
-# 3. Commit with proper format
-git -C gcc commit -s -m "$(cat <<'EOF'
+# 3. Stage changes
+git -C gcc add gcc/fortran/changed-file.cc
+
+# 4. Commit using gcc-commit-mklog (MANDATORY - auto-generates ChangeLog)
+#    Write the commit message to a file first, then commit with -F.
+#    The prepare-commit-msg hook appends the ChangeLog automatically.
+cat > /tmp/gcc-commit-msg.txt <<'EOF'
 fortran: Short summary [PR<number>]
 
 Description of the fix.
-
-	PR fortran/<number>
-
-gcc/fortran/ChangeLog:
-
-	* file.cc (function): Change description.
-
-Signed-off-by: Name <email>
 EOF
-)"
+cd gcc && GCC_FORCE_MKLOG=1 GCC_MKLOG_ARGS='["-b", "fortran/<number>"]' \
+  git commit -s -F /tmp/gcc-commit-msg.txt
 
-# 4. Export patch
-git -C gcc format-patch -1 HEAD -o ../pr/<number>/
+# 5. Verify commit passes GCC checks (MANDATORY before push)
+git gcc-verify HEAD
 
-# 5. Track in meta-repo
-git add pr/<number>/
+# 6. Export patch
+git format-patch -1 HEAD -o ../pr/<number>/
+
+# 7. Push to fork
+git push origin pr<number>-fix
+
+# 8. Track in meta-repo
+cd .. && git add pr/<number>/
 git commit -m "pr<number>: add patch"
 git push origin main
 ```
+
+### Commit rules (HARD RULES)
+
+- **Always use `gcc-commit-mklog`** or the `GCC_FORCE_MKLOG=1` env var
+  with the prepare-commit-msg hook. Never hand-write ChangeLog entries.
+- **Always run `git gcc-verify HEAD`** before pushing. It checks
+  ChangeLog format, PR references, and other GCC conventions.
+- **Always use `-s`** (Signed-off-by) on commits.
+- **Branches go off `upstream/master`**, not off other fix branches.
+- **One fix per branch** (e.g., `pr123949-init-se-fix`), not stacked.
 
 ## PR Directory Structure
 
@@ -401,6 +435,42 @@ README.md header format:
 | 123282 | `pr123282-fix` | Fix OpenACC refcount for Fortran allocatable array descriptors |
 
 **Merged upstream:** 32365, 90519, 92613, 96255, 107721, 121472, 121475, 121628, 123868
+
+## aarch64 Testing (Hetzner Cloud)
+
+For testing on aarch64 (e.g., CI regressions reported by Linaro), use a
+short-lived Hetzner Cloud VM via `scripts/hcloud-vm.sh`.
+
+**Prerequisites:** `hcloud` CLI installed, `HCLOUD_TOKEN` in `~/.secrets`.
+
+```bash
+source ~/.secrets
+
+# Spin up CAX41 (16 ARM cores, 32 GB, ~0.05 EUR/hr)
+scripts/hcloud-vm.sh create
+
+# Build GCC at a specific commit
+scripts/hcloud-vm.sh ssh  # then on VM:
+cd /root/gcc-dev/gcc && git checkout <commit>
+cd /root/gcc-dev/gcc-build && make -j$(nproc)
+
+# Run a single test
+scripts/hcloud-vm.sh test pr123949.f90
+
+# Run full check-gfortran (in tmux)
+scripts/hcloud-vm.sh check
+
+# Interactive SSH
+scripts/hcloud-vm.sh ssh
+
+# Tear down (immediate)
+scripts/hcloud-vm.sh destroy
+```
+
+**VM layout mirrors local:** `/root/gcc-dev/{gcc,gcc-build}` with same
+configure flags (Fortran-only, debug, no bootstrap).
+
+**SSH key:** `ert-workstation` registered on Hetzner, uses `~/.ssh/id_rsa.pub`.
 
 ## Upstream Submission
 
