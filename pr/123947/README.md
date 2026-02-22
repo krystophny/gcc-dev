@@ -3,7 +3,7 @@
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123947
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/48
 - **Branch:** `pr123947-fix` (rebased on `upstream/master`)
-- **Status:** UPDATED locally (v2 patch), pending upstream
+- **Status:** UPDATED locally (v2 standalone squashed patch), pending upstream
 
 ## Summary
 
@@ -41,13 +41,14 @@ generation ping-pong in mutually recursive type graphs.
 
 Artifacts:
 
-- GCC commit: `1a78fca24f4`
+- GCC commit: `841b68e48c4`
 - Exported patch:
   `pr/123947/0001-fortran-Fix-recursive-deep-copy-helper-generation-PR.patch`
 
 Files changed:
 
 - `gcc/fortran/trans-array.cc`
+- `gcc/testsuite/gfortran.dg/pr123947.f90` (new)
 - `gcc/testsuite/gfortran.dg/pr123947_2.f90` (new)
 
 Behavioral changes:

@@ -1,30 +1,57 @@
-From 1a78fca24f43b8a08de3eafe1f97230630532636 Mon Sep 17 00:00:00 2001
+From 841b68e48c448c4d5e60ee9926904290fd7e66ef Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
-Date: Sun, 22 Feb 2026 01:16:52 +0100
+Date: Sun, 22 Feb 2026 22:23:51 +0100
 Subject: [PATCH] fortran: Fix recursive deep-copy helper generation [PR123947]
 
-After rebasing on current upstream/master, PR123947 still crashed on the\nfull testcase and the previous cache approach was also reported to trigger\nverify_gimple failures on another testcase.\n\nKeep the direct self-recursion guard for recursive allocatable array helpers,\nbut rework wrapper reuse to cache FUNCTION_DECL per derived type and rebuild\nADDR_EXPR at each use site. This avoids reusing context-sensitive tree\nexpressions and also prevents wrapper-generation ping-pong in mutually\nrecursive type graphs.\n\nAlso add a second regression testcase that exercises SOURCE-allocation deep\ncopy in multiple procedures without importing external tests verbatim.\n\n\tPR fortran/123947\n\t* fortran/trans-array.cc (copy_helper_wrappers): Reuse cached\n\thelper FUNCTION_DECLs and rebuild ADDR_EXPR at use sites.\n\t(generate_element_copy_wrapper): Return cached wrappers by type\n\tand register wrapper decl before recursive body generation.\n\t(structure_alloc_comps): Keep direct-self helper gating and use\n\twrapper generator/cache path without current_function_decl reuse.\n\t* testsuite/gfortran.dg/pr123947_2.f90: New test.\n
+Fix recursive allocatable deep-copy expansion in structure allocation
+and make copy-helper wrapper reuse safe across function contexts by
+caching FUNCTION_DECLs and rebuilding ADDR_EXPR at use sites.
+
+Keep recursion handling finite for mutually recursive derived types
+and add regression coverage for both original and SOURCE-allocation
+variants.
+
+	PR fortran/123947
+
+gcc/fortran/ChangeLog:
+
+	* trans-array.cc (copy_helper_wrappers): New.  Cache wrapper
+	FUNCTION_DECLs by derived type.
+	(generate_element_copy_wrapper): Reuse cached wrapper decl and
+	rebuild ADDR_EXPR per use site; register wrapper before recursive
+	body generation.
+	(structure_alloc_comps): Use recursive helper path for direct
+	self-recursion only; remove generating_copy_helper flag.
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/pr123947.f90: New test.
+	* gfortran.dg/pr123947_2.f90: New test.
 
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
- gcc/fortran/trans-array.cc               | 47 ++++++++----------------
- gcc/testsuite/gfortran.dg/pr123947_2.f90 | 47 ++++++++++++++++++++++++
- 2 files changed, 62 insertions(+), 32 deletions(-)
+ gcc/fortran/trans-array.cc               | 52 ++++++++++++------------
+ gcc/testsuite/gfortran.dg/pr123947.f90   | 29 +++++++++++++
+ gcc/testsuite/gfortran.dg/pr123947_2.f90 | 47 +++++++++++++++++++++
+ 3 files changed, 102 insertions(+), 26 deletions(-)
+ create mode 100644 gcc/testsuite/gfortran.dg/pr123947.f90
  create mode 100644 gcc/testsuite/gfortran.dg/pr123947_2.f90
 
 diff --git a/gcc/fortran/trans-array.cc b/gcc/fortran/trans-array.cc
-index 8175f488927..15b20a6ec06 100644
+index 6cddd80b8ae..15b20a6ec06 100644
 --- a/gcc/fortran/trans-array.cc
 +++ b/gcc/fortran/trans-array.cc
-@@ -10033,7 +10033,6 @@ enum {DEALLOCATE_ALLOC_COMP = 1, NULLIFY_ALLOC_COMP,
+@@ -10033,8 +10033,8 @@ enum {DEALLOCATE_ALLOC_COMP = 1, NULLIFY_ALLOC_COMP,
        BCAST_ALLOC_COMP};
  
  static gfc_actual_arglist *pdt_param_list;
 -static bool generating_copy_helper;
  static hash_set<gfc_symbol *> seen_derived_types;
- static hash_map<gfc_symbol *, tree> copy_helper_wrappers;
++static hash_map<gfc_symbol *, tree> copy_helper_wrappers;
  
-@@ -10044,7 +10043,11 @@ static tree structure_alloc_comps (gfc_symbol *, tree, tree, int, int, int,
+ /* Forward declaration of structure_alloc_comps for wrapper generator.  */
+ static tree structure_alloc_comps (gfc_symbol *, tree, tree, int, int, int,
+@@ -10043,7 +10043,11 @@ static tree structure_alloc_comps (gfc_symbol *, tree, tree, int, int, int,
  /* Generate a wrapper function that performs element-wise deep copy for
     recursive allocatable array components. This wrapper is passed as a
     function pointer to the runtime helper _gfortran_cfi_deep_copy_array,
@@ -37,7 +64,7 @@ index 8175f488927..15b20a6ec06 100644
  
  static tree
  get_copy_helper_function_type (void)
-@@ -10071,6 +10074,10 @@ static tree
+@@ -10070,6 +10074,10 @@ static tree
  generate_element_copy_wrapper (gfc_symbol *der_type, tree comp_type,
  				int purpose, int caf_mode)
  {
@@ -48,7 +75,7 @@ index 8175f488927..15b20a6ec06 100644
    tree fndecl, fntype, result_decl;
    tree dest_parm, src_parm, dest_typed, src_typed;
    tree der_type_ptr;
-@@ -10094,6 +10101,7 @@ generate_element_copy_wrapper (gfc_symbol *der_type, tree comp_type,
+@@ -10093,6 +10101,7 @@ generate_element_copy_wrapper (gfc_symbol *der_type, tree comp_type,
    DECL_CONTEXT (fndecl) = NULL_TREE;
    DECL_INITIAL (fndecl) = make_node (BLOCK);
    BLOCK_SUPERCONTEXT (DECL_INITIAL (fndecl)) = fndecl;
@@ -56,7 +83,7 @@ index 8175f488927..15b20a6ec06 100644
  
    result_decl = build_decl (input_location, RESULT_DECL, NULL_TREE,
  			    void_type_node);
-@@ -10123,9 +10131,6 @@ generate_element_copy_wrapper (gfc_symbol *der_type, tree comp_type,
+@@ -10122,9 +10131,6 @@ generate_element_copy_wrapper (gfc_symbol *der_type, tree comp_type,
    pushlevel ();
    gfc_init_block (&block);
  
@@ -66,7 +93,7 @@ index 8175f488927..15b20a6ec06 100644
    /* When generating a wrapper, we need a fresh type tracking state to
       avoid inheriting the parent context's seen_derived_types, which would
       cause infinite recursion when the wrapper tries to handle the same
-@@ -10153,7 +10158,6 @@ generate_element_copy_wrapper (gfc_symbol *der_type, tree comp_type,
+@@ -10152,7 +10158,6 @@ generate_element_copy_wrapper (gfc_symbol *der_type, tree comp_type,
    for (unsigned i = 0; i < saved_symbols.length (); i++)
      seen_derived_types.add (saved_symbols[i]);
    saved_symbols.release ();
@@ -74,25 +101,42 @@ index 8175f488927..15b20a6ec06 100644
  
    body = gfc_finish_block (&block);
    decls = getdecls ();
-@@ -10335,8 +10339,6 @@ structure_alloc_comps (gfc_symbol * der_type, tree decl, tree dest,
+@@ -10332,8 +10337,8 @@ structure_alloc_comps (gfc_symbol * der_type, tree decl, tree dest,
+ 	   && seen_derived_types.contains (c->ts.u.derived))
+ 	  || (c->ts.type == BT_CLASS
  	      && seen_derived_types.contains (CLASS_DATA (c)->ts.u.derived));
-       bool direct_self_recursive
- 	= (c->ts.type == BT_DERIVED && c->ts.u.derived == der_type);
 -      bool inside_wrapper = generating_copy_helper;
 -
++      bool direct_self_recursive
++	= (c->ts.type == BT_DERIVED && c->ts.u.derived == der_type);
        bool is_pdt_type = IS_PDT (c);
  
        cdecl = c->backend_decl;
-@@ -11013,7 +11015,7 @@ structure_alloc_comps (gfc_symbol * der_type, tree decl, tree dest,
- 	  /* Special case: recursive allocatable array components require
- 	     runtime helpers to avoid compile-time infinite recursion.  Generate
- 	     a call to _gfortran_cfi_deep_copy_array with an element copy
--	     wrapper.  When inside a wrapper, reuse current_function_decl.  */
+@@ -11007,14 +11012,15 @@ structure_alloc_comps (gfc_symbol * der_type, tree decl, tree dest,
+ 					   false, false, NULL_TREE, NULL_TREE);
+ 	      gfc_add_expr_to_block (&fnblock, tmp);
+ 	    }
+-      /* Special case: recursive allocatable array components require
+-	 runtime helpers to avoid compile-time infinite recursion.  Generate
+-	 a call to _gfortran_cfi_deep_copy_array with an element copy
+-	 wrapper.  When inside a wrapper, reuse current_function_decl.  */
+-      else if (c->attr.allocatable && c->as && cmp_has_alloc_comps && same_type
+-	       && purpose == COPY_ALLOC_COMP && !c->attr.proc_pointer
+-	       && !c->attr.codimension && !caf_in_coarray (caf_mode)
+-	       && c->ts.type == BT_DERIVED && c->ts.u.derived != NULL)
++	  /* Special case: recursive allocatable array components require
++	     runtime helpers to avoid compile-time infinite recursion.  Generate
++	     a call to _gfortran_cfi_deep_copy_array with an element copy
 +	     wrapper.  */
- 	  else if (c->attr.allocatable && c->as && cmp_has_alloc_comps
- 		   && direct_self_recursive
- 		   && purpose == COPY_ALLOC_COMP && !c->attr.proc_pointer
-@@ -11041,29 +11043,10 @@ structure_alloc_comps (gfc_symbol * der_type, tree decl, tree dest,
++	  else if (c->attr.allocatable && c->as && cmp_has_alloc_comps
++		   && direct_self_recursive
++		   && purpose == COPY_ALLOC_COMP && !c->attr.proc_pointer
++		   && !c->attr.codimension && !caf_in_coarray (caf_mode)
++		   && c->ts.type == BT_DERIVED && c->ts.u.derived != NULL)
+ 	    {
+ 	      tree copy_wrapper, call, dest_addr, src_addr, elem_type;
+ 	      tree helper_ptr_type;
+@@ -11037,16 +11043,10 @@ structure_alloc_comps (gfc_symbol * der_type, tree decl, tree dest,
  							     comp_rank);
  	      gfc_add_expr_to_block (&fnblock, alloc_expr);
  
@@ -103,22 +147,9 @@ index 8175f488927..15b20a6ec06 100644
 -		copy_wrapper
 -		  = gfc_build_addr_expr (NULL_TREE, current_function_decl);
 -	      else
--		{
--		  tree *cached = NULL;
--		  if (caf_mode == 0)
--		    cached = copy_helper_wrappers.get (c->ts.u.derived);
--		  if (cached)
--		    copy_wrapper = *cached;
--		  else
--		    {
--		      copy_wrapper
--			= generate_element_copy_wrapper (c->ts.u.derived,
--							 elem_type, purpose,
--							 caf_mode);
--		      if (caf_mode == 0)
--			copy_helper_wrappers.put (c->ts.u.derived, copy_wrapper);
--		    }
--		}
+-		copy_wrapper
+-		  = generate_element_copy_wrapper (c->ts.u.derived, elem_type,
+-						   purpose, caf_mode);
 +	      /* Generate or reuse the element copy helper.  */
 +	      copy_wrapper
 +		= generate_element_copy_wrapper (c->ts.u.derived, elem_type,
@@ -126,6 +157,41 @@ index 8175f488927..15b20a6ec06 100644
  	      copy_wrapper = fold_convert (helper_ptr_type, copy_wrapper);
  
  	      /* Build addresses of descriptors.  */
+diff --git a/gcc/testsuite/gfortran.dg/pr123947.f90 b/gcc/testsuite/gfortran.dg/pr123947.f90
+new file mode 100644
+index 00000000000..30a21864f65
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr123947.f90
+@@ -0,0 +1,29 @@
++! { dg-do compile }
++!
++! PR fortran/123947
++! Reduced from Bugzilla attachment 63564.
++! Used to ICE in gfc_build_addr_expr from trans-array deep-copy handling.
++!
++TYPE TY0
++TYPE(TY0), ALLOCATABLE :: NODE0(:)
++TYPE(TY), ALLOCATABLE :: NODE4(:)
++TYPE(TY1),ALLOCATABLE :: NODE7(:)
++END TYPE
++TYPE TY1
++INTEGER,ALLOCATABLE :: II(:)
++TYPE(TY0) :: NODE2(4)
++TYPE(TY1), ALLOCATABLE :: NODE1(:)
++TYPE(TY),ALLOCATABLE :: NODE5(:)
++END TYPE
++TYPE TY
++INTEGER,ALLOCATABLE :: II(:)
++TYPE(TY1) :: NODE3(4)
++TYPE(TY),ALLOCATABLE :: NODE6(:)
++END TYPE
++TYPE BASE
++TYPE(TY),ALLOCATABLE :: OBJ(:)
++END TYPE
++TYPE(BASE):: OBJ_BASE
++ALLOCATE(OBJ_BASE%OBJ(2)%NODE6(2)%NODE6(3))
++ALLOCATE(OBJ_BASE%OBJ(2)%NODE6(2)%NODE6(2)%NODE6(3))
++END
 diff --git a/gcc/testsuite/gfortran.dg/pr123947_2.f90 b/gcc/testsuite/gfortran.dg/pr123947_2.f90
 new file mode 100644
 index 00000000000..d6c26c48b06
