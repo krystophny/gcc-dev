@@ -72,18 +72,29 @@ on fork branch `origin/pr123949-init-se-fix` (commit `05159b27621`).
 ### aarch64 LTO bootstrap verification (2026-02-23)
 
 Tested on Hetzner Cloud CAX41 (16 ARM cores, 32 GB RAM, aarch64).
-GCC source at upstream commit `3a17cc11c` with fix applied to
-`trans-array.cc`.
+Both builds at upstream commit `3a17cc11c` with `--with-build-config=bootstrap-lto`.
+
+#### Test fails without fix
 
 ```
-$ uname -m
-aarch64
-
 $ gcc-build-lto/gcc/gfortran --version | head -1
 GNU Fortran (GCC) 16.0.1 20260220 (experimental)
 
-$ make -j16 bootstrap  # --with-build-config=bootstrap-lto
-EXIT: 0
+$ cd gcc-build-lto/gcc
+$ make check-gfortran RUNTESTFLAGS="dg.exp=pr123949.f90"
+FAIL: gfortran.dg/pr123949.f90   -O  (internal compiler error: in gfc_conv_constant, at fortran/trans-const.cc:425)
+FAIL: gfortran.dg/pr123949.f90   -O  (test for excess errors)
+
+# of unexpected failures	2
+```
+
+#### Test passes with fix
+
+Same commit with `gfc_init_se(&tse, NULL)` added in `trans-array.cc`.
+
+```
+$ gcc-build-lto/gcc/gfortran --version | head -1
+GNU Fortran (GCC) 16.0.1 20260220 (experimental)
 
 $ cd gcc-build-lto/gcc
 $ make check-gfortran RUNTESTFLAGS="dg.exp=pr123949.f90"
@@ -91,8 +102,6 @@ PASS: gfortran.dg/pr123949.f90   -O  (test for excess errors)
 
 # of expected passes		1
 ```
-
-Unfixed build (same commit, no `gfc_init_se` patch) pending on second VM.
 
 ## Notes
 
