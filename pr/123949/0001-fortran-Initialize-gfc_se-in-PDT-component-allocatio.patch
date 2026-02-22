@@ -1,0 +1,40 @@
+From 5d91f6e188a0b8c9a6da12459c275858ac6c7b43 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Sun, 22 Feb 2026 22:07:19 +0100
+Subject: [PATCH] fortran: Initialize gfc_se in PDT component allocation
+ [PR123949]
+
+Add missing gfc_init_se call for the default initializer case in
+ALLOCATE_PDT_COMP.  The adjacent KIND/LEN block (line 11118) and
+pdt_string block (line 11149) both initialize tse, but this block
+left it uninitialized, causing undefined behavior when tse.ss
+contained stack garbage.  Exposed as an ICE in gfc_conv_constant
+(trans-const.cc:425) on aarch64 with LTO bootstrap.
+
+	PR fortran/123949
+
+gcc/fortran/ChangeLog:
+
+	* trans-array.cc (structure_alloc_comps): Add missing gfc_init_se
+	call in ALLOCATE_PDT_COMP for scalar component default initializer.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/trans-array.cc | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/gcc/fortran/trans-array.cc b/gcc/fortran/trans-array.cc
+index 6cddd80b8ae..e7666416213 100644
+--- a/gcc/fortran/trans-array.cc
++++ b/gcc/fortran/trans-array.cc
+@@ -11136,6 +11136,7 @@ structure_alloc_comps (gfc_symbol * der_type, tree decl, tree dest,
+ 	    {
+ 	      gfc_se tse;
+ 	      gfc_expr *c_expr;
++	      gfc_init_se (&tse, NULL);
+ 	      c_expr = c->initializer;
+ 	      gfc_conv_expr_type (&tse, c_expr, TREE_TYPE (comp));
+ 	      gfc_add_block_to_block (&fnblock, &tse.pre);
+-- 
+2.53.0
+
