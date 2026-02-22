@@ -2,89 +2,90 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123947
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/48
-- **Branch:** `pr123947-fix`
-- **Status:** FIXED locally (patch on fork), pending upstream
+- **Branch:** `pr123947-fix` (rebased on `upstream/master`)
+- **Status:** UPDATED locally (v2 patch), pending upstream
 
 ## Summary
 
-GCC 16 trunk crashes with an ICE (`Segmentation fault`) while compiling the
-full recursive-type testcase from Bugzilla attachment 63564. The stack trace
-points to:
+GCC 16 trunk ICEs on recursive allocatable deep-copy expansion from the full
+Bugzilla testcase (`attachment 63564`).
 
-- `contains_struct_check` (`tree.h`)
-- `gfc_build_addr_expr` (`gcc/fortran/trans.cc:350`)
+Bugzilla comment #5 (2026-02-18) reported that the first local fix (comment #4
+patch) fixed the original crash but introduced a new ICE (`verify_gimple` /
+`location references block not in block tree`) on another testcase.
 
-Reported behavior in Bugzilla:
-
-- `gfortran 15.2.0`: compiles testcase
-- `gfortran trunk (2026-01-02 and 2026-01-31 snapshots)`: ICE
+This update replaces that approach with a wrapper-cache redesign that avoids
+reusing context-sensitive wrapper address trees and also breaks wrapper
+generation ping-pong in mutually recursive type graphs.
 
 ## Reproducers
 
-Saved Bugzilla attachments:
+- `pr/123947/attachment-63564-full.f90` (Bugzilla full testcase)
+- `pr/123947/attachment-63567-mre.f90` (Bugzilla reduced testcase)
+- `pr/123947/reproducer-reduced.f90` (local reduced testcase)
+- Local verification-only (not added 1:1 to testsuite):
+  `/tmp/pr123947_local_0583_variant.f90`
 
-- `pr/123947/attachment-63564-full.f90` (original full testcase)
-- `pr/123947/attachment-63567-mre.f90` (reduced testcase)
-- `pr/123947/reproducer.f90` (copy of reduced testcase)
-- `pr/123947/reproducer-reduced.f90` (new 23-line local MRE that reproduces)
+## Root Cause
 
-Compile command:
+`structure_alloc_comps` helper selection and wrapper handling had two issues:
 
-```bash
-gfortran -c -w pr/123947/attachment-63564-full.f90
-gfortran -c -w pr/123947/attachment-63567-mre.f90
-```
+1. Helper path selection for recursive allocatable arrays needed to stay on
+   direct self-recursion only (not arbitrary "seen" mutual recursion).
+2. Wrapper reuse needed to be safe across contexts:
+   - Caching an `ADDR_EXPR` tree is unsafe across different function contexts.
+   - With only direct generation, mutually recursive wrappers can recursively
+     regenerate each other without a stable per-type anchor.
 
-Expected crash location when reproducing:
-`ALLOCATE(OBJ_BASE%OBJ(2)%NODE6(3))` in the full testcase.
+## Fix (v2)
 
-## Local Results (2026-02-17, clean non-offload rebuild)
+Artifacts:
+
+- GCC commit: `1a78fca24f4`
+- Exported patch:
+  `pr/123947/0001-fortran-Fix-recursive-deep-copy-helper-generation-PR.patch`
+
+Files changed:
+
+- `gcc/fortran/trans-array.cc`
+- `gcc/testsuite/gfortran.dg/pr123947_2.f90` (new)
+
+Behavioral changes:
+
+1. Keep direct self-recursion gating for recursive array helper path.
+2. Cache helper wrapper `FUNCTION_DECL` per derived type (not `ADDR_EXPR`).
+3. Rebuild fresh `ADDR_EXPR` at each use site from cached `FUNCTION_DECL`.
+4. Keep wrapper-generation recursion finite across mutually recursive types via
+   the per-type `FUNCTION_DECL` cache.
+5. Add second regression test (`pr123947_2.f90`) using a non-1:1 locally
+   derived source-allocation pattern.
+
+## Validation (2026-02-22)
 
 Compiler under test:
 
 - `gcc-build/gcc/gfortran -B gcc-build/gcc`
-- `GNU Fortran (GCC) 16.0.1 20260217 (experimental)`
-- Configured with:
-  `--enable-languages=fortran --disable-multilib --disable-bootstrap`
+- `GNU Fortran (GCC) 16.0.1 20260221 (experimental)`
 
-Results on unfixed compiler:
+Compile checks:
 
-- Reduced testcase (`attachment-63567-mre.f90`):
-  - single run: PASS
-  - stress loop (30 runs): **30 PASS / 0 FAIL**
-- Full testcase (`attachment-63564-full.f90`):
-  - single run: FAIL (ICE)
-  - stress loop (30 runs): **0 PASS / 30 FAIL**
-- Baseline system compiler (`GNU Fortran (GCC) 15.2.1 20260209`):
-  - reduced testcase: PASS
-  - full testcase: PASS
+- `attachment-63564-full.f90`: **PASS**
+- `attachment-63567-mre.f90`: **PASS**
+- `gfortran.dg/pr123947.f90`: **PASS**
+- `gfortran.dg/pr123947_2.f90`: **PASS**
+- local derived 0583-style testcase: **PASS**
+- Fujitsu reference file `0583_0023.f90` compiled locally for verification only:
+  **PASS**
 
-## Notes
+Targeted tests:
 
-- Bugzilla comment #1 references `r16-5067-g9636d90e432600` as a regression
-  marker.
-- Bugzilla comment #3 notes the ICE was not observed under valgrind (but very
-  slow), and recursive/mutual recursion in type declarations may be relevant.
-- Backtrace on failing local build includes:
-  - `gfc_build_addr_expr` (`gcc/fortran/trans.cc:350`)
-  - `structure_alloc_comps` (`gcc/fortran/trans-array.cc:11053`)
-  - `gfc_copy_alloc_comp` (`gcc/fortran/trans-array.cc:11535`)
+- `make check-gfortran RUNTESTFLAGS="dg.exp=pr123947.f90"`: **PASS**
+- `make check-gfortran RUNTESTFLAGS="dg.exp=pr123947_2.f90"`: **PASS**
 
-## Fix
+Full tests:
 
-- Commit: `da5c252c8252356e4eb32bead1c231e019f5a430`
-- Patch: `pr/123947/0001-fortran-Avoid-ICE-in-recursive-allocatable-deep-copy.patch`
-
-Change summary:
-
-- Restrict recursive array helper path in `structure_alloc_comps` to direct
-  self-recursion (instead of any seen/mutually-recursive type).
-- Cache generated element-copy helper wrappers per derived type in
-  non-coarray mode.
-- Add regression test `gcc/testsuite/gfortran.dg/pr123947.f90`.
-
-Validation on patched compiler:
-
-- `attachment-63564-full.f90`: PASS (single run), PASS (30/30 loop)
-- `reproducer-reduced.f90`: PASS (single run), PASS (30/30 loop)
-- testsuite: `gfortran.dg/pr123947.f90` PASS
+- `make -j32 -k check-gfortran`: completed
+  - `gfortran.dg/pr123947.f90`: PASS
+  - `gfortran.dg/pr123947_2.f90`: PASS
+  - `grep -E "^FAIL|^XPASS" gcc-build/gcc/testsuite/gfortran/gfortran.sum`:
+    no matches
