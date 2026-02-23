@@ -1,0 +1,97 @@
+From b150df5f821f2f746574012f291878e9c15f7003 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Mon, 23 Feb 2026 22:42:44 +0100
+Subject: [PATCH] fortran: Fix iterator counting in nested block scopes [PR
+ fortran/124208]
+
+Count FORALL/DO CONCURRENT iterators in EXEC_BLOCK namespace code chains
+while sizing VAR_EXPR in gfc_resolve_forall.
+
+This prevents undersized allocation and an ICE for nested FORALL/DO
+CONCURRENT inside ASSOCIATE/BLOCK constructs.
+
+	PR fortran/124208
+gcc/fortran/ChangeLog:
+
+	* resolve.cc (gfc_max_forall_iterators_in_chain): Count iterators in EXEC_BLOCK namespaces.
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/pr124208.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/resolve.cc                 |  7 +++++
+ gcc/testsuite/gfortran.dg/pr124208.f90 | 43 ++++++++++++++++++++++++++
+ 2 files changed, 50 insertions(+)
+ create mode 100644 gcc/testsuite/gfortran.dg/pr124208.f90
+
+diff --git a/gcc/fortran/resolve.cc b/gcc/fortran/resolve.cc
+index 655db8a1c9c..d28d00a03a0 100644
+--- a/gcc/fortran/resolve.cc
++++ b/gcc/fortran/resolve.cc
+@@ -12449,6 +12449,13 @@ gfc_max_forall_iterators_in_chain (gfc_code *code)
+ 
+       if (c->op == EXEC_FORALL || c->op == EXEC_DO_CONCURRENT)
+ 	sub_iters = gfc_count_forall_iterators (c);
++      else if (c->op == EXEC_BLOCK)
++	{
++	  /* BLOCK/ASSOCIATE bodies live in the block namespace code chain,
++	     not in the generic c->block arm list used by IF/SELECT.  */
++	  if (c->ext.block.ns && c->ext.block.ns->code)
++	    sub_iters = gfc_max_forall_iterators_in_chain (c->ext.block.ns->code);
++	}
+       else if (c->block)
+ 	for (gfc_code *b = c->block; b; b = b->block)
+ 	  {
+diff --git a/gcc/testsuite/gfortran.dg/pr124208.f90 b/gcc/testsuite/gfortran.dg/pr124208.f90
+new file mode 100644
+index 00000000000..f4dde1a05dd
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr124208.f90
+@@ -0,0 +1,43 @@
++! { dg-do compile }
++! PR fortran/124208
++
++subroutine p1
++  implicit none
++  integer :: i
++  integer :: arr(4)
++
++  arr = 0
++  do concurrent (i = 1:5)
++    associate (a => i)
++      forall (a = 1:4, arr(a) == 0)
++        arr(mod (a + i - 1, 4) + 1) = a
++      end forall
++    end associate
++  end do
++end subroutine p1
++
++subroutine p2
++  implicit none
++  integer :: ii
++  integer :: pp(10), qq(10)
++
++  ii = 100
++  block
++    integer :: ii
++    ii = 200
++    do concurrent (ii = 1:10)
++      block
++        integer :: ii
++        ii = 2
++        do concurrent (ii = 1:10)
++          block
++            integer :: t
++            t = 2
++            pp(ii) = ii + t
++          end block
++        end do
++      end block
++      qq(ii) = ii
++    end do
++  end block
++end subroutine p2
+-- 
+2.53.0
+
