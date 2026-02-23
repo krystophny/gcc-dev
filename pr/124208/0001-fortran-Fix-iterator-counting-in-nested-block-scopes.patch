@@ -1,4 +1,4 @@
-From b150df5f821f2f746574012f291878e9c15f7003 Mon Sep 17 00:00:00 2001
+From c8ba03211a515f66636c38c34e1e93e7c36ec0f8 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Mon, 23 Feb 2026 22:42:44 +0100
 Subject: [PATCH] fortran: Fix iterator counting in nested block scopes [PR
@@ -21,8 +21,8 @@ gcc/testsuite/ChangeLog:
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
  gcc/fortran/resolve.cc                 |  7 +++++
- gcc/testsuite/gfortran.dg/pr124208.f90 | 43 ++++++++++++++++++++++++++
- 2 files changed, 50 insertions(+)
+ gcc/testsuite/gfortran.dg/pr124208.f90 | 40 ++++++++++++++++++++++++++
+ 2 files changed, 47 insertions(+)
  create mode 100644 gcc/testsuite/gfortran.dg/pr124208.f90
 
 diff --git a/gcc/fortran/resolve.cc b/gcc/fortran/resolve.cc
@@ -45,53 +45,50 @@ index 655db8a1c9c..d28d00a03a0 100644
  	  {
 diff --git a/gcc/testsuite/gfortran.dg/pr124208.f90 b/gcc/testsuite/gfortran.dg/pr124208.f90
 new file mode 100644
-index 00000000000..f4dde1a05dd
+index 00000000000..be833d19e65
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/pr124208.f90
-@@ -0,0 +1,43 @@
+@@ -0,0 +1,40 @@
 +! { dg-do compile }
 +! PR fortran/124208
 +
-+subroutine p1
++subroutine nested_forall_in_associate
 +  implicit none
-+  integer :: i
-+  integer :: arr(4)
++  integer :: lane
++  integer :: box(6)
 +
-+  arr = 0
-+  do concurrent (i = 1:5)
-+    associate (a => i)
-+      forall (a = 1:4, arr(a) == 0)
-+        arr(mod (a + i - 1, 4) + 1) = a
++  box = 0
++  do concurrent (lane = 1:4)
++    associate (idx => lane)
++      forall (idx = 1:3, box(idx) == 0)
++        box(mod (idx + lane - 1, 3) + 1) = idx + lane
 +      end forall
 +    end associate
 +  end do
-+end subroutine p1
++end subroutine nested_forall_in_associate
 +
-+subroutine p2
++subroutine shadowed_do_concurrent_blocks
 +  implicit none
-+  integer :: ii
-+  integer :: pp(10), qq(10)
++  integer :: i
++  integer :: acc(8)
 +
-+  ii = 100
++  acc = 0
 +  block
-+    integer :: ii
-+    ii = 200
-+    do concurrent (ii = 1:10)
++    integer :: i
++    i = 2
++    do concurrent (i = 1:3)
++      associate (base => i)
 +      block
-+        integer :: ii
-+        ii = 2
-+        do concurrent (ii = 1:10)
-+          block
-+            integer :: t
-+            t = 2
-+            pp(ii) = ii + t
-+          end block
++        integer :: i
++        i = base + 1
++        do concurrent (i = base + 1:5)
++          acc(i) = acc(i) + i
 +        end do
 +      end block
-+      qq(ii) = ii
++      end associate
 +    end do
 +  end block
-+end subroutine p2
++end subroutine shadowed_do_concurrent_blocks
 -- 
 2.53.0
 
