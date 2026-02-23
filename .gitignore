@@ -37,3 +37,4 @@ __pycache__/
 *.debug
 *.statistics
 *.profile_estimate
+.tabula/artifacts/
