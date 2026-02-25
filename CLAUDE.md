@@ -308,6 +308,30 @@ are essential for spotting double allocations.
 
 **Evidence:** PR123868.
 
+### Pattern 7: GC Collection During Wrapper Generation
+
+**Symptom:** ICE (segfault / `contains_struct_check` failure) when compiling
+ALLOCATE of sub-objects in derived types with mutually-referencing recursive
+allocatable array components.
+
+**Root cause:** `generate_element_copy_wrapper` (PR121628) calls
+`cgraph_node::add_new_function` which during `PARSING` state calls
+`finalize_function` → `ggc_collect()`.  This GC frees locally-computed
+COMPONENT_REF tree nodes on caller stack frames of `structure_alloc_comps`
+that haven't been attached to any GC-rooted structure yet.  Triggered only
+with mutually-referencing types (3+ types) that require nested wrapper
+generation.
+
+**Fix:** Use `cgraph_node::finalize_function(fndecl, true)` (no_collect=true)
+to skip GC during wrapper registration.
+
+**Key lesson:** When adding new functions during tree lowering, avoid
+`add_new_function` if callers hold unrooted tree nodes.  Use
+`finalize_function(..., true)` to defer GC.  Confirm with
+`--param ggc-min-heapsize=999999` which disables GC.
+
+**Evidence:** PR124235.
+
 ## Fix Development Rules
 
 ### DO
@@ -433,6 +457,7 @@ README.md header format:
 | 103276 | `pr103276-fix` | Skip pointer mapping for pass-by-ref in ENTER/EXIT DATA |
 | 123252 | `pr123252-fix` | Map scalar fields on enter data for components |
 | 123282 | `pr123282-fix` | Fix OpenACC refcount for Fortran allocatable array descriptors |
+| 124235 | `pr124235-fix` | Fix ICE in ALLOCATE of sub-objects with recursive types |
 
 **Merged upstream:** 32365, 90519, 92613, 96255, 107721, 121472, 121475, 121628, 123868
 
