@@ -1,0 +1,112 @@
+From 0a4a68f091003d7a7db9ea5032b36a795fb5830b Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Wed, 25 Feb 2026 09:41:27 +0100
+Subject: [PATCH] fortran: Fix ICE in ALLOCATE of sub-objects with recursive
+ types [PR124235]
+
+The deep-copy wrapper generation for recursive allocatable array
+components (PR121628) calls cgraph_node::add_new_function to register
+the wrapper.  During PARSING state, add_new_function calls
+finalize_function which triggers ggc_collect().  This garbage
+collection frees locally-computed tree nodes (COMPONENT_REFs etc.)
+in caller stack frames of structure_alloc_comps that are not yet
+attached to any GC-rooted structure, causing a segfault when those
+nodes are subsequently accessed.
+
+Use finalize_function with no_collect=true to skip the collection.
+The GC will run at a safe point later.
+
+	PR fortran/124235
+
+gcc/fortran/ChangeLog:
+
+	* trans-array.cc (generate_element_copy_wrapper): Use
+	cgraph_node::finalize_function with no_collect=true instead
+	of cgraph_node::add_new_function to avoid garbage collection
+	while caller frames hold unrooted tree nodes.
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/pr124235.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/trans-array.cc             |  8 ++++-
+ gcc/testsuite/gfortran.dg/pr124235.f90 | 46 ++++++++++++++++++++++++++
+ 2 files changed, 53 insertions(+), 1 deletion(-)
+ create mode 100644 gcc/testsuite/gfortran.dg/pr124235.f90
+
+diff --git a/gcc/fortran/trans-array.cc b/gcc/fortran/trans-array.cc
+index e7666416213..73bb90a4b60 100644
+--- a/gcc/fortran/trans-array.cc
++++ b/gcc/fortran/trans-array.cc
+@@ -10165,7 +10165,13 @@ generate_element_copy_wrapper (gfc_symbol *der_type, tree comp_type,
+ 
+   pop_cfun ();
+ 
+-  cgraph_node::add_new_function (fndecl, false);
++  /* Use finalize_function with no_collect=true to skip the ggc_collect
++     call that add_new_function would trigger.  This function is called
++     during tree lowering of structure_alloc_comps where caller stack
++     frames hold locally-computed tree nodes (COMPONENT_REFs etc.) that
++     are not yet attached to any GC root.  A collection at this point
++     would free those nodes and cause segfaults.  PR124235.  */
++  cgraph_node::finalize_function (fndecl, true);
+ 
+   return build1 (ADDR_EXPR, get_copy_helper_pointer_type (), fndecl);
+ }
+diff --git a/gcc/testsuite/gfortran.dg/pr124235.f90 b/gcc/testsuite/gfortran.dg/pr124235.f90
+new file mode 100644
+index 00000000000..30735ff2295
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr124235.f90
+@@ -0,0 +1,46 @@
++! { dg-do compile }
++! PR fortran/124235 - ICE in ALLOCATE of sub-objects with recursive types
++!
++! Mutually-referencing derived types with a mix of allocatable and
++! fixed-size array components.  Allocating a sub-object of an
++! already-allocated component triggered a segfault during tree lowering
++! because garbage collection during deep-copy wrapper generation
++! invalidated locally-computed COMPONENT_REF tree nodes.
++
++program pr124235
++  implicit none
++
++  type :: alpha_t
++    integer, allocatable :: vals(:)
++    type(alpha_t), allocatable :: a_kids(:)
++    type(gamma_t), allocatable :: g_ref(:)
++    integer :: tag
++    type(beta_t), allocatable :: b_ref(:)
++  end type
++
++  type :: beta_t
++    integer, allocatable :: vals(:)
++    type(alpha_t) :: a_fixed(4)
++    type(beta_t), allocatable :: b_kids(:)
++    integer :: tag
++    type(gamma_t), allocatable :: g_ref(:)
++  end type
++
++  type :: gamma_t
++    integer, allocatable :: vals(:)
++    type(beta_t) :: b_fixed(4)
++    integer :: tag
++    type(gamma_t), allocatable :: g_kids(:)
++  end type
++
++  type :: container_t
++    type(gamma_t), allocatable :: items(:)
++    type(gamma_t), allocatable :: spares(:)
++  end type
++
++  type(container_t) :: box
++
++  allocate(box%items(6))
++  allocate(box%items(2)%g_kids(3))
++
++end program
+-- 
+2.53.0
+
