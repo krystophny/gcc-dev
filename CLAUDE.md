@@ -437,8 +437,19 @@ cd gcc && GCC_FORCE_MKLOG=1 GCC_MKLOG_ARGS='["-b", "fortran/<number>"]' \
 # 5. Verify commit passes GCC checks (MANDATORY before push)
 git gcc-verify HEAD
 
+# 5b. gcc-verify does NOT check for Signed-off-by.  Check the final
+#     commit message explicitly, especially after editor/template-based
+#     commits or any hook-driven message rewrite.
+git log -1 --format=%B | grep -q '^Signed-off-by: ' \
+  || { echo "ERROR: missing Signed-off-by trailer in commit"; exit 1; }
+
 # 6. Export patch
 git format-patch -1 HEAD -o ../pr/<number>/
+
+# 6b. Verify the exported patch still contains Signed-off-by.
+patch=$(ls -t ../pr/<number>/0001-*.patch | head -n1)
+grep -q '^Signed-off-by: ' "$patch" \
+  || { echo "ERROR: exported patch missing Signed-off-by trailer"; exit 1; }
 
 # 7. Push to fork
 git push origin pr<number>-fix
@@ -456,6 +467,9 @@ git push origin main
   ChangeLog text before the commit is finalized.
 - Re-run `git gcc-verify HEAD` immediately.  Repeating `git commit -F ...`
   with a fully written ChangeLog can otherwise lead to duplicated hook output.
+- After any editor/template-based commit, explicitly re-check that the
+  `Signed-off-by:` trailer is still present.  A full-message replacement can
+  silently drop the `-s` trailer even when `git commit -s` was used.
 
 ### Commit rules (HARD RULES)
 
@@ -464,6 +478,8 @@ git push origin main
 - **Always run `git gcc-verify HEAD`** before pushing. It checks
   ChangeLog format, PR references, and other GCC conventions.
 - **Always use `-s`** (Signed-off-by) on commits.
+- **Always verify `Signed-off-by:` in both the final commit message and the
+  exported patch.** `git gcc-verify` does not check this.
 - **Branches go off `upstream/master`**, not off other fix branches.
 - **One fix per branch** (e.g., `pr123949-init-se-fix`), not stacked.
 
