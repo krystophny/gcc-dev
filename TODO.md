@@ -2,8 +2,8 @@
 
 ## PR106946 (#88) - Patch Ready [DONE]
 
-**Status:** PATCH READY. Full `check-gfortran` passed, patch exported and pushed
-on branch `origin/pr106946-fix` (`88049a3af71`).
+**Status:** PATCH READY. Full `check-gfortran` passed, signed patch exported
+and pushed on branch `origin/pr106946-fix` (`d02ccf8946c`).
 
 ### Task list
 
@@ -31,8 +31,10 @@ CLASS container orphaned with dangling pointers. ICE in `resolve_fl_derived`.
 
 **Fix:** In `gfc_match_data_decl` cleanup, detect CLASS components added during
 the failed statement (via `attr.is_class` check on `ts.u.derived`), remove their
-CLASS container from the namespace symtree, release the symbol, and free the
-component. Non-CLASS components are left for secondary error reporting.
+CLASS container from the namespace symtree when it is still present, release
+the symbol, and free the component. Non-CLASS components are left for
+secondary error reporting. The regression test now covers allocatable and
+pointer CLASS declarations plus a valid component followed by a bad one.
 
 **Steps to finalize:**
 ```bash
@@ -84,6 +86,7 @@ git push origin pr106946-fix
 ```
 
 Patch exported: `pr/106946/0001-fortran-Fix-ICE-on-invalid-CLASS-component-in-derive.patch`
+Verified: commit and patch both contain `Signed-off-by:`.
 
 Then: `gh issue edit 88 --add-label patch-ready`
 
@@ -175,7 +178,7 @@ Compare tree dumps with/without OpenMP. May need runtime tracing in libgomp.
 | #91 | 109788 | UB: shift exponent 64 | runtime UB |
 | #55 | 79524 | Valgrind error fimplicit_none_2.f90 | memory |
 
-**PR82721:** Likely similar undo/dangling pointer as PR106946. GDB to find
+**PR82721:** Possibly similar undo/dangling pointer bug to PR106946. GDB to find
 corrupt string source.
 
 **PR109788:** Find Fortran code path passing 64 to shift in `hwint.h:293`.

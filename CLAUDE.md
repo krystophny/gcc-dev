@@ -364,7 +364,8 @@ Delete related symtree entries before releasing the helper symbol.
 the undo machinery.  CLASS container symbols created by
 `gfc_build_class_symbol` are one concrete example.
 
-**Evidence:** PR106946.  PR82721 appears to be the same general family of bug.
+**Evidence:** PR106946.  PR82721 may be the same general family of bug, but
+that still needs to be verified from a stack trace or reduced fix.
 
 ## Fix Development Rules
 
