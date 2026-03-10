@@ -3,6 +3,8 @@
 #
 # Usage:
 #   gcc-bugzilla.sh info <pr-number>           # Show bug info
+#   gcc-bugzilla.sh search <term>              # Search fortran bugs
+#   gcc-bugzilla.sh regressions                # List open fortran regressions
 #   gcc-bugzilla.sh attach <pr-number> <file>  # Attach a file (requires login)
 #   gcc-bugzilla.sh login                      # Login to GCC Bugzilla
 #
@@ -17,12 +19,16 @@ usage() {
     echo "Usage: $0 <command> [args...]"
     echo ""
     echo "Commands:"
-    echo "  info <pr-number>            Show bug status, summary, and comments"
+    echo "  info <pr-number>            Show bug status, summary, and details"
+    echo "  search <term>               Search open fortran bugs by summary text"
+    echo "  regressions                 List all open fortran regressions"
     echo "  attach <pr-number> <file>   Attach a file to the bug (requires login)"
     echo "  login                       Login to GCC Bugzilla (saves token)"
     echo ""
     echo "Examples:"
     echo "  $0 info 124235"
+    echo "  $0 search 'ICE in fold_convert'"
+    echo "  $0 regressions"
     echo "  $0 attach 123280 pr/123280/0001-fix.patch"
     exit 1
 }
@@ -43,6 +49,25 @@ Assignee:  %{assigned_to}
 CC:        %{cc}
 Blocks:    %{blocks}
 Depends:   %{depends_on}"
+}
+
+cmd_search() {
+    local term="$1"
+    $BZ query \
+        --product=gcc \
+        --component=fortran \
+        --status=UNCONFIRMED,NEW,ASSIGNED,SUSPENDED,WAITING,REOPENED \
+        --summary="$term" \
+        --outputformat="%{bug_id} [%{bug_status}] %{short_desc}"
+}
+
+cmd_regressions() {
+    $BZ query \
+        --product=gcc \
+        --component=fortran \
+        --status=UNCONFIRMED,NEW,ASSIGNED,SUSPENDED,WAITING,REOPENED \
+        --summary="regression" \
+        --outputformat="%{bug_id} [%{bug_status}] %{short_desc}"
 }
 
 cmd_attach() {
@@ -84,6 +109,13 @@ case "$1" in
     info)
         [[ $# -lt 2 ]] && { echo "Error: missing PR number"; usage; }
         cmd_info "$2"
+        ;;
+    search)
+        [[ $# -lt 2 ]] && { echo "Error: missing search term"; usage; }
+        cmd_search "$2"
+        ;;
+    regressions)
+        cmd_regressions
         ;;
     attach)
         [[ $# -lt 3 ]] && { echo "Error: missing PR number or file"; usage; }
