@@ -92,26 +92,25 @@ Then: `gh issue edit 88 --add-label patch-ready`
 
 ---
 
-## PR82721 (#56) - Investigate [IN PROGRESS]
+## PR82721 (#56) - Patch Ready [DONE]
 
-**Status:** Reproduces locally with `gcc-build/gcc/gfortran -B gcc-build/gcc`.
-Next step is root-cause debugging in the error-recovery / symbol-table cleanup
-path.
+**Status:** PATCH READY. Full `check-gfortran` passed, signed patch exported
+and pushed on branch `origin/pr82721-fix` (`98a30995f17`).
 
 ### Task list
 
-- [ ] Task 1: Reproduce the ICE with the minimal duplicate-type testcase.
-- [ ] Task 1 review: Confirm the failure mode and collect a useful backtrace.
-- [ ] Task 2: Debug the dangling symbol/symtree path around `reject_statement`.
-- [ ] Task 2 review: Verify the root cause against the actual cleanup flow.
-- [ ] Task 3: Implement a minimal fix and add a regression test.
-- [ ] Task 3 review: Check that the fix is precise and does not mask other errors.
-- [ ] Task 4: Rebuild and run targeted validation for PR82721.
-- [ ] Task 4 review: Inspect diagnostics and ensure the ICE is gone.
-- [ ] Task 5: Run a clean full `check-gfortran`.
-- [ ] Task 5 review: Check `FAIL`/`XPASS` deltas and confirm no regressions.
-- [ ] Task 6: Commit, `gcc-verify`, export, push, and update issue `#56`.
-- [ ] Task 6 review: Verify patch artifact, branch state, and issue metadata.
+- [x] Task 1: Reproduce the ICE with the minimal duplicate-type testcase.
+- [x] Task 1 review: Confirm the failure mode and collect a useful backtrace.
+- [x] Task 2: Debug the dangling symbol/symtree path around `reject_statement`.
+- [x] Task 2 review: Verify the root cause against the actual cleanup flow.
+- [x] Task 3: Implement a minimal fix and add a regression test.
+- [x] Task 3 review: Check that the fix is precise and does not mask other errors.
+- [x] Task 4: Rebuild and run targeted validation for PR82721.
+- [x] Task 4 review: Inspect diagnostics and ensure the ICE is gone.
+- [x] Task 5: Run a clean full `check-gfortran`.
+- [x] Task 5 review: Check `FAIL`/`XPASS` deltas and confirm no regressions.
+- [x] Task 6: Commit, `gcc-verify`, export, push, and update issue `#56`.
+- [x] Task 6 review: Verify patch artifact, branch state, and issue metadata.
 
 **Reproducer:**
 
@@ -126,13 +125,34 @@ Expected end state:
 - user-facing error diagnostic
 - no internal compiler error
 
+**Confirmed reproducer path:**
+
+- `MALLOC_PERTURB_=165 gcc-build/gcc/gfortran -B gcc-build/gcc -fsyntax-only`
+  on the minimal variant ICEs reliably on unfixed sources.
+- Backtrace reaches `find_sym` via `resolve_charlen`, after the duplicate-type
+  diagnostic.
+
+**Root cause:** `gfc_match_decl_type_spec` adds new `gfc_charlen` nodes to the
+current namespace `cl_list` while parsing `CHARACTER(len(...))`.  If the data
+declaration is later rejected, `reject_statement()` undoes symbol-table changes
+but does not roll back those fresh `gfc_charlen` nodes.  The stale `len(c)`
+expression is then resolved later and walks dangling symtree pointers.
+
+**Current local fix:** `build_sym` drops only the unattached fresh
+`gfc_charlen` node created for a rejected duplicate-type declaration, leaving
+charlen nodes that are still needed by surviving invalid declarations alone.
+The regression test `gfortran.dg/pr82721.f90` sets `MALLOC_PERTURB_` to make
+the old crash deterministic.
+
+Patch exported: `pr/82721/0001-fortran-Fix-ICE-after-rejected-CHARACTER-duplicate-d.patch`
+Verified: commit and patch both contain `Signed-off-by:`.
+
 ---
 
 ## Backlog Audit (2026-03-10)
 
 **Confirmed locally still reproducing with `gcc-build/gcc/gfortran -B gcc-build/gcc`:**
 
-- `PR82721` (`#56`) - still ICEs after the duplicate-type diagnostic.
 - `PR102459` (`#79`) - still ICEs with `-fopenmp`.
 
 **Quick compile check did not reproduce immediately; re-verify before spending
@@ -174,12 +194,8 @@ Compare tree dumps with/without OpenMP. May need runtime tracing in libgomp.
 
 | GH# | PR | Title | Category |
 |-----|----|-------|----------|
-| #56 | 82721 | Corrupted error message, sometimes ICE | ice |
 | #91 | 109788 | UB: shift exponent 64 | runtime UB |
 | #55 | 79524 | Valgrind error fimplicit_none_2.f90 | memory |
-
-**PR82721:** Possibly similar undo/dangling pointer bug to PR106946. GDB to find
-corrupt string source.
 
 **PR109788:** Find Fortran code path passing 64 to shift in `hwint.h:293`.
 Add bounds check.
@@ -231,6 +247,7 @@ Debug `trans-openmp.cc` `clause_default_ctor`.
 | #12 | 123280 | acc_is_present assumed-shape | on-mailing-list |
 | #13 | 96080 | OpenACC pointer semantics | on-mailing-list |
 | #14 | 123282 | OpenACC refcount bug | on-bugzilla |
+| #56 | 82721 | CHARACTER duplicate declaration ICE | patch-ready |
 
 ---
 
