@@ -1,26 +1,44 @@
 ! { dg-do compile }
 ! PR fortran/124235 - ICE in ALLOCATE of sub-objects with recursive types
 !
-! Allocating a sub-object of an already-allocated array component
-! of a derived type with recursive/mutually-referencing structure
-! causes an ICE during tree lowering.
+! Mutually-referencing derived types with a mix of allocatable and
+! fixed-size array components. Allocating a sub-object of an
+! already-allocated component triggers an ICE in tree lowering.
 
 program pr124235
   implicit none
 
-  type :: node_t
-    integer, allocatable :: values(:)
-    type(node_t), allocatable :: children(:)
+  type :: alpha_t
+    integer, allocatable :: vals(:)
+    type(alpha_t), allocatable :: a_kids(:)
+    type(gamma_t), allocatable :: g_ref(:)
     integer :: tag
+    type(beta_t), allocatable :: b_ref(:)
   end type
 
-  type :: tree_t
-    type(node_t), allocatable :: roots(:)
+  type :: beta_t
+    integer, allocatable :: vals(:)
+    type(alpha_t) :: a_fixed(4)
+    type(beta_t), allocatable :: b_kids(:)
+    integer :: tag
+    type(gamma_t), allocatable :: g_ref(:)
   end type
 
-  type(tree_t) :: forest
+  type :: gamma_t
+    integer, allocatable :: vals(:)
+    type(beta_t) :: b_fixed(4)
+    integer :: tag
+    type(gamma_t), allocatable :: g_kids(:)
+  end type
 
-  allocate(forest%roots(4))
-  allocate(forest%roots(1)%children(3))
+  type :: container_t
+    type(gamma_t), allocatable :: items(:)
+    type(gamma_t), allocatable :: spares(:)
+  end type
+
+  type(container_t) :: box
+
+  allocate(box%items(6))
+  allocate(box%items(2)%g_kids(3))
 
 end program

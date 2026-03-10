@@ -446,6 +446,39 @@ README.md header format:
 - **Status:** PENDING (patch on fork) | MERGED (gcc commit abc123)
 ```
 
+## Issue Management (krystophny/gcc-dev)
+
+Each GCC PR tracked in this repo has a GitHub issue. Issues use additive labels
+to track progress through the submission pipeline:
+
+| Label | Meaning |
+|-------|---------|
+| `patch-ready` | Working patch exists on the fork |
+| `on-bugzilla` | Patch/analysis posted to GCC Bugzilla |
+| `on-mailing-list` | Patch sent to gcc-patches@ mailing list |
+| (closed) | Merged upstream |
+
+Labels are additive: an issue can have all three simultaneously.
+
+### When adding labels, always include a comment with links:
+
+- **on-bugzilla**: link to the Bugzilla bug
+  `https://gcc.gnu.org/bugzilla/show_bug.cgi?id=<number>`
+- **on-mailing-list**: link to the mailing list archive post
+  `https://gcc.gnu.org/pipermail/gcc-patches/YYYY-Month/NNNNNN.html`
+
+### When closing issues (merged upstream), always include:
+
+- Link to the upstream commit:
+  `https://gcc.gnu.org/git/?p=gcc.git;a=commit;h=<hash>`
+- The GCC revision tag (e.g., `r16-7700-ge0b70284cfa`)
+
+Example close comment:
+```
+Merged upstream: r16-7700-ge0b70284cfa
+https://gcc.gnu.org/git/?p=gcc.git;a=commit;h=e0b70284cfa...
+```
+
 ## Current Patch Status
 
 **On origin (individual branches + integration branch `openacc`):**
@@ -457,9 +490,8 @@ README.md header format:
 | 103276 | `pr103276-fix` | Skip pointer mapping for pass-by-ref in ENTER/EXIT DATA |
 | 123252 | `pr123252-fix` | Map scalar fields on enter data for components |
 | 123282 | `pr123282-fix` | Fix OpenACC refcount for Fortran allocatable array descriptors |
-| 124235 | `pr124235-fix` | Fix ICE in ALLOCATE of sub-objects with recursive types |
 
-**Merged upstream:** 32365, 90519, 92613, 96255, 107721, 121472, 121475, 121628, 123868
+**Merged upstream:** 32365, 90519, 92613, 96255, 107721, 121472, 121475, 121628, 123868, 123943, 123947, 123949, 124208, 124235
 
 ## aarch64 Testing (Hetzner Cloud)
 
