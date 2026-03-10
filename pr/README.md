@@ -13,6 +13,7 @@ Minimal reproducers and patches for GCC Fortran and libgomp bugs.
 | [95338](95338/) | ENTRY + `-ff2c` ICE | [#68](https://github.com/krystophny/gcc-dev/issues/68) |
 | [103276](103276/) | OpenACC ENTER DATA duplicate mapping | [#10](https://github.com/krystophny/gcc-dev/issues/10) |
 | [106946](106946/) | ICE on invalid CLASS component in derived type | [#88](https://github.com/krystophny/gcc-dev/issues/88) |
+| [120286](120286/) | OpenMP polymorphic pointer privatization | [#95](https://github.com/krystophny/gcc-dev/issues/95) |
 | [123252](123252/) | OpenACC scalar member wrong value | [#11](https://github.com/krystophny/gcc-dev/issues/11) |
 | [123280](123280/) | acc_is_present fails for assumed-shape | [#12](https://github.com/krystophny/gcc-dev/issues/12) |
 | [96080](96080/) | acc_is_present fails for pointers | [#13](https://github.com/krystophny/gcc-dev/issues/13) |
@@ -28,7 +29,6 @@ Minimal reproducers and patches for GCC Fortran and libgomp bugs.
 | 101760 | Deferred-length char + OMP target ICE | [#76](https://github.com/krystophny/gcc-dev/issues/76) |
 | 109788 | UB shift exponent 64 in IPA/Fortran path | [#91](https://github.com/krystophny/gcc-dev/issues/91) |
 | 110626 | Duplicated finalization in derived assignment | [#92](https://github.com/krystophny/gcc-dev/issues/92) |
-| 120286 | OpenMP double free with polymorphic pointer use | [#95](https://github.com/krystophny/gcc-dev/issues/95) |
 | 120723 | OpenACC `attach(scalar)` ICE | [#96](https://github.com/krystophny/gcc-dev/issues/96) |
 
 ## Merged Upstream
