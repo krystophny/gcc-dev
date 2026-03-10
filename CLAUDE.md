@@ -367,6 +367,25 @@ the undo machinery.  CLASS container symbols created by
 **Evidence:** PR106946.  PR82721 may be the same general family of bug, but
 that still needs to be verified from a stack trace or reduced fix.
 
+### Pattern 9: Namespace Charlen Nodes Surviving Rejected Declarations
+
+**Symptom:** Invalid `CHARACTER(len(...))` declarations diagnose correctly and
+then later crash or emit corrupted follow-up errors while resolving the length
+expression.
+
+**Root cause:** `gfc_new_charlen` pushes fresh `gfc_charlen` nodes onto the
+current namespace `cl_list`, but `reject_statement()` does not undo that list.
+If declaration processing fails before the charlen is attached to a surviving
+symbol, the stale `len(...)` expression remains reachable from the namespace and
+later resolves through dangling symtree pointers.
+
+**Fix:** Clean up the unattached charlen at the exact failure point that rejects
+the declaration.  Do not bulk-roll back all fresh `cl_list` nodes for the whole
+statement, because some invalid declarations intentionally keep their charlen
+state around for later diagnostics.
+
+**Evidence:** PR82721.
+
 ## Fix Development Rules
 
 ### DO
