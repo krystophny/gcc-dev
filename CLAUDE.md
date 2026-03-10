@@ -404,6 +404,23 @@ equivalently from the last relevant reference), not from the first
 
 **Evidence:** PR102459.
 
+### Pattern 11: OpenMP Hooks Must Tolerate Missing Outer References When Unused
+
+**Symptom:** OpenMP lowering ICEs in a language hook such as
+`gfc_omp_clause_default_ctor` because `outer == NULL_TREE`.
+
+**Root cause:** The middle end can legitimately invoke the hook without an
+outer reference in some reduction paths.  If the language-specific constructor
+path only needs fresh local storage and does not actually read outer state,
+asserting on a non-null outer reference is too strict.
+
+**Fix:** Require `outer` only for cases that actually use it, such as copied
+descriptors or recursive walks of allocatable components.  Keep the assertion
+for those cases; relax it only for the plain scalar cases that do not inspect
+the outer object.
+
+**Evidence:** PR102596.
+
 ## Fix Development Rules
 
 ### DO

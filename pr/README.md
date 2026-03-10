@@ -8,6 +8,7 @@ Minimal reproducers and patches for GCC Fortran and libgomp bugs.
 |----|-------|--------------|
 | [102430](102430/) | OpenMP linear(array) ICE | [#9](https://github.com/krystophny/gcc-dev/issues/9) |
 | [102459](102459/) | OMP iterator component array ICE | [#79](https://github.com/krystophny/gcc-dev/issues/79) |
+| [102596](102596/) | OMP task reduction ctor ICE | [#80](https://github.com/krystophny/gcc-dev/issues/80) |
 | [103276](103276/) | OpenACC ENTER DATA duplicate mapping | [#10](https://github.com/krystophny/gcc-dev/issues/10) |
 | [106946](106946/) | ICE on invalid CLASS component in derived type | [#88](https://github.com/krystophny/gcc-dev/issues/88) |
 | [123252](123252/) | OpenACC scalar member wrong value | [#11](https://github.com/krystophny/gcc-dev/issues/11) |
@@ -25,7 +26,6 @@ Minimal reproducers and patches for GCC Fortran and libgomp bugs.
 | 82721 | Corrupted error message / ICE after duplicate type | [#56](https://github.com/krystophny/gcc-dev/issues/56) |
 | 95338 | ENTRY + `-ff2c` ICE | [#68](https://github.com/krystophny/gcc-dev/issues/68) |
 | 101760 | Deferred-length char + OMP target ICE | [#76](https://github.com/krystophny/gcc-dev/issues/76) |
-| 102596 | OMP task reduction ctor ICE | [#80](https://github.com/krystophny/gcc-dev/issues/80) |
 | 109788 | UB shift exponent 64 in IPA/Fortran path | [#91](https://github.com/krystophny/gcc-dev/issues/91) |
 | 110626 | Duplicated finalization in derived assignment | [#92](https://github.com/krystophny/gcc-dev/issues/92) |
 | 120286 | OpenMP double free with polymorphic pointer use | [#95](https://github.com/krystophny/gcc-dev/issues/95) |
