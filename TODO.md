@@ -414,14 +414,86 @@ Verified: commit and patch both contain `Signed-off-by:`.
 
 ---
 
+## PR110877 (#101) - Patch Ready [DONE]
+
+**Status:** PATCH READY. Full `check-gfortran` passed, signed patch exported
+and pushed on branch `origin/pr110877-fix` (`55493d38c01`).
+
+### Task list
+
+- [x] Task 1: Reproduce the polymorphic dummy-array wrong-code case.
+- [x] Task 1 review: Confirm the shallow-copy split between `g = f` and
+  `allocate(g, source=f)` from the tree dump.
+- [x] Task 2: Debug the scalarized class-assignment path in `trans-expr.cc`.
+- [x] Task 2 review: Verify the missing deep copy comes from losing the class
+  container/vptr on dummy-array element references.
+- [x] Task 3: Implement the minimal fix and add a regression test.
+- [x] Task 3 review: Narrow the new path to nonpointer dummy arrays and recheck
+  nearby class/finalization code paths for regressions.
+- [x] Task 4: Rebuild the frontend and run direct plus targeted validation.
+- [x] Task 4 review: Recheck the original reproducer, `class_transformational_1`,
+  `class_assign_4`, `finalize_59`, `class_dummy_6`, and `pr99326`.
+- [x] Task 5: Run a clean full `check-gfortran`.
+- [x] Task 5 review: Confirm the merged `gfortran.sum` has `0` `FAIL`/`XPASS`.
+- [x] Task 6: Commit, `gcc-verify`, export, push, and update issue `#101`.
+- [x] Task 6 review: Verify the signed commit, exported patch footer, branch
+  state, and issue metadata.
+
+**Reproducer:**
+
+```fortran
+module m
+  type :: foo_t
+  end type foo_t
+  type, extends(foo_t) :: bar_t
+    real, allocatable :: a
+  end type bar_t
+end module m
+
+program p
+  use m
+  class(foo_t), allocatable :: f(:), g(:)
+
+  allocate(bar_t :: f(1))
+  select type (f)
+  class is (bar_t)
+    allocate(f(1)%a)
+  end select
+
+  g = f
+end
+```
+
+Expected end state:
+- `g = f` preserves allocation status of `bar_t%a`
+- no shallow-copy loss of allocatable components for scalarized dummy-array
+  elements
+
+**Root cause:** Scalarized intrinsic assignment from a polymorphic dummy array
+element fell into the generic class-element hook with `rse.expr` already
+reduced to the data object.  That meant `gfc_get_vptr_from_expr (rse.expr)`
+returned `NULL_TREE`, so the assignment silently skipped the `_copy` path and
+performed a raw struct copy.  Allocatable components in the dynamic type were
+therefore not deep-copied.
+
+**Current local fix:** Detect the narrow case of nonpointer, nonallocatable
+class dummy arrays in `gfc_trans_assignment_1`.  When scalarization has peeled
+off an element and `rse.expr` no longer carries the class container, recover
+the vptr from the original dummy `gfc_expr` and reuse the existing `_copy`
+machinery.  Keep the new path out of class pointers and allocatables so
+pointer-style class results continue to use plain assignment.  The regression
+test `gfortran.dg/pr110877.f90` checks both `g = f` and
+`allocate(g, source=f)`.
+
+Patch exported: `pr/110877/0001-fortran-Fix-class-dummy-array-assignment-deep-copy-P.patch`
+Verified: commit and patch both contain `Signed-off-by:`.
+
+---
+
 ## Backlog Audit (2026-03-10)
 
 **Confirmed locally still reproducing with dedicated validation:**
 
-- `PR110877` (`#101`) - assignment from a polymorphic array dummy argument
-  drops allocatable components on `g = f` while `allocate(g, source=f)`
-  preserves them.  Current WIP fix reproduces the expected `T/T` behavior but
-  regresses `class_transformational_1.f90`, so it is not patch-ready yet.
 - `PR120723` (`#96`) - with local `openacc.mod`, `!$acc enter data
   attach(scalar)` still ICEs with `unexpected pointer mapping node`.
 
@@ -469,14 +541,9 @@ Add bounds check.
 | GH# | PR | Title | Category |
 |-----|----|-------|----------|
 | #76 | 101760 | ICE deferred-len + OMP target | ice, openmp |
-| #101 | 110877 | Dummy class assignment loses alloc comps | wrong-code, polymorphism |
 
 **PR101760:** SSA name wrong type for deferred-length char with OMP target.
 Debug `trans-openmp.cc` target clause generation.
-
-**PR110877:** Reuse the dummy-array class container for scalarized element copy
-without perturbing unrelated class-transformational lowering.  Current WIP
-fixes the reproducer but regresses `class_transformational_1.f90`.
 
 ### P4 - High Complexity
 
