@@ -421,6 +421,23 @@ the outer object.
 
 **Evidence:** PR102596.
 
+### Pattern 12: Mixed ENTRY Results Must Use ABI Return Types
+
+**Symptom:** A mixed `ENTRY` function compiles until the GIMPLE verifier sees a
+non-trivial conversion in `COMPONENT_REF`, often only with ABI-changing flags
+such as `-ff2c`.
+
+**Root cause:** Shared mixed-ENTRY master unions are easy to build from the
+Fortran result symbol types, but those are not always the frontend ABI return
+types.  Under `-ff2c`, default `REAL` entries still have default-REAL result
+symbols while their wrappers return C `double`.
+
+**Fix:** When building shared ENTRY result storage, derive each field from the
+actual ABI return type of the entry wrapper, not from the raw Fortran result
+symbol type.
+
+**Evidence:** PR95338.
+
 ## Fix Development Rules
 
 ### DO
@@ -599,6 +616,10 @@ https://gcc.gnu.org/git/?p=gcc.git;a=commit;h=e0b70284cfa...
 | PR | Branch | Description |
 |----|--------|-------------|
 | 102430 | `origin/master` | Reject array/allocatable LINEAR on DO |
+| 82721 | `pr82721-fix` | Fix CHARACTER duplicate declaration ICE |
+| 95338 | `pr95338-fix` | Fix mixed ENTRY union ABI under `-ff2c` |
+| 102459 | `pr102459-fix` | Fix OMP iterator component array ICE |
+| 102596 | `pr102596-fix` | Allow task-reduction allocatable scalars without outer ref |
 | 123280+96080 | `pr123280-fix` | Fix acc_is_present for assumed-shape and pointers |
 | 103276 | `pr103276-fix` | Skip pointer mapping for pass-by-ref in ENTER/EXIT DATA |
 | 123252 | `pr123252-fix` | Map scalar fields on enter data for components |

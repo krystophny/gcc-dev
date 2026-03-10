@@ -268,11 +268,82 @@ Verified: commit and patch both contain `Signed-off-by:`.
 
 ---
 
+## PR95338 (#68) - Patch Ready [DONE]
+
+**Status:** PATCH READY. Full `check-gfortran` passed, signed patch exported
+and pushed on branch `origin/pr95338-fix` (`4ddac5d947e1`).
+
+### Task list
+
+- [x] Task 1: Reproduce the `-O1 -ff2c` mixed-ENTRY ICE and inspect the
+  generated master union.
+- [x] Task 1 review: Confirm the wrapper returns `real(kind=8)` while the
+  shared union still stores `real(kind=4)` for the ENTRY result.
+- [x] Task 2: Debug where the mixed-ENTRY union field types are chosen.
+- [x] Task 2 review: Verify the ABI mismatch belongs in `trans-types.cc`
+  rather than the wrapper-return code in `trans-decl.cc`.
+- [x] Task 3: Implement the minimal fix and add a regression test.
+- [x] Task 3 review: Keep the change limited to mixed-ENTRY union field typing
+  and preserve existing wrapper signatures.
+- [x] Task 4: Rebuild and run direct plus targeted PR95338 validation.
+- [x] Task 4 review: Check the fresh `-fdump-tree-original` output and confirm
+  `master.0.f` now uses `real(kind=8)` for entry `g`.
+- [x] Task 5: Run a clean full `check-gfortran`.
+- [x] Task 5 review: Check merged `gfortran.sum` for `0` `FAIL`/`XPASS`.
+- [x] Task 6: Commit, `gcc-verify`, export, push, and update issue `#68`.
+- [x] Task 6 review: Verify signed commit, exported patch footer, branch state,
+  and issue metadata.
+
+**Reproducer:**
+
+```fortran
+module m
+contains
+   function f(x)
+      integer :: x
+      integer :: f
+      real :: g
+      f = x
+      return
+   entry g(x)
+      g = x
+   end
+end
+program p
+   use m
+   print *, f(1)
+   print *, g(1)
+end
+```
+
+Expected end state:
+- successful compile with `-O1 -ff2c`
+- no internal compiler error
+
+**Root cause:** `gfc_get_mixed_entry_union` built each shared union field from
+the Fortran result symbol type.  Under `-ff2c`, default `REAL` ENTRY wrappers
+return C `double`, so the wrapper for `g` returned `real(kind=8)` while the
+master union field stayed `real(kind=4)`.  That left a non-trivial conversion
+inside `COMPONENT_REF`, and the GIMPLE verifier rejected the lowered code.
+
+**Current local fix:** Build mixed-ENTRY union fields from the ABI return type
+instead of the raw Fortran result symbol type, so default `REAL` ENTRY results
+under `-ff2c` contribute a `real(kind=8)` union member.  The regression test
+`gfortran.dg/pr95338.f90` covers the original mixed `INTEGER`/`REAL` ENTRY
+case under `-O1 -ff2c`.
+
+Patch exported: `pr/95338/0001-fortran-Fix-mixed-ENTRY-union-ABI-under-ff2c-PR95338.patch`
+Verified: commit and patch both contain `Signed-off-by:`.
+
+---
+
 ## Backlog Audit (2026-03-10)
 
-**Confirmed locally still reproducing with `gcc-build/gcc/gfortran -B gcc-build/gcc`:**
+**Confirmed locally still reproducing with dedicated validation:**
 
-- `PR95338` (`#68`) - exact `-O1 -ff2c` compile still ICEs.
+- `PR120286` (`#95`) - runtime OpenMP reproducer still segfaults, and the
+  `omplower` dump shows privatized polymorphic pointer cleanup freeing the
+  shared pointee on thread exit.
 
 **Quick compile check did not reproduce immediately; re-verify before spending
 fix time:**
@@ -323,10 +394,7 @@ Add bounds check.
 
 | GH# | PR | Title | Category |
 |-----|----|-------|----------|
-| #68 | 95338 | ICE ENTRY + -ff2c | ice |
 | #76 | 101760 | ICE deferred-len + OMP target | ice, openmp |
-
-**PR95338:** ENTRY + `-ff2c` calling convention mismatch. Debug `trans-decl.cc`.
 
 **PR101760:** SSA name wrong type for deferred-length char with OMP target.
 Debug `trans-openmp.cc` target clause generation.
@@ -357,6 +425,7 @@ Debug `trans-openmp.cc` target clause generation.
 | #13 | 96080 | OpenACC pointer semantics | on-mailing-list |
 | #14 | 123282 | OpenACC refcount bug | on-bugzilla |
 | #56 | 82721 | CHARACTER duplicate declaration ICE | patch-ready |
+| #68 | 95338 | ENTRY + -ff2c ICE | patch-ready |
 | #79 | 102459 | OMP iterator component array ICE | patch-ready |
 | #80 | 102596 | OMP task reduction ctor ICE | patch-ready |
 

@@ -1,0 +1,113 @@
+From 4ddac5d947e1e8bb718fb9cca5aeab865c350420 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Tue, 10 Mar 2026 19:44:29 +0100
+Subject: [PATCH] fortran: Fix mixed ENTRY union ABI under -ff2c [PR95338]
+
+Mixed ENTRY masters store each result in a shared union.  Under -ff2c,
+default REAL entries use the C double ABI even though their Fortran result
+symbols remain default REAL.  Building the union directly from the Fortran
+result symbols therefore gives the entry wrapper a real(kind=8) return type
+but leaves the master union field at real(kind=4), which later trips the
+GIMPLE verifier with a non-trivial conversion in COMPONENT_REF.
+
+Build the mixed ENTRY union fields from the ABI return type instead, so
+default REAL entries under -ff2c contribute a real(kind=8) field.  Add a
+regression test for the original mixed INTEGER/REAL ENTRY reproducer.
+
+gcc/fortran/ChangeLog:
+
+	PR fortran/95338
+	* trans-types.cc (gfc_get_entry_result_type): New helper to use the
+	ABI return type for mixed ENTRY union fields.
+	(gfc_get_mixed_entry_union): Use it for each entry result field.
+
+gcc/testsuite/ChangeLog:
+
+	PR fortran/95338
+	* gfortran.dg/pr95338.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/trans-types.cc            | 24 +++++++++++++++++++++++-
+ gcc/testsuite/gfortran.dg/pr95338.f90 | 27 +++++++++++++++++++++++++++
+ 2 files changed, 50 insertions(+), 1 deletion(-)
+ create mode 100644 gcc/testsuite/gfortran.dg/pr95338.f90
+
+diff --git a/gcc/fortran/trans-types.cc b/gcc/fortran/trans-types.cc
+index 4d6d1bbb915..5e88a377c81 100644
+--- a/gcc/fortran/trans-types.cc
++++ b/gcc/fortran/trans-types.cc
+@@ -3248,6 +3248,27 @@ gfc_return_by_reference (gfc_symbol * sym)
+   return 0;
+ }
+ 
++static tree
++gfc_get_entry_result_type (gfc_symbol *sym)
++{
++  tree type;
++
++  type = gfc_sym_type (sym->result);
++
++  /* Mixed ENTRY master unions must use the ABI return type of each entry.
++     Under -ff2c, default REAL entries return C double even though their
++     Fortran result symbol remains default REAL.  */
++  if (flag_f2c
++      && sym->ts.type == BT_REAL
++      && sym->ts.kind == gfc_default_real_kind
++      && !sym->attr.pointer
++      && !sym->attr.allocatable
++      && !sym->attr.always_explicit)
++    type = gfc_get_real_type (gfc_default_double_kind);
++
++  return type;
++}
++
+ static tree
+ gfc_get_mixed_entry_union (gfc_namespace *ns)
+ {
+@@ -3276,7 +3297,8 @@ gfc_get_mixed_entry_union (gfc_namespace *ns)
+       if (el == el2)
+ 	gfc_add_field_to_struct_1 (type,
+ 				   get_identifier (el->sym->result->name),
+-				   gfc_sym_type (el->sym->result), &chain);
++				   gfc_get_entry_result_type (el->sym),
++				   &chain);
+     }
+ 
+   /* Finish off the type.  */
+diff --git a/gcc/testsuite/gfortran.dg/pr95338.f90 b/gcc/testsuite/gfortran.dg/pr95338.f90
+new file mode 100644
+index 00000000000..712b5911207
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr95338.f90
+@@ -0,0 +1,27 @@
++! { dg-do run }
++! { dg-additional-options "-O1 -ff2c" }
++!
++! PR fortran/95338 - mixed ENTRY results with -ff2c must use the ABI
++! return type in the master union.
++
++module m
++contains
++  function f(x)
++    integer :: x
++    integer :: f
++    real :: g
++
++    f = x
++    return
++
++    entry g(x)
++    g = x
++  end
++end
++
++program p
++  use m
++
++  if (f(1) /= 1) stop 1
++  if (g(1) /= 1.0) stop 2
++end
+-- 
+2.53.0
+
