@@ -550,13 +550,40 @@ SSH agent forwarding (`-A`) is used throughout for GitHub fork access.
 **ABSOLUTELY FORBIDDEN without explicit user permission:**
 - `git send-email` to gcc-patches@gcc.gnu.org
 - Posting to any GCC mailing list
-- Updating Bugzilla
+- Updating Bugzilla (posting comments, attaching files)
 - Any external communication
 
-**NEVER use git send-email or contact gcc-patches@ - this is a HARD RULE.**
+**NEVER use git send-email, gcc-send-patch.sh, or gcc-bugzilla.sh attach
+without the user explicitly requesting it - this is a HARD RULE.**
 
 Permitted without approval:
 - Prepare patches, run tests, document readiness
 - Push to origin (krystophny/gcc fork)
 - Create PRs in the fork
 - Export patches with `git format-patch`
+- Query Bugzilla for bug info (`gcc-bugzilla.sh info <number>`)
+
+### Tooling
+
+**Bugzilla CLI** (`python-bugzilla`):
+```bash
+# Query bug info (always permitted)
+scripts/gcc-bugzilla.sh info <pr-number>
+
+# Attach a patch (REQUIRES explicit user permission)
+scripts/gcc-bugzilla.sh attach <pr-number> <file>
+
+# Login (one-time, saves token in ~/.bugzillarc)
+scripts/gcc-bugzilla.sh login
+```
+
+**Mailing list** (`git send-email`, configured in gcc/):
+```bash
+# Send patch (REQUIRES explicit user permission)
+scripts/gcc-send-patch.sh pr/<number>/0001-*.patch
+
+# Dry run (preview without sending, always permitted)
+scripts/gcc-send-patch.sh --dry-run pr/<number>/0001-*.patch
+```
+
+Both scripts have interactive confirmation prompts as a safety net.
