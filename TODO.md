@@ -149,18 +149,78 @@ Verified: commit and patch both contain `Signed-off-by:`.
 
 ---
 
+## PR102459 (#79) - Patch Ready [DONE]
+
+**Status:** PATCH READY. Full `check-gfortran` passed, signed patch exported
+and pushed on branch `origin/pr102459-fix` (`dcc53363931b`).
+
+### Task list
+
+- [x] Task 1: Reproduce the OpenMP iterator ICE and inspect the failing clause path.
+- [x] Task 1 review: Confirm the crash enters `gfc_conv_scalarized_array_ref`
+  with missing scalarizer state.
+- [x] Task 2: Debug the reference-shape mismatch in `trans-openmp.cc`.
+- [x] Task 2 review: Verify the whole expression is rank-1 even though the first
+  `REF_ARRAY` is `AR_ELEMENT`.
+- [x] Task 3: Implement the minimal fix and add a regression test.
+- [x] Task 3 review: Check that scalar locators still use the reference path.
+- [x] Task 4: Rebuild and run direct plus targeted PR102459 validation.
+- [x] Task 4 review: Inspect direct `-fsyntax-only` and `-O -S` behavior for
+  both `x(j)%a` and `x(j)%a(1)`.
+- [x] Task 5: Run a clean full `check-gfortran`.
+- [x] Task 5 review: Check merged `gfortran.sum` for `0` `FAIL`/`XPASS`.
+- [x] Task 6: Commit, `gcc-verify`, export, push, and update issue `#79`.
+- [x] Task 6 review: Verify the signed commit, exported patch footer, branch
+  state, and issue metadata.
+
+**Reproducer:**
+
+```fortran
+program p
+   type t
+      integer :: a(2)
+   end type
+   type(t) :: x(8)
+   !$omp task depend (iterator(j=1:8), out:x(j)%a)
+   !$omp end task
+end
+```
+
+Expected end state:
+- successful compile
+- no internal compiler error
+
+**Root cause:** `gfc_trans_omp_clauses` used
+`n->expr->ref->u.ar.type == AR_ELEMENT` to decide between scalar-reference and
+array-descriptor lowering.  For `x(j)%a`, the first `REF_ARRAY` is the scalar
+base element `x(j)`, but the full expression is still the rank-1 component
+array `a`.  That sends an array-valued expression through
+`gfc_conv_expr_reference`, which later reaches
+`gfc_conv_scalarized_array_ref` with `se->ss == NULL` and ICEs.
+
+**Current local fix:** Choose the lowering path from `n->expr->rank == 0`
+instead of the first `REF_ARRAY` kind, so `x(j)%a` goes through
+`gfc_conv_expr_descriptor` while true scalars like `x(j)%a(1)` still use the
+reference path.  Apply the same change to `gfc_trans_omp_depobj`.  The
+regression test `gfortran.dg/pr102459.f90` covers both the original array case
+and the scalar control case.
+
+Patch exported: `pr/102459/0001-fortran-Fix-OpenMP-iterator-depend-lowering-for-comp.patch`
+Verified: commit and patch both contain `Signed-off-by:`.
+
+---
+
 ## Backlog Audit (2026-03-10)
 
 **Confirmed locally still reproducing with `gcc-build/gcc/gfortran -B gcc-build/gcc`:**
 
-- `PR102459` (`#79`) - still ICEs with `-fopenmp`.
+- `PR95338` (`#68`) - exact `-O1 -ff2c` compile still ICEs.
+- `PR102596` (`#80`) - exact `-fopenmp` compile still ICEs in OMP lowering.
 
 **Quick compile check did not reproduce immediately; re-verify before spending
 fix time:**
 
-- `PR95338` (`#68`) - quick `-O1 -ff2c` compile did not ICE.
 - `PR101760` (`#76`) - quick `-fopenmp` compile did not ICE.
-- `PR102596` (`#80`) - quick `-fopenmp` compile did not ICE.
 
 **Needs dedicated re-check / special setup:**
 
@@ -208,16 +268,12 @@ Add bounds check.
 |-----|----|-------|----------|
 | #68 | 95338 | ICE ENTRY + -ff2c | ice |
 | #76 | 101760 | ICE deferred-len + OMP target | ice, openmp |
-| #79 | 102459 | ICE OMP iterator array ref | ice, openmp |
 | #80 | 102596 | ICE OMP task reduction ctor | ice, openmp |
 
 **PR95338:** ENTRY + `-ff2c` calling convention mismatch. Debug `trans-decl.cc`.
 
 **PR101760:** SSA name wrong type for deferred-length char with OMP target.
 Debug `trans-openmp.cc` target clause generation.
-
-**PR102459:** Scalarizer wrong for OMP iterator variables. Debug
-`trans-openmp.cc` iterator lowering.
 
 **PR102596:** Default constructor fails for OMP task reduction derived type.
 Debug `trans-openmp.cc` `clause_default_ctor`.
@@ -248,6 +304,7 @@ Debug `trans-openmp.cc` `clause_default_ctor`.
 | #13 | 96080 | OpenACC pointer semantics | on-mailing-list |
 | #14 | 123282 | OpenACC refcount bug | on-bugzilla |
 | #56 | 82721 | CHARACTER duplicate declaration ICE | patch-ready |
+| #79 | 102459 | OMP iterator component array ICE | patch-ready |
 
 ---
 

@@ -386,6 +386,24 @@ state around for later diagnostics.
 
 **Evidence:** PR82721.
 
+### Pattern 10: OpenMP Clause Lowering Must Use Overall Expression Rank
+
+**Symptom:** OpenMP `depend` or `depobj` locators with nested references such
+as `x(j)%a` ICE during lowering, often in
+`gfc_conv_scalarized_array_ref` with missing scalarizer state.
+
+**Root cause:** Clause lowering looks only at the first `REF_ARRAY` to decide
+whether a locator is scalar or array-valued.  For `x(j)%a`, that first array
+reference is the scalar base element `x(j)`, but the full expression is still
+the rank-1 component array `a`.
+
+**Fix:** Choose between `gfc_conv_expr_reference` and
+`gfc_conv_expr_descriptor` from the rank of the full expression (or
+equivalently from the last relevant reference), not from the first
+`REF_ARRAY`.
+
+**Evidence:** PR102459.
+
 ## Fix Development Rules
 
 ### DO
