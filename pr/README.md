@@ -9,6 +9,8 @@ Minimal reproducers and patches for GCC Fortran and libgomp bugs.
 | [102430](102430/) | OpenMP linear(array) ICE | [#9](https://github.com/krystophny/gcc-dev/issues/9) |
 | [102459](102459/) | OMP iterator component array ICE | [#79](https://github.com/krystophny/gcc-dev/issues/79) |
 | [102596](102596/) | OMP task reduction ctor ICE | [#80](https://github.com/krystophny/gcc-dev/issues/80) |
+| [82721](82721/) | CHARACTER duplicate declaration ICE | [#56](https://github.com/krystophny/gcc-dev/issues/56) |
+| [95338](95338/) | ENTRY + `-ff2c` ICE | [#68](https://github.com/krystophny/gcc-dev/issues/68) |
 | [103276](103276/) | OpenACC ENTER DATA duplicate mapping | [#10](https://github.com/krystophny/gcc-dev/issues/10) |
 | [106946](106946/) | ICE on invalid CLASS component in derived type | [#88](https://github.com/krystophny/gcc-dev/issues/88) |
 | [123252](123252/) | OpenACC scalar member wrong value | [#11](https://github.com/krystophny/gcc-dev/issues/11) |
@@ -23,8 +25,6 @@ Minimal reproducers and patches for GCC Fortran and libgomp bugs.
 | 42954 | TARGET_*_CPP_BUILTINS missing | [#52](https://github.com/krystophny/gcc-dev/issues/52) |
 | 60576 | assumed_rank_7.f90 failure | [#53](https://github.com/krystophny/gcc-dev/issues/53) |
 | 79524 | Valgrind/ASan error in `fimplicit_none_2.f90` | [#55](https://github.com/krystophny/gcc-dev/issues/55) |
-| 82721 | Corrupted error message / ICE after duplicate type | [#56](https://github.com/krystophny/gcc-dev/issues/56) |
-| 95338 | ENTRY + `-ff2c` ICE | [#68](https://github.com/krystophny/gcc-dev/issues/68) |
 | 101760 | Deferred-length char + OMP target ICE | [#76](https://github.com/krystophny/gcc-dev/issues/76) |
 | 109788 | UB shift exponent 64 in IPA/Fortran path | [#91](https://github.com/krystophny/gcc-dev/issues/91) |
 | 110626 | Duplicated finalization in derived assignment | [#92](https://github.com/krystophny/gcc-dev/issues/92) |
