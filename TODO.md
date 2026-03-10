@@ -1,426 +1,244 @@
-# Patch Analysis: PR121628 Deep Copy of Recursive Allocatable Components
+# GCC Fortran Regression Fix TODO
 
-**Patch File:** `0001-fortran-Fix-deep-copy-of-recursive-allocatable-compo.patch`
-**Analysis Date:** 2025-11-05
-**Current Branch:** fix-bug121628
-**Commit:** df6de36e752
+## PR106946 (#88) - Finalize [IN PROGRESS]
 
-## Executive Summary
+**Status:** PATCH READY. Full `check-gfortran` passed, patch exported and pushed
+on branch `origin/pr106946-fix` (`88049a3af71`).
 
-This patch successfully solves the compile-time infinite recursion bug when handling recursive allocatable array components in Fortran derived types. The core algorithm is sound and well-implemented, but has three critical issues that must be addressed before upstream submission.
+### Task list
 
-**Recommendation:** Fix critical issues #1 and #2, verify issue #3. Patch is then production-ready.
+- [x] Task 1: Review the current fix and test for correctness/minimality.
+- [x] Task 1 review: Self-review the changed code paths and test coverage before building.
+- [x] Task 2: Rebuild the affected compiler pieces and run targeted PR106946 validation.
+- [x] Task 2 review: Inspect the targeted test results and compiler behavior for regressions.
+- [x] Task 3: Run a clean full `check-gfortran`.
+- [x] Task 3 review: Check `FAIL`/`XPASS` deltas and confirm no new regressions.
+- [x] Task 4: Commit with `gcc-commit-mklog`, run `git gcc-verify`, export the patch, and push the branch.
+- [x] Task 4 review: Inspect commit metadata, generated patch contents, and pushed branch state.
+- [x] Task 5: Update `pr/106946/` and GitHub issue `#88` to `patch-ready`.
+- [x] Task 5 review: Verify the issue label/comment state and local meta-repo tracking files.
 
----
+**Files changed:**
+- `gcc/fortran/decl.cc` - CLASS component cleanup on error in `gfc_match_data_decl`
+- `gcc/fortran/symbol.cc` - Extract `gfc_free_component`, make `gfc_delete_symtree` non-static
+- `gcc/fortran/gfortran.h` - Declarations for above
+- `gcc/testsuite/gfortran.dg/pr106946.f90` - Test case
 
-## Critical Issues (Must Fix Before Upstream)
+**Root cause:** `gfc_build_class_symbol` (class.cc:747) creates CLASS container
+symbols with `gfc_new_symbol` + `gfc_new_symtree`, bypassing the undo mechanism.
+On syntax error, `gfc_undo_symbols` frees the referenced type but leaves the
+CLASS container orphaned with dangling pointers. ICE in `resolve_fl_derived`.
 
-### 1. Self-Assignment Bug (USE-AFTER-FREE)
+**Fix:** In `gfc_match_data_decl` cleanup, detect CLASS components added during
+the failed statement (via `attr.is_class` check on `ts.u.derived`), remove their
+CLASS container from the namespace symtree, release the symbol, and free the
+component. Non-CLASS components are left for secondary error reporting.
 
-**Severity:** CRITICAL - Causes crashes and memory corruption
-
-**Problem:** No identity check before copy operation. Self-assignment `a = a` triggers:
-1. Deallocation of `a%children`
-2. Allocation of new `a%children`
-3. Copy from `a%children` to `a%children` (source already freed!)
-
-**Example:**
-```fortran
-type :: node_t
-    type(node_t), allocatable :: children(:)
-end type
-type(node_t) :: a
-a = a  ! BUG: use-after-free or internal error
-```
-
-**Fix Location:** `gcc/fortran/trans-array.cc:10233-10279`
-
-**Fix Code:**
-```c
-// Add before deep copy call generation
-tree self_check = fold_build2_loc(input_location, NE_EXPR,
-                                  boolean_type_node,
-                                  gfc_build_addr_expr(NULL_TREE, dcmp),
-                                  gfc_build_addr_expr(NULL_TREE, comp));
-
-tree copy_block = /* existing deep copy code */;
-
-tree guarded_copy = build3_loc(input_location, COND_EXPR,
-                               void_type_node,
-                               self_check,
-                               copy_block,
-                               build_empty_stmt(input_location));
-
-gfc_add_expr_to_block(&fnblock, guarded_copy);
-```
-
-**Test Case Needed:** `gcc/testsuite/gfortran.dg/alloc_comp_deep_copy_7.f90`
-```fortran
-program test_self_assign
-  type :: node_t
-    type(node_t), allocatable :: children(:)
-  end type
-  type(node_t) :: a
-  allocate(a%children(2))
-  a = a  ! Should be no-op, not crash
-  if (.not. allocated(a%children)) stop 1
-end program
-```
-
----
-
-### 2. Missing Descriptor Validation (MEMORY CORRUPTION)
-
-**Severity:** CRITICAL - Silent memory corruption, buffer overflows
-
-**Problem:** Runtime function assumes compiler allocated destination correctly but never verifies. Rank mismatch, extent mismatch, or element size mismatch causes:
-- Out-of-bounds reads/writes
-- Heap corruption
-- Security vulnerabilities
-
-**Example Scenarios:**
-
-**Rank mismatch:**
-```c
-// If compiler bug allocates wrong rank
-rank = GFC_DESCRIPTOR_RANK(src);  // e.g., 2
-for (int dim = 0; dim < 2; dim++) {
-    dest_stride_bytes[dim] = GFC_DESCRIPTOR_STRIDE(dest, dim) * elem_size;
-    // If dest has rank=1, stride[1] is out of bounds - reads garbage!
-}
-```
-
-**Extent mismatch:**
-```c
-// If dest has 50 elements but src has 100
-extent[0] = GFC_DESCRIPTOR_EXTENT(src, 0);  // 100
-// Copy loop runs 100 iterations
-// After 50: writes past allocated memory - HEAP OVERFLOW
-```
-
-**Fix Location:** `libgfortran/runtime/deep_copy.c:703-728`
-
-**Fix Code:**
-```c
-// Add after line 703, before extracting extents
-
-rank = GFC_DESCRIPTOR_RANK(src);
-
-// Validate rank compatibility
-if (GFC_DESCRIPTOR_RANK(dest) != rank)
-    internal_error(NULL, "cfi_deep_copy_array: rank mismatch "
-                   "(src rank=%d, dest rank=%d)",
-                   rank, GFC_DESCRIPTOR_RANK(dest));
-
-// Validate element size compatibility
-src_elem_size = descriptor_elem_size(src);
-dest_elem_size = descriptor_elem_size(dest);
-if (src_elem_size != dest_elem_size)
-    internal_error(NULL, "cfi_deep_copy_array: element size mismatch "
-                   "(src size=%zu, dest size=%zu)",
-                   src_elem_size, dest_elem_size);
-
-// Validate extent compatibility for each dimension
-for (int dim = 0; dim < rank; dim++)
-{
-    index_type src_extent = GFC_DESCRIPTOR_EXTENT(src, dim);
-    index_type dest_extent = GFC_DESCRIPTOR_EXTENT(dest, dim);
-
-    if (src_extent != dest_extent)
-        internal_error(NULL, "cfi_deep_copy_array: extent mismatch "
-                       "in dimension %d (src extent=%ld, dest extent=%ld)",
-                       dim, (long)src_extent, (long)dest_extent);
-
-    extent[dim] = src_extent;
-    if (extent[dim] <= 0)
-        return;
-
-    src_stride_bytes[dim] = GFC_DESCRIPTOR_STRIDE(src, dim) * src_elem_size;
-    dest_stride_bytes[dim] = GFC_DESCRIPTOR_STRIDE(dest, dim) * dest_elem_size;
-    count[dim] = 0;
-}
-```
-
-**Why Critical:**
-- Defensive programming - never trust inputs, even from compiler
-- Catches compiler bugs early with clear error messages
-- Prevents silent heap corruption and security vulnerabilities
-- Cost: ~20 instructions, negligible overhead
-- Benefit: Protection against catastrophic memory corruption
-
----
-
-### 3. ABI Versioning (VERIFY TARGET)
-
-**Severity:** MEDIUM - Potential distribution package conflicts
-
-**Status:** LIKELY OK but needs verification
-
-**Analysis:**
-- Patch dated October 2025 (after GCC 15.1 release in April 2025)
-- GCC 16.1 not released until April 2026
-- GFORTRAN_16 contains only 2 symbols (minimal, suggests unreleased namespace)
-
-**If GFORTRAN_16 was NOT in GCC 15.1:** Current approach is fine
-
-**If GFORTRAN_16 WAS in GCC 15.1:** Must use sub-version
-
-**Fix Location:** `libgfortran/gfortran.map:2037-2042`
-
-**Verification Needed:**
+**Steps to finalize:**
 ```bash
-# Check if GFORTRAN_16 exists in released GCC 15.1
-nm -D /path/to/gcc-15.1/lib/libgfortran.so.5 | grep GFORTRAN_16
+cd gcc-build/gcc
+make -j32 -k check-gfortran > /tmp/test-pr106946.log 2>&1
+grep -cE "^FAIL|^XPASS" testsuite/gfortran/gfortran.sum  # must be 0
+
+cd ../../gcc
+git checkout -b pr106946-fix upstream/master
+git add gcc/fortran/decl.cc gcc/fortran/symbol.cc gcc/fortran/gfortran.h \
+        gcc/testsuite/gfortran.dg/pr106946.f90
+
+cat > /tmp/gcc-commit-msg.txt <<'EOF'
+fortran: Fix ICE on invalid CLASS component in derived type [PR106946]
+
+When a CLASS component declaration inside a derived type has a syntax
+error (e.g., missing comma), gfc_build_class_symbol creates a CLASS
+container symbol outside the undo mechanism.  On error recovery,
+gfc_undo_symbols frees the referenced type but leaves the CLASS
+container as an orphan with dangling pointers, causing an ICE during
+resolution.
+
+Fix by detecting and removing CLASS container components and their
+symbols from the namespace during error cleanup in gfc_match_data_decl.
+Also extract gfc_free_component helper from free_components and make
+gfc_delete_symtree available outside symbol.cc.
+
+gcc/fortran/ChangeLog:
+
+	PR fortran/106946
+	* decl.cc (gfc_match_data_decl): Remove CLASS components and their
+	container symbols on MATCH_ERROR inside derived type definitions.
+	* symbol.cc (gfc_free_component): New, extracted from free_components.
+	(free_components): Use gfc_free_component.
+	(gfc_delete_symtree): Make non-static.
+	* gfortran.h (gfc_free_component): Declare.
+	(gfc_delete_symtree): Declare.
+
+gcc/testsuite/ChangeLog:
+
+	PR fortran/106946
+	* gfortran.dg/pr106946.f90: New test.
+EOF
+GCC_FORCE_MKLOG=1 GCC_MKLOG_ARGS='["-b", "fortran/106946"]' \
+  git commit -s -F /tmp/gcc-commit-msg.txt
+git gcc-verify HEAD
+git format-patch -1 HEAD -o ../pr/106946/
+git push origin pr106946-fix
 ```
 
-**Alternative Fix (if needed):**
-```map
-GFORTRAN_16 {
-  global:
-    _gfortran_string_split;
-    _gfortran_string_split_char4;
-} GFORTRAN_15.2;
+Patch exported: `pr/106946/0001-fortran-Fix-ICE-on-invalid-CLASS-component-in-derive.patch`
 
-GFORTRAN_16.1 {
-  global:
-    _gfortran_cfi_deep_copy_array;
-} GFORTRAN_16;
+Then: `gh issue edit 88 --add-label patch-ready`
+
+---
+
+## Backlog Audit (2026-03-10)
+
+**Confirmed locally still reproducing with `gcc-build/gcc/gfortran -B gcc-build/gcc`:**
+
+- `PR82721` (`#56`) - still ICEs after the duplicate-type diagnostic.
+- `PR102459` (`#79`) - still ICEs with `-fopenmp`.
+
+**Quick compile check did not reproduce immediately; re-verify before spending
+fix time:**
+
+- `PR95338` (`#68`) - quick `-O1 -ff2c` compile did not ICE.
+- `PR101760` (`#76`) - quick `-fopenmp` compile did not ICE.
+- `PR102596` (`#80`) - quick `-fopenmp` compile did not ICE.
+
+**Needs dedicated re-check / special setup:**
+
+- `PR109788` (`#91`) - requires the precise UB-triggering path, likely with
+  sanitizer instrumentation or exact IPA conditions.
+- `PR79524` (`#55`) - needs Valgrind/ASan confirmation on the invalid-code path.
+- `PR120723` (`#96`) - needs `openacc.mod` / OpenACC-capable setup for a real
+  compile check.
+- `PR120286` (`#95`) - runtime OpenMP wrong-code reproducer, not a quick
+  compile-only check.
+- `PR110626` (`#92`) - runtime/finalization behavior issue.
+- `PR60576` (`#53`) - runtime/ASan descriptor overflow issue.
+- `PR42954` (`#52`) - architectural preprocessor gap, not a quick ICE check.
+
+## Remaining Open Issues (by priority, then complexity)
+
+### P3 - High Priority
+
+| GH# | PR | Title | Complexity | Category |
+|-----|----|-------|------------|----------|
+| #96 | 120723 | ICE attach(scalar) OpenACC | medium | ice, openacc |
+| #95 | 120286 | Double free with OpenMP | high | wrong-code, openmp |
+
+**PR120723:** Debug `trans-openmp.cc` map clause generation for scalar attach.
+Should generate `GOMP_MAP_ATTACH`, not pointer mapping. Test with offload build.
+
+**PR120286:** Refcount or deep-copy issue in `trans-openmp.cc` / `trans-array.cc`.
+Compare tree dumps with/without OpenMP. May need runtime tracing in libgomp.
+
+### P4 - Low Complexity
+
+| GH# | PR | Title | Category |
+|-----|----|-------|----------|
+| #56 | 82721 | Corrupted error message, sometimes ICE | ice |
+| #91 | 109788 | UB: shift exponent 64 | runtime UB |
+| #55 | 79524 | Valgrind error fimplicit_none_2.f90 | memory |
+
+**PR82721:** Likely similar undo/dangling pointer as PR106946. GDB to find
+corrupt string source.
+
+**PR109788:** Find Fortran code path passing 64 to shift in `hwint.h:293`.
+Add bounds check.
+
+**PR79524:** `valgrind ./f951 <test>` for exact stack trace. Fix at source.
+
+### P4 - Medium Complexity
+
+| GH# | PR | Title | Category |
+|-----|----|-------|----------|
+| #68 | 95338 | ICE ENTRY + -ff2c | ice |
+| #76 | 101760 | ICE deferred-len + OMP target | ice, openmp |
+| #79 | 102459 | ICE OMP iterator array ref | ice, openmp |
+| #80 | 102596 | ICE OMP task reduction ctor | ice, openmp |
+
+**PR95338:** ENTRY + `-ff2c` calling convention mismatch. Debug `trans-decl.cc`.
+
+**PR101760:** SSA name wrong type for deferred-length char with OMP target.
+Debug `trans-openmp.cc` target clause generation.
+
+**PR102459:** Scalarizer wrong for OMP iterator variables. Debug
+`trans-openmp.cc` iterator lowering.
+
+**PR102596:** Default constructor fails for OMP task reduction derived type.
+Debug `trans-openmp.cc` `clause_default_ctor`.
+
+### P4 - High Complexity
+
+| GH# | PR | Title | Category |
+|-----|----|-------|----------|
+| #53 | 60576 | FAIL assumed_rank_7.f90 | wrong-code |
+| #92 | 110626 | Duplicated finalization | wrong-code |
+
+### P5
+
+| GH# | PR | Title | Category |
+|-----|----|-------|----------|
+| #52 | 42954 | TARGET_CPP_BUILTINS missing | preprocessor |
+
+---
+
+## Already Patch-Ready (awaiting upstream)
+
+| GH# | PR | Description | Pipeline |
+|-----|----|-------------|----------|
+| #9 | 102430 | OpenMP linear(array) ICE | on-mailing-list |
+| #10 | 103276 | OpenACC ENTER DATA mapping | on-mailing-list |
+| #11 | 123252 | OpenACC scalar member | on-bugzilla |
+| #12 | 123280 | acc_is_present assumed-shape | on-mailing-list |
+| #13 | 96080 | OpenACC pointer semantics | on-mailing-list |
+| #14 | 123282 | OpenACC refcount bug | on-bugzilla |
+
+---
+
+## Workflow for Each Fix
+
+```bash
+# 1. Branch off upstream
+cd gcc && git checkout upstream/master && git checkout -b pr<N>-fix
+
+# 2. Reproduce
+cd ../gcc-build/gcc && ./gfortran -B . -c /tmp/reproducer.f90 -o /dev/null
+
+# 3. Debug
+gdb -batch -ex run -ex bt --args ./f951 /tmp/reproducer.f90 -quiet
+
+# 4. Fix (minimal change in gcc/fortran/*.cc)
+
+# 5. Rebuild
+make -j32 f951
+
+# 6. Verify fix
+./gfortran -B . -c /tmp/reproducer.f90 -o /dev/null  # no crash
+
+# 7. Write test: gcc/testsuite/gfortran.dg/pr<N>.f90
+
+# 8. Single test
+make check-gfortran RUNTESTFLAGS="dg.exp=pr<N>.f90"
+
+# 9. Full test suite (MANDATORY - 0 FAIL/XPASS required)
+make -j32 -k check-gfortran > /tmp/test-pr<N>.log 2>&1
+grep -cE "^FAIL|^XPASS" testsuite/gfortran/gfortran.sum
+
+# 10. Commit
+cat > /tmp/gcc-commit-msg.txt <<'EOF'
+fortran: Short summary [PR<N>]
+
+Description.
+EOF
+cd ../../gcc
+GCC_FORCE_MKLOG=1 GCC_MKLOG_ARGS='["-b", "fortran/<N>"]' \
+  git commit -s -F /tmp/gcc-commit-msg.txt
+git gcc-verify HEAD
+
+# 11. Export and push
+git format-patch -1 HEAD -o ../pr/<N>/
+git push origin pr<N>-fix
+
+# 12. Label issue
+gh issue edit <GH#> --add-label patch-ready
 ```
-
-**Action Item:** Patch author should explicitly state target GCC version in commit message.
-
----
-
-## High Priority Issues (Should Fix)
-
-### 4. Circular Reference Detection
-
-**Problem:** User can create cycles at runtime causing stack overflow
-
-```fortran
-type :: node_t
-    type(node_t), allocatable :: children(:)
-end type
-type(node_t) :: a
-allocate(a%children(1))
-a%children(1) = a  ! Creates cycle
-! Later: b = a causes infinite recursion at runtime
-```
-
-**Impact:** Better than compile-time loop, but still crashes program
-
-**Fix Difficulty:** HIGH - requires tracking visited nodes, complex state management
-
-**Recommendation:** Document as known limitation, fix in future version
-
----
-
-### 5. Error Path Memory Leaks
-
-**Problem:** If allocation fails mid-copy, already-allocated nested components leak
-
-**Example:**
-```fortran
-! If allocation fails at children(5), children(1:4) are leaked
-```
-
-**Fix:** Add exception handling or cleanup guards in runtime function
-
-**Complexity:** MEDIUM
-
----
-
-### 6. Zero-Size Element Handling
-
-**Location:** `libgfortran/runtime/deep_copy.c:668-673`
-
-```c
-static inline size_t
-descriptor_elem_size (gfc_array_void *desc)
-{
-  size_t size = GFC_DESCRIPTOR_SIZE (desc);
-  return size == 0 ? 1 : size;  // Heuristic workaround
-}
-```
-
-**Problem:** Why size==0? Returning 1 could cause incorrect stride calculation
-
-**Fix:** Investigate root cause, handle as special case instead of faking size
-
----
-
-## Medium Priority Issues
-
-### 7. Thread Safety (Global State)
-
-**Location:** `gcc/fortran/trans-array.cc:98`
-
-```c
-static bool generating_copy_helper;  // Global mutable state
-```
-
-**Problem:** No synchronization for parallel compilation (LTO)
-
-**Fix:** Use thread-local storage or compiler-context-local state
-
----
-
-### 8. PDT Support Missing
-
-**Problem:** Parameterized Derived Types can have different sizes per element
-
-```fortran
-type :: string_t(len)
-    integer, len :: len
-    character(len) :: data
-end type
-type :: container_t
-    type(string_t(*)), allocatable :: strings(:)
-end type
-```
-
-**Impact:** Undefined behavior if PDT parameters vary between elements
-
----
-
-### 9. Finalization Interaction Unclear
-
-**Problem:** Fortran 2018 finalization rules complex, unclear if handled correctly
-
-**Needs:** Test cases for finalizers with recursive types
-
----
-
-## Low Priority Issues
-
-### 10. Performance - O(n) Function Call Overhead
-
-Every array element pays function call overhead even for shallow recursion
-
-**Optimization:** Could inline for simple cases, use runtime only for deep recursion
-
----
-
-### 11. Wrapper Deduplication Missing
-
-Generates new wrapper for each occurrence of recursive type across modules
-
-**Impact:** Code bloat, poor icache performance
-
-**Fix:** Hash table of (type, purpose) -> wrapper_decl, reuse across translation units
-
----
-
-### 12. Test Coverage Gaps
-
-**Missing Tests:**
-- Self-assignment (`a = a`)
-- Non-contiguous arrays (strides)
-- Polymorphic types (`class(*)`)
-- Mixed types (recursive + coarray/PDT/finalizers)
-- Large array performance
-- Error conditions (allocation failure)
-- Assumed-rank arrays
-
----
-
-## Strengths of the Patch
-
-1. **Core Algorithm is Sound**
-   - Moves recursion from compile-time to runtime
-   - Anti-recursion flag prevents infinite wrapper generation
-   - Runtime helper correctly iterates multi-dimensional arrays
-
-2. **GNU Standards Compliant**
-   - Proper coding style (2-space C, 4-space Fortran)
-   - GPL v3 + Runtime Exception licensing
-   - Complete ChangeLog entries
-   - Good test coverage for basic functionality
-
-3. **Well-Designed Division of Labor**
-   - Compiler: Allocation, wrapper generation, detection
-   - Runtime: Element iteration, shallow+deep copy
-   - Clean separation of concerns
-
-4. **Tests Are Comprehensive for Core Functionality**
-   - Multi-level recursion (3 levels)
-   - Circular assignments (stress testing)
-   - Data integrity verification
-   - No trampolines (security)
-
-5. **Solves Real Problem**
-   - Fortran 2018+ compliance
-   - Enables legitimate user code
-   - No regressions (74,231 tests passed)
-
----
-
-## Files Modified Summary
-
-**Compiler Frontend (250 lines):**
-- `gcc/fortran/trans-array.cc` (+174 lines) - Core detection and wrapper generation
-- `gcc/fortran/trans-decl.cc` (+20 lines) - Function declaration
-- `gcc/fortran/trans-intrinsic.cc` (+17 lines) - Atomic operations bug fix
-- `gcc/fortran/trans.h` (+3 lines) - External declaration
-
-**Runtime Library (125 lines):**
-- `libgfortran/runtime/deep_copy.c` (+125 lines, new file) - Element iteration logic
-
-**Test Suite (138 lines):**
-- `gcc/testsuite/gfortran.dg/alloc_comp_deep_copy_5.f90` (+63 lines, new)
-- `gcc/testsuite/gfortran.dg/alloc_comp_deep_copy_6.f90` (+75 lines, new)
-- `gcc/testsuite/gfortran.dg/array_memcpy_2.f90` (updated)
-
-**Build System (78 lines):**
-- `libgfortran/Makefile.am` (+1 line)
-- `libgfortran/Makefile.in` (+8 lines)
-- `libgfortran/gfortran.map` (+1 line)
-- `libgfortran/libgfortran.h` (+8 lines)
-
-**Total:** 12 files, +501/-10 lines
-
----
-
-## Recommended Actions Before Upstreaming
-
-### Mandatory Fixes:
-
-1. **Add self-assignment check** (5 lines in trans-array.cc)
-2. **Add descriptor validation** (20 lines in runtime/deep_copy.c)
-3. **Verify GFORTRAN_16 target** (documentation in commit message)
-
-### Recommended Additions:
-
-4. **Add test case for self-assignment**
-5. **Add test case for non-contiguous arrays**
-6. **Document known limitation: no circular reference detection**
-
-### Timeline Estimate:
-
-- Critical fixes: 2-4 hours
-- Additional tests: 2-3 hours
-- Verification and validation: 1-2 hours
-- **Total: 1 day of work**
-
----
-
-## Conclusion
-
-The patch demonstrates excellent understanding of compiler internals and provides a solid solution to a fundamental limitation. With the three critical issues addressed, this patch will be production-ready and suitable for upstreaming to GCC master branch.
-
-The core algorithm is sound, the implementation is clean, and the approach (moving recursion from compile-time to runtime via function pointers) is elegant and correct.
-
-**Overall Assessment: 8/10**
-- Deduct 1 point for self-assignment bug
-- Deduct 1 point for missing validation
-- Core solution is excellent
-
----
-
-## References
-
-- GCC Bugzilla: PR121628
-- GCC Coding Standards: https://gcc.gnu.org/codingconventions.html
-- Fortran 2018 Standard: ISO/IEC 1539-1:2018
-- GCC Development Plan: https://gcc.gnu.org/develop.html
-- Symbol Versioning: https://gcc.gnu.org/wiki/SymbolVersioning

@@ -1,0 +1,219 @@
+From 88049a3af71ee877634eb597797c2463fad1612d Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Tue, 10 Mar 2026 14:31:23 +0100
+Subject: [PATCH] fortran: Fix ICE on invalid CLASS component in derived type
+ [PR106946]
+
+When a CLASS component declaration inside a derived type has a syntax
+error (for example, a missing comma), gfc_build_class_symbol creates a
+CLASS container symbol outside the undo mechanism.  Error recovery then
+frees the referenced type but leaves the CLASS container orphaned with
+dangling pointers, leading to an ICE during later resolution.
+
+Fix this by removing CLASS components created during a failed data
+declaration from the derived type component chain, deleting their
+namespace symtree entries, releasing the CLASS container symbol, and
+freeing the component itself.  Also expose component and symtree cleanup
+helpers needed by that rollback path.
+
+gcc/fortran/ChangeLog:
+
+	PR fortran/106946
+	* decl.cc (gfc_match_data_decl): Remove CLASS components added by a
+	failed declaration in a derived type and clean up their container
+	symbols.
+	* gfortran.h (gfc_free_component, gfc_delete_symtree): Declare.
+	* symbol.cc (gfc_free_component): New function.
+	(free_components): Use it.
+	(gfc_delete_symtree): Make non-static.
+
+gcc/testsuite/ChangeLog:
+
+	PR fortran/106946
+	* gfortran.dg/pr106946.f90: New test.
+---
+ gcc/fortran/decl.cc                    | 58 ++++++++++++++++++++++++++
+ gcc/fortran/gfortran.h                 |  2 +
+ gcc/fortran/symbol.cc                  | 28 ++++++++-----
+ gcc/testsuite/gfortran.dg/pr106946.f90 | 14 +++++++
+ 4 files changed, 91 insertions(+), 11 deletions(-)
+ create mode 100644 gcc/testsuite/gfortran.dg/pr106946.f90
+
+diff --git a/gcc/fortran/decl.cc b/gcc/fortran/decl.cc
+index 8b659a3f36a..8c7071c0747 100644
+--- a/gcc/fortran/decl.cc
++++ b/gcc/fortran/decl.cc
+@@ -6819,12 +6819,28 @@ gfc_match_data_decl (void)
+   gfc_symbol *sym;
+   match m;
+   int elem;
++  gfc_component *comp_tail = NULL;
+ 
+   type_param_spec_list = NULL;
+   decl_type_param_list = NULL;
+ 
+   num_idents_on_line = 0;
+ 
++  /* Record the last component before we start, so that we can roll back
++     any components added during this statement on error.  PR106946.
++     Must be set before any 'goto cleanup' with m == MATCH_ERROR.  */
++  if (gfc_comp_struct (gfc_current_state ()))
++    {
++      gfc_symbol *block = gfc_current_block ();
++      if (block)
++	{
++	  comp_tail = block->components;
++	  if (comp_tail)
++	    while (comp_tail->next)
++	      comp_tail = comp_tail->next;
++	}
++    }
++
+   m = gfc_match_decl_type_spec (&current_ts, 0);
+   if (m != MATCH_YES)
+     return m;
+@@ -6944,6 +6960,48 @@ ok:
+   gfc_free_data_all (gfc_current_ns);
+ 
+ cleanup:
++  /* If we failed inside a derived type definition, remove any CLASS
++     components that were added during this failed statement.  CLASS
++     components have a container symbol created by gfc_build_class_symbol
++     outside the undo mechanism.  When reject_statement later calls
++     gfc_undo_symbols, the referenced type is freed but the CLASS container
++     and component survive, creating dangling pointers.  We only remove
++     CLASS components; non-CLASS components are left for further error
++     reporting during resolution.  PR106946.  */
++  if (m == MATCH_ERROR && gfc_comp_struct (gfc_current_state ()))
++    {
++      gfc_symbol *block = gfc_current_block ();
++      if (block)
++	{
++	  gfc_component **prev;
++	  if (comp_tail)
++	    prev = &comp_tail->next;
++	  else
++	    prev = &block->components;
++
++	  while (*prev)
++	    {
++	      gfc_component *c = *prev;
++	      if (c->ts.type == BT_CLASS && c->ts.u.derived
++		  && c->ts.u.derived->attr.is_class)
++		{
++		  /* Unlink this CLASS component.  */
++		  *prev = c->next;
++
++		  /* Remove the CLASS container from the namespace.  */
++		  gfc_symbol *fclass = c->ts.u.derived;
++		  gfc_delete_symtree (&fclass->ns->sym_root, fclass->name);
++		  gfc_release_symbol (fclass);
++
++		  /* Free the component structure.  */
++		  gfc_free_component (c);
++		}
++	      else
++		prev = &c->next;
++	    }
++	}
++    }
++
+   if (saved_kind_expr)
+     gfc_free_expr (saved_kind_expr);
+   if (type_param_spec_list)
+diff --git a/gcc/fortran/gfortran.h b/gcc/fortran/gfortran.h
+index bbf3968eacb..b0ce54e1c21 100644
+--- a/gcc/fortran/gfortran.h
++++ b/gcc/fortran/gfortran.h
+@@ -3779,6 +3779,7 @@ bool gfc_missing_attr (symbol_attribute *, locus *);
+ bool gfc_copy_attr (symbol_attribute *, symbol_attribute *, locus *);
+ int gfc_copy_dummy_sym (gfc_symbol **, gfc_symbol *, int);
+ bool gfc_add_component (gfc_symbol *, const char *, gfc_component **);
++void gfc_free_component (gfc_component *);
+ gfc_symbol *gfc_use_derived (gfc_symbol *);
+ gfc_component *gfc_find_component (gfc_symbol *, const char *, bool, bool,
+                                    gfc_ref **);
+@@ -3793,6 +3794,7 @@ gfc_st_label *gfc_rebind_label (gfc_st_label *, int);
+ 
+ gfc_namespace *gfc_get_namespace (gfc_namespace *, int);
+ gfc_symtree *gfc_new_symtree (gfc_symtree **, const char *);
++void gfc_delete_symtree (gfc_symtree **, const char *);
+ gfc_symtree *gfc_find_symtree (gfc_symtree *, const char *);
+ gfc_symtree *gfc_get_unique_symtree (gfc_namespace *);
+ gfc_user_op *gfc_get_uop (const char *);
+diff --git a/gcc/fortran/symbol.cc b/gcc/fortran/symbol.cc
+index 9edfb8e9eeb..32d12600a19 100644
+--- a/gcc/fortran/symbol.cc
++++ b/gcc/fortran/symbol.cc
+@@ -2734,6 +2734,21 @@ gfc_find_component (gfc_symbol *sym, const char *name,
+ /* Given a symbol, free all of the component structures and everything
+    they point to.  */
+ 
++void
++gfc_free_component (gfc_component *p)
++{
++  gfc_free_array_spec (p->as);
++  gfc_free_expr (p->initializer);
++  if (p->kind_expr)
++    gfc_free_expr (p->kind_expr);
++  if (p->param_list)
++    gfc_free_actual_arglist (p->param_list);
++  free (p->tb);
++  p->tb = NULL;
++  free (p);
++}
++
++
+ static void
+ free_components (gfc_component *p)
+ {
+@@ -2742,16 +2757,7 @@ free_components (gfc_component *p)
+   for (; p; p = q)
+     {
+       q = p->next;
+-
+-      gfc_free_array_spec (p->as);
+-      gfc_free_expr (p->initializer);
+-      if (p->kind_expr)
+-	gfc_free_expr (p->kind_expr);
+-      if (p->param_list)
+-	gfc_free_actual_arglist (p->param_list);
+-      free (p->tb);
+-      p->tb = NULL;
+-      free (p);
++      gfc_free_component (p);
+     }
+ }
+ 
+@@ -3147,7 +3153,7 @@ gfc_new_symtree (gfc_symtree **root, const char *name)
+ 
+ /* Delete a symbol from the tree.  Does not free the symbol itself!  */
+ 
+-static void
++void
+ gfc_delete_symtree (gfc_symtree **root, const char *name)
+ {
+   gfc_symtree st, *st0;
+diff --git a/gcc/testsuite/gfortran.dg/pr106946.f90 b/gcc/testsuite/gfortran.dg/pr106946.f90
+new file mode 100644
+index 00000000000..cd37ed1d032
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr106946.f90
+@@ -0,0 +1,14 @@
++! { dg-do compile }
++! PR fortran/106946
++! ICE in resolve_component on invalid CLASS declaration with missing comma.
++!
++! The missing comma between 'a' and 'b' is a syntax error.  Previously,
++! this caused an ICE because the CLASS container symbol created during
++! parsing was not tracked by the undo mechanism, leaving a dangling
++! reference after error recovery.
++
++program p
++   type t
++      class(u), allocatable :: a b  ! { dg-error "Syntax error in data declaration" }
++   end type
++end
+-- 
+2.53.0
+

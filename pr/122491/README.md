@@ -2,7 +2,7 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=122491
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/50
-- **Status:** PENDING (patch on fork branch `origin/pr122491-fix`, commit `b2937e05eddf3670be733a4df832bf330f33555c`)
+- **Status:** MERGED upstream (`r16-7577-gff2f6c5153ecc1`, commit `ff2f6c5153e`)
 
 ## Summary
 
