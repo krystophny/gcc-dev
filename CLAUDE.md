@@ -570,6 +570,12 @@ Permitted without approval:
 # Query bug info (always permitted)
 scripts/gcc-bugzilla.sh info <pr-number>
 
+# Search open fortran bugs by summary text (always permitted)
+scripts/gcc-bugzilla.sh search "ICE in fold_convert"
+
+# List all open fortran regressions (always permitted)
+scripts/gcc-bugzilla.sh regressions
+
 # Attach a patch (REQUIRES explicit user permission)
 scripts/gcc-bugzilla.sh attach <pr-number> <file>
 
