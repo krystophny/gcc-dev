@@ -1,6 +1,6 @@
 # GCC Fortran Regression Fix TODO
 
-## PR106946 (#88) - Finalize [IN PROGRESS]
+## PR106946 (#88) - Patch Ready [DONE]
 
 **Status:** PATCH READY. Full `check-gfortran` passed, patch exported and pushed
 on branch `origin/pr106946-fix` (`88049a3af71`).
@@ -86,6 +86,42 @@ git push origin pr106946-fix
 Patch exported: `pr/106946/0001-fortran-Fix-ICE-on-invalid-CLASS-component-in-derive.patch`
 
 Then: `gh issue edit 88 --add-label patch-ready`
+
+---
+
+## PR82721 (#56) - Investigate [IN PROGRESS]
+
+**Status:** Reproduces locally with `gcc-build/gcc/gfortran -B gcc-build/gcc`.
+Next step is root-cause debugging in the error-recovery / symbol-table cleanup
+path.
+
+### Task list
+
+- [ ] Task 1: Reproduce the ICE with the minimal duplicate-type testcase.
+- [ ] Task 1 review: Confirm the failure mode and collect a useful backtrace.
+- [ ] Task 2: Debug the dangling symbol/symtree path around `reject_statement`.
+- [ ] Task 2 review: Verify the root cause against the actual cleanup flow.
+- [ ] Task 3: Implement a minimal fix and add a regression test.
+- [ ] Task 3 review: Check that the fix is precise and does not mask other errors.
+- [ ] Task 4: Rebuild and run targeted validation for PR82721.
+- [ ] Task 4 review: Inspect diagnostics and ensure the ICE is gone.
+- [ ] Task 5: Run a clean full `check-gfortran`.
+- [ ] Task 5 review: Check `FAIL`/`XPASS` deltas and confirm no regressions.
+- [ ] Task 6: Commit, `gcc-verify`, export, push, and update issue `#56`.
+- [ ] Task 6 review: Verify patch artifact, branch state, and issue metadata.
+
+**Reproducer:**
+
+```fortran
+program p
+   real :: a, b(4)
+   character(len(c)) :: b
+end
+```
+
+Expected end state:
+- user-facing error diagnostic
+- no internal compiler error
 
 ---
 
