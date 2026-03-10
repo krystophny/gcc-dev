@@ -210,12 +210,69 @@ Verified: commit and patch both contain `Signed-off-by:`.
 
 ---
 
+## PR102596 (#80) - Patch Ready [DONE]
+
+**Status:** PATCH READY. Full `check-gfortran` passed, signed patch exported
+and pushed on branch `origin/pr102596-fix` (`aba89bd758f1`).
+
+### Task list
+
+- [x] Task 1: Reproduce the OpenMP task-reduction ICE and inspect the failing hook call.
+- [x] Task 1 review: Confirm `gfc_omp_clause_default_ctor` is called with
+  `OMP_CLAUSE_TASK_REDUCTION` and `outer == NULL_TREE`.
+- [x] Task 2: Debug whether the fix belongs in `omp-low` or the Fortran hook.
+- [x] Task 2 review: Verify the first `omp-low` attempt was wrong because
+  `build_outer_var_ref` itself has no valid outer source in this path.
+- [x] Task 3: Implement the minimal fix and add a regression test.
+- [x] Task 3 review: Keep `outer` mandatory for descriptor/alloc-comp cases and
+  relax it only for plain scalar allocatables.
+- [x] Task 4: Rebuild and run direct plus targeted PR102596 validation.
+- [x] Task 4 review: Confirm the reproducer now compiles and targeted DejaGnu passes.
+- [x] Task 5: Run a clean full `check-gfortran`.
+- [x] Task 5 review: Check merged `gfortran.sum` for `0` `FAIL`/`XPASS`.
+- [x] Task 6: Commit, `gcc-verify`, export, push, and update issue `#80`.
+- [x] Task 6 review: Verify signed commit, exported patch footer, branch state,
+  and issue metadata.
+
+**Reproducer:**
+
+```fortran
+program p
+  integer, allocatable :: r
+  allocate (r)
+  r = 0
+  !$omp target parallel reduction(task, +:r)
+  r = r + 1
+  !$omp end target parallel
+end
+```
+
+Expected end state:
+- successful compile
+- no internal compiler error
+
+**Root cause:** `omp-low` can legitimately call
+`gfc_omp_clause_default_ctor` for an `OMP_CLAUSE_TASK_REDUCTION` allocatable
+scalar with `outer == NULL_TREE`.  Plain scalar allocatables only need fresh
+storage allocation in that path, but the Fortran hook asserted
+unconditionally on `outer != NULL_TREE` and ICEd during `omplower`.
+
+**Current local fix:** Keep requiring `outer` for descriptor-based allocatables
+and types with allocatable components, but allow `NULL_TREE` for plain scalar
+allocatables that do not actually use the outer reference.  The regression
+test `gfortran.dg/pr102596.f90` covers the task-reduction allocatable-scalar
+case.
+
+Patch exported: `pr/102596/0001-fortran-Allow-task-reduction-allocatable-scalars-wit.patch`
+Verified: commit and patch both contain `Signed-off-by:`.
+
+---
+
 ## Backlog Audit (2026-03-10)
 
 **Confirmed locally still reproducing with `gcc-build/gcc/gfortran -B gcc-build/gcc`:**
 
 - `PR95338` (`#68`) - exact `-O1 -ff2c` compile still ICEs.
-- `PR102596` (`#80`) - exact `-fopenmp` compile still ICEs in OMP lowering.
 
 **Quick compile check did not reproduce immediately; re-verify before spending
 fix time:**
@@ -268,15 +325,11 @@ Add bounds check.
 |-----|----|-------|----------|
 | #68 | 95338 | ICE ENTRY + -ff2c | ice |
 | #76 | 101760 | ICE deferred-len + OMP target | ice, openmp |
-| #80 | 102596 | ICE OMP task reduction ctor | ice, openmp |
 
 **PR95338:** ENTRY + `-ff2c` calling convention mismatch. Debug `trans-decl.cc`.
 
 **PR101760:** SSA name wrong type for deferred-length char with OMP target.
 Debug `trans-openmp.cc` target clause generation.
-
-**PR102596:** Default constructor fails for OMP task reduction derived type.
-Debug `trans-openmp.cc` `clause_default_ctor`.
 
 ### P4 - High Complexity
 
@@ -305,6 +358,7 @@ Debug `trans-openmp.cc` `clause_default_ctor`.
 | #14 | 123282 | OpenACC refcount bug | on-bugzilla |
 | #56 | 82721 | CHARACTER duplicate declaration ICE | patch-ready |
 | #79 | 102459 | OMP iterator component array ICE | patch-ready |
+| #80 | 102596 | OMP task reduction ctor ICE | patch-ready |
 
 ---
 
