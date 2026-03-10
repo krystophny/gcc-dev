@@ -2,7 +2,7 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123949
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/49
-- **Status:** MERGED upstream (decl.cc fix as `3a17cc11cb5`), follow-up pending
+- **Status:** MERGED upstream (`r16-7603-g3a17cc11cb5543` and follow-up `r16-7635-g33b945b4e637f4`)
 
 ## Summary
 

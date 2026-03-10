@@ -2,8 +2,8 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123947
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/48
-- **Branch:** `pr123947-fix` (rebased on `upstream/master`)
-- **Status:** UPDATED locally (v2 standalone squashed patch), pending upstream
+- **Branch:** `pr123947-fix` (historical local branch)
+- **Status:** MERGED upstream (fixed via `r16-7700-ge0b70284cfac5b`, testcase additions in `83ef3db4b38`)
 
 ## Summary
 
