@@ -112,6 +112,19 @@ grep -E "^FAIL|^XPASS" gcc-build/gcc/testsuite/gfortran/gfortran.sum
 make check-gfortran RUNTESTFLAGS="dg.exp=pr123280.f90"
 ```
 
+### Full Test Suite Validation (MANDATORY for all patches)
+
+Every patch MUST pass the full `check-gfortran` test suite before being accepted.
+No partial passes. No skipped tests. Zero new failures.
+
+```bash
+cd gcc-build/gcc && make -j32 -k check-gfortran > /tmp/test.log 2>&1
+grep -cE "^FAIL|^XPASS" testsuite/gfortran/gfortran.sum  # must be 0 new
+```
+
+Compare FAIL/XPASS counts against baseline recorded before fixes. If a fix
+introduces regressions, fix them or revert the patch.
+
 ### OpenACC Tests
 
 OpenACC runtime tests require actual GPU offload. Tests marked with
@@ -332,6 +345,27 @@ to skip GC during wrapper registration.
 
 **Evidence:** PR124235.
 
+### Pattern 8: Error Recovery Leaving Helper Symbols Behind
+
+**Symptom:** Invalid code emits the expected diagnostic and then ICEs later in
+resolution or on the following statement, often with dangling symbol or symtree
+references.
+
+**Root cause:** Some parser-generated helper symbols/components are created
+outside the normal undo checkpoint machinery.  On `reject_statement()`,
+`gfc_undo_symbols()` frees the main declaration state but leaves the helper
+node alive, so it still points into freed structures.
+
+**Fix:** Record the pre-statement tail/root state before matching, and on
+`MATCH_ERROR` explicitly unlink any helper nodes created during that statement.
+Delete related symtree entries before releasing the helper symbol.
+
+**Key lesson:** Do not assume that all declaration byproducts participate in
+the undo machinery.  CLASS container symbols created by
+`gfc_build_class_symbol` are one concrete example.
+
+**Evidence:** PR106946.  PR82721 appears to be the same general family of bug.
+
 ## Fix Development Rules
 
 ### DO
@@ -414,6 +448,14 @@ cd .. && git add pr/<number>/
 git commit -m "pr<number>: add patch"
 git push origin main
 ```
+
+**If `gcc-verify` rejects an incomplete hook-generated ChangeLog skeleton:**
+- Keep the mklog hook enabled, but switch from plain `git commit -F ...` to an
+  editor-driven commit (`git commit -e` with a template/editor script).
+- Let the hook run, then replace the message with the fully completed
+  ChangeLog text before the commit is finalized.
+- Re-run `git gcc-verify HEAD` immediately.  Repeating `git commit -F ...`
+  with a fully written ChangeLog can otherwise lead to duplicated hook output.
 
 ### Commit rules (HARD RULES)
 
