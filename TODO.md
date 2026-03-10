@@ -418,6 +418,10 @@ Verified: commit and patch both contain `Signed-off-by:`.
 
 **Confirmed locally still reproducing with dedicated validation:**
 
+- `PR110877` (`#101`) - assignment from a polymorphic array dummy argument
+  drops allocatable components on `g = f` while `allocate(g, source=f)`
+  preserves them.  Current WIP fix reproduces the expected `T/T` behavior but
+  regresses `class_transformational_1.f90`, so it is not patch-ready yet.
 - `PR120723` (`#96`) - with local `openacc.mod`, `!$acc enter data
   attach(scalar)` still ICEs with `unexpected pointer mapping node`.
 
@@ -465,9 +469,14 @@ Add bounds check.
 | GH# | PR | Title | Category |
 |-----|----|-------|----------|
 | #76 | 101760 | ICE deferred-len + OMP target | ice, openmp |
+| #101 | 110877 | Dummy class assignment loses alloc comps | wrong-code, polymorphism |
 
 **PR101760:** SSA name wrong type for deferred-length char with OMP target.
 Debug `trans-openmp.cc` target clause generation.
+
+**PR110877:** Reuse the dummy-array class container for scalarized element copy
+without perturbing unrelated class-transformational lowering.  Current WIP
+fixes the reproducer but regresses `class_transformational_1.f90`.
 
 ### P4 - High Complexity
 

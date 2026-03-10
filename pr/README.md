@@ -28,6 +28,7 @@ Minimal reproducers and patches for GCC Fortran and libgomp bugs.
 | 79524 | Valgrind/ASan error in `fimplicit_none_2.f90` | [#55](https://github.com/krystophny/gcc-dev/issues/55) |
 | 101760 | Deferred-length char + OMP target ICE | [#76](https://github.com/krystophny/gcc-dev/issues/76) |
 | 109788 | UB shift exponent 64 in IPA/Fortran path | [#91](https://github.com/krystophny/gcc-dev/issues/91) |
+| 110877 | Polymorphic dummy assignment drops alloc comps | [#101](https://github.com/krystophny/gcc-dev/issues/101) |
 | 110626 | Duplicated finalization in derived assignment | [#92](https://github.com/krystophny/gcc-dev/issues/92) |
 | 120723 | OpenACC `attach(scalar)` ICE | [#96](https://github.com/krystophny/gcc-dev/issues/96) |
 
