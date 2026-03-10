@@ -3,7 +3,7 @@
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=106946
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/88
 - **Branch:** `pr106946-fix`
-- **Status:** PENDING (patch on fork branch `origin/pr106946-fix`, commit `88049a3af71ee877634eb597797c2463fad1612d`)
+- **Status:** PENDING (patch on fork branch `origin/pr106946-fix`, commit `d02ccf8946c3f4b28a1fa85dba2593eb2a8d0f21`)
 
 ## Summary
 
@@ -42,9 +42,11 @@ Change:
   parsing a data declaration.
 - On `MATCH_ERROR` inside a derived type definition, remove any newly-added
   CLASS components created during the failed statement.
-- Delete the generated CLASS container symbol from the namespace symtree,
-  release the symbol, and free the component node.
+- Delete the generated CLASS container symbol from the namespace symtree when
+  it is still present, release the symbol, and free the component node.
 - Expose `gfc_free_component` and `gfc_delete_symtree` for that rollback path.
+- Expand the regression coverage to include allocatable and pointer CLASS
+  declarations, plus a valid component followed by a bad one.
 
 ## Validation
 

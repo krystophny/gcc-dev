@@ -1,6 +1,6 @@
-From 88049a3af71ee877634eb597797c2463fad1612d Mon Sep 17 00:00:00 2001
+From d02ccf8946c3f4b28a1fa85dba2593eb2a8d0f21 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
-Date: Tue, 10 Mar 2026 14:31:23 +0100
+Date: Tue, 10 Mar 2026 17:32:32 +0100
 Subject: [PATCH] fortran: Fix ICE on invalid CLASS component in derived type
  [PR106946]
 
@@ -12,16 +12,16 @@ dangling pointers, leading to an ICE during later resolution.
 
 Fix this by removing CLASS components created during a failed data
 declaration from the derived type component chain, deleting their
-namespace symtree entries, releasing the CLASS container symbol, and
-freeing the component itself.  Also expose component and symtree cleanup
-helpers needed by that rollback path.
+namespace symtree entries only when they are still present, releasing
+the CLASS container symbol, and freeing the component itself.  Also
+expand the regression coverage to exercise allocatable and pointer CLASS
+declarations, including a valid component followed by a bad one.
 
 gcc/fortran/ChangeLog:
 
 	PR fortran/106946
 	* decl.cc (gfc_match_data_decl): Remove CLASS components added by a
-	failed declaration in a derived type and clean up their container
-	symbols.
+	failed declaration in a derived type, and guard symtree deletion.
 	* gfortran.h (gfc_free_component, gfc_delete_symtree): Declare.
 	* symbol.cc (gfc_free_component): New function.
 	(free_components): Use it.
@@ -30,17 +30,20 @@ gcc/fortran/ChangeLog:
 gcc/testsuite/ChangeLog:
 
 	PR fortran/106946
-	* gfortran.dg/pr106946.f90: New test.
+	* gfortran.dg/pr106946.f90: Cover allocatable and pointer CLASS
+	declarations, including a valid component followed by a bad one.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
- gcc/fortran/decl.cc                    | 58 ++++++++++++++++++++++++++
+ gcc/fortran/decl.cc                    | 59 ++++++++++++++++++++++++++
  gcc/fortran/gfortran.h                 |  2 +
- gcc/fortran/symbol.cc                  | 28 ++++++++-----
- gcc/testsuite/gfortran.dg/pr106946.f90 | 14 +++++++
- 4 files changed, 91 insertions(+), 11 deletions(-)
+ gcc/fortran/symbol.cc                  | 28 +++++++-----
+ gcc/testsuite/gfortran.dg/pr106946.f90 | 30 +++++++++++++
+ 4 files changed, 108 insertions(+), 11 deletions(-)
  create mode 100644 gcc/testsuite/gfortran.dg/pr106946.f90
 
 diff --git a/gcc/fortran/decl.cc b/gcc/fortran/decl.cc
-index 8b659a3f36a..8c7071c0747 100644
+index 8b659a3f36a..b74ee97157c 100644
 --- a/gcc/fortran/decl.cc
 +++ b/gcc/fortran/decl.cc
 @@ -6819,12 +6819,28 @@ gfc_match_data_decl (void)
@@ -72,18 +75,18 @@ index 8b659a3f36a..8c7071c0747 100644
    m = gfc_match_decl_type_spec (&current_ts, 0);
    if (m != MATCH_YES)
      return m;
-@@ -6944,6 +6960,48 @@ ok:
+@@ -6944,6 +6960,49 @@ ok:
    gfc_free_data_all (gfc_current_ns);
  
  cleanup:
 +  /* If we failed inside a derived type definition, remove any CLASS
-+     components that were added during this failed statement.  CLASS
-+     components have a container symbol created by gfc_build_class_symbol
-+     outside the undo mechanism.  When reject_statement later calls
-+     gfc_undo_symbols, the referenced type is freed but the CLASS container
-+     and component survive, creating dangling pointers.  We only remove
-+     CLASS components; non-CLASS components are left for further error
-+     reporting during resolution.  PR106946.  */
++     components that were added during this failed statement.  For CLASS
++     components, gfc_build_class_symbol creates an extra container symbol in
++     the namespace outside the normal undo machinery.  When reject_statement
++     later calls gfc_undo_symbols, the declaration state is rolled back but
++     that helper symbol survives and leaves the component dangling.  Ordinary
++     components do not create that extra helper symbol, so leave them in
++     place for the usual follow-up diagnostics.  PR106946.  */
 +  if (m == MATCH_ERROR && gfc_comp_struct (gfc_current_state ()))
 +    {
 +      gfc_symbol *block = gfc_current_block ();
@@ -106,7 +109,8 @@ index 8b659a3f36a..8c7071c0747 100644
 +
 +		  /* Remove the CLASS container from the namespace.  */
 +		  gfc_symbol *fclass = c->ts.u.derived;
-+		  gfc_delete_symtree (&fclass->ns->sym_root, fclass->name);
++		  if (gfc_find_symtree (fclass->ns->sym_root, fclass->name))
++		    gfc_delete_symtree (&fclass->ns->sym_root, fclass->name);
 +		  gfc_release_symbol (fclass);
 +
 +		  /* Free the component structure.  */
@@ -196,23 +200,39 @@ index 9edfb8e9eeb..32d12600a19 100644
    gfc_symtree st, *st0;
 diff --git a/gcc/testsuite/gfortran.dg/pr106946.f90 b/gcc/testsuite/gfortran.dg/pr106946.f90
 new file mode 100644
-index 00000000000..cd37ed1d032
+index 00000000000..d7c534861a0
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/pr106946.f90
-@@ -0,0 +1,14 @@
+@@ -0,0 +1,30 @@
 +! { dg-do compile }
 +! PR fortran/106946
 +! ICE in resolve_component on invalid CLASS declaration with missing comma.
 +!
-+! The missing comma between 'a' and 'b' is a syntax error.  Previously,
-+! this caused an ICE because the CLASS container symbol created during
-+! parsing was not tracked by the undo mechanism, leaving a dangling
-+! reference after error recovery.
++! The bad declarations below should diagnose and continue without leaving
++! behind dangling CLASS container symbols in the surrounding namespace.
 +
 +program p
-+   type t
-+      class(u), allocatable :: a b  ! { dg-error "Syntax error in data declaration" }
-+   end type
++  type :: u
++  end type
++
++  type :: v
++  end type
++
++  type :: w
++  end type
++
++  type :: t1
++    class(u), allocatable :: a b  ! { dg-error "Syntax error in data declaration" }
++  end type
++
++  type :: t2
++    class(v), pointer :: p q  ! { dg-error "Syntax error in data declaration" }
++  end type
++
++  type :: t3
++    class(w), allocatable :: ok
++    class(w), allocatable :: x y  ! { dg-error "Syntax error in data declaration" }
++  end type
 +end
 -- 
 2.53.0
