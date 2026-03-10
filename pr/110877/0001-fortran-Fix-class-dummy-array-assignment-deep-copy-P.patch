@@ -1,0 +1,143 @@
+From 55493d38c019728320a728481b0f010dddf861fc Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Tue, 10 Mar 2026 22:39:54 +0100
+Subject: [PATCH] fortran: Fix class dummy-array assignment deep copy
+ [PR110877]
+
+Recover the class vptr for scalarized elements of nonpointer dummy arrays so polymorphic assignment uses the deep-copy path.
+
+	PR fortran/110877
+
+gcc/fortran/ChangeLog:
+
+	* trans-expr.cc (gfc_trans_assignment_1): Recover the class vptr
+	for scalarized elements of nonpointer dummy arrays.
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/pr110877.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/trans-expr.cc              | 27 ++++++++++----
+ gcc/testsuite/gfortran.dg/pr110877.f90 | 49 ++++++++++++++++++++++++++
+ 2 files changed, 70 insertions(+), 6 deletions(-)
+ create mode 100644 gcc/testsuite/gfortran.dg/pr110877.f90
+
+diff --git a/gcc/fortran/trans-expr.cc b/gcc/fortran/trans-expr.cc
+index 8bd2689d744..104a9584686 100644
+--- a/gcc/fortran/trans-expr.cc
++++ b/gcc/fortran/trans-expr.cc
+@@ -13100,10 +13100,11 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
+   tree string_length;
+   int n;
+   bool maybe_workshare = false, lhs_refs_comp = false, rhs_refs_comp = false;
+-  symbol_attribute lhs_caf_attr, rhs_caf_attr, lhs_attr;
++  symbol_attribute lhs_caf_attr, rhs_caf_attr, lhs_attr, rhs_attr;
+   bool is_poly_assign;
+   bool realloc_flag;
+   bool assoc_assign = false;
++  bool dummy_class_array_copy;
+ 
+   /* Assignment of the form lhs = rhs.  */
+   gfc_start_block (&block);
+@@ -13159,6 +13160,17 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
+      needed at two locations, so do it once only before the information is
+      needed.  */
+   lhs_attr = gfc_expr_attr (expr1);
++  rhs_attr = gfc_expr_attr (expr2);
++  dummy_class_array_copy
++    = (expr2->expr_type == EXPR_VARIABLE
++       && expr2->rank > 0
++       && expr2->symtree != NULL
++       && expr2->symtree->n.sym->attr.dummy
++       && expr2->ts.type == BT_CLASS
++       && !rhs_attr.pointer
++       && !rhs_attr.allocatable
++       && !CLASS_DATA (expr2)->attr.class_pointer
++       && !CLASS_DATA (expr2)->attr.allocatable);
+ 
+   is_poly_assign
+     = (use_vptr_copy
+@@ -13464,15 +13476,18 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
+ 
+       expr1->must_finalize = 0;
+     }
+-  else if (!is_poly_assign && expr2->must_finalize
++  else if (!is_poly_assign
+ 	   && expr1->ts.type == BT_CLASS
+-	   && expr2->ts.type == BT_CLASS)
++	   && expr2->ts.type == BT_CLASS
++	   && (expr2->must_finalize || dummy_class_array_copy))
+     {
+       /* This case comes about when the scalarizer provides array element
+-	 references. Use the vptr copy function, since this does a deep
+-	 copy of allocatable components, without which the finalizer call
+-	 will deallocate the components.  */
++	 references to class temporaries or nonpointer dummy arrays. Use the
++	 vptr copy function, since this does a deep copy of allocatable
++	 components.  */
+       tmp = gfc_get_vptr_from_expr (rse.expr);
++      if (tmp == NULL_TREE && dummy_class_array_copy)
++	tmp = gfc_get_vptr_from_expr (gfc_get_class_from_gfc_expr (expr2));
+       if (tmp != NULL_TREE)
+ 	{
+ 	  tree fcn = gfc_vptr_copy_get (tmp);
+diff --git a/gcc/testsuite/gfortran.dg/pr110877.f90 b/gcc/testsuite/gfortran.dg/pr110877.f90
+new file mode 100644
+index 00000000000..4348ba0a0e3
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr110877.f90
+@@ -0,0 +1,49 @@
++! { dg-do run }
++!
++! PR fortran/110877
++! Incorrect copy of allocatable component in polymorphic assignment
++! from an array dummy argument.
++
++module pr110877_m
++  type :: foo_t
++  end type foo_t
++
++  type, extends(foo_t) :: bar_t
++    real, allocatable :: a
++  end type bar_t
++end module pr110877_m
++
++program pr110877
++  use pr110877_m
++  implicit none
++
++  class(foo_t), allocatable :: foo(:)
++
++  allocate(bar_t :: foo(1))
++  select type (foo)
++  class is (bar_t)
++    allocate(foo(1)%a)
++  end select
++
++  call check_assign(foo)
++
++contains
++
++  subroutine check_assign(f)
++    class(foo_t), intent(in) :: f(:)
++    class(foo_t), allocatable :: g(:)
++
++    g = f
++    select type (g)
++    class is (bar_t)
++      if (.not. allocated(g(1)%a)) stop 1
++    end select
++
++    deallocate(g)
++    allocate(g, source=f)
++    select type (g)
++    class is (bar_t)
++      if (.not. allocated(g(1)%a)) stop 2
++    end select
++  end subroutine check_assign
++end program pr110877
+-- 
+2.53.0
+

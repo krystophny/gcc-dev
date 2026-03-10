@@ -28,6 +28,7 @@ LD_LIBRARY_PATH=/opt/gcc16/lib64 ./a.out
 - [PR102430](pr/102430/) - OpenMP linear(array) ICE
 - [PR103276](pr/103276/) - OpenACC ENTER DATA mapping
 - [PR106946](pr/106946/) - CLASS component error-recovery ICE
+- [PR110877](pr/110877/) - Polymorphic dummy-array assignment deep copy
 - [PR123252](pr/123252/) - Derived type scalar fields
 - [PR123280](pr/123280/) - acc_is_present for assumed-shape / pointers
 - [PR123282](pr/123282/) - OpenACC refcount with allocatable descriptors
