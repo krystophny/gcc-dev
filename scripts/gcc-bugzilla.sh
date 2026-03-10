@@ -2,11 +2,11 @@
 # gcc-bugzilla.sh - Query and interact with GCC Bugzilla
 #
 # Usage:
-#   gcc-bugzilla.sh info <pr-number>           # Show bug info
-#   gcc-bugzilla.sh search <term>              # Search fortran bugs
-#   gcc-bugzilla.sh regressions                # List open fortran regressions
-#   gcc-bugzilla.sh attach <pr-number> <file>  # Attach a file (requires login)
-#   gcc-bugzilla.sh login                      # Login to GCC Bugzilla
+#   gcc-bugzilla.sh info <pr-number>                          # Show bug info
+#   gcc-bugzilla.sh search <term>                             # Search fortran bugs
+#   gcc-bugzilla.sh regressions                               # List open fortran regressions
+#   gcc-bugzilla.sh attach <pr-number> <file> [desc] [comment]  # Attach with optional comment
+#   gcc-bugzilla.sh login                                     # Login to GCC Bugzilla
 #
 # Requires: python-bugzilla (pip install python-bugzilla)
 
@@ -19,17 +19,18 @@ usage() {
     echo "Usage: $0 <command> [args...]"
     echo ""
     echo "Commands:"
-    echo "  info <pr-number>            Show bug status, summary, and details"
-    echo "  search <term>               Search open fortran bugs by summary text"
-    echo "  regressions                 List all open fortran regressions"
-    echo "  attach <pr-number> <file>   Attach a file to the bug (requires login)"
-    echo "  login                       Login to GCC Bugzilla (saves token)"
+    echo "  info <pr-number>                          Show bug status, summary, and details"
+    echo "  search <term>                             Search open fortran bugs by summary text"
+    echo "  regressions                               List all open fortran regressions"
+    echo "  attach <pr-number> <file> [desc] [comment]  Attach a file (requires login)"
+    echo "  login                                     Login to GCC Bugzilla (saves token)"
     echo ""
     echo "Examples:"
     echo "  $0 info 124235"
     echo "  $0 search 'ICE in fold_convert'"
     echo "  $0 regressions"
     echo "  $0 attach 123280 pr/123280/0001-fix.patch"
+    echo "  $0 attach 123280 pr/123280/0001-fix.patch 'Proposed patch' 'Fixes the ICE by...'"
     exit 1
 }
 
@@ -73,19 +74,22 @@ cmd_regressions() {
 cmd_attach() {
     local pr="$1"
     local file="$2"
+    local desc="${3:-$(basename "$file")}"
+    local comment="${4:-}"
 
     if [[ ! -f "$file" ]]; then
         echo "Error: file not found: $file" >&2
         exit 1
     fi
 
-    local desc
-    desc="$(basename "$file")"
+    file="$(realpath "$file")"
 
-    echo "Attaching '$file' to bug $pr as '$desc'..."
+    echo "Attaching '$file' to bug $pr..."
     echo ""
-    echo "  Bug: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=$pr"
-    echo "  File: $file"
+    echo "  Bug:     https://gcc.gnu.org/bugzilla/show_bug.cgi?id=$pr"
+    echo "  File:    $file"
+    echo "  Desc:    $desc"
+    [[ -n "$comment" ]] && echo "  Comment: $comment"
     echo ""
     read -rp "Proceed? [y/N] " confirm
     if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
@@ -93,7 +97,17 @@ cmd_attach() {
         exit 0
     fi
 
-    $BZ attach --file="$file" --desc="$desc" --type="text/plain" "$pr"
+    python3 - "$pr" "$file" "$desc" "$comment" <<'PYEOF'
+import sys, bugzilla
+pr, path, desc, comment = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+bz = bugzilla.Bugzilla("https://gcc.gnu.org/bugzilla/xmlrpc.cgi")
+kwargs = dict(content_type="text/plain", is_patch=True)
+if comment:
+    kwargs["comment"] = comment
+att_id = bz.attachfile(int(pr), path, desc, **kwargs)
+print(f"Attachment ID: {att_id}")
+print(f"https://gcc.gnu.org/bugzilla/show_bug.cgi?id={pr}")
+PYEOF
     echo "Done."
 }
 
@@ -119,7 +133,7 @@ case "$1" in
         ;;
     attach)
         [[ $# -lt 3 ]] && { echo "Error: missing PR number or file"; usage; }
-        cmd_attach "$2" "$3"
+        cmd_attach "$2" "$3" "${4:-}" "${5:-}"
         ;;
     login)
         cmd_login
