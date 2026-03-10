@@ -490,15 +490,75 @@ Verified: commit and patch both contain `Signed-off-by:`.
 
 ---
 
+## PR120723 (#96) - Patch Ready [DONE]
+
+**Status:** PATCH READY. Full `check-gfortran` passed, signed patch exported
+and pushed on branch `origin/pr120723-fix` (`5fae5d7c4e9`).
+
+### Task list
+
+- [x] Task 1: Reproduce the OpenACC `attach(scalar)` ICE.
+- [x] Task 1 review: Confirm the crash comes from a standalone pointer-mapping
+  node reaching `omp_group_base`.
+- [x] Task 2: Debug the scalar OpenACC lowering path in `trans-openmp.cc`.
+- [x] Task 2 review: Verify descriptor and component attach/detach paths already
+  have dedicated lowering and should remain untouched.
+- [x] Task 3: Implement the minimal fix and add a regression test.
+- [x] Task 3 review: Keep the new path limited to bare scalar attach/detach
+  clauses so other pointer/descriptor mappings are unchanged.
+- [x] Task 4: Rebuild and run direct plus targeted GoACC validation.
+- [x] Task 4 review: Recheck the new test, `attach-descriptor.f90`, and
+  `pr109622-6.f90` with the correct `goacc.exp` harness.
+- [x] Task 5: Run a clean full `check-gfortran`.
+- [x] Task 5 review: Confirm the merged `gfortran.sum` has `0` `FAIL`/`XPASS`.
+- [x] Task 6: Commit, `gcc-verify`, export, push, and update issue `#96`.
+- [x] Task 6 review: Verify the signed commit, exported patch footer, branch
+  state, and issue metadata.
+
+**Reproducer:**
+
+```fortran
+use openacc
+implicit none (type, external)
+integer, pointer :: a, b(:)
+integer, allocatable :: c, d(:)
+
+!$acc enter data attach(a)
+!$acc enter data attach(b)
+!$acc enter data attach(c)
+!$acc enter data attach(d)
+
+!$acc exit data detach(a)
+!$acc exit data detach(b)
+!$acc exit data detach(c)
+!$acc exit data detach(d)
+end
+```
+
+Expected end state:
+- successful `-fopenacc` compile
+- no `unexpected pointer mapping node` ICE
+
+**Root cause:** Plain scalar pointer-like variables used bare OpenACC
+`attach`/`detach` clauses but still fell through the generic scalar pointer
+mapping path in `gfc_trans_omp_clauses`.  That path built a standalone pointer
+mapping node, which later tripped the gimplifier check in `omp_group_base`.
+
+**Current local fix:** Detect bare OpenACC `attach`/`detach` clauses for
+non-descriptor scalar pointer-like variables in the generic scalar path and
+lower them directly as attach/detach operations on the scalar itself.  Leave
+descriptor and component cases on their existing dedicated paths.  The new
+test `gfortran.dg/goacc/pr120723.f90` checks the scalar pointer and scalar
+allocatable forms in the `original` dump.
+
+Patch exported: `pr/120723/0001-fortran-Fix-scalar-OpenACC-attach-detach-lowering-PR.patch`
+Verified: commit and patch both contain `Signed-off-by:`.
+
+---
+
 ## Backlog Audit (2026-03-10)
 
 **Confirmed locally still reproducing with dedicated validation:**
-
-- `PR120723` (`#96`) - with local `openacc.mod`, `!$acc enter data
-  attach(scalar)` still ICEs with `unexpected pointer mapping node`.
-
-**Quick compile check did not reproduce immediately; re-verify before spending
-fix time:**
 
 - `PR101760` (`#76`) - quick `-fopenmp` compile did not ICE.
 
@@ -507,22 +567,11 @@ fix time:**
 - `PR109788` (`#91`) - requires the precise UB-triggering path, likely with
   sanitizer instrumentation or exact IPA conditions.
 - `PR79524` (`#55`) - needs Valgrind/ASan confirmation on the invalid-code path.
-- `PR120723` (`#96`) - needs `openacc.mod` / OpenACC-capable setup for a real
-  compile check.
 - `PR110626` (`#92`) - runtime/finalization behavior issue.
 - `PR60576` (`#53`) - runtime/ASan descriptor overflow issue.
 - `PR42954` (`#52`) - architectural preprocessor gap, not a quick ICE check.
 
 ## Remaining Open Issues (by priority, then complexity)
-
-### P3 - High Priority
-
-| GH# | PR | Title | Complexity | Category |
-|-----|----|-------|------------|----------|
-| #96 | 120723 | ICE attach(scalar) OpenACC | medium | ice, openacc |
-
-**PR120723:** Debug `trans-openmp.cc` map clause generation for scalar attach.
-Should generate `GOMP_MAP_ATTACH`, not pointer mapping. Test with offload build.
 
 ### P4 - Low Complexity
 
@@ -574,6 +623,7 @@ Debug `trans-openmp.cc` target clause generation.
 | #68 | 95338 | ENTRY + -ff2c ICE | patch-ready |
 | #79 | 102459 | OMP iterator component array ICE | patch-ready |
 | #80 | 102596 | OMP task reduction ctor ICE | patch-ready |
+| #96 | 120723 | OpenACC scalar attach/detach ICE | patch-ready |
 | #95 | 120286 | OpenMP polymorphic pointer privatization | patch-ready |
 
 ---
