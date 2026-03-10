@@ -337,13 +337,89 @@ Verified: commit and patch both contain `Signed-off-by:`.
 
 ---
 
+## PR120286 (#95) - Patch Ready [DONE]
+
+**Status:** PATCH READY. Full `check-gfortran` passed, signed patch exported
+and pushed on branch `origin/pr120286-fix` (`985517a4dcc`).
+
+### Task list
+
+- [x] Task 1: Reproduce the OpenMP crash with a scalar polymorphic pointer in
+  `private`/`firstprivate`.
+- [x] Task 1 review: Confirm from the `omplower` dump that worker cleanup
+  finalizes and frees the shared pointee.
+- [x] Task 2: Debug the privatization ctor/dtor path in `trans-openmp.cc`.
+- [x] Task 2 review: Verify the problem is misclassification in the
+  clause-specific hooks, not a general deep-mapping or runtime refcount bug.
+- [x] Task 3: Implement the minimal fix and add a regression test.
+- [x] Task 3 review: Keep class-pointer detection local to the ctor/dtor hooks
+  so existing OpenMP polymorphic-mapping warnings remain intact.
+- [x] Task 4: Rebuild the frontend and run direct plus targeted validation.
+- [x] Task 4 review: Re-check both the original reproducer and
+  `gomp/polymorphic-mapping-1.f90` after rebuilding `f951`.
+- [x] Task 5: Run a clean full `check-gfortran`.
+- [x] Task 5 review: Confirm the rebuilt full-suite run finishes with `0`
+  `FAIL`/`XPASS`.
+- [x] Task 6: Commit, `gcc-verify`, export, push, and update issue `#95`.
+- [x] Task 6 review: Verify the signed commit, exported patch footer, branch
+  state, and issue metadata.
+
+**Reproducer:**
+
+```fortran
+program main
+  type foo_t
+    integer :: dummy
+  end type foo_t
+  type fooPtr_t
+    class(foo_t), pointer :: p
+  end type fooPtr_t
+  type fooPtrStack_t
+    class(fooPtr_t), allocatable :: list(:)
+  end type fooPtrStack_t
+  type(fooPtrStack_t) :: x
+  class(foo_t), pointer :: ptr
+  integer :: n
+
+  allocate (x%list(1))
+  allocate (x%list(1)%p)
+!$omp parallel do default(none) num_threads(2) private(n, ptr) shared(x)
+  do n = 1, 1
+    ptr => x%list(n)%p
+  end do
+!$omp end parallel do
+end
+```
+
+Expected end state:
+- successful compile and run with `-fopenmp`
+- no segmentation fault or double free
+
+**Root cause:** `gfc_omp_clause_copy_ctor` and `gfc_omp_clause_dtor` decided
+their polymorphic class handling from the lowered tree type alone.  For scalar
+class pointers privatized through OpenMP temporaries, that tree type still
+looked like a class container, so the hooks took the owned-polymorphic path,
+finalized `ptr._data`, and freed the shared pointee on thread exit.
+
+**Current local fix:** Unwrap saved descriptors first and recognize
+`__class_*_p` container types locally in those two OpenMP privatization hooks.
+Treat those entities as pointer-association-only state there, while leaving
+the broader `gfc_is_polymorphic_nonptr` classification unchanged for mapping
+warnings and deep-mapping logic.  The regression test
+`gfortran.dg/pr120286.f90` covers both the original `private(ptr)` crash and a
+`firstprivate(ptr)` association check.
+
+Patch exported: `pr/120286/0001-fortran-Preserve-scalar-class-pointers-in-OpenMP-pri.patch`
+Verified: commit and patch both contain `Signed-off-by:`.
+
+---
+
 ## Backlog Audit (2026-03-10)
 
 **Confirmed locally still reproducing with dedicated validation:**
 
-- `PR120286` (`#95`) - runtime OpenMP reproducer still segfaults, and the
-  `omplower` dump shows privatized polymorphic pointer cleanup freeing the
-  shared pointee on thread exit.
+- `PR120723` (`#96`) - with local `openacc.mod`, `!$acc enter data
+  attach(scalar)` still ICEs with `unexpected pointer mapping node`.
 
 **Quick compile check did not reproduce immediately; re-verify before spending
 fix time:**
@@ -357,8 +433,6 @@ fix time:**
 - `PR79524` (`#55`) - needs Valgrind/ASan confirmation on the invalid-code path.
 - `PR120723` (`#96`) - needs `openacc.mod` / OpenACC-capable setup for a real
   compile check.
-- `PR120286` (`#95`) - runtime OpenMP wrong-code reproducer, not a quick
-  compile-only check.
 - `PR110626` (`#92`) - runtime/finalization behavior issue.
 - `PR60576` (`#53`) - runtime/ASan descriptor overflow issue.
 - `PR42954` (`#52`) - architectural preprocessor gap, not a quick ICE check.
@@ -370,13 +444,9 @@ fix time:**
 | GH# | PR | Title | Complexity | Category |
 |-----|----|-------|------------|----------|
 | #96 | 120723 | ICE attach(scalar) OpenACC | medium | ice, openacc |
-| #95 | 120286 | Double free with OpenMP | high | wrong-code, openmp |
 
 **PR120723:** Debug `trans-openmp.cc` map clause generation for scalar attach.
 Should generate `GOMP_MAP_ATTACH`, not pointer mapping. Test with offload build.
-
-**PR120286:** Refcount or deep-copy issue in `trans-openmp.cc` / `trans-array.cc`.
-Compare tree dumps with/without OpenMP. May need runtime tracing in libgomp.
 
 ### P4 - Low Complexity
 
@@ -428,6 +498,7 @@ Debug `trans-openmp.cc` target clause generation.
 | #68 | 95338 | ENTRY + -ff2c ICE | patch-ready |
 | #79 | 102459 | OMP iterator component array ICE | patch-ready |
 | #80 | 102596 | OMP task reduction ctor ICE | patch-ready |
+| #95 | 120286 | OpenMP polymorphic pointer privatization | patch-ready |
 
 ---
 

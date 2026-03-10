@@ -438,6 +438,25 @@ symbol type.
 
 **Evidence:** PR95338.
 
+### Pattern 13: OpenMP Privatization Hooks Must Inspect the Original Decl
+
+**Symptom:** OpenMP `private` or `firstprivate` on a scalar polymorphic
+pointer compiles, but the worker cleanup finalizes and frees the shared
+target, leading to a crash or double free at runtime.
+
+**Root cause:** The OpenMP clause copy/dtor hooks are easy to steer from the
+lowered tree type alone, but scalar class pointers often pass through
+artificial saved-descriptor temporaries whose tree type still looks like a
+class record.  If those hooks classify the entity as an owned polymorphic
+object instead of a pointer-like one, they take the finalize/free path.
+
+**Fix:** In the clause-specific ctor/dtor hooks, unwrap saved descriptors
+first and recognize class-pointer container types locally.  Preserve only
+pointer association for those entities there, without changing the broader
+polymorphic mapping classification used for warnings or deep mapping.
+
+**Evidence:** PR120286.
+
 ## Fix Development Rules
 
 ### DO
@@ -620,6 +639,7 @@ https://gcc.gnu.org/git/?p=gcc.git;a=commit;h=e0b70284cfa...
 | 95338 | `pr95338-fix` | Fix mixed ENTRY union ABI under `-ff2c` |
 | 102459 | `pr102459-fix` | Fix OMP iterator component array ICE |
 | 102596 | `pr102596-fix` | Allow task-reduction allocatable scalars without outer ref |
+| 120286 | `pr120286-fix` | Preserve scalar class pointers in OpenMP privatization |
 | 123280+96080 | `pr123280-fix` | Fix acc_is_present for assumed-shape and pointers |
 | 103276 | `pr103276-fix` | Skip pointer mapping for pass-by-ref in ENTER/EXIT DATA |
 | 123252 | `pr123252-fix` | Map scalar fields on enter data for components |
