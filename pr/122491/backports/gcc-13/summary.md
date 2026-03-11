@@ -13,7 +13,7 @@
 
 | Branch | Reproduces | Candidate | Apply mode | Targeted tests | Full suite |
 |--------|------------|-----------|------------|----------------|------------|
-| gcc-13 | unknown | unknown | unknown | not-run | not-run |
+| gcc-13 | unknown | unknown | needs-special-env | not-run | not-run |
 
 ## Risk Summary
 

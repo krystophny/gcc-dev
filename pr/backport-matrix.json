@@ -1,37 +1,37 @@
 {
-  "generated_at": "2026-03-11T19:41:42Z",
+  "generated_at": "2026-03-11T20:12:42Z",
   "rows": [
     {
       "backports": {
         "gcc-13": {
-          "apply_mode": "unknown",
-          "backport_candidate": null,
-          "branch_commit": null,
-          "branch_patch": null,
+          "apply_mode": "validated-targeted",
+          "backport_candidate": true,
+          "branch_commit": "ffefe58e40d3f17ae3cedc7d865f909caeb38c58",
+          "branch_patch": "backports/gcc-13/0001-fortran-Reject-array-allocatable-LINEAR-on-DO-PR1024.patch",
           "full_suite": "not-run",
-          "notes": "",
-          "reproduces": null,
-          "targeted_tests": "not-run"
+          "notes": "targeted tests passed: gomp/pr102430.f90",
+          "reproduces": true,
+          "targeted_tests": "pass"
         },
         "gcc-14": {
-          "apply_mode": "unknown",
-          "backport_candidate": null,
-          "branch_commit": null,
-          "branch_patch": null,
+          "apply_mode": "validated-targeted",
+          "backport_candidate": true,
+          "branch_commit": "93c57cb681a2800eef139d3014ef652d29a3a317",
+          "branch_patch": "backports/gcc-14/0001-fortran-Reject-array-allocatable-LINEAR-on-DO-PR1024.patch",
           "full_suite": "not-run",
-          "notes": "",
-          "reproduces": null,
-          "targeted_tests": "not-run"
+          "notes": "targeted tests passed: gomp/pr102430.f90",
+          "reproduces": true,
+          "targeted_tests": "pass"
         },
         "gcc-15": {
-          "apply_mode": "unknown",
-          "backport_candidate": null,
-          "branch_commit": null,
-          "branch_patch": null,
+          "apply_mode": "validated-targeted",
+          "backport_candidate": true,
+          "branch_commit": "3f9b7014d3a3d86be9a852078ce8fcb362093586",
+          "branch_patch": "backports/gcc-15/0001-fortran-Reject-array-allocatable-LINEAR-on-DO-PR1024.patch",
           "full_suite": "not-run",
-          "notes": "",
-          "reproduces": null,
-          "targeted_tests": "not-run"
+          "notes": "targeted tests passed: gomp/pr102430.f90",
+          "reproduces": true,
+          "targeted_tests": "pass"
         }
       },
       "fix_status": "patch-ready",
@@ -42,33 +42,33 @@
     {
       "backports": {
         "gcc-13": {
-          "apply_mode": "unknown",
-          "backport_candidate": null,
+          "apply_mode": "not-affected",
+          "backport_candidate": false,
           "branch_commit": null,
           "branch_patch": null,
           "full_suite": "not-run",
-          "notes": "",
-          "reproduces": null,
+          "notes": "baseline branch compiler does not match the recorded reproducer signature",
+          "reproduces": false,
           "targeted_tests": "not-run"
         },
         "gcc-14": {
-          "apply_mode": "unknown",
-          "backport_candidate": null,
+          "apply_mode": "not-affected",
+          "backport_candidate": false,
           "branch_commit": null,
           "branch_patch": null,
           "full_suite": "not-run",
-          "notes": "",
-          "reproduces": null,
+          "notes": "baseline branch compiler does not match the recorded reproducer signature",
+          "reproduces": false,
           "targeted_tests": "not-run"
         },
         "gcc-15": {
-          "apply_mode": "unknown",
-          "backport_candidate": null,
+          "apply_mode": "not-affected",
+          "backport_candidate": false,
           "branch_commit": null,
           "branch_patch": null,
           "full_suite": "not-run",
-          "notes": "",
-          "reproduces": null,
+          "notes": "baseline branch compiler does not match the recorded reproducer signature",
+          "reproduces": false,
           "targeted_tests": "not-run"
         }
       },
@@ -80,32 +80,32 @@
     {
       "backports": {
         "gcc-13": {
-          "apply_mode": "unknown",
+          "apply_mode": "needs-special-env",
           "backport_candidate": null,
           "branch_commit": null,
           "branch_patch": null,
           "full_suite": "not-run",
-          "notes": "",
+          "notes": "requires sanitizer-instrumented branch compiler to observe the UAF",
           "reproduces": null,
           "targeted_tests": "not-run"
         },
         "gcc-14": {
-          "apply_mode": "unknown",
+          "apply_mode": "needs-special-env",
           "backport_candidate": null,
           "branch_commit": null,
           "branch_patch": null,
           "full_suite": "not-run",
-          "notes": "",
+          "notes": "requires sanitizer-instrumented branch compiler to observe the UAF",
           "reproduces": null,
           "targeted_tests": "not-run"
         },
         "gcc-15": {
-          "apply_mode": "unknown",
+          "apply_mode": "needs-special-env",
           "backport_candidate": null,
           "branch_commit": null,
           "branch_patch": null,
           "full_suite": "not-run",
-          "notes": "",
+          "notes": "requires sanitizer-instrumented branch compiler to observe the UAF",
           "reproduces": null,
           "targeted_tests": "not-run"
         }
@@ -118,32 +118,32 @@
     {
       "backports": {
         "gcc-13": {
-          "apply_mode": "unknown",
+          "apply_mode": "needs-special-env",
           "backport_candidate": null,
           "branch_commit": null,
           "branch_patch": null,
           "full_suite": "not-run",
-          "notes": "",
+          "notes": "requires NVPTX OpenACC runtime/offload execution to reproduce the size bug",
           "reproduces": null,
           "targeted_tests": "not-run"
         },
         "gcc-14": {
-          "apply_mode": "unknown",
+          "apply_mode": "needs-special-env",
           "backport_candidate": null,
           "branch_commit": null,
           "branch_patch": null,
           "full_suite": "not-run",
-          "notes": "",
+          "notes": "requires NVPTX OpenACC runtime/offload execution to reproduce the size bug",
           "reproduces": null,
           "targeted_tests": "not-run"
         },
         "gcc-15": {
-          "apply_mode": "unknown",
+          "apply_mode": "needs-special-env",
           "backport_candidate": null,
           "branch_commit": null,
           "branch_patch": null,
           "full_suite": "not-run",
-          "notes": "",
+          "notes": "requires NVPTX OpenACC runtime/offload execution to reproduce the size bug",
           "reproduces": null,
           "targeted_tests": "not-run"
         }
@@ -156,32 +156,32 @@
     {
       "backports": {
         "gcc-13": {
-          "apply_mode": "unknown",
+          "apply_mode": "needs-special-env",
           "backport_candidate": null,
           "branch_commit": null,
           "branch_patch": null,
           "full_suite": "not-run",
-          "notes": "",
+          "notes": "requires Valgrind or equivalent leak checking to validate the regression",
           "reproduces": null,
           "targeted_tests": "not-run"
         },
         "gcc-14": {
-          "apply_mode": "unknown",
+          "apply_mode": "needs-special-env",
           "backport_candidate": null,
           "branch_commit": null,
           "branch_patch": null,
           "full_suite": "not-run",
-          "notes": "",
+          "notes": "requires Valgrind or equivalent leak checking to validate the regression",
           "reproduces": null,
           "targeted_tests": "not-run"
         },
         "gcc-15": {
-          "apply_mode": "unknown",
+          "apply_mode": "needs-special-env",
           "backport_candidate": null,
           "branch_commit": null,
           "branch_patch": null,
           "full_suite": "not-run",
-          "notes": "",
+          "notes": "requires Valgrind or equivalent leak checking to validate the regression",
           "reproduces": null,
           "targeted_tests": "not-run"
         }
@@ -194,33 +194,33 @@
     {
       "backports": {
         "gcc-13": {
-          "apply_mode": "unknown",
-          "backport_candidate": null,
+          "apply_mode": "needs-adaptation",
+          "backport_candidate": true,
           "branch_commit": null,
           "branch_patch": null,
           "full_suite": "not-run",
-          "notes": "",
-          "reproduces": null,
+          "notes": "error: could not apply 841b68e48c4... fortran: Fix recursive deep-copy helper generation [PR123947]\nhint: After resolving the conflicts, mark them with\nhint: \"git add/rm <pathspec>\", then run\nhint: \"git cherry-pick --continue\".\nhint: You can instead skip this commit with \"git cherry-pick --skip\".\nhint: To abort and get back to the state before \"git cherry-pick\",\nhint: run \"git cherry-pick --abort\".\nhint: Disable this message with \"git config set advice.mergeConflict false\"",
+          "reproduces": true,
           "targeted_tests": "not-run"
         },
         "gcc-14": {
-          "apply_mode": "unknown",
-          "backport_candidate": null,
+          "apply_mode": "needs-adaptation",
+          "backport_candidate": true,
           "branch_commit": null,
           "branch_patch": null,
           "full_suite": "not-run",
-          "notes": "",
-          "reproduces": null,
+          "notes": "error: could not apply 841b68e48c4... fortran: Fix recursive deep-copy helper generation [PR123947]\nhint: After resolving the conflicts, mark them with\nhint: \"git add/rm <pathspec>\", then run\nhint: \"git cherry-pick --continue\".\nhint: You can instead skip this commit with \"git cherry-pick --skip\".\nhint: To abort and get back to the state before \"git cherry-pick\",\nhint: run \"git cherry-pick --abort\".\nhint: Disable this message with \"git config set advice.mergeConflict false\"",
+          "reproduces": true,
           "targeted_tests": "not-run"
         },
         "gcc-15": {
-          "apply_mode": "unknown",
-          "backport_candidate": null,
+          "apply_mode": "not-affected",
+          "backport_candidate": false,
           "branch_commit": null,
           "branch_patch": null,
           "full_suite": "not-run",
-          "notes": "",
-          "reproduces": null,
+          "notes": "baseline branch compiler does not match the recorded reproducer signature",
+          "reproduces": false,
           "targeted_tests": "not-run"
         }
       },
@@ -232,33 +232,33 @@
     {
       "backports": {
         "gcc-13": {
-          "apply_mode": "unknown",
-          "backport_candidate": null,
+          "apply_mode": "not-affected",
+          "backport_candidate": false,
           "branch_commit": null,
           "branch_patch": null,
           "full_suite": "not-run",
-          "notes": "",
-          "reproduces": null,
+          "notes": "baseline branch compiler does not match the recorded reproducer signature",
+          "reproduces": false,
           "targeted_tests": "not-run"
         },
         "gcc-14": {
-          "apply_mode": "unknown",
-          "backport_candidate": null,
+          "apply_mode": "not-affected",
+          "backport_candidate": false,
           "branch_commit": null,
           "branch_patch": null,
           "full_suite": "not-run",
-          "notes": "",
-          "reproduces": null,
+          "notes": "baseline branch compiler does not match the recorded reproducer signature",
+          "reproduces": false,
           "targeted_tests": "not-run"
         },
         "gcc-15": {
-          "apply_mode": "unknown",
-          "backport_candidate": null,
+          "apply_mode": "not-affected",
+          "backport_candidate": false,
           "branch_commit": null,
           "branch_patch": null,
           "full_suite": "not-run",
-          "notes": "",
-          "reproduces": null,
+          "notes": "baseline branch compiler does not match the recorded reproducer signature",
+          "reproduces": false,
           "targeted_tests": "not-run"
         }
       },
@@ -270,33 +270,33 @@
     {
       "backports": {
         "gcc-13": {
-          "apply_mode": "unknown",
-          "backport_candidate": null,
+          "apply_mode": "not-affected",
+          "backport_candidate": false,
           "branch_commit": null,
           "branch_patch": null,
           "full_suite": "not-run",
-          "notes": "",
-          "reproduces": null,
+          "notes": "baseline branch compiler does not match the recorded reproducer signature",
+          "reproduces": false,
           "targeted_tests": "not-run"
         },
         "gcc-14": {
-          "apply_mode": "unknown",
-          "backport_candidate": null,
+          "apply_mode": "not-affected",
+          "backport_candidate": false,
           "branch_commit": null,
           "branch_patch": null,
           "full_suite": "not-run",
-          "notes": "",
-          "reproduces": null,
+          "notes": "baseline branch compiler does not match the recorded reproducer signature",
+          "reproduces": false,
           "targeted_tests": "not-run"
         },
         "gcc-15": {
-          "apply_mode": "unknown",
-          "backport_candidate": null,
+          "apply_mode": "not-affected",
+          "backport_candidate": false,
           "branch_commit": null,
           "branch_patch": null,
           "full_suite": "not-run",
-          "notes": "",
-          "reproduces": null,
+          "notes": "baseline branch compiler does not match the recorded reproducer signature",
+          "reproduces": false,
           "targeted_tests": "not-run"
         }
       },
@@ -308,33 +308,33 @@
     {
       "backports": {
         "gcc-13": {
-          "apply_mode": "unknown",
-          "backport_candidate": null,
+          "apply_mode": "needs-adaptation",
+          "backport_candidate": true,
           "branch_commit": null,
           "branch_patch": null,
           "full_suite": "not-run",
-          "notes": "",
-          "reproduces": null,
+          "notes": "error: could not apply e0b70284cfa... fortran: Fix ICE in ALLOCATE of sub-objects with recursive types\nhint: After resolving the conflicts, mark them with\nhint: \"git add/rm <pathspec>\", then run\nhint: \"git cherry-pick --continue\".\nhint: You can instead skip this commit with \"git cherry-pick --skip\".\nhint: To abort and get back to the state before \"git cherry-pick\",\nhint: run \"git cherry-pick --abort\".\nhint: Disable this message with \"git config set advice.mergeConflict false\"",
+          "reproduces": true,
           "targeted_tests": "not-run"
         },
         "gcc-14": {
-          "apply_mode": "unknown",
-          "backport_candidate": null,
+          "apply_mode": "needs-adaptation",
+          "backport_candidate": true,
           "branch_commit": null,
           "branch_patch": null,
           "full_suite": "not-run",
-          "notes": "",
-          "reproduces": null,
+          "notes": "error: could not apply e0b70284cfa... fortran: Fix ICE in ALLOCATE of sub-objects with recursive types\nhint: After resolving the conflicts, mark them with\nhint: \"git add/rm <pathspec>\", then run\nhint: \"git cherry-pick --continue\".\nhint: You can instead skip this commit with \"git cherry-pick --skip\".\nhint: To abort and get back to the state before \"git cherry-pick\",\nhint: run \"git cherry-pick --abort\".\nhint: Disable this message with \"git config set advice.mergeConflict false\"",
+          "reproduces": true,
           "targeted_tests": "not-run"
         },
         "gcc-15": {
-          "apply_mode": "unknown",
-          "backport_candidate": null,
+          "apply_mode": "not-affected",
+          "backport_candidate": false,
           "branch_commit": null,
           "branch_patch": null,
           "full_suite": "not-run",
-          "notes": "",
-          "reproduces": null,
+          "notes": "baseline branch compiler does not match the recorded reproducer signature",
+          "reproduces": false,
           "targeted_tests": "not-run"
         }
       },

@@ -60,18 +60,33 @@
     "commit": "1afc4672561a",
     "patch": "0001-libgomp-Fix-OpenACC-refcount-for-Fortran-allocatable.patch"
   },
-  "updated_at": "2026-03-11T19:41:19Z",
+  "updated_at": "2026-03-11T20:09:43Z",
   "validation": {
+    "baseline": {
+      "contains_any": [
+        "internal compiler error",
+        "ICE in"
+      ],
+      "exit": "nonzero",
+      "not_contains": []
+    },
     "compile": [
       "gcc-build/gcc/gfortran",
       "-B",
       "gcc-build/gcc",
       "-c",
-      "pr/123282/reproducer.f90",
+      "pr/123282/mre.f90",
       "-o",
       "/dev/null"
     ],
     "env": {},
+    "fixed": {
+      "contains_any": [],
+      "exit": "zero",
+      "not_contains": [
+        "internal compiler error"
+      ]
+    },
     "kind": "compile",
     "run": []
   }

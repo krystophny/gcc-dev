@@ -6,33 +6,33 @@
   },
   "backports": {
     "gcc-13": {
-      "apply_mode": "unknown",
-      "backport_candidate": null,
+      "apply_mode": "needs-adaptation",
+      "backport_candidate": true,
       "branch_commit": null,
       "branch_patch": null,
       "full_suite": "not-run",
-      "notes": "",
-      "reproduces": null,
+      "notes": "error: could not apply e0b70284cfa... fortran: Fix ICE in ALLOCATE of sub-objects with recursive types\nhint: After resolving the conflicts, mark them with\nhint: \"git add/rm <pathspec>\", then run\nhint: \"git cherry-pick --continue\".\nhint: You can instead skip this commit with \"git cherry-pick --skip\".\nhint: To abort and get back to the state before \"git cherry-pick\",\nhint: run \"git cherry-pick --abort\".\nhint: Disable this message with \"git config set advice.mergeConflict false\"",
+      "reproduces": true,
       "targeted_tests": "not-run"
     },
     "gcc-14": {
-      "apply_mode": "unknown",
-      "backport_candidate": null,
+      "apply_mode": "needs-adaptation",
+      "backport_candidate": true,
       "branch_commit": null,
       "branch_patch": null,
       "full_suite": "not-run",
-      "notes": "",
-      "reproduces": null,
+      "notes": "error: could not apply e0b70284cfa... fortran: Fix ICE in ALLOCATE of sub-objects with recursive types\nhint: After resolving the conflicts, mark them with\nhint: \"git add/rm <pathspec>\", then run\nhint: \"git cherry-pick --continue\".\nhint: You can instead skip this commit with \"git cherry-pick --skip\".\nhint: To abort and get back to the state before \"git cherry-pick\",\nhint: run \"git cherry-pick --abort\".\nhint: Disable this message with \"git config set advice.mergeConflict false\"",
+      "reproduces": true,
       "targeted_tests": "not-run"
     },
     "gcc-15": {
-      "apply_mode": "unknown",
-      "backport_candidate": null,
+      "apply_mode": "not-affected",
+      "backport_candidate": false,
       "branch_commit": null,
       "branch_patch": null,
       "full_suite": "not-run",
-      "notes": "",
-      "reproduces": null,
+      "notes": "baseline branch compiler does not match the recorded reproducer signature",
+      "reproduces": false,
       "targeted_tests": "not-run"
     }
   },
@@ -60,8 +60,16 @@
     "commit": "e0b70284cfa",
     "patch": "0001-fortran-Fix-ICE-in-ALLOCATE-of-sub-objects-with-recu.patch"
   },
-  "updated_at": "2026-03-11T19:41:19Z",
+  "updated_at": "2026-03-11T20:11:54Z",
   "validation": {
+    "baseline": {
+      "contains_any": [
+        "internal compiler error",
+        "ICE in"
+      ],
+      "exit": "nonzero",
+      "not_contains": []
+    },
     "compile": [
       "gcc-build/gcc/gfortran",
       "-B",
@@ -72,6 +80,13 @@
       "/dev/null"
     ],
     "env": {},
+    "fixed": {
+      "contains_any": [],
+      "exit": "zero",
+      "not_contains": [
+        "internal compiler error"
+      ]
+    },
     "kind": "compile",
     "run": []
   }

@@ -6,32 +6,32 @@
   },
   "backports": {
     "gcc-13": {
-      "apply_mode": "unknown",
+      "apply_mode": "needs-special-env",
       "backport_candidate": null,
       "branch_commit": null,
       "branch_patch": null,
       "full_suite": "not-run",
-      "notes": "",
+      "notes": "requires sanitizer-instrumented branch compiler to observe the UAF",
       "reproduces": null,
       "targeted_tests": "not-run"
     },
     "gcc-14": {
-      "apply_mode": "unknown",
+      "apply_mode": "needs-special-env",
       "backport_candidate": null,
       "branch_commit": null,
       "branch_patch": null,
       "full_suite": "not-run",
-      "notes": "",
+      "notes": "requires sanitizer-instrumented branch compiler to observe the UAF",
       "reproduces": null,
       "targeted_tests": "not-run"
     },
     "gcc-15": {
-      "apply_mode": "unknown",
+      "apply_mode": "needs-special-env",
       "backport_candidate": null,
       "branch_commit": null,
       "branch_patch": null,
       "full_suite": "not-run",
-      "notes": "",
+      "notes": "requires sanitizer-instrumented branch compiler to observe the UAF",
       "reproduces": null,
       "targeted_tests": "not-run"
     }
@@ -60,19 +60,9 @@
     "commit": "ff2f6c5153e",
     "patch": "0001-fortran-Avoid-UAF-on-missing-END-BLOCK-cleanup-PR122.patch"
   },
-  "updated_at": "2026-03-11T19:41:19Z",
+  "updated_at": "2026-03-11T20:11:32Z",
   "validation": {
-    "compile": [
-      "gcc-build/gcc/gfortran",
-      "-B",
-      "gcc-build/gcc",
-      "-c",
-      "pr/122491/reproducer.f90",
-      "-o",
-      "/dev/null"
-    ],
-    "env": {},
-    "kind": "compile",
-    "run": []
+    "kind": "special-env",
+    "reason": "requires sanitizer-instrumented branch compiler to observe the UAF"
   }
 }

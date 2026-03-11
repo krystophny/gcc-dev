@@ -6,34 +6,34 @@
   },
   "backports": {
     "gcc-13": {
-      "apply_mode": "unknown",
-      "backport_candidate": null,
-      "branch_commit": null,
-      "branch_patch": null,
+      "apply_mode": "validated-targeted",
+      "backport_candidate": true,
+      "branch_commit": "ffefe58e40d3f17ae3cedc7d865f909caeb38c58",
+      "branch_patch": "backports/gcc-13/0001-fortran-Reject-array-allocatable-LINEAR-on-DO-PR1024.patch",
       "full_suite": "not-run",
-      "notes": "",
-      "reproduces": null,
-      "targeted_tests": "not-run"
+      "notes": "targeted tests passed: gomp/pr102430.f90",
+      "reproduces": true,
+      "targeted_tests": "pass"
     },
     "gcc-14": {
-      "apply_mode": "unknown",
-      "backport_candidate": null,
-      "branch_commit": null,
-      "branch_patch": null,
+      "apply_mode": "validated-targeted",
+      "backport_candidate": true,
+      "branch_commit": "93c57cb681a2800eef139d3014ef652d29a3a317",
+      "branch_patch": "backports/gcc-14/0001-fortran-Reject-array-allocatable-LINEAR-on-DO-PR1024.patch",
       "full_suite": "not-run",
-      "notes": "",
-      "reproduces": null,
-      "targeted_tests": "not-run"
+      "notes": "targeted tests passed: gomp/pr102430.f90",
+      "reproduces": true,
+      "targeted_tests": "pass"
     },
     "gcc-15": {
-      "apply_mode": "unknown",
-      "backport_candidate": null,
-      "branch_commit": null,
-      "branch_patch": null,
+      "apply_mode": "validated-targeted",
+      "backport_candidate": true,
+      "branch_commit": "3f9b7014d3a3d86be9a852078ce8fcb362093586",
+      "branch_patch": "backports/gcc-15/0001-fortran-Reject-array-allocatable-LINEAR-on-DO-PR1024.patch",
       "full_suite": "not-run",
-      "notes": "",
-      "reproduces": null,
-      "targeted_tests": "not-run"
+      "notes": "targeted tests passed: gomp/pr102430.f90",
+      "reproduces": true,
+      "targeted_tests": "pass"
     }
   },
   "bugzilla": {
@@ -60,18 +60,37 @@
     "commit": "d498fe6e019",
     "patch": "0001-fortran-Reject-array-allocatable-LINEAR-on-DO-PR1024.patch"
   },
-  "updated_at": "2026-03-11T19:41:19Z",
+  "updated_at": "2026-03-11T20:11:17Z",
   "validation": {
+    "baseline": {
+      "contains_any": [
+        "internal compiler error",
+        "ICE in"
+      ],
+      "exit": "nonzero",
+      "not_contains": []
+    },
     "compile": [
       "gcc-build/gcc/gfortran",
       "-B",
       "gcc-build/gcc",
+      "-fopenmp",
       "-c",
       "pr/102430/reproducer.f90",
       "-o",
       "/dev/null"
     ],
     "env": {},
+    "fixed": {
+      "contains_any": [
+        "Sorry, not yet supported",
+        "not yet supported"
+      ],
+      "exit": "nonzero",
+      "not_contains": [
+        "internal compiler error"
+      ]
+    },
     "kind": "compile",
     "run": []
   }

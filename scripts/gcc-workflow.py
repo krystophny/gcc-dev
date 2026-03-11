@@ -106,6 +106,53 @@ VALIDITY_OVERRIDES = {
 }
 
 VALIDATION_OVERRIDES = {
+    102430: {
+        "kind": "compile",
+        "compile": [
+            "gcc-build/gcc/gfortran",
+            "-B",
+            "gcc-build/gcc",
+            "-fopenmp",
+            "-c",
+            "pr/102430/reproducer.f90",
+            "-o",
+            "/dev/null",
+        ],
+        "run": [],
+        "env": {},
+        "baseline": {
+            "exit": "nonzero",
+            "contains_any": ["internal compiler error", "ICE in"],
+            "not_contains": [],
+        },
+        "fixed": {
+            "exit": "nonzero",
+            "contains_any": ["Sorry, not yet supported", "not yet supported"],
+            "not_contains": ["internal compiler error"],
+        },
+    },
+    106946: {
+        "kind": "compile",
+        "compile": [
+            "gcc-build/gcc/gfortran",
+            "-B",
+            "gcc-build/gcc",
+            "-fsyntax-only",
+            "pr/106946/reproducer.f90",
+        ],
+        "run": [],
+        "env": {},
+        "baseline": {
+            "exit": "nonzero",
+            "contains_any": ["internal compiler error", "ICE in"],
+            "not_contains": [],
+        },
+        "fixed": {
+            "exit": "nonzero",
+            "contains_any": ["Syntax error in data declaration", "Invalid character"],
+            "not_contains": ["internal compiler error"],
+        },
+    },
     110877: {
         "kind": "run",
         "compile": [
@@ -132,6 +179,115 @@ VALIDATION_OVERRIDES = {
         ],
         "run": ["/tmp/pr120286"],
         "env": {"OMP_NUM_THREADS": "2"},
+    },
+    122491: {
+        "kind": "special-env",
+        "reason": "requires sanitizer-instrumented branch compiler to observe the UAF",
+    },
+    123255: {
+        "kind": "special-env",
+        "reason": "requires NVPTX OpenACC runtime/offload execution to reproduce the size bug",
+    },
+    123868: {
+        "kind": "special-env",
+        "reason": "requires Valgrind or equivalent leak checking to validate the regression",
+    },
+    123947: {
+        "kind": "compile",
+        "compile": [
+            "gcc-build/gcc/gfortran",
+            "-B",
+            "gcc-build/gcc",
+            "-c",
+            "pr/123947/reproducer-reduced.f90",
+            "-o",
+            "/dev/null",
+        ],
+        "run": [],
+        "env": {},
+        "baseline": {
+            "exit": "nonzero",
+            "contains_any": ["internal compiler error", "ICE in"],
+            "not_contains": [],
+        },
+        "fixed": {
+            "exit": "zero",
+            "contains_any": [],
+            "not_contains": ["internal compiler error"],
+        },
+    },
+    123949: {
+        "kind": "compile",
+        "compile": [
+            "gcc-build/gcc/gfortran",
+            "-B",
+            "gcc-build/gcc",
+            "-c",
+            "-w",
+            "pr/123949/reproducer.f90",
+            "-o",
+            "/dev/null",
+        ],
+        "run": [],
+        "env": {},
+        "baseline": {
+            "exit": "nonzero",
+            "contains_any": ["internal compiler error", "ICE in"],
+            "not_contains": [],
+        },
+        "fixed": {
+            "exit": "zero",
+            "contains_any": [],
+            "not_contains": ["internal compiler error"],
+        },
+    },
+    124208: {
+        "kind": "compile",
+        "compile": [
+            "gcc-build/gcc/gfortran",
+            "-B",
+            "gcc-build/gcc",
+            "-c",
+            "pr/124208/reproducer.f90",
+            "-o",
+            "/dev/null",
+        ],
+        "run": [],
+        "env": {},
+        "baseline": {
+            "exit": "nonzero",
+            "contains_any": ["internal compiler error", "ICE in"],
+            "not_contains": [],
+        },
+        "fixed": {
+            "exit": "zero",
+            "contains_any": [],
+            "not_contains": ["internal compiler error"],
+        },
+    },
+    124235: {
+        "kind": "compile",
+        "compile": [
+            "gcc-build/gcc/gfortran",
+            "-B",
+            "gcc-build/gcc",
+            "-c",
+            "pr/124235/reproducer.f90",
+            "-o",
+            "/dev/null",
+        ],
+        "run": [],
+        "env": {},
+        "baseline": {
+            "exit": "nonzero",
+            "contains_any": ["internal compiler error", "ICE in"],
+            "not_contains": [],
+        },
+        "fixed": {
+            "exit": "zero",
+            "contains_any": [],
+            "not_contains": ["internal compiler error"],
+        },
     },
 }
 
@@ -235,6 +391,16 @@ def parse_branch_name(readme: str) -> Optional[str]:
     return None
 
 
+def parse_patch_name(readme: str, patch_files: List[str], existing_patch: Optional[str]) -> Optional[str]:
+    mentioned = re.findall(r"(0001-[A-Za-z0-9_.+-]+\.patch)", readme)
+    for patch in reversed(mentioned):
+        if patch in patch_files:
+            return patch
+    if existing_patch and existing_patch in patch_files:
+        return existing_patch
+    return patch_files[-1] if patch_files else None
+
+
 def parse_fix_status(status_line: str, pr_dir: Path) -> str:
     upper = status_line.upper()
     if "MERGED" in upper:
@@ -305,6 +471,15 @@ def default_validation(pr: int, pr_dir: Path) -> Dict[str, Any]:
     if pr in VALIDATION_OVERRIDES:
         return VALIDATION_OVERRIDES[pr]
     reproducer = pr_dir / "reproducer.f90"
+    candidate = reproducer
+    if not candidate.exists():
+        alternatives = sorted(
+            p
+            for p in pr_dir.glob("*.f90")
+            if "attachment" not in p.name
+        )
+        if alternatives:
+            candidate = alternatives[0]
     return {
         "kind": "compile",
         "compile": [
@@ -312,12 +487,22 @@ def default_validation(pr: int, pr_dir: Path) -> Dict[str, Any]:
             "-B",
             "gcc-build/gcc",
             "-c",
-            str(reproducer.relative_to(ROOT)) if reproducer.exists() else f"pr/{pr}/reproducer.f90",
+            str(candidate.relative_to(ROOT)),
             "-o",
             "/dev/null",
         ],
         "run": [],
         "env": {},
+        "baseline": {
+            "exit": "nonzero",
+            "contains_any": ["internal compiler error", "ICE in"],
+            "not_contains": [],
+        },
+        "fixed": {
+            "exit": "zero",
+            "contains_any": [],
+            "not_contains": ["internal compiler error"],
+        },
     }
 
 
@@ -356,7 +541,7 @@ def bugzilla_lookup(pr: int) -> Dict[str, Any]:
         "status": bug.get("status"),
         "resolution": bug.get("resolution"),
         "keywords": bug.get("keywords", []),
-            "refreshed_at": _dt.datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z"),
+        "refreshed_at": timestamp(),
     }
 
 
@@ -381,6 +566,7 @@ def build_status(pr_dir: Path, refresh_bugzilla: bool, existing: Optional[Dict[s
             bugzilla_info = {**bugzilla_info, "lookup_error": str(exc)}
     bugzilla = parse_bugzilla(readme, pr)
     patch_files = sorted(p.name for p in pr_dir.glob("0001-*.patch"))
+    existing_patch = existing.get("trunk", {}).get("patch") if existing else None
     trunk_commit = parse_trunk_commit(readme)
     fix_status = parse_fix_status(status_line, pr_dir)
     severity = infer_severity(pr, readme)
@@ -398,7 +584,7 @@ def build_status(pr_dir: Path, refresh_bugzilla: bool, existing: Optional[Dict[s
         "trunk": {
             "branch": parse_branch_name(readme),
             "commit": trunk_commit,
-            "patch": patch_files[0] if patch_files else None,
+            "patch": parse_patch_name(readme, patch_files, existing_patch),
         },
         "classification": {
             "regression": infer_regression(pr, readme, status_line, bugzilla_info),
@@ -413,7 +599,7 @@ def build_status(pr_dir: Path, refresh_bugzilla: bool, existing: Optional[Dict[s
         },
         "backports": ensure_branch_matrix(existing.get("backports") if existing else None),
         "notes": existing.get("notes", "") if existing else "",
-        "updated_at": _dt.datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z"),
+        "updated_at": timestamp(),
     }
     return metadata
 
@@ -621,7 +807,7 @@ def write_backport_matrix(metadata_rows: List[Dict[str, Any]]) -> None:
             }
         )
     (PR_ROOT / "backport-matrix.md").write_text("\n".join(md_lines) + "\n", encoding="utf-8")
-    write_json(PR_ROOT / "backport-matrix.json", {"generated_at": _dt.datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z"), "rows": machine_rows})
+    write_json(PR_ROOT / "backport-matrix.json", {"generated_at": timestamp(), "rows": machine_rows})
 
 
 def scan_regressions(paths: List[Path]) -> None:
@@ -668,6 +854,193 @@ def configure_branch_build(worktree: Path, build_dir: Path) -> None:
     )
 
 
+def ensure_branch_compiler(build_dir: Path) -> None:
+    gfortran = build_dir / "gcc" / "gfortran"
+    f951 = build_dir / "gcc" / "f951"
+    if gfortran.exists() and f951.exists():
+        return
+    run(["make", "-j32", "all-gcc"], cwd=build_dir, capture=False)
+
+
+def build_branch_compiler(build_dir: Path) -> None:
+    run(["make", "-j32", "all-gcc"], cwd=build_dir, capture=False)
+
+
+def timestamp() -> str:
+    return _dt.datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def resolve_command_item(item: str, build_dir: Path) -> str:
+    if item == "gcc-build/gcc/gfortran":
+        return str(build_dir / "gcc" / "gfortran")
+    if item == "gcc-build/gcc":
+        return str(build_dir / "gcc")
+    if item.startswith("pr/") or item.startswith("gcc-build/"):
+        return str(ROOT / item)
+    return item
+
+
+def resolve_validation_command(spec: Dict[str, Any], build_dir: Path, key: str) -> List[str]:
+    return [resolve_command_item(item, build_dir) for item in spec.get(key, [])]
+
+
+def combined_output(proc: subprocess.CompletedProcess[str]) -> str:
+    return f"{proc.stdout or ''}\n{proc.stderr or ''}"
+
+
+def merge_outputs(*procs: subprocess.CompletedProcess[str]) -> subprocess.CompletedProcess[str]:
+    args = [proc.args for proc in procs if proc is not None]
+    stdout = "\n".join(proc.stdout or "" for proc in procs if proc is not None)
+    stderr = "\n".join(proc.stderr or "" for proc in procs if proc is not None)
+    returncode = 0
+    for proc in reversed(procs):
+        if proc is not None:
+            returncode = proc.returncode
+            break
+    return subprocess.CompletedProcess(args=args, returncode=returncode, stdout=stdout, stderr=stderr)
+
+
+def summarize_output(proc: subprocess.CompletedProcess[str], limit: int = 1200) -> str:
+    output = combined_output(proc).strip()
+    if not output:
+        return "(no output)"
+    if len(output) <= limit:
+        return output
+    return output[: limit - 3] + "..."
+
+
+def execute_validation(spec: Dict[str, Any], build_dir: Path) -> subprocess.CompletedProcess[str]:
+    env = spec.get("env", {})
+    compile_proc = run(resolve_validation_command(spec, build_dir, "compile"), check=False, env=env)
+    if spec.get("kind") != "run":
+        return compile_proc
+    if compile_proc.returncode != 0:
+        return compile_proc
+    run_proc = run(resolve_validation_command(spec, build_dir, "run"), check=False, env=env)
+    return merge_outputs(compile_proc, run_proc)
+
+
+def tests_from_patch(patch: Path) -> List[str]:
+    matches = []
+    marker = " b/gcc/testsuite/gfortran.dg/"
+    for line in read_text(patch).splitlines():
+        if marker not in line:
+            continue
+        rel = line.split(marker, 1)[1].strip()
+        if rel and rel not in matches:
+            matches.append(rel)
+    return matches
+
+
+def targeted_tests_for_meta(meta: Dict[str, Any]) -> List[str]:
+    patch_name = meta["trunk"].get("patch")
+    if patch_name:
+        tests = tests_from_patch(PR_ROOT / str(meta["pr"]) / patch_name)
+        if tests:
+            return tests
+    return [f"pr{meta['pr']}.f90"]
+
+
+def reset_gfortran_results(build_dir: Path) -> None:
+    testsuite_dir = build_dir / "gcc" / "testsuite" / "gfortran"
+    for name in ("gfortran.sum", "gfortran.log"):
+        path = testsuite_dir / name
+        if path.exists():
+            path.unlink()
+
+
+def current_fail_xpass(build_dir: Path) -> List[str]:
+    sum_path = build_dir / "gcc" / "testsuite" / "gfortran" / "gfortran.sum"
+    if not sum_path.exists():
+        return []
+    return [
+        line.strip()
+        for line in read_text(sum_path).splitlines()
+        if line.startswith("FAIL:") or line.startswith("XPASS:")
+    ]
+
+
+def run_targeted_tests(build_dir: Path, tests: List[str]) -> Tuple[str, str]:
+    failures = []
+    for test in tests:
+        reset_gfortran_results(build_dir)
+        run(
+            ["make", "check-gfortran", f"RUNTESTFLAGS=dg.exp={test}"],
+            cwd=build_dir / "gcc",
+            capture=False,
+            check=False,
+        )
+        bad = current_fail_xpass(build_dir)
+        if bad:
+            failures.append(f"{test}: {'; '.join(bad)}")
+    if failures:
+        return "fail", "targeted test regressions: " + " | ".join(failures)
+    return "pass", f"targeted tests passed: {', '.join(tests)}"
+
+
+def full_suite_cache_path(build_dir: Path) -> Path:
+    return build_dir / ".workflow-gfortran-baseline.json"
+
+
+def branch_ref_commit(worktree: Path, ref: str) -> str:
+    return run(["git", "-C", str(worktree), "rev-parse", ref]).stdout.strip()
+
+
+def load_or_compute_full_suite_baseline(branch: str, worktree: Path, build_dir: Path) -> List[str]:
+    ref = ACTIVE_BRANCHES[branch]["ref"]
+    commit = branch_ref_commit(worktree, ref)
+    cache_path = full_suite_cache_path(build_dir)
+    if cache_path.exists():
+        cached = json.loads(cache_path.read_text(encoding="utf-8"))
+        if cached.get("ref") == ref and cached.get("commit") == commit:
+            return cached.get("fail_xpass", [])
+    run(["git", "-C", str(worktree), "reset", "--hard", ref], capture=False)
+    build_branch_compiler(build_dir)
+    reset_gfortran_results(build_dir)
+    run(["make", "-j32", "-k", "check-gfortran"], cwd=build_dir / "gcc", capture=False)
+    baseline = current_fail_xpass(build_dir)
+    write_json(
+        cache_path,
+        {
+            "branch": branch,
+            "ref": ref,
+            "commit": commit,
+            "generated_at": timestamp(),
+            "fail_xpass": baseline,
+        },
+    )
+    return baseline
+
+
+def run_full_suite(build_dir: Path, baseline: List[str]) -> Tuple[str, str]:
+    reset_gfortran_results(build_dir)
+    run(["make", "-j32", "-k", "check-gfortran"], cwd=build_dir / "gcc", capture=False)
+    baseline_set = set(baseline)
+    extra = [line for line in current_fail_xpass(build_dir) if line not in baseline_set]
+    if extra:
+        return "fail", "new FAIL/XPASS entries: " + " | ".join(extra[:10])
+    return "pass", "no new FAIL/XPASS entries versus cached branch baseline"
+
+
+def matches_expectation(proc: subprocess.CompletedProcess[str], expect: Dict[str, Any]) -> bool:
+    output = combined_output(proc)
+    exit_mode = expect.get("exit", "any")
+    if exit_mode == "zero" and proc.returncode != 0:
+        return False
+    if exit_mode == "nonzero" and proc.returncode == 0:
+        return False
+    contains_any = expect.get("contains_any", [])
+    if contains_any and not any(token in output for token in contains_any):
+        return False
+    for token in expect.get("contains_all", []):
+        if token not in output:
+            return False
+    for token in expect.get("not_contains", []):
+        if token in output:
+            return False
+    return True
+
+
 def update_branch_state(
     pr_dir: Path,
     branch: str,
@@ -700,48 +1073,84 @@ def update_branch_state(
         }
     )
     meta["backports"][branch] = info
-    meta["updated_at"] = _dt.datetime.utcnow().isoformat(timespec="seconds") + "Z"
+    meta["updated_at"] = timestamp()
     write_json(pr_dir / "status.json", meta)
 
 
 def branch_check(paths: List[Path], branches: List[str], full_suite: bool) -> None:
+    branch_context: Dict[str, Dict[str, Any]] = {}
+    for branch in branches:
+        worktree, build_dir = ensure_worktree(branch)
+        configure_branch_build(worktree, build_dir)
+        ensure_branch_compiler(build_dir)
+        context: Dict[str, Any] = {"worktree": worktree, "build_dir": build_dir}
+        if full_suite:
+            context["baseline_fail_xpass"] = load_or_compute_full_suite_baseline(branch, worktree, build_dir)
+        branch_context[branch] = context
+
     for pr_dir in paths:
         meta = load_status(pr_dir)
         if not meta["classification"]["regression"]:
             continue
         validation = meta["validation"]
         for branch in branches:
-            worktree, build_dir = ensure_worktree(branch)
-            configure_branch_build(worktree, build_dir)
-            compile_cmd = [str(ROOT / part) if part.startswith("gcc-build/") or part.startswith("pr/") else part for part in validation["compile"]]
-            compile_cmd = [
-                str(build_dir / "gcc" / "gfortran") if part == "gcc-build/gcc/gfortran" else
-                str(build_dir / "gcc") if part == "gcc-build/gcc" else
-                part
-                for part in compile_cmd
-            ]
-            proc = run(compile_cmd, check=False, env=validation.get("env", {}))
-            reproduces = proc.returncode != 0
+            worktree = branch_context[branch]["worktree"]
+            build_dir = branch_context[branch]["build_dir"]
+            ref = ACTIVE_BRANCHES[branch]["ref"]
+            run(["git", "-C", str(worktree), "reset", "--hard", ref], capture=False)
+            build_branch_compiler(build_dir)
+
+            if validation.get("kind") == "special-env":
+                update_branch_state(
+                    pr_dir,
+                    branch,
+                    reproduces=None,
+                    apply_mode="needs-special-env",
+                    notes=validation.get("reason", "requires environment not available in automated branch-check"),
+                )
+                render_packet(load_status(pr_dir))
+                continue
+
+            baseline_expect = validation.get("baseline")
+            fixed_expect = validation.get("fixed")
+            if not baseline_expect or not fixed_expect:
+                update_branch_state(
+                    pr_dir,
+                    branch,
+                    reproduces=None,
+                    apply_mode="invalid-validation-spec",
+                    notes="validation spec must provide both baseline and fixed expectations",
+                )
+                render_packet(load_status(pr_dir))
+                continue
+
+            proc = execute_validation(validation, build_dir)
+            reproduces = matches_expectation(proc, baseline_expect)
+
             if not reproduces:
                 update_branch_state(
                     pr_dir,
                     branch,
                     reproduces=False,
                     apply_mode="not-affected",
-                    notes="reproducer did not fail on branch baseline",
+                    notes="baseline branch compiler does not match the recorded reproducer signature",
                 )
+                render_packet(load_status(pr_dir))
                 continue
-            if meta["fix_status"] != "patch-ready" or not meta["trunk"]["commit"]:
+
+            if meta["fix_status"] not in {"patch-ready", "merged"} or not meta["trunk"]["commit"]:
                 update_branch_state(
                     pr_dir,
                     branch,
                     reproduces=True,
                     apply_mode="pending-trunk-fix",
-                    notes="branch is affected but no trunk patch-ready commit is recorded yet",
+                    notes="branch is affected but no trunk patch-ready or merged commit is recorded",
                 )
+                render_packet(load_status(pr_dir))
                 continue
+
             temp_branch = f"backport/pr{meta['pr']}-{branch}"
-            run(["git", "-C", str(worktree), "checkout", "-B", temp_branch, ACTIVE_BRANCHES[branch]["ref"]])
+            run(["git", "-C", str(worktree), "checkout", "-B", temp_branch, ref])
             cherry = run(
                 [
                     "git",
@@ -755,6 +1164,7 @@ def branch_check(paths: List[Path], branches: List[str], full_suite: bool) -> No
             )
             if cherry.returncode != 0:
                 run(["git", "-C", str(worktree), "cherry-pick", "--abort"], check=False)
+                run(["git", "-C", str(worktree), "reset", "--hard", ref], capture=False)
                 update_branch_state(
                     pr_dir,
                     branch,
@@ -762,45 +1172,86 @@ def branch_check(paths: List[Path], branches: List[str], full_suite: bool) -> No
                     apply_mode="needs-adaptation",
                     notes=(cherry.stderr or cherry.stdout).strip()[:2000],
                 )
+                render_packet(load_status(pr_dir))
                 continue
-            branch_commit = run(
-                ["git", "-C", str(worktree), "rev-parse", "HEAD"]
-            ).stdout.strip()
-            run(["make", "-j32"], cwd=build_dir)
-            targeted = "pass"
-            full = "pass"
-            if full_suite:
+
+            try:
+                build_branch_compiler(build_dir)
+                fixed_proc = execute_validation(validation, build_dir)
+                if not matches_expectation(fixed_proc, fixed_expect):
+                    update_branch_state(
+                        pr_dir,
+                        branch,
+                        reproduces=True,
+                        apply_mode="fails-fixed-validation",
+                        notes="branch patch applied, but fixed validation did not match expected signature:\n"
+                        + summarize_output(fixed_proc),
+                    )
+                    render_packet(load_status(pr_dir))
+                    continue
+
+                branch_commit = run(
+                    ["git", "-C", str(worktree), "rev-parse", "HEAD"]
+                ).stdout.strip()
+                patch_out = pr_dir / "backports" / branch
+                patch_out.mkdir(parents=True, exist_ok=True)
+                for old_patch in patch_out.glob("0001-*.patch"):
+                    old_patch.unlink()
                 run(
-                    ["make", "-j32", "-k", "check-gfortran"],
-                    cwd=build_dir / "gcc",
+                    [
+                        "git",
+                        "-C",
+                        str(worktree),
+                        "format-patch",
+                        "-1",
+                        "HEAD",
+                        "-o",
+                        str(patch_out),
+                    ]
                 )
-            patch_out = pr_dir / "backports" / branch
-            patch_out.mkdir(parents=True, exist_ok=True)
-            run(
-                [
-                    "git",
-                    "-C",
-                    str(worktree),
-                    "format-patch",
-                    "-1",
-                    "HEAD",
-                    "-o",
-                    str(patch_out),
-                ]
-            )
-            branch_patch = next(sorted(patch_out.glob("0001-*.patch")))
-            update_branch_state(
-                pr_dir,
-                branch,
-                reproduces=True,
-                apply_mode="ready",
-                notes="clean cherry-pick and local branch validation succeeded",
-                branch_commit=branch_commit,
-                branch_patch=str(branch_patch.relative_to(pr_dir)),
-                targeted_tests=targeted,
-                full_suite=full,
-            )
-            render_packet(load_status(pr_dir))
+                branch_patch = sorted(patch_out.glob("0001-*.patch"))[0]
+
+                targeted_state, targeted_note = run_targeted_tests(build_dir, targeted_tests_for_meta(meta))
+                if targeted_state != "pass":
+                    update_branch_state(
+                        pr_dir,
+                        branch,
+                        reproduces=True,
+                        apply_mode="fails-targeted-tests",
+                        notes=targeted_note,
+                        branch_commit=branch_commit,
+                        branch_patch=str(branch_patch.relative_to(pr_dir)),
+                        targeted_tests=targeted_state,
+                        full_suite="not-run",
+                    )
+                    render_packet(load_status(pr_dir))
+                    continue
+
+                full_state = "not-run"
+                note = targeted_note
+                apply_mode = "validated-targeted"
+                if full_suite:
+                    full_state, full_note = run_full_suite(
+                        build_dir, branch_context[branch]["baseline_fail_xpass"]
+                    )
+                    note = targeted_note + "; " + full_note
+                    apply_mode = "ready" if full_state == "pass" else "fails-full-suite"
+
+                update_branch_state(
+                    pr_dir,
+                    branch,
+                    reproduces=True,
+                    apply_mode=apply_mode,
+                    notes=note,
+                    branch_commit=branch_commit,
+                    branch_patch=str(branch_patch.relative_to(pr_dir)),
+                    targeted_tests=targeted_state,
+                    full_suite=full_state,
+                )
+                render_packet(load_status(pr_dir))
+            finally:
+                run(["git", "-C", str(worktree), "reset", "--hard", ref], capture=False)
+    scan_regressions(paths)
 
 
 def selected_patch(meta: Dict[str, Any], branch: str) -> Path:

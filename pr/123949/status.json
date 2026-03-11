@@ -6,33 +6,33 @@
   },
   "backports": {
     "gcc-13": {
-      "apply_mode": "unknown",
-      "backport_candidate": null,
+      "apply_mode": "not-affected",
+      "backport_candidate": false,
       "branch_commit": null,
       "branch_patch": null,
       "full_suite": "not-run",
-      "notes": "",
-      "reproduces": null,
+      "notes": "baseline branch compiler does not match the recorded reproducer signature",
+      "reproduces": false,
       "targeted_tests": "not-run"
     },
     "gcc-14": {
-      "apply_mode": "unknown",
-      "backport_candidate": null,
+      "apply_mode": "not-affected",
+      "backport_candidate": false,
       "branch_commit": null,
       "branch_patch": null,
       "full_suite": "not-run",
-      "notes": "",
-      "reproduces": null,
+      "notes": "baseline branch compiler does not match the recorded reproducer signature",
+      "reproduces": false,
       "targeted_tests": "not-run"
     },
     "gcc-15": {
-      "apply_mode": "unknown",
-      "backport_candidate": null,
+      "apply_mode": "not-affected",
+      "backport_candidate": false,
       "branch_commit": null,
       "branch_patch": null,
       "full_suite": "not-run",
-      "notes": "",
-      "reproduces": null,
+      "notes": "baseline branch compiler does not match the recorded reproducer signature",
+      "reproduces": false,
       "targeted_tests": "not-run"
     }
   },
@@ -58,20 +58,36 @@
   "trunk": {
     "branch": "origin/pr123949-init-se-fix",
     "commit": "05159b27621",
-    "patch": "0001-fortran-Fix-PDT-ICE-with-large-KIND-values-PR123949.patch"
+    "patch": "0001-fortran-Initialize-gfc_se-in-PDT-component-allocatio.patch"
   },
-  "updated_at": "2026-03-11T19:41:19Z",
+  "updated_at": "2026-03-11T20:11:48Z",
   "validation": {
+    "baseline": {
+      "contains_any": [
+        "internal compiler error",
+        "ICE in"
+      ],
+      "exit": "nonzero",
+      "not_contains": []
+    },
     "compile": [
       "gcc-build/gcc/gfortran",
       "-B",
       "gcc-build/gcc",
       "-c",
+      "-w",
       "pr/123949/reproducer.f90",
       "-o",
       "/dev/null"
     ],
     "env": {},
+    "fixed": {
+      "contains_any": [],
+      "exit": "zero",
+      "not_contains": [
+        "internal compiler error"
+      ]
+    },
     "kind": "compile",
     "run": []
   }

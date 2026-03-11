@@ -13,7 +13,7 @@
 
 | Branch | Reproduces | Candidate | Apply mode | Targeted tests | Full suite |
 |--------|------------|-----------|------------|----------------|------------|
-| gcc-14 | unknown | unknown | unknown | not-run | not-run |
+| gcc-14 | yes | yes | validated-targeted | pass | not-run |
 
 ## Risk Summary
 
