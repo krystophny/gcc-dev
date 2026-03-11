@@ -1,0 +1,13 @@
+Proposed trunk fix for PR106946.
+
+Summary:
+- regression: yes
+- severity: ice-on-invalid
+- trunk commit: d02ccf8946c3f4b28a1fa85dba2593eb2a8d0f21
+- patch: 0001-fortran-Fix-ICE-on-invalid-CLASS-component-in-derive.patch
+
+Validation:
+- targeted validation: completed locally
+- full check-gfortran: passed locally
+
+Maintainer summary and branch matrix are available in the local packet.

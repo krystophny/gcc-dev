@@ -1,0 +1,78 @@
+{
+  "artifacts": {
+    "bugzilla_comment": "submission/bugzilla-comment.txt",
+    "mailing_list_cover": "submission/mailing-list-cover.txt",
+    "maintainer_summary": "submission/maintainer-summary.md"
+  },
+  "backports": {
+    "gcc-13": {
+      "apply_mode": "unknown",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    },
+    "gcc-14": {
+      "apply_mode": "unknown",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    },
+    "gcc-15": {
+      "apply_mode": "unknown",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    }
+  },
+  "bugzilla": {
+    "id": 123254,
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123254"
+  },
+  "classification": {
+    "regression": false,
+    "severity": "runtime-crash",
+    "validity_class": "valid-code"
+  },
+  "fix_status": "open",
+  "github_issue": null,
+  "notes": "",
+  "pr": 123254,
+  "submission_status": {
+    "on_bugzilla": false,
+    "on_mailing_list": false,
+    "sent": false
+  },
+  "title": "OpenACC present() on DT dummy arg (worksforme)",
+  "trunk": {
+    "branch": null,
+    "commit": "769041822723208bf85a91ac409b9b0bdae3fff0",
+    "patch": null
+  },
+  "updated_at": "2026-03-11T19:41:19Z",
+  "validation": {
+    "compile": [
+      "gcc-build/gcc/gfortran",
+      "-B",
+      "gcc-build/gcc",
+      "-c",
+      "pr/123254/reproducer.f90",
+      "-o",
+      "/dev/null"
+    ],
+    "env": {},
+    "kind": "compile",
+    "run": []
+  }
+}

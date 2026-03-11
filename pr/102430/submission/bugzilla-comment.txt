@@ -1,0 +1,13 @@
+Proposed trunk fix for PR102430.
+
+Summary:
+- regression: yes
+- severity: ice-on-valid
+- trunk commit: d498fe6e019
+- patch: 0001-fortran-Reject-array-allocatable-LINEAR-on-DO-PR1024.patch
+
+Validation:
+- targeted validation: completed locally
+- full check-gfortran: passed locally
+
+Maintainer summary and branch matrix are available in the local packet.

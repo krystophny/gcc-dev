@@ -1,0 +1,13 @@
+Proposed trunk fix for PR123255.
+
+Summary:
+- regression: yes
+- severity: wrong-code
+- trunk commit: 42475cae6d7cce30aabfac660a55c2d9e5b38e68
+- patch: missing patch
+
+Validation:
+- targeted validation: completed locally
+- full check-gfortran: passed locally
+
+Maintainer summary and branch matrix are available in the local packet.

@@ -1,0 +1,9 @@
+PR122491 submission packet
+
+Bugzilla: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=122491
+Regression: yes
+Severity: ice-on-invalid
+Trunk commit: ff2f6c5153e
+
+This packet was generated from the meta-repo workflow and includes
+branch applicability data for active release branches.

@@ -1,0 +1,78 @@
+{
+  "artifacts": {
+    "bugzilla_comment": "submission/bugzilla-comment.txt",
+    "mailing_list_cover": "submission/mailing-list-cover.txt",
+    "maintainer_summary": "submission/maintainer-summary.md"
+  },
+  "backports": {
+    "gcc-13": {
+      "apply_mode": "unknown",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    },
+    "gcc-14": {
+      "apply_mode": "unknown",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    },
+    "gcc-15": {
+      "apply_mode": "unknown",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    }
+  },
+  "bugzilla": {
+    "id": 123255,
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123255"
+  },
+  "classification": {
+    "regression": true,
+    "severity": "wrong-code",
+    "validity_class": "valid-code"
+  },
+  "fix_status": "open",
+  "github_issue": null,
+  "notes": "",
+  "pr": 123255,
+  "submission_status": {
+    "on_bugzilla": false,
+    "on_mailing_list": false,
+    "sent": false
+  },
+  "title": "OpenACC: copyin allocatable component ordering regression",
+  "trunk": {
+    "branch": null,
+    "commit": "42475cae6d7cce30aabfac660a55c2d9e5b38e68",
+    "patch": null
+  },
+  "updated_at": "2026-03-11T19:41:19Z",
+  "validation": {
+    "compile": [
+      "gcc-build/gcc/gfortran",
+      "-B",
+      "gcc-build/gcc",
+      "-c",
+      "pr/123255/reproducer.f90",
+      "-o",
+      "/dev/null"
+    ],
+    "env": {},
+    "kind": "compile",
+    "run": []
+  }
+}

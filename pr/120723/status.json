@@ -1,0 +1,78 @@
+{
+  "artifacts": {
+    "bugzilla_comment": "submission/bugzilla-comment.txt",
+    "mailing_list_cover": "submission/mailing-list-cover.txt",
+    "maintainer_summary": "submission/maintainer-summary.md"
+  },
+  "backports": {
+    "gcc-13": {
+      "apply_mode": "unknown",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    },
+    "gcc-14": {
+      "apply_mode": "unknown",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    },
+    "gcc-15": {
+      "apply_mode": "unknown",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    }
+  },
+  "bugzilla": {
+    "id": 120723,
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=120723"
+  },
+  "classification": {
+    "regression": false,
+    "severity": "ice-on-valid",
+    "validity_class": "valid-code"
+  },
+  "fix_status": "patch-ready",
+  "github_issue": 96,
+  "notes": "",
+  "pr": 120723,
+  "submission_status": {
+    "on_bugzilla": false,
+    "on_mailing_list": false,
+    "sent": false
+  },
+  "title": "OpenACC scalar `attach`/`detach` ICE",
+  "trunk": {
+    "branch": "origin/pr120723-fix",
+    "commit": "5fae5d7c4e9c25d18c52a14d5ff8779030908ff5",
+    "patch": "0001-fortran-Fix-scalar-OpenACC-attach-detach-lowering-PR.patch"
+  },
+  "updated_at": "2026-03-11T19:41:19Z",
+  "validation": {
+    "compile": [
+      "gcc-build/gcc/gfortran",
+      "-B",
+      "gcc-build/gcc",
+      "-c",
+      "pr/120723/reproducer.f90",
+      "-o",
+      "/dev/null"
+    ],
+    "env": {},
+    "kind": "compile",
+    "run": []
+  }
+}

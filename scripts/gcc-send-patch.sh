@@ -4,6 +4,7 @@
 # Usage:
 #   gcc-send-patch.sh <patch-file>           # Send with default to: gcc-patches@
 #   gcc-send-patch.sh --dry-run <patch-file> # Preview without sending
+#   gcc-send-patch.sh submit <pr> [branch] [--execute]  # Send generated packet
 #
 # Prerequisites:
 #   git send-email must be configured in gcc/ with SMTP settings.
@@ -18,6 +19,7 @@ GCC_DIR="$SCRIPT_DIR/../gcc"
 
 usage() {
     echo "Usage: $0 [--dry-run] <patch-file>"
+    echo "   or: $0 submit <pr> [branch] [--execute]"
     echo ""
     echo "Sends a GCC patch to gcc-patches@gcc.gnu.org via git send-email."
     echo ""
@@ -27,6 +29,7 @@ usage() {
     echo "Examples:"
     echo "  $0 pr/123280/0001-libgomp-Remove-contiguous.patch"
     echo "  $0 --dry-run pr/103276/0001-fortran-Skip-pointer.patch"
+    echo "  $0 submit 120723 gcc-15 --execute"
     echo ""
     echo "The patch must be a git format-patch output file."
     exit 1
@@ -34,6 +37,11 @@ usage() {
 
 DRY_RUN=""
 PATCH_FILE=""
+
+if [[ "${1:-}" == "submit" ]]; then
+    shift
+    exec python3 "$(dirname "$0")/gcc-workflow.py" submit-mail "$@"
+fi
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -74,8 +82,11 @@ if [[ -n "$DRY_RUN" ]]; then
 fi
 echo ""
 
-read -rp "Proceed? [y/N] " confirm
-if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+confirm="${GCC_SEND_PATCH_ASSUME_YES:-}"
+if [[ -z "$confirm" ]]; then
+    read -rp "Proceed? [y/N] " confirm
+fi
+if [[ "$confirm" != "1" && "$confirm" != "y" && "$confirm" != "Y" ]]; then
     echo "Aborted."
     exit 0
 fi

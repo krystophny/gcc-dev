@@ -1,0 +1,78 @@
+{
+  "artifacts": {
+    "bugzilla_comment": "submission/bugzilla-comment.txt",
+    "mailing_list_cover": "submission/mailing-list-cover.txt",
+    "maintainer_summary": "submission/maintainer-summary.md"
+  },
+  "backports": {
+    "gcc-13": {
+      "apply_mode": "unknown",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    },
+    "gcc-14": {
+      "apply_mode": "unknown",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    },
+    "gcc-15": {
+      "apply_mode": "unknown",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    }
+  },
+  "bugzilla": {
+    "id": 123949,
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123949"
+  },
+  "classification": {
+    "regression": true,
+    "severity": "ice-on-valid",
+    "validity_class": "valid-code"
+  },
+  "fix_status": "merged",
+  "github_issue": 49,
+  "notes": "",
+  "pr": 123949,
+  "submission_status": {
+    "on_bugzilla": false,
+    "on_mailing_list": false,
+    "sent": false
+  },
+  "title": "[16 regression] [PDT] ICE in `gfc_match_decl_type_spec` at `decl.cc:4782`",
+  "trunk": {
+    "branch": "origin/pr123949-init-se-fix",
+    "commit": "05159b27621",
+    "patch": "0001-fortran-Fix-PDT-ICE-with-large-KIND-values-PR123949.patch"
+  },
+  "updated_at": "2026-03-11T19:41:19Z",
+  "validation": {
+    "compile": [
+      "gcc-build/gcc/gfortran",
+      "-B",
+      "gcc-build/gcc",
+      "-c",
+      "pr/123949/reproducer.f90",
+      "-o",
+      "/dev/null"
+    ],
+    "env": {},
+    "kind": "compile",
+    "run": []
+  }
+}

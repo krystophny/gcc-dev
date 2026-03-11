@@ -1,0 +1,9 @@
+PR102430 submission packet
+
+Bugzilla: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102430
+Regression: yes
+Severity: ice-on-valid
+Trunk commit: d498fe6e019
+
+This packet was generated from the meta-repo workflow and includes
+branch applicability data for active release branches.

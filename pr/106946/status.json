@@ -1,0 +1,78 @@
+{
+  "artifacts": {
+    "bugzilla_comment": "submission/bugzilla-comment.txt",
+    "mailing_list_cover": "submission/mailing-list-cover.txt",
+    "maintainer_summary": "submission/maintainer-summary.md"
+  },
+  "backports": {
+    "gcc-13": {
+      "apply_mode": "unknown",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    },
+    "gcc-14": {
+      "apply_mode": "unknown",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    },
+    "gcc-15": {
+      "apply_mode": "unknown",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    }
+  },
+  "bugzilla": {
+    "id": 106946,
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=106946"
+  },
+  "classification": {
+    "regression": true,
+    "severity": "ice-on-invalid",
+    "validity_class": "invalid-code"
+  },
+  "fix_status": "patch-ready",
+  "github_issue": 88,
+  "notes": "",
+  "pr": 106946,
+  "submission_status": {
+    "on_bugzilla": false,
+    "on_mailing_list": false,
+    "sent": false
+  },
+  "title": "ICE on invalid CLASS component in derived type",
+  "trunk": {
+    "branch": "origin/pr106946-fix",
+    "commit": "d02ccf8946c3f4b28a1fa85dba2593eb2a8d0f21",
+    "patch": "0001-fortran-Fix-ICE-on-invalid-CLASS-component-in-derive.patch"
+  },
+  "updated_at": "2026-03-11T19:41:19Z",
+  "validation": {
+    "compile": [
+      "gcc-build/gcc/gfortran",
+      "-B",
+      "gcc-build/gcc",
+      "-c",
+      "pr/106946/reproducer.f90",
+      "-o",
+      "/dev/null"
+    ],
+    "env": {},
+    "kind": "compile",
+    "run": []
+  }
+}
