@@ -1,10 +1,10 @@
 {
-  "apply_mode": "unknown",
+  "apply_mode": "needs-special-env",
   "backport_candidate": null,
   "branch_commit": null,
   "branch_patch": null,
   "full_suite": "not-run",
-  "notes": "",
+  "notes": "requires NVPTX OpenACC runtime/offload execution to reproduce the size bug",
   "reproduces": null,
   "targeted_tests": "not-run"
 }

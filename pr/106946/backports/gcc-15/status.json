@@ -1,10 +1,10 @@
 {
-  "apply_mode": "unknown",
-  "backport_candidate": null,
+  "apply_mode": "not-affected",
+  "backport_candidate": false,
   "branch_commit": null,
   "branch_patch": null,
   "full_suite": "not-run",
-  "notes": "",
-  "reproduces": null,
+  "notes": "baseline branch compiler does not match the recorded reproducer signature",
+  "reproduces": false,
   "targeted_tests": "not-run"
 }

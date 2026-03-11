@@ -60,8 +60,16 @@
     "commit": "dcc53363931b63ae6f0f197b779c13fb8cd18d26",
     "patch": "0001-fortran-Fix-OpenMP-iterator-depend-lowering-for-comp.patch"
   },
-  "updated_at": "2026-03-11T19:41:19Z",
+  "updated_at": "2026-03-11T20:09:43Z",
   "validation": {
+    "baseline": {
+      "contains_any": [
+        "internal compiler error",
+        "ICE in"
+      ],
+      "exit": "nonzero",
+      "not_contains": []
+    },
     "compile": [
       "gcc-build/gcc/gfortran",
       "-B",
@@ -72,6 +80,13 @@
       "/dev/null"
     ],
     "env": {},
+    "fixed": {
+      "contains_any": [],
+      "exit": "zero",
+      "not_contains": [
+        "internal compiler error"
+      ]
+    },
     "kind": "compile",
     "run": []
   }

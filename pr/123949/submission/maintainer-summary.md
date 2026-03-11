@@ -7,15 +7,15 @@
 - **Severity:** ice-on-valid
 - **Validity class:** valid-code
 - **Trunk commit:** 05159b27621
-- **Trunk patch:** 0001-fortran-Fix-PDT-ICE-with-large-KIND-values-PR123949.patch
+- **Trunk patch:** 0001-fortran-Initialize-gfc_se-in-PDT-component-allocatio.patch
 
 ## Active Release Branch Matrix
 
 | Branch | Reproduces | Candidate | Apply mode | Targeted tests | Full suite |
 |--------|------------|-----------|------------|----------------|------------|
-| gcc-13 | unknown | unknown | unknown | not-run | not-run |
-| gcc-14 | unknown | unknown | unknown | not-run | not-run |
-| gcc-15 | unknown | unknown | unknown | not-run | not-run |
+| gcc-13 | no | no | not-affected | not-run | not-run |
+| gcc-14 | no | no | not-affected | not-run | not-run |
+| gcc-15 | no | no | not-affected | not-run | not-run |
 
 ## Risk Summary
 

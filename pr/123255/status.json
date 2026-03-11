@@ -6,32 +6,32 @@
   },
   "backports": {
     "gcc-13": {
-      "apply_mode": "unknown",
+      "apply_mode": "needs-special-env",
       "backport_candidate": null,
       "branch_commit": null,
       "branch_patch": null,
       "full_suite": "not-run",
-      "notes": "",
+      "notes": "requires NVPTX OpenACC runtime/offload execution to reproduce the size bug",
       "reproduces": null,
       "targeted_tests": "not-run"
     },
     "gcc-14": {
-      "apply_mode": "unknown",
+      "apply_mode": "needs-special-env",
       "backport_candidate": null,
       "branch_commit": null,
       "branch_patch": null,
       "full_suite": "not-run",
-      "notes": "",
+      "notes": "requires NVPTX OpenACC runtime/offload execution to reproduce the size bug",
       "reproduces": null,
       "targeted_tests": "not-run"
     },
     "gcc-15": {
-      "apply_mode": "unknown",
+      "apply_mode": "needs-special-env",
       "backport_candidate": null,
       "branch_commit": null,
       "branch_patch": null,
       "full_suite": "not-run",
-      "notes": "",
+      "notes": "requires NVPTX OpenACC runtime/offload execution to reproduce the size bug",
       "reproduces": null,
       "targeted_tests": "not-run"
     }
@@ -60,19 +60,9 @@
     "commit": "42475cae6d7cce30aabfac660a55c2d9e5b38e68",
     "patch": null
   },
-  "updated_at": "2026-03-11T19:41:19Z",
+  "updated_at": "2026-03-11T20:11:34Z",
   "validation": {
-    "compile": [
-      "gcc-build/gcc/gfortran",
-      "-B",
-      "gcc-build/gcc",
-      "-c",
-      "pr/123255/reproducer.f90",
-      "-o",
-      "/dev/null"
-    ],
-    "env": {},
-    "kind": "compile",
-    "run": []
+    "kind": "special-env",
+    "reason": "requires NVPTX OpenACC runtime/offload execution to reproduce the size bug"
   }
 }

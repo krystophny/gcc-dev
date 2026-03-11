@@ -1,0 +1,96 @@
+From ffefe58e40d3f17ae3cedc7d865f909caeb38c58 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Sun, 21 Dec 2025 00:33:11 +0100
+Subject: [PATCH] fortran: Reject array/allocatable LINEAR on DO [PR102430]
+
+The middle-end does not implement array/allocatable LINEAR for OpenMP
+worksharing loops, which can ICE during OpenMP expansion.  Diagnose this
+case in the Fortran front end with a sorry message instead.
+
+Tested on x86_64-pc-linux-gnu.
+
+	PR fortran/102430
+
+gcc/fortran/ChangeLog:
+
+	* openmp.cc (resolve_omp_clauses): Reject array/allocatable LINEAR on
+	worksharing-loop constructs.
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/gomp/pr102430.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+(cherry picked from commit d498fe6e01953ad22efdc704311bb95b81f8b10d)
+---
+ gcc/fortran/openmp.cc                       | 35 +++++++++++++++++++++
+ gcc/testsuite/gfortran.dg/gomp/pr102430.f90 | 11 +++++++
+ 2 files changed, 46 insertions(+)
+ create mode 100644 gcc/testsuite/gfortran.dg/gomp/pr102430.f90
+
+diff --git a/gcc/fortran/openmp.cc b/gcc/fortran/openmp.cc
+index 04ba144ecc3..fc001aa2f54 100644
+--- a/gcc/fortran/openmp.cc
++++ b/gcc/fortran/openmp.cc
+@@ -8161,6 +8161,41 @@ resolve_omp_clauses (gfc_code *code, gfc_omp_clauses *omp_clauses,
+ 		      }
+ 		    break;
+ 		  case OMP_LIST_LINEAR:
++		    if (code)
++		      {
++			bool is_worksharing_for = false;
++			switch (code->op)
++			  {
++			  case EXEC_OMP_DO:
++			  case EXEC_OMP_PARALLEL_DO:
++			  case EXEC_OMP_DISTRIBUTE_PARALLEL_DO:
++			  case EXEC_OMP_TARGET_PARALLEL_DO:
++			  case EXEC_OMP_TEAMS_DISTRIBUTE_PARALLEL_DO:
++			  case EXEC_OMP_TARGET_TEAMS_DISTRIBUTE_PARALLEL_DO:
++			    is_worksharing_for = true;
++			    break;
++			  default:
++			    break;
++			  }
++
++			if (is_worksharing_for
++			    && (n->sym->attr.dimension
++				|| n->sym->attr.allocatable))
++			  {
++			    if (n->sym->attr.allocatable)
++			      gfc_error ("Sorry, ALLOCATABLE object %qs in "
++					 "LINEAR clause on worksharing-loop "
++					 "construct at %L is not yet supported",
++					 n->sym->name, &n->where);
++			    else
++			      gfc_error ("Sorry, array %qs in LINEAR clause "
++					 "on worksharing-loop construct at %L "
++					 "is not yet supported",
++					 n->sym->name, &n->where);
++			    break;
++			  }
++		      }
++
+ 		    if (code
+ 			&& n->u.linear.op != OMP_LINEAR_DEFAULT
+ 			&& n->u.linear.op != linear_op)
+diff --git a/gcc/testsuite/gfortran.dg/gomp/pr102430.f90 b/gcc/testsuite/gfortran.dg/gomp/pr102430.f90
+new file mode 100644
+index 00000000000..73c8c3f1dec
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/gomp/pr102430.f90
+@@ -0,0 +1,11 @@
++! { dg-do compile }
++! { dg-options "-fopenmp" }
++! PR fortran/102430
++
++program p
++  integer :: a(2)
++  !$omp parallel do linear(a)  ! { dg-error "Sorry, array" }
++  do i = 1, 8
++    a = a + 1
++  end do
++end program p
+-- 
+2.53.0
+

@@ -4,7 +4,7 @@ Summary:
 - regression: yes
 - severity: ice-on-valid
 - trunk commit: 05159b27621
-- patch: 0001-fortran-Fix-PDT-ICE-with-large-KIND-values-PR123949.patch
+- patch: 0001-fortran-Initialize-gfc_se-in-PDT-component-allocatio.patch
 
 Validation:
 - targeted validation: completed locally

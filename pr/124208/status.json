@@ -6,33 +6,33 @@
   },
   "backports": {
     "gcc-13": {
-      "apply_mode": "unknown",
-      "backport_candidate": null,
+      "apply_mode": "not-affected",
+      "backport_candidate": false,
       "branch_commit": null,
       "branch_patch": null,
       "full_suite": "not-run",
-      "notes": "",
-      "reproduces": null,
+      "notes": "baseline branch compiler does not match the recorded reproducer signature",
+      "reproduces": false,
       "targeted_tests": "not-run"
     },
     "gcc-14": {
-      "apply_mode": "unknown",
-      "backport_candidate": null,
+      "apply_mode": "not-affected",
+      "backport_candidate": false,
       "branch_commit": null,
       "branch_patch": null,
       "full_suite": "not-run",
-      "notes": "",
-      "reproduces": null,
+      "notes": "baseline branch compiler does not match the recorded reproducer signature",
+      "reproduces": false,
       "targeted_tests": "not-run"
     },
     "gcc-15": {
-      "apply_mode": "unknown",
-      "backport_candidate": null,
+      "apply_mode": "not-affected",
+      "backport_candidate": false,
       "branch_commit": null,
       "branch_patch": null,
       "full_suite": "not-run",
-      "notes": "",
-      "reproduces": null,
+      "notes": "baseline branch compiler does not match the recorded reproducer signature",
+      "reproduces": false,
       "targeted_tests": "not-run"
     }
   },
@@ -60,8 +60,16 @@
     "commit": "97965bdc1ed",
     "patch": "0001-fortran-Fix-iterator-counting-in-nested-block-scopes.patch"
   },
-  "updated_at": "2026-03-11T19:41:19Z",
+  "updated_at": "2026-03-11T20:11:50Z",
   "validation": {
+    "baseline": {
+      "contains_any": [
+        "internal compiler error",
+        "ICE in"
+      ],
+      "exit": "nonzero",
+      "not_contains": []
+    },
     "compile": [
       "gcc-build/gcc/gfortran",
       "-B",
@@ -72,6 +80,13 @@
       "/dev/null"
     ],
     "env": {},
+    "fixed": {
+      "contains_any": [],
+      "exit": "zero",
+      "not_contains": [
+        "internal compiler error"
+      ]
+    },
     "kind": "compile",
     "run": []
   }

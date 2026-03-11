@@ -58,20 +58,35 @@
   "trunk": {
     "branch": null,
     "commit": null,
-    "patch": "0001-fortran-Implement-optional-type-spec-for-DO-CONCURRE.patch"
+    "patch": "0001-fortran-Mark-type-spec-iterators-referenced.patch"
   },
-  "updated_at": "2026-03-11T19:41:19Z",
+  "updated_at": "2026-03-11T20:09:43Z",
   "validation": {
+    "baseline": {
+      "contains_any": [
+        "internal compiler error",
+        "ICE in"
+      ],
+      "exit": "nonzero",
+      "not_contains": []
+    },
     "compile": [
       "gcc-build/gcc/gfortran",
       "-B",
       "gcc-build/gcc",
       "-c",
-      "pr/96255/reproducer.f90",
+      "pr/96255/looper.f90",
       "-o",
       "/dev/null"
     ],
     "env": {},
+    "fixed": {
+      "contains_any": [],
+      "exit": "zero",
+      "not_contains": [
+        "internal compiler error"
+      ]
+    },
     "kind": "compile",
     "run": []
   }

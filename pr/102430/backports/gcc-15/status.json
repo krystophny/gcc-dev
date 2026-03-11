@@ -1,10 +1,10 @@
 {
-  "apply_mode": "unknown",
-  "backport_candidate": null,
-  "branch_commit": null,
-  "branch_patch": null,
+  "apply_mode": "validated-targeted",
+  "backport_candidate": true,
+  "branch_commit": "3f9b7014d3a3d86be9a852078ce8fcb362093586",
+  "branch_patch": "backports/gcc-15/0001-fortran-Reject-array-allocatable-LINEAR-on-DO-PR1024.patch",
   "full_suite": "not-run",
-  "notes": "",
-  "reproduces": null,
-  "targeted_tests": "not-run"
+  "notes": "targeted tests passed: gomp/pr102430.f90",
+  "reproduces": true,
+  "targeted_tests": "pass"
 }

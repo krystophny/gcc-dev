@@ -1,10 +1,10 @@
 {
-  "apply_mode": "unknown",
+  "apply_mode": "needs-special-env",
   "backport_candidate": null,
   "branch_commit": null,
   "branch_patch": null,
   "full_suite": "not-run",
-  "notes": "",
+  "notes": "requires sanitizer-instrumented branch compiler to observe the UAF",
   "reproduces": null,
   "targeted_tests": "not-run"
 }
