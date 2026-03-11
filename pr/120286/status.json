@@ -1,0 +1,82 @@
+{
+  "artifacts": {
+    "bugzilla_comment": "submission/bugzilla-comment.txt",
+    "mailing_list_cover": "submission/mailing-list-cover.txt",
+    "maintainer_summary": "submission/maintainer-summary.md"
+  },
+  "backports": {
+    "gcc-13": {
+      "apply_mode": "unknown",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    },
+    "gcc-14": {
+      "apply_mode": "unknown",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    },
+    "gcc-15": {
+      "apply_mode": "unknown",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    }
+  },
+  "bugzilla": {
+    "id": 120286,
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=120286"
+  },
+  "classification": {
+    "regression": false,
+    "severity": "runtime-crash",
+    "validity_class": "valid-code"
+  },
+  "fix_status": "patch-ready",
+  "github_issue": 95,
+  "notes": "",
+  "pr": 120286,
+  "submission_status": {
+    "on_bugzilla": false,
+    "on_mailing_list": false,
+    "sent": false
+  },
+  "title": "OpenMP frees privatized polymorphic pointer targets",
+  "trunk": {
+    "branch": null,
+    "commit": null,
+    "patch": "0001-fortran-Preserve-scalar-class-pointers-in-OpenMP-pri.patch"
+  },
+  "updated_at": "2026-03-11T19:41:19Z",
+  "validation": {
+    "compile": [
+      "gcc-build/gcc/gfortran",
+      "-B",
+      "gcc-build/gcc",
+      "-fopenmp",
+      "pr/120286/reproducer.f90",
+      "-o",
+      "/tmp/pr120286"
+    ],
+    "env": {
+      "OMP_NUM_THREADS": "2"
+    },
+    "kind": "run",
+    "run": [
+      "/tmp/pr120286"
+    ]
+  }
+}

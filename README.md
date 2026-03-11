@@ -47,6 +47,31 @@ LD_LIBRARY_PATH=/opt/gcc16/lib64 ./a.out
 
 - [CLAUDE.md](CLAUDE.md) - Complete development guide
 - [pr/README.md](pr/README.md) - PR tracking overview
+- [pr/backport-matrix.md](pr/backport-matrix.md) - Regression backport status
+
+## Backport Workflow
+
+Structured PR metadata now lives in `pr/<number>/status.json`.
+Generated maintainer packets live under `pr/<number>/submission/`, and
+branch-specific backport state lives under `pr/<number>/backports/`.
+
+```bash
+# Seed or refresh structured metadata
+python3 scripts/gcc-workflow.py sync-metadata --all
+
+# Regenerate maintainer packets for regression PRs
+python3 scripts/gcc-workflow.py render-packet --all --regressions
+
+# Write the top-level regression/backport matrix
+python3 scripts/gcc-workflow.py scan-regressions
+
+# Prepare and run branch applicability checks
+python3 scripts/gcc-workflow.py branch-check --branches gcc-15,gcc-14,gcc-13
+
+# Dry-run upstream submission for a generated packet
+python3 scripts/gcc-workflow.py submit-bugzilla 120723 --branch trunk
+python3 scripts/gcc-workflow.py submit-mail 120723 --branch gcc-15
+```
 
 ## Installed Compilers
 

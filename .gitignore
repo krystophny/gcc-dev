@@ -2,6 +2,10 @@
 /gcc/
 /gcc-build/
 /gcc-offload-build/
+/gcc-worktrees/
+/gcc-build-gcc13/
+/gcc-build-gcc14/
+/gcc-build-gcc15/
 /third_party/
 
 # Compiled artifacts

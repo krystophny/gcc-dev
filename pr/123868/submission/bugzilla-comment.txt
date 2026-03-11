@@ -1,0 +1,13 @@
+Proposed trunk fix for PR123868.
+
+Summary:
+- regression: yes
+- severity: wrong-code
+- trunk commit: ca448bc5e435
+- patch: 0001-fortran-Fix-memory-leak-on-assignment-with-nested-al.patch
+
+Validation:
+- targeted validation: completed locally
+- full check-gfortran: passed locally
+
+Maintainer summary and branch matrix are available in the local packet.

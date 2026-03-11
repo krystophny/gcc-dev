@@ -1,0 +1,79 @@
+{
+  "artifacts": {
+    "bugzilla_comment": "submission/bugzilla-comment.txt",
+    "mailing_list_cover": "submission/mailing-list-cover.txt",
+    "maintainer_summary": "submission/maintainer-summary.md"
+  },
+  "backports": {
+    "gcc-13": {
+      "apply_mode": "unknown",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    },
+    "gcc-14": {
+      "apply_mode": "unknown",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    },
+    "gcc-15": {
+      "apply_mode": "unknown",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    }
+  },
+  "bugzilla": {
+    "id": 110877,
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=110877"
+  },
+  "classification": {
+    "regression": false,
+    "severity": "wrong-code",
+    "validity_class": "valid-code"
+  },
+  "fix_status": "patch-ready",
+  "github_issue": 101,
+  "notes": "",
+  "pr": 110877,
+  "submission_status": {
+    "on_bugzilla": false,
+    "on_mailing_list": false,
+    "sent": false
+  },
+  "title": "Incorrect copy of allocatable component in polymorphic assignment from array dummy argument",
+  "trunk": {
+    "branch": "origin/pr110877-fix",
+    "commit": "55493d38c019728320a728481b0f010dddf861fc",
+    "patch": "0001-fortran-Fix-class-dummy-array-assignment-deep-copy-P.patch"
+  },
+  "updated_at": "2026-03-11T19:41:19Z",
+  "validation": {
+    "compile": [
+      "gcc-build/gcc/gfortran",
+      "-B",
+      "gcc-build/gcc",
+      "pr/110877/reproducer.f90",
+      "-o",
+      "/tmp/pr110877"
+    ],
+    "env": {},
+    "kind": "run",
+    "run": [
+      "/tmp/pr110877"
+    ]
+  }
+}

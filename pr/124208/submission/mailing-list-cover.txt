@@ -1,0 +1,9 @@
+PR124208 submission packet
+
+Bugzilla: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124208
+Regression: yes
+Severity: wrong-code
+Trunk commit: 97965bdc1ed
+
+This packet was generated from the meta-repo workflow and includes
+branch applicability data for active release branches.

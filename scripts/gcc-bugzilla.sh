@@ -7,6 +7,7 @@
 #   gcc-bugzilla.sh regressions                               # List open fortran regressions
 #   gcc-bugzilla.sh attach <pr-number> <file> [desc] [comment]  # Attach with optional comment
 #   gcc-bugzilla.sh login                                     # Login to GCC Bugzilla
+#   gcc-bugzilla.sh submit <pr-number> [branch] [--execute]   # Submit generated packet
 #
 # Requires: python-bugzilla (pip install python-bugzilla)
 
@@ -24,6 +25,7 @@ usage() {
     echo "  regressions                               List all open fortran regressions"
     echo "  attach <pr-number> <file> [desc] [comment]  Attach a file (requires login)"
     echo "  login                                     Login to GCC Bugzilla (saves token)"
+    echo "  submit <pr-number> [branch] [--execute]   Submit generated workflow packet"
     echo ""
     echo "Examples:"
     echo "  $0 info 124235"
@@ -31,7 +33,14 @@ usage() {
     echo "  $0 regressions"
     echo "  $0 attach 123280 pr/123280/0001-fix.patch"
     echo "  $0 attach 123280 pr/123280/0001-fix.patch 'Proposed patch' 'Fixes the ICE by...'"
+    echo "  $0 submit 120723 gcc-15 --execute"
     exit 1
+}
+
+cmd_submit() {
+    local pr="$1"
+    shift || true
+    exec python3 "$(dirname "$0")/gcc-workflow.py" submit-bugzilla "$pr" "$@"
 }
 
 cmd_info() {
@@ -91,8 +100,11 @@ cmd_attach() {
     echo "  Desc:    $desc"
     [[ -n "$comment" ]] && echo "  Comment: $comment"
     echo ""
-    read -rp "Proceed? [y/N] " confirm
-    if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+    local confirm="${GCC_BUGZILLA_ASSUME_YES:-}"
+    if [[ -z "$confirm" ]]; then
+        read -rp "Proceed? [y/N] " confirm
+    fi
+    if [[ "$confirm" != "1" && "$confirm" != "y" && "$confirm" != "Y" ]]; then
         echo "Aborted."
         exit 0
     fi
@@ -137,6 +149,10 @@ case "$1" in
         ;;
     login)
         cmd_login
+        ;;
+    submit)
+        [[ $# -lt 2 ]] && { echo "Error: missing PR number"; usage; }
+        cmd_submit "$2" "${@:3}"
         ;;
     *)
         echo "Unknown command: $1" >&2

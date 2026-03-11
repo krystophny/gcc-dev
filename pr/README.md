@@ -58,9 +58,19 @@ Each PR directory contains:
 ```
 pr/<number>/
 ├── README.md           # Links, status, analysis
+├── status.json         # Canonical machine-readable status/backport metadata
 ├── reproducer.f90      # Minimal test case
 ├── 0001-*.patch        # Exported patch (if applicable)
+├── submission/         # Generated maintainer/Bugzilla/mail packets
+├── backports/          # Branch-specific patch and status packets
 └── Makefile            # Optional multi-compiler testing
+```
+
+Top-level generated backport status:
+
+```
+pr/backport-matrix.md
+pr/backport-matrix.json
 ```
 
 ## Usage
@@ -80,6 +90,21 @@ make test-all
 3. Add `README.md` with links and analysis
 4. Test with reference compilers (nvfortran for OpenACC)
 5. Export patch: `git -C ../gcc format-patch -1 HEAD -o .`
+6. Refresh structured metadata: `python3 scripts/gcc-workflow.py sync-metadata <number>`
+7. Regenerate maintainer packet: `python3 scripts/gcc-workflow.py render-packet <number>`
+
+## Backport Commands
+
+```bash
+# Refresh metadata for every tracked PR
+python3 scripts/gcc-workflow.py sync-metadata --all
+
+# Render packets for every regression PR
+python3 scripts/gcc-workflow.py render-packet --all --regressions
+
+# Record branch applicability for active maintained release branches
+python3 scripts/gcc-workflow.py branch-check --branches gcc-15,gcc-14,gcc-13
+```
 
 ## Links
 

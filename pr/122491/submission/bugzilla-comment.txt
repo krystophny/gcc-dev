@@ -1,0 +1,13 @@
+Proposed trunk fix for PR122491.
+
+Summary:
+- regression: yes
+- severity: ice-on-invalid
+- trunk commit: ff2f6c5153e
+- patch: 0001-fortran-Avoid-UAF-on-missing-END-BLOCK-cleanup-PR122.patch
+
+Validation:
+- targeted validation: completed locally
+- full check-gfortran: passed locally
+
+Maintainer summary and branch matrix are available in the local packet.

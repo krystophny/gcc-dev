@@ -719,6 +719,25 @@ Permitted without approval:
 
 ### Tooling
 
+**Backport-aware workflow**:
+```bash
+# Refresh canonical per-PR metadata from tracked READMEs/patches
+python3 scripts/gcc-workflow.py sync-metadata --all
+
+# Render maintainer packets and the regression backport matrix
+python3 scripts/gcc-workflow.py render-packet --all --regressions
+python3 scripts/gcc-workflow.py scan-regressions
+
+# Run release-branch applicability checks in dedicated worktrees/build dirs
+python3 scripts/gcc-workflow.py branch-check --branches gcc-15,gcc-14,gcc-13
+
+# Generated files:
+#   pr/<n>/status.json
+#   pr/<n>/submission/{maintainer-summary.md,bugzilla-comment.txt,mailing-list-cover.txt}
+#   pr/<n>/backports/<branch>/
+#   pr/backport-matrix.{md,json}
+```
+
 **Bugzilla CLI** (`python-bugzilla`):
 ```bash
 # Query bug info (always permitted)
@@ -735,6 +754,9 @@ scripts/gcc-bugzilla.sh attach <pr-number> <file>
 
 # Login (one-time, saves token in ~/.bugzillarc)
 scripts/gcc-bugzilla.sh login
+
+# Submit the generated packet (REQUIRES explicit user permission)
+scripts/gcc-bugzilla.sh submit <pr-number> [--branch trunk|gcc-15|gcc-14|gcc-13] [--execute]
 ```
 
 **Mailing list** (`git send-email`, configured in gcc/):
@@ -744,6 +766,9 @@ scripts/gcc-send-patch.sh pr/<number>/0001-*.patch
 
 # Dry run (preview without sending, always permitted)
 scripts/gcc-send-patch.sh --dry-run pr/<number>/0001-*.patch
+
+# Send the generated packet (REQUIRES explicit user permission)
+scripts/gcc-send-patch.sh submit <pr-number> [--branch trunk|gcc-15|gcc-14|gcc-13] [--execute]
 ```
 
 Both scripts have interactive confirmation prompts as a safety net.

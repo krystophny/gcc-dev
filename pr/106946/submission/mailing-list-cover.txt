@@ -1,0 +1,9 @@
+PR106946 submission packet
+
+Bugzilla: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=106946
+Regression: yes
+Severity: ice-on-invalid
+Trunk commit: d02ccf8946c3f4b28a1fa85dba2593eb2a8d0f21
+
+This packet was generated from the meta-repo workflow and includes
+branch applicability data for active release branches.

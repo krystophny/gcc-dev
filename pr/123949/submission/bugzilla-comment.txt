@@ -1,0 +1,13 @@
+Proposed trunk fix for PR123949.
+
+Summary:
+- regression: yes
+- severity: ice-on-valid
+- trunk commit: 05159b27621
+- patch: 0001-fortran-Fix-PDT-ICE-with-large-KIND-values-PR123949.patch
+
+Validation:
+- targeted validation: completed locally
+- full check-gfortran: passed locally
+
+Maintainer summary and branch matrix are available in the local packet.

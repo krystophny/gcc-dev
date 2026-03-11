@@ -1,0 +1,10 @@
+{
+  "apply_mode": "unknown",
+  "backport_candidate": null,
+  "branch_commit": null,
+  "branch_patch": null,
+  "full_suite": "not-run",
+  "notes": "",
+  "reproduces": null,
+  "targeted_tests": "not-run"
+}

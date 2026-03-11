@@ -1,0 +1,13 @@
+Proposed trunk fix for PR124208.
+
+Summary:
+- regression: yes
+- severity: wrong-code
+- trunk commit: 97965bdc1ed
+- patch: 0001-fortran-Fix-iterator-counting-in-nested-block-scopes.patch
+
+Validation:
+- targeted validation: completed locally
+- full check-gfortran: passed locally
+
+Maintainer summary and branch matrix are available in the local packet.

@@ -1,0 +1,13 @@
+Proposed trunk fix for PR124235.
+
+Summary:
+- regression: yes
+- severity: ice-on-valid
+- trunk commit: e0b70284cfa
+- patch: 0001-fortran-Fix-ICE-in-ALLOCATE-of-sub-objects-with-recu.patch
+
+Validation:
+- targeted validation: completed locally
+- full check-gfortran: passed locally
+
+Maintainer summary and branch matrix are available in the local packet.
