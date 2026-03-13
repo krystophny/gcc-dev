@@ -1,4 +1,4 @@
-From 73e327406ade6ee6c8604ddd03aa233764701678 Mon Sep 17 00:00:00 2001
+From d08632545837e600f290662c4ca5714227abb647 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Fri, 13 Mar 2026 20:50:07 +0100
 Subject: [PATCH] fortran: Fix use-after-free in CLASS component error recovery
@@ -12,9 +12,9 @@ container for a failed component also invalidated it for previously
 committed components, causing a use-after-free detectable with valgrind
 and manifesting as a SEGV on Solaris/SPARC.
 
-Fix by collecting the CLASS containers from removed components, then
-freeing only those that are no longer referenced by any remaining
-component.
+Fix by deferring CLASS container cleanup until after all failed
+components are unlinked, then freeing the container only if no remaining
+component still references it.
 
 gcc/fortran/ChangeLog:
 
@@ -25,11 +25,11 @@ gcc/fortran/ChangeLog:
 
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
- gcc/fortran/decl.cc | 50 ++++++++++++++++++++++++++++++++++++---------
- 1 file changed, 40 insertions(+), 10 deletions(-)
+ gcc/fortran/decl.cc | 51 ++++++++++++++++++++++++++++++++++++---------
+ 1 file changed, 41 insertions(+), 10 deletions(-)
 
 diff --git a/gcc/fortran/decl.cc b/gcc/fortran/decl.cc
-index 551ce86d475..ff641601963 100644
+index 551ce86d475..d8aa7d1c06f 100644
 --- a/gcc/fortran/decl.cc
 +++ b/gcc/fortran/decl.cc
 @@ -6994,7 +6994,13 @@ cleanup:
@@ -47,14 +47,15 @@ index 551ce86d475..ff641601963 100644
    if (m == MATCH_ERROR && gfc_comp_struct (gfc_current_state ()))
      {
        gfc_symbol *block = gfc_current_block ();
-@@ -7006,27 +7012,51 @@ cleanup:
+@@ -7006,27 +7012,52 @@ cleanup:
  	  else
  	    prev = &block->components;
  
-+	  /* A single declaration matches one type-spec, so all CLASS
-+	     components created here share the same container.  Record
-+	     it so we can check after unlinking whether it is still
-+	     referenced by a previously committed component.  */
++	  /* Record the CLASS container from the removed components.
++	     Normally all components in one declaration share a single
++	     container, but per-variable array specs can produce
++	     additional ones; any beyond the first are harmlessly
++	     leaked until namespace destruction.  */
 +	  gfc_symbol *fclass_container = NULL;
 +
  	  while (*prev)
