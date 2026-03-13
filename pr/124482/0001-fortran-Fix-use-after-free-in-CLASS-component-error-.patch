@@ -1,0 +1,112 @@
+From 338ac82f6dfdf77cc8c7abdec018ae977772212f Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Fri, 13 Mar 2026 20:50:07 +0100
+Subject: [PATCH] fortran: Fix use-after-free in CLASS component error recovery
+ [PR124482]
+
+The error recovery added in r16-8021 (PR106946) freed CLASS container
+symbols when removing invalid CLASS components from a derived type.
+However, gfc_build_class_symbol reuses existing containers when multiple
+components share the same class type and attributes.  Freeing the
+container for a failed component also invalidated it for previously
+committed components, causing a use-after-free detectable with valgrind
+and manifesting as a SEGV on Solaris/SPARC.
+
+Fix by collecting the CLASS containers from removed components, then
+freeing only those that are no longer referenced by any remaining
+component.
+
+gcc/fortran/ChangeLog:
+
+	PR fortran/124482
+	* decl.cc (gfc_match_data_decl): Defer CLASS container cleanup
+	until after all failed components are unlinked.  Check remaining
+	component list before freeing a shared container.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/decl.cc | 47 +++++++++++++++++++++++++++++++++++++--------
+ 1 file changed, 39 insertions(+), 8 deletions(-)
+
+diff --git a/gcc/fortran/decl.cc b/gcc/fortran/decl.cc
+index 551ce86d475..f71b5aeab5b 100644
+--- a/gcc/fortran/decl.cc
++++ b/gcc/fortran/decl.cc
+@@ -6994,7 +6994,13 @@ cleanup:
+      later calls gfc_undo_symbols, the declaration state is rolled back but
+      that helper symbol survives and leaves the component dangling.  Ordinary
+      components do not create that extra helper symbol, so leave them in
+-     place for the usual follow-up diagnostics.  PR106946.  */
++     place for the usual follow-up diagnostics.  PR106946.
++
++     CLASS containers are shared between components of the same class type
++     and attributes (gfc_build_class_symbol reuses existing containers).
++     We must not free a container that is still referenced by a previously
++     committed component.  Unlink and free the components first, then clean
++     up only orphaned containers.  PR124482.  */
+   if (m == MATCH_ERROR && gfc_comp_struct (gfc_current_state ()))
+     {
+       gfc_symbol *block = gfc_current_block ();
+@@ -7006,27 +7012,52 @@ cleanup:
+ 	  else
+ 	    prev = &block->components;
+ 
++	  /* Collect CLASS containers from components we are about to
++	     remove, then unlink and free each component.  */
++	  gfc_symbol *fclass_todo[8];
++	  int n_fclass = 0;
++
+ 	  while (*prev)
+ 	    {
+ 	      gfc_component *c = *prev;
+ 	      if (c->ts.type == BT_CLASS && c->ts.u.derived
+ 		  && c->ts.u.derived->attr.is_class)
+ 		{
+-		  /* Unlink this CLASS component.  */
+ 		  *prev = c->next;
+ 
+-		  /* Remove the CLASS container from the namespace.  */
++		  /* Remember the container for later cleanup.  Avoid
++		     duplicates since multiple components may share one.  */
+ 		  gfc_symbol *fclass = c->ts.u.derived;
+-		  if (gfc_find_symtree (fclass->ns->sym_root, fclass->name))
+-		    gfc_delete_symtree (&fclass->ns->sym_root, fclass->name);
+-		  gfc_release_symbol (fclass);
+-
+-		  /* Free the component structure.  */
++		  bool seen = false;
++		  for (int i = 0; i < n_fclass; i++)
++		    if (fclass_todo[i] == fclass)
++		      { seen = true; break; }
++		  if (!seen && n_fclass < 8)
++		    fclass_todo[n_fclass++] = fclass;
++
++		  c->ts.u.derived = NULL;
+ 		  gfc_free_component (c);
+ 		}
+ 	      else
+ 		prev = &c->next;
+ 	    }
++
++	  /* Free containers that are no longer referenced by any
++	     remaining component.  */
++	  for (int i = 0; i < n_fclass; i++)
++	    {
++	      gfc_symbol *fclass = fclass_todo[i];
++	      bool shared = false;
++	      for (gfc_component *q = block->components; q; q = q->next)
++		if (q->ts.type == BT_CLASS && q->ts.u.derived == fclass)
++		  { shared = true; break; }
++	      if (!shared)
++		{
++		  if (gfc_find_symtree (fclass->ns->sym_root, fclass->name))
++		    gfc_delete_symtree (&fclass->ns->sym_root, fclass->name);
++		  gfc_release_symbol (fclass);
++		}
++	    }
+ 	}
+     }
+ 
+-- 
+2.53.0
+

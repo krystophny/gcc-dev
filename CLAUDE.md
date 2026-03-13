@@ -457,6 +457,28 @@ polymorphic mapping classification used for warnings or deep mapping.
 
 **Evidence:** PR120286.
 
+### Pattern 14: Shared CLASS Containers in Error Recovery
+
+**Symptom:** SEGV or use-after-free when compiling invalid CLASS component
+declarations inside derived types, especially when a valid and invalid
+component share the same class type and attributes.
+
+**Root cause:** `gfc_build_class_symbol` reuses existing CLASS container
+symbols (e.g., `__class_w_a`) when multiple components have the same class
+type and attributes.  Error-recovery code that frees the container for a
+failed component also invalidates the container for previously committed
+components.
+
+**Fix:** Before freeing a CLASS container during error recovery, scan the
+remaining component list for other references to the same container.  Only
+free if unshared.
+
+**Key lesson:** CLASS container symbols are shared by design.  Any cleanup
+code that frees them must check for shared references first.  Valgrind on
+x86_64 catches these even when the crash only manifests on other platforms.
+
+**Evidence:** PR124482 (regression against PR106946 fix).
+
 ## Fix Development Rules
 
 ### DO
