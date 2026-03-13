@@ -1,4 +1,4 @@
-From 338ac82f6dfdf77cc8c7abdec018ae977772212f Mon Sep 17 00:00:00 2001
+From 73e327406ade6ee6c8604ddd03aa233764701678 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Fri, 13 Mar 2026 20:50:07 +0100
 Subject: [PATCH] fortran: Fix use-after-free in CLASS component error recovery
@@ -25,11 +25,11 @@ gcc/fortran/ChangeLog:
 
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
- gcc/fortran/decl.cc | 47 +++++++++++++++++++++++++++++++++++++--------
- 1 file changed, 39 insertions(+), 8 deletions(-)
+ gcc/fortran/decl.cc | 50 ++++++++++++++++++++++++++++++++++++---------
+ 1 file changed, 40 insertions(+), 10 deletions(-)
 
 diff --git a/gcc/fortran/decl.cc b/gcc/fortran/decl.cc
-index 551ce86d475..f71b5aeab5b 100644
+index 551ce86d475..ff641601963 100644
 --- a/gcc/fortran/decl.cc
 +++ b/gcc/fortran/decl.cc
 @@ -6994,7 +6994,13 @@ cleanup:
@@ -47,14 +47,15 @@ index 551ce86d475..f71b5aeab5b 100644
    if (m == MATCH_ERROR && gfc_comp_struct (gfc_current_state ()))
      {
        gfc_symbol *block = gfc_current_block ();
-@@ -7006,27 +7012,52 @@ cleanup:
+@@ -7006,27 +7012,51 @@ cleanup:
  	  else
  	    prev = &block->components;
  
-+	  /* Collect CLASS containers from components we are about to
-+	     remove, then unlink and free each component.  */
-+	  gfc_symbol *fclass_todo[8];
-+	  int n_fclass = 0;
++	  /* A single declaration matches one type-spec, so all CLASS
++	     components created here share the same container.  Record
++	     it so we can check after unlinking whether it is still
++	     referenced by a previously committed component.  */
++	  gfc_symbol *fclass_container = NULL;
 +
  	  while (*prev)
  	    {
@@ -64,23 +65,16 @@ index 551ce86d475..f71b5aeab5b 100644
  		{
 -		  /* Unlink this CLASS component.  */
  		  *prev = c->next;
- 
+-
 -		  /* Remove the CLASS container from the namespace.  */
-+		  /* Remember the container for later cleanup.  Avoid
-+		     duplicates since multiple components may share one.  */
- 		  gfc_symbol *fclass = c->ts.u.derived;
+-		  gfc_symbol *fclass = c->ts.u.derived;
 -		  if (gfc_find_symtree (fclass->ns->sym_root, fclass->name))
 -		    gfc_delete_symtree (&fclass->ns->sym_root, fclass->name);
 -		  gfc_release_symbol (fclass);
 -
 -		  /* Free the component structure.  */
-+		  bool seen = false;
-+		  for (int i = 0; i < n_fclass; i++)
-+		    if (fclass_todo[i] == fclass)
-+		      { seen = true; break; }
-+		  if (!seen && n_fclass < 8)
-+		    fclass_todo[n_fclass++] = fclass;
-+
++		  if (!fclass_container)
++		    fclass_container = c->ts.u.derived;
 +		  c->ts.u.derived = NULL;
  		  gfc_free_component (c);
  		}
@@ -88,20 +82,27 @@ index 551ce86d475..f71b5aeab5b 100644
  		prev = &c->next;
  	    }
 +
-+	  /* Free containers that are no longer referenced by any
-+	     remaining component.  */
-+	  for (int i = 0; i < n_fclass; i++)
++	  /* Free the container only if no remaining component still
++	     references it.  CLASS containers are shared between
++	     components of the same class type and attributes
++	     (gfc_build_class_symbol reuses existing ones).  */
++	  if (fclass_container)
 +	    {
-+	      gfc_symbol *fclass = fclass_todo[i];
 +	      bool shared = false;
 +	      for (gfc_component *q = block->components; q; q = q->next)
-+		if (q->ts.type == BT_CLASS && q->ts.u.derived == fclass)
-+		  { shared = true; break; }
++		if (q->ts.type == BT_CLASS
++		    && q->ts.u.derived == fclass_container)
++		  {
++		    shared = true;
++		    break;
++		  }
 +	      if (!shared)
 +		{
-+		  if (gfc_find_symtree (fclass->ns->sym_root, fclass->name))
-+		    gfc_delete_symtree (&fclass->ns->sym_root, fclass->name);
-+		  gfc_release_symbol (fclass);
++		  if (gfc_find_symtree (fclass_container->ns->sym_root,
++					fclass_container->name))
++		    gfc_delete_symtree (&fclass_container->ns->sym_root,
++					fclass_container->name);
++		  gfc_release_symbol (fclass_container);
 +		}
 +	    }
  	}
