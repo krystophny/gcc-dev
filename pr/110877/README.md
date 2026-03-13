@@ -3,7 +3,7 @@
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=110877
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/101
 - **Branch:** `pr110877-fix`
-- **Status:** PATCH READY (signed patch on fork)
+- **Status:** MERGED (r16-8017-gb018656f8c016)
 
 ## Summary
 

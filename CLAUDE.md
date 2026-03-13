@@ -635,17 +635,13 @@ https://gcc.gnu.org/git/?p=gcc.git;a=commit;h=e0b70284cfa...
 | PR | Branch | Description |
 |----|--------|-------------|
 | 102430 | `origin/master` | Reject array/allocatable LINEAR on DO |
-| 82721 | `pr82721-fix` | Fix CHARACTER duplicate declaration ICE |
-| 95338 | `pr95338-fix` | Fix mixed ENTRY union ABI under `-ff2c` |
-| 102459 | `pr102459-fix` | Fix OMP iterator component array ICE |
-| 102596 | `pr102596-fix` | Allow task-reduction allocatable scalars without outer ref |
 | 120286 | `pr120286-fix` | Preserve scalar class pointers in OpenMP privatization |
 | 123280+96080 | `pr123280-fix` | Fix acc_is_present for assumed-shape and pointers |
 | 103276 | `pr103276-fix` | Skip pointer mapping for pass-by-ref in ENTER/EXIT DATA |
 | 123252 | `pr123252-fix` | Map scalar fields on enter data for components |
 | 123282 | `pr123282-fix` | Fix OpenACC refcount for Fortran allocatable array descriptors |
 
-**Merged upstream:** 32365, 90519, 92613, 96255, 107721, 121472, 121475, 121628, 123868, 123943, 123947, 123949, 124208, 124235
+**Merged upstream:** 32365, 82721, 90519, 92613, 95338, 96255, 102333, 102459, 102596, 103139, 106946, 107721, 110877, 121472, 121475, 121628, 123868, 123943, 123947, 123949, 124208, 124235
 
 ## aarch64 Testing (Hetzner Cloud)
 
