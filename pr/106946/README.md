@@ -3,7 +3,7 @@
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=106946
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/88
 - **Branch:** `pr106946-fix`
-- **Status:** PENDING (patch on fork branch `origin/pr106946-fix`, commit `d02ccf8946c3f4b28a1fa85dba2593eb2a8d0f21`)
+- **Status:** MERGED (r16-8021-g0d0fbb0a01e4e)
 
 ## Summary
 

@@ -3,7 +3,7 @@
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95338
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/68
 - **Branch:** `pr95338-fix`
-- **Status:** PENDING (patch on fork branch `origin/pr95338-fix`, commit `4ddac5d947e1e8bb718fb9cca5aeab865c350420`)
+- **Status:** MERGED (r16-8014-g490c7ba8d880f)
 
 ## Summary
 

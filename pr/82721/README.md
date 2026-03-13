@@ -3,7 +3,7 @@
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82721
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/56
 - **Branch:** `pr82721-fix`
-- **Status:** PENDING (patch on fork branch `origin/pr82721-fix`, commit `98a30995f17e4ecff5c3b49bf8046592b746ab3a`)
+- **Status:** MERGED (r16-8023-g5cfaad50af7dc)
 
 ## Summary
 
