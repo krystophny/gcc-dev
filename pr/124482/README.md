@@ -3,7 +3,7 @@
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124482
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/102
 - **Branch:** `pr124482-fix`
-- **Status:** PENDING (patch in progress)
+- **Status:** PENDING (patch on fork branch `origin/pr124482-fix`, on Bugzilla attachment 63924)
 
 ## Summary
 
@@ -47,4 +47,10 @@ File changed: `gcc/fortran/decl.cc`
 
 - Valgrind: 0 errors (was 25 before fix)
 - DejaGnu `pr106946.f90`: 4/4 expected passes
-- Full `check-gfortran`: pending
+- Full `check-gfortran`: 0 FAIL, 0 XPASS
+
+## Patch Artifact
+
+- GCC commit: `d0863254583` (on fork branch `origin/pr124482-fix`)
+- Exported patch:
+  `pr/124482/0001-fortran-Fix-use-after-free-in-CLASS-component-error-.patch`
