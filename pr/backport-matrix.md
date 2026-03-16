@@ -11,3 +11,4 @@
 | 123949 | yes | merged | ice-on-valid | not-affected | not-affected | not-affected |
 | 124208 | yes | merged | wrong-code | not-affected | not-affected | not-affected |
 | 124235 | yes | merged | ice-on-valid | not-affected | needs-adaptation | needs-adaptation |
+| 124482 | yes | merged | runtime-crash | unknown | unknown | unknown |

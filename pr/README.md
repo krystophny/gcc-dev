@@ -14,7 +14,6 @@ Minimal reproducers and patches for GCC Fortran and libgomp bugs.
 | [123280](123280/) | acc_is_present fails for assumed-shape | [#12](https://github.com/krystophny/gcc-dev/issues/12) |
 | [96080](96080/) | acc_is_present fails for pointers | [#13](https://github.com/krystophny/gcc-dev/issues/13) |
 | [123282](123282/) | OpenACC refcount bug in repeated alloc/dealloc cycles | [#14](https://github.com/krystophny/gcc-dev/issues/14) |
-| [124482](124482/) | CLASS component error-recovery regression on Solaris/SPARC | [#102](https://github.com/krystophny/gcc-dev/issues/102) |
 
 ## Open Tracking (no patch yet)
 
@@ -51,6 +50,7 @@ Minimal reproducers and patches for GCC Fortran and libgomp bugs.
 | [123949](123949/) | PDT ICE with large KIND values | 3a17cc11cb5 / 33b945b4e63 | [#49](https://github.com/krystophny/gcc-dev/issues/49) |
 | [124208](124208/) | Iterator counting in nested block scopes | 97965bdc1ed | [#100](https://github.com/krystophny/gcc-dev/issues/100) |
 | [124235](124235/) | ALLOCATE sub-object recursive-type ICE | e0b70284cfa | [#51](https://github.com/krystophny/gcc-dev/issues/51) |
+| [124482](124482/) | CLASS component error-recovery regression on Solaris/SPARC | d8b00bf2e151 | [#102](https://github.com/krystophny/gcc-dev/issues/102) |
 
 ## Directory Structure
 

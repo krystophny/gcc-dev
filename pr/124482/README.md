@@ -1,14 +1,15 @@
-# Bug 124482: SEGV in resolve_cyclic_derived_type (use-after-free)
+# Bug 124482: Segfault in resolve_cyclic_derived_type (use-after-free)
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124482
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/102
 - **Branch:** `pr124482-fix`
-- **Status:** PENDING (patch on fork branch `origin/pr124482-fix`, on Bugzilla attachment 63924)
+- **Status:** MERGED upstream (`d8b00bf2e1514cd132a9febaa9849ab46cd316f5`, 2026-03-15)
 
 ## Summary
 
 The test `gfortran.dg/pr106946.f90` (added by our PR 106946 fix, commit
-r16-8021-g0d0fbb0a01e) SEGVs on Solaris/SPARC.  Reported between compiler
+r16-8021-g0d0fbb0a01e) segfaults on Solaris/SPARC.  This is a GCC 16 regression,
+reported between compiler
 snapshots 20260311 and 20260312, but reproducible on x86_64 with valgrind.
 
 ## Root Cause
@@ -51,6 +52,7 @@ File changed: `gcc/fortran/decl.cc`
 
 ## Patch Artifact
 
-- GCC commit: `d0863254583` (on fork branch `origin/pr124482-fix`)
+- GCC commit: `d8b00bf2e1514cd132a9febaa9849ab46cd316f5` (merged upstream on 2026-03-15)
+- Fork branch commit: `d0863254583` (on `origin/pr124482-fix`)
 - Exported patch:
   `pr/124482/0001-fortran-Fix-use-after-free-in-CLASS-component-error-.patch`

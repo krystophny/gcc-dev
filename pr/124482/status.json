@@ -41,26 +41,26 @@
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124482"
   },
   "classification": {
-    "regression": false,
-    "severity": "other",
+    "regression": true,
+    "severity": "runtime-crash",
     "validity_class": "valid-code"
   },
-  "fix_status": "patch-ready",
+  "fix_status": "merged",
   "github_issue": 102,
   "notes": "",
   "pr": 124482,
   "submission_status": {
-    "on_bugzilla": true,
+    "on_bugzilla": false,
     "on_mailing_list": false,
     "sent": false
   },
-  "title": "SEGV in resolve_cyclic_derived_type (use-after-free)",
+  "title": "Segfault in resolve_cyclic_derived_type (use-after-free)",
   "trunk": {
-    "branch": "origin/pr124482-fix",
-    "commit": "d0863254583",
+    "branch": null,
+    "commit": "d8b00bf2e1514cd132a9febaa9849ab46cd316f5",
     "patch": "0001-fortran-Fix-use-after-free-in-CLASS-component-error-.patch"
   },
-  "updated_at": "2026-03-16T22:28:58Z",
+  "updated_at": "2026-03-16T22:46:23Z",
   "validation": {
     "baseline": {
       "contains_any": [

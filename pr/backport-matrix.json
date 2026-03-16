@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-16T22:29:04Z",
+  "generated_at": "2026-03-16T22:46:41Z",
   "rows": [
     {
       "backports": {
@@ -342,6 +342,44 @@
       "pr": 124235,
       "regression": true,
       "severity": "ice-on-valid"
+    },
+    {
+      "backports": {
+        "gcc-13": {
+          "apply_mode": "unknown",
+          "backport_candidate": null,
+          "branch_commit": null,
+          "branch_patch": null,
+          "full_suite": "not-run",
+          "notes": "",
+          "reproduces": null,
+          "targeted_tests": "not-run"
+        },
+        "gcc-14": {
+          "apply_mode": "unknown",
+          "backport_candidate": null,
+          "branch_commit": null,
+          "branch_patch": null,
+          "full_suite": "not-run",
+          "notes": "",
+          "reproduces": null,
+          "targeted_tests": "not-run"
+        },
+        "gcc-15": {
+          "apply_mode": "unknown",
+          "backport_candidate": null,
+          "branch_commit": null,
+          "branch_patch": null,
+          "full_suite": "not-run",
+          "notes": "",
+          "reproduces": null,
+          "targeted_tests": "not-run"
+        }
+      },
+      "fix_status": "merged",
+      "pr": 124482,
+      "regression": true,
+      "severity": "runtime-crash"
     }
   ]
 }

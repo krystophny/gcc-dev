@@ -662,9 +662,8 @@ https://gcc.gnu.org/git/?p=gcc.git;a=commit;h=e0b70284cfa...
 | 103276 | `pr103276-fix` | Skip pointer mapping for pass-by-ref in ENTER/EXIT DATA |
 | 123252 | `pr123252-fix` | Map scalar fields on enter data for components |
 | 123282 | `pr123282-fix` | Fix OpenACC refcount for Fortran allocatable array descriptors |
-| 124482 | `pr124482-fix` | Fix use-after-free in CLASS component error recovery |
 
-**Merged upstream:** 32365, 82721, 90519, 92613, 95338, 96255, 102333, 102459, 102596, 103139, 106946, 107721, 110877, 121472, 121475, 121628, 123868, 123943, 123947, 123949, 124208, 124235
+**Merged upstream:** 32365, 82721, 90519, 92613, 95338, 96255, 102333, 102459, 102596, 103139, 106946, 107721, 110877, 121472, 121475, 121628, 123868, 123943, 123947, 123949, 124208, 124235, 124482
 
 ## aarch64 Testing (Hetzner Cloud)
 
