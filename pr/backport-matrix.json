@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-11T20:12:42Z",
+  "generated_at": "2026-03-16T22:29:04Z",
   "rows": [
     {
       "backports": {
@@ -72,7 +72,7 @@
           "targeted_tests": "not-run"
         }
       },
-      "fix_status": "patch-ready",
+      "fix_status": "merged",
       "pr": 106946,
       "regression": true,
       "severity": "ice-on-invalid"

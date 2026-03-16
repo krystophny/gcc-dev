@@ -619,12 +619,21 @@ Debug `trans-openmp.cc` target clause generation.
 | #12 | 123280 | acc_is_present assumed-shape | on-mailing-list |
 | #13 | 96080 | OpenACC pointer semantics | on-mailing-list |
 | #14 | 123282 | OpenACC refcount bug | on-bugzilla |
-| #56 | 82721 | CHARACTER duplicate declaration ICE | patch-ready |
-| #68 | 95338 | ENTRY + -ff2c ICE | patch-ready |
-| #79 | 102459 | OMP iterator component array ICE | patch-ready |
-| #80 | 102596 | OMP task reduction ctor ICE | patch-ready |
-| #96 | 120723 | OpenACC scalar attach/detach ICE | patch-ready |
 | #95 | 120286 | OpenMP polymorphic pointer privatization | patch-ready |
+| #96 | 120723 | OpenACC scalar attach/detach ICE | patch-ready |
+
+---
+
+## Recently Merged Upstream
+
+| GH# | PR | Description | Revision |
+|-----|----|-------------|----------|
+| #56 | 82721 | CHARACTER duplicate declaration ICE | r16-8023-g5cfaad50af7dc |
+| #68 | 95338 | ENTRY + -ff2c ICE | r16-8014-g490c7ba8d880f |
+| #79 | 102459 | OMP iterator component array ICE | r16-8070-gd2ab04fbba7b9 |
+| #80 | 102596 | OMP task reduction ctor ICE | r16-8068-ge53a7510be511 |
+| #88 | 106946 | CLASS component error-recovery ICE | r16-8021-g0d0fbb0a01e4e |
+| #101 | 110877 | Polymorphic dummy assignment deep copy | r16-8017-gb018656f8c016 |
 
 ---
 

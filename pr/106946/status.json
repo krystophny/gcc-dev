@@ -45,7 +45,7 @@
     "severity": "ice-on-invalid",
     "validity_class": "invalid-code"
   },
-  "fix_status": "patch-ready",
+  "fix_status": "merged",
   "github_issue": 88,
   "notes": "",
   "pr": 106946,
@@ -56,11 +56,11 @@
   },
   "title": "ICE on invalid CLASS component in derived type",
   "trunk": {
-    "branch": "origin/pr106946-fix",
-    "commit": "d02ccf8946c3f4b28a1fa85dba2593eb2a8d0f21",
+    "branch": null,
+    "commit": null,
     "patch": "0001-fortran-Fix-ICE-on-invalid-CLASS-component-in-derive.patch"
   },
-  "updated_at": "2026-03-11T20:11:29Z",
+  "updated_at": "2026-03-16T22:28:29Z",
   "validation": {
     "baseline": {
       "contains_any": [

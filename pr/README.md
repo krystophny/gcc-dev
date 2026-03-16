@@ -7,19 +7,14 @@ Minimal reproducers and patches for GCC Fortran and libgomp bugs.
 | PR | Title | GitHub Issue |
 |----|-------|--------------|
 | [102430](102430/) | OpenMP linear(array) ICE | [#9](https://github.com/krystophny/gcc-dev/issues/9) |
-| [102459](102459/) | OMP iterator component array ICE | [#79](https://github.com/krystophny/gcc-dev/issues/79) |
-| [102596](102596/) | OMP task reduction ctor ICE | [#80](https://github.com/krystophny/gcc-dev/issues/80) |
-| [82721](82721/) | CHARACTER duplicate declaration ICE | [#56](https://github.com/krystophny/gcc-dev/issues/56) |
-| [95338](95338/) | ENTRY + `-ff2c` ICE | [#68](https://github.com/krystophny/gcc-dev/issues/68) |
 | [103276](103276/) | OpenACC ENTER DATA duplicate mapping | [#10](https://github.com/krystophny/gcc-dev/issues/10) |
-| [106946](106946/) | ICE on invalid CLASS component in derived type | [#88](https://github.com/krystophny/gcc-dev/issues/88) |
-| [110877](110877/) | Polymorphic dummy assignment drops alloc comps | [#101](https://github.com/krystophny/gcc-dev/issues/101) |
-| [120723](120723/) | OpenACC `attach(scalar)` ICE | [#96](https://github.com/krystophny/gcc-dev/issues/96) |
 | [120286](120286/) | OpenMP polymorphic pointer privatization | [#95](https://github.com/krystophny/gcc-dev/issues/95) |
+| [120723](120723/) | OpenACC `attach(scalar)` ICE | [#96](https://github.com/krystophny/gcc-dev/issues/96) |
 | [123252](123252/) | OpenACC scalar member wrong value | [#11](https://github.com/krystophny/gcc-dev/issues/11) |
 | [123280](123280/) | acc_is_present fails for assumed-shape | [#12](https://github.com/krystophny/gcc-dev/issues/12) |
 | [96080](96080/) | acc_is_present fails for pointers | [#13](https://github.com/krystophny/gcc-dev/issues/13) |
 | [123282](123282/) | OpenACC refcount bug in repeated alloc/dealloc cycles | [#14](https://github.com/krystophny/gcc-dev/issues/14) |
+| [124482](124482/) | CLASS component error-recovery regression on Solaris/SPARC | [#102](https://github.com/krystophny/gcc-dev/issues/102) |
 
 ## Open Tracking (no patch yet)
 
@@ -37,10 +32,16 @@ Minimal reproducers and patches for GCC Fortran and libgomp bugs.
 | PR | Title | GCC Commit | GitHub Issue |
 |----|-------|------------|--------------|
 | [32365](32365/) | Spec-statement diagnostics | 7db49bf4be2 | [#3](https://github.com/krystophny/gcc-dev/issues/3) |
+| [82721](82721/) | CHARACTER duplicate declaration ICE | 5cfaad50af7 | [#56](https://github.com/krystophny/gcc-dev/issues/56) |
 | [90519](90519/) | FINAL + recursive allocatable ICE | 1eb696fc092 | [#4](https://github.com/krystophny/gcc-dev/issues/4) |
 | [92613](92613/) | -cpp -fpreprocessed warning | 15ffee4e129 | [#7](https://github.com/krystophny/gcc-dev/issues/7) |
+| [95338](95338/) | ENTRY + `-ff2c` ICE | 490c7ba8d880 | [#68](https://github.com/krystophny/gcc-dev/issues/68) |
 | [96255](96255/) | DO CONCURRENT type-spec | 5e62a23cc3a | [#1](https://github.com/krystophny/gcc-dev/issues/1) |
+| [102459](102459/) | OMP iterator component array ICE | d2ab04fbba7b | [#79](https://github.com/krystophny/gcc-dev/issues/79) |
+| [102596](102596/) | OMP task reduction ctor ICE | e53a7510be51 | [#80](https://github.com/krystophny/gcc-dev/issues/80) |
+| [106946](106946/) | ICE on invalid CLASS component in derived type | 0d0fbb0a01e4 | [#88](https://github.com/krystophny/gcc-dev/issues/88) |
 | [107721](107721/) | Array constructor type-spec | c50d263beff | [#6](https://github.com/krystophny/gcc-dev/issues/6) |
+| [110877](110877/) | Polymorphic dummy assignment drops alloc comps | b018656f8c01 | [#101](https://github.com/krystophny/gcc-dev/issues/101) |
 | [121472](121472/) | Constructor/finalizer ICE | 5bb465a7896 | [#2](https://github.com/krystophny/gcc-dev/issues/2) |
 | [121475](121475/) | Function result finalization | a30b5f23b58 | [#8](https://github.com/krystophny/gcc-dev/issues/8) |
 | [121628](121628/) | Recursive allocatable deep copy | a1fe2cfa896 | [#5](https://github.com/krystophny/gcc-dev/issues/5) |

@@ -37,30 +37,30 @@
     }
   },
   "bugzilla": {
-    "id": 82721,
-    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82721"
+    "id": 124482,
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124482"
   },
   "classification": {
     "regression": false,
-    "severity": "ice-on-invalid",
-    "validity_class": "invalid-code"
+    "severity": "other",
+    "validity_class": "valid-code"
   },
-  "fix_status": "merged",
-  "github_issue": 56,
+  "fix_status": "patch-ready",
+  "github_issue": 102,
   "notes": "",
-  "pr": 82721,
+  "pr": 124482,
   "submission_status": {
-    "on_bugzilla": false,
+    "on_bugzilla": true,
     "on_mailing_list": false,
     "sent": false
   },
-  "title": "Corrupted error message / ICE after duplicate type",
+  "title": "SEGV in resolve_cyclic_derived_type (use-after-free)",
   "trunk": {
-    "branch": null,
-    "commit": null,
-    "patch": "0001-fortran-Fix-ICE-after-rejected-CHARACTER-duplicate-d.patch"
+    "branch": "origin/pr124482-fix",
+    "commit": "d0863254583",
+    "patch": "0001-fortran-Fix-use-after-free-in-CLASS-component-error-.patch"
   },
-  "updated_at": "2026-03-16T22:28:29Z",
+  "updated_at": "2026-03-16T22:28:58Z",
   "validation": {
     "baseline": {
       "contains_any": [
@@ -75,7 +75,7 @@
       "-B",
       "gcc-build/gcc",
       "-c",
-      "pr/82721/reproducer.f90",
+      "pr/124482/reproducer.f90",
       "-o",
       "/dev/null"
     ],

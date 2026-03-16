@@ -45,7 +45,7 @@
     "severity": "ice-on-valid",
     "validity_class": "valid-code"
   },
-  "fix_status": "patch-ready",
+  "fix_status": "merged",
   "github_issue": 68,
   "notes": "",
   "pr": 95338,
@@ -56,11 +56,11 @@
   },
   "title": "ICE on mixed ENTRY result types with `-ff2c`",
   "trunk": {
-    "branch": "origin/pr95338-fix",
-    "commit": "4ddac5d947e1e8bb718fb9cca5aeab865c350420",
+    "branch": null,
+    "commit": null,
     "patch": "0001-fortran-Fix-mixed-ENTRY-union-ABI-under-ff2c-PR95338.patch"
   },
-  "updated_at": "2026-03-11T20:09:43Z",
+  "updated_at": "2026-03-16T22:28:29Z",
   "validation": {
     "baseline": {
       "contains_any": [

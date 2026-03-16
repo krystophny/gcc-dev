@@ -45,7 +45,7 @@
     "severity": "wrong-code",
     "validity_class": "valid-code"
   },
-  "fix_status": "patch-ready",
+  "fix_status": "merged",
   "github_issue": 101,
   "notes": "",
   "pr": 110877,
@@ -60,7 +60,7 @@
     "commit": "55493d38c019728320a728481b0f010dddf861fc",
     "patch": "0001-fortran-Fix-class-dummy-array-assignment-deep-copy-P.patch"
   },
-  "updated_at": "2026-03-11T20:09:43Z",
+  "updated_at": "2026-03-16T22:28:29Z",
   "validation": {
     "compile": [
       "gcc-build/gcc/gfortran",

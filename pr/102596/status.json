@@ -45,7 +45,7 @@
     "severity": "ice-on-valid",
     "validity_class": "valid-code"
   },
-  "fix_status": "patch-ready",
+  "fix_status": "merged",
   "github_issue": 80,
   "notes": "",
   "pr": 102596,
@@ -56,11 +56,11 @@
   },
   "title": "ICE on OpenMP task reduction of allocatable scalar",
   "trunk": {
-    "branch": "origin/pr102596-fix",
-    "commit": "aba89bd758f1ddb3d42ca41260b872198ccdc511",
+    "branch": null,
+    "commit": null,
     "patch": "0001-fortran-Allow-task-reduction-allocatable-scalars-wit.patch"
   },
-  "updated_at": "2026-03-11T20:09:43Z",
+  "updated_at": "2026-03-16T22:28:29Z",
   "validation": {
     "baseline": {
       "contains_any": [
