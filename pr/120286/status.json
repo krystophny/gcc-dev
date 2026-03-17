@@ -45,22 +45,22 @@
     "severity": "runtime-crash",
     "validity_class": "valid-code"
   },
-  "fix_status": "patch-ready",
+  "fix_status": "merged",
   "github_issue": 95,
-  "notes": "2026-03-17: moved the OpenMP runtime testcase to libgomp/testsuite/libgomp.fortran after review feedback from Tobias Burnus; reran full check-fortran with 0 FAIL/XPASS in the aggregated gfortran and libgomp sums.",
+  "notes": "2026-03-17: moved the OpenMP runtime testcase to libgomp/testsuite/libgomp.fortran after review feedback from Tobias Burnus; reran full check-fortran with 0 FAIL/XPASS in the aggregated gfortran and libgomp sums. Merged upstream as r16-8123-g60fbabc1a182cc (commit 60fbabc1a182cca77d14c68a1b623c554310d135).",
   "pr": 120286,
   "submission_status": {
-    "on_bugzilla": false,
+    "on_bugzilla": true,
     "on_mailing_list": false,
     "sent": false
   },
   "title": "OpenMP frees privatized polymorphic pointer targets",
   "trunk": {
     "branch": null,
-    "commit": null,
+    "commit": "60fbabc1a182cca77d14c68a1b623c554310d135",
     "patch": "0001-fortran-Preserve-scalar-class-pointers-in-OpenMP-pri.patch"
   },
-  "updated_at": "2026-03-17T19:48:05Z",
+  "updated_at": "2026-03-17T20:16:52Z",
   "validation": {
     "compile": [
       "gcc-build/gcc/gfortran",

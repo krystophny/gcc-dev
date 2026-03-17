@@ -8,7 +8,6 @@ Minimal reproducers and patches for GCC Fortran and libgomp bugs.
 |----|-------|--------------|
 | [102430](102430/) | OpenMP linear(array) ICE | [#9](https://github.com/krystophny/gcc-dev/issues/9) |
 | [103276](103276/) | OpenACC ENTER DATA duplicate mapping | [#10](https://github.com/krystophny/gcc-dev/issues/10) |
-| [120286](120286/) | OpenMP polymorphic pointer privatization | [#95](https://github.com/krystophny/gcc-dev/issues/95) |
 | [120723](120723/) | OpenACC `attach(scalar)` ICE | [#96](https://github.com/krystophny/gcc-dev/issues/96) |
 | [123252](123252/) | OpenACC scalar member wrong value | [#11](https://github.com/krystophny/gcc-dev/issues/11) |
 | [123280](123280/) | acc_is_present fails for assumed-shape | [#12](https://github.com/krystophny/gcc-dev/issues/12) |
@@ -41,6 +40,7 @@ Minimal reproducers and patches for GCC Fortran and libgomp bugs.
 | [106946](106946/) | ICE on invalid CLASS component in derived type | 0d0fbb0a01e4 | [#88](https://github.com/krystophny/gcc-dev/issues/88) |
 | [107721](107721/) | Array constructor type-spec | c50d263beff | [#6](https://github.com/krystophny/gcc-dev/issues/6) |
 | [110877](110877/) | Polymorphic dummy assignment drops alloc comps | b018656f8c01 | [#101](https://github.com/krystophny/gcc-dev/issues/101) |
+| [120286](120286/) | OpenMP polymorphic pointer privatization | 60fbabc1a182 | [#95](https://github.com/krystophny/gcc-dev/issues/95) |
 | [121472](121472/) | Constructor/finalizer ICE | 5bb465a7896 | [#2](https://github.com/krystophny/gcc-dev/issues/2) |
 | [121475](121475/) | Function result finalization | a30b5f23b58 | [#8](https://github.com/krystophny/gcc-dev/issues/8) |
 | [121628](121628/) | Recursive allocatable deep copy | a1fe2cfa896 | [#5](https://github.com/krystophny/gcc-dev/issues/5) |

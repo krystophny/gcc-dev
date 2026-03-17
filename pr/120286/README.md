@@ -3,8 +3,9 @@
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=120286
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/95
 - **Branch:** `pr120286-fix`
-- **Status:** PENDING (patch on fork, full `check-gfortran` PASS)
+- **Status:** MERGED upstream (`r16-8123-g60fbabc1a182cc`)
 - **Commit:** `a1257244071fbe39b572313b1cecff91fa688655`
+- **Upstream commit:** `60fbabc1a182cca77d14c68a1b623c554310d135`
 
 ## Summary
 
