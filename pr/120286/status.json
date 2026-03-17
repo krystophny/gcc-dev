@@ -47,7 +47,7 @@
   },
   "fix_status": "patch-ready",
   "github_issue": 95,
-  "notes": "",
+  "notes": "2026-03-17: moved the OpenMP runtime testcase to libgomp/testsuite/libgomp.fortran after review feedback from Tobias Burnus; reran full check-fortran with 0 FAIL/XPASS in the aggregated gfortran and libgomp sums.",
   "pr": 120286,
   "submission_status": {
     "on_bugzilla": false,
@@ -60,7 +60,7 @@
     "commit": null,
     "patch": "0001-fortran-Preserve-scalar-class-pointers-in-OpenMP-pri.patch"
   },
-  "updated_at": "2026-03-11T20:09:43Z",
+  "updated_at": "2026-03-17T19:48:05Z",
   "validation": {
     "compile": [
       "gcc-build/gcc/gfortran",

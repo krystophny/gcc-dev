@@ -154,6 +154,17 @@ if (.not. acc_is_present(ptr)) stop 2
 ! { dg-skip-if "" { *-*-* } { "*" } { "-DACC_MEM_SHARED=0" } }
 ```
 
+**OpenMP testcase placement:**
+- OpenMP compile-only frontend tests belong in `gcc/testsuite/gfortran.dg/gomp/`.
+  Those tests get `-fopenmp` automatically; do not add it manually unless the
+  testcase has a specific non-default driver requirement.
+- OpenMP link or runtime tests belong in `libgomp/testsuite/libgomp.fortran/`.
+  This includes any test that uses `dg-do run`, `omp_lib.h`, or `use omp_lib`,
+  because `libgomp` and the Fortran OpenMP module are only available there.
+- If an OpenMP testcase executes code rather than only checking diagnostics or
+  dumps, default to `libgomp.fortran/` and move it to `gcc/testsuite/` only
+  when there is a frontend-specific reason.
+
 ## Debugging Techniques
 
 ### Tree Dumps

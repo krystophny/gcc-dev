@@ -4,7 +4,7 @@
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/95
 - **Branch:** `pr120286-fix`
 - **Status:** PENDING (patch on fork, full `check-gfortran` PASS)
-- **Commit:** `985517a4dcc92c4d8996b9530b6e1beb2333b8fc`
+- **Commit:** `a1257244071fbe39b572313b1cecff91fa688655`
 
 ## Summary
 
@@ -47,21 +47,24 @@ Expected result after the fix:
   containers as association-only state in those two ctor/dtor hooks, without
   changing the global `gfc_is_polymorphic_nonptr` classification used by
   OpenMP mapping warnings and deep-mapping logic.
-- Add `gfortran.dg/pr120286.f90`, covering both the original `private(ptr)`
-  crash and a `firstprivate(ptr)` association check.
+- Add `libgomp.fortran/pr120286.f90`, covering both the original
+  `private(ptr)` crash and a `firstprivate(ptr)` association check.
 
 ## Validation
 
 - Direct compile and run of `reproducer.f90`: PASS
 - Direct `-fdump-tree-omplower` review: PASS (privatized worker no longer emits
   finalize/free cleanup for `ptr`)
-- Targeted DejaGnu test:
-  `make -C gcc-build/gcc check-gfortran RUNTESTFLAGS="dg.exp=pr120286.f90"`:
+- Targeted libgomp test:
+  `make -C gcc-build/x86_64-pc-linux-gnu/libgomp check RUNTESTFLAGS="fortran.exp=pr120286.f90"`:
   PASS
 - Warning regression check:
   `make -C gcc-build/gcc check-gfortran RUNTESTFLAGS="dg.exp=gomp/polymorphic-mapping-1.f90"`:
   PASS
 - Full `check-gfortran`: PASS (`0` `FAIL`/`XPASS`)
+- Full `check-fortran`: PASS (`0` `FAIL`/`XPASS` in both
+  `gcc-build/gcc/testsuite/gfortran/gfortran.sum` and
+  `gcc-build/x86_64-pc-linux-gnu/libgomp/testsuite/libgomp.sum`)
 
 ## Review Notes
 
@@ -71,3 +74,5 @@ Expected result after the fix:
 - The class-pointer helper is intentionally local to those hooks.  A broader
   change to `gfc_is_polymorphic_nonptr` suppressed existing OpenMP
   polymorphic-mapping warnings and was rejected during self-review.
+- Per Tobias Burnus' review, the runtime testcase now lives in
+  `libgomp/testsuite/libgomp.fortran/`, not `gcc/testsuite/`.

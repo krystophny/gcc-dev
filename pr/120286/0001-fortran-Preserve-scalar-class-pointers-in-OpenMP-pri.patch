@@ -1,4 +1,4 @@
-From 985517a4dcc92c4d8996b9530b6e1beb2333b8fc Mon Sep 17 00:00:00 2001
+From a1257244071fbe39b572313b1cecff91fa688655 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Tue, 10 Mar 2026 20:59:48 +0100
 Subject: [PATCH] fortran: Preserve scalar class pointers in OpenMP
@@ -15,7 +15,8 @@ locally in those hooks.  That keeps scalar class pointers on the
 association-only path without changing the broader polymorphic mapping
 classification used for OpenMP warnings and deep mapping.
 
-Add a runtime regression test for the original private(ptr) crash plus a
+Move the runtime regression test to libgomp.fortran, where OpenMP runtime
+tests belong, and cover both the original private(ptr) crash plus a
 firstprivate(ptr) association check.
 
 gcc/fortran/ChangeLog:
@@ -27,17 +28,17 @@ gcc/fortran/ChangeLog:
 	association.  Handle scalar class pointers on that path too.
 	(gfc_omp_clause_dtor): Likewise.
 
-gcc/testsuite/ChangeLog:
+libgomp/ChangeLog:
 
 	PR fortran/120286
-	* gfortran.dg/pr120286.f90: New test.
+	* testsuite/libgomp.fortran/pr120286.f90: New test.
 
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
- gcc/fortran/trans-openmp.cc            | 75 +++++++++++++++++++-------
- gcc/testsuite/gfortran.dg/pr120286.f90 | 50 +++++++++++++++++
- 2 files changed, 105 insertions(+), 20 deletions(-)
- create mode 100644 gcc/testsuite/gfortran.dg/pr120286.f90
+ gcc/fortran/trans-openmp.cc                   | 75 ++++++++++++++-----
+ .../testsuite/libgomp.fortran/pr120286.f90    | 49 ++++++++++++
+ 2 files changed, 104 insertions(+), 20 deletions(-)
+ create mode 100644 libgomp/testsuite/libgomp.fortran/pr120286.f90
 
 diff --git a/gcc/fortran/trans-openmp.cc b/gcc/fortran/trans-openmp.cc
 index 3dd4cf272e5..1224df47b26 100644
@@ -155,14 +156,13 @@ index 3dd4cf272e5..1224df47b26 100644
    if (gfc_is_polymorphic_nonptr (decl_type))
      {
        if (POINTER_TYPE_P (decl_type))
-diff --git a/gcc/testsuite/gfortran.dg/pr120286.f90 b/gcc/testsuite/gfortran.dg/pr120286.f90
+diff --git a/libgomp/testsuite/libgomp.fortran/pr120286.f90 b/libgomp/testsuite/libgomp.fortran/pr120286.f90
 new file mode 100644
-index 00000000000..99c02a78c9c
+index 00000000000..e45ed5539a6
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/pr120286.f90
-@@ -0,0 +1,50 @@
++++ b/libgomp/testsuite/libgomp.fortran/pr120286.f90
+@@ -0,0 +1,49 @@
 +! { dg-do run }
-+! { dg-additional-options "-fopenmp" }
 +!
 +! PR fortran/120286 - scalar class pointers in OpenMP private/firstprivate
 +! clauses must preserve association status without taking ownership.
