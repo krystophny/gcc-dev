@@ -47,16 +47,32 @@ warning: implicit declaration of function 'pthread_condattr_setpshared'
 ld: undefined reference to `pthread_condattr_setpshared'
 ```
 
-Build reproduction attempt in progress (2026-03-18):
+Build script: `cfarm428-build.sh` (run via `ssh cfarm428.cfarm.net 'bash -s' < pr/124512/cfarm428-build.sh`)
+
 ```bash
+# One-time setup
 ssh cfarm428.cfarm.net
-cd ~/gcc-dev
+mkdir -p ~/gcc-dev && cd ~/gcc-dev
 git clone --depth 1 git://gcc.gnu.org/git/gcc.git
-mkdir gcc-build && cd gcc-build
-../gcc/configure --enable-languages=fortran --disable-multilib \
-  --disable-bootstrap CFLAGS='-Og -g' CXXFLAGS='-Og -g'
-make -j16
+
+# Build (handles all workarounds)
+bash -s < pr/124512/cfarm428-build.sh
 ```
+
+### Platform quirks discovered (2026-03-18)
+
+1. **BSD make vs GNU make**: NetBSD default `make` is BSD make; must use `gmake`.
+2. **GMP/MPFR/MPC in /usr/pkg**: Need `--with-gmp=/usr/pkg --with-mpfr=/usr/pkg --with-mpc=/usr/pkg`.
+3. **libisl.so.23 in /usr/pkg/lib**: Need `LD_LIBRARY_PATH=/usr/pkg/lib` for self-tests.
+4. **config.host missing NetBSD for aarch64**: `host_detect_local_cpu` not linked.
+   Pattern `aarch64*-*-freebsd* | aarch64*-*-linux* | aarch64*-*-fuchsia* | aarch64*-*-darwin*`
+   does not include `aarch64*-*-netbsd*`. This is a **separate bug** from PR124512.
+   Workaround: patch line 103 of `gcc/config.host` to add `aarch64*-*-netbsd*`.
+
+### Build status
+
+- config.host patch applied, compiler (f951/gfortran) builds successfully.
+- Waiting for libgfortran build to hit the pthread_condattr_setpshared failure.
 
 ## Key participants
 
