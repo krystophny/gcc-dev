@@ -36,6 +36,28 @@ a separate aarch64-specific issue.
   to the pthread problem.
 - May be a parallel build race condition or missing dependency.
 
+## Reproduction
+
+### cfarm428.cfarm.net (NetBSD 10.1, aarch64/evbarm, 16 cores, 1TB disk)
+
+Confirmed `pthread_condattr_setpshared` is missing:
+```
+$ cc -o /tmp/test_pshared /tmp/test_pshared.c -lpthread
+warning: implicit declaration of function 'pthread_condattr_setpshared'
+ld: undefined reference to `pthread_condattr_setpshared'
+```
+
+Build reproduction attempt in progress (2026-03-18):
+```bash
+ssh cfarm428.cfarm.net
+cd ~/gcc-dev
+git clone --depth 1 git://gcc.gnu.org/git/gcc.git
+mkdir gcc-build && cd gcc-build
+../gcc/configure --enable-languages=fortran --disable-multilib \
+  --disable-bootstrap CFLAGS='-Og -g' CXXFLAGS='-Og -g'
+make -j16
+```
+
 ## Key participants
 
 - **Andre Vehreschild** (vehre@gcc.gnu.org): Assignee-equivalent, author of shmem CAF.

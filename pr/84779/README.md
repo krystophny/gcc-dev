@@ -43,8 +43,24 @@ Compile with: `gfortran -O1 -fdefault-integer-8 reproducer.f90`
   shows memory corruption remains.
 - The ENTRY thunk mechanism with mixed integer sizes is the likely root cause.
 
-## Fix strategy
+## Valgrind analysis (2026-03-18, GCC 16.0.1 r16-9623-g110a8007906, x86_64)
 
-1. Reproduce valgrind errors on trunk.
-2. Analyze valgrind output to identify the specific memory issue.
-3. Fix likely in `trans-decl.cc` (build_entry_thunks) or tree-sra interaction.
+Jerry DeLisle rejected closure citing 336 valgrind errors. Investigation shows
+these are **not specific to this bug** -- they are pre-existing IRA sparseset
+false positives that appear on any compilation:
+
+```
+$ valgrind --trace-children=yes ... gfortran -O1 -fdefault-integer-8 -c pr84779_c13.f90
+ERROR SUMMARY: 138 errors from 29 contexts  (f951 subprocess)
+
+$ valgrind --trace-children=yes ... gfortran -O1 -c hello.f90
+ERROR SUMMARY: 148 errors from 36 contexts  (f951 subprocess -- MORE errors!)
+```
+
+All errors originate in `sparseset_alloc` (malloc, not calloc) -> `sparseset_bit_p`
+reading uninitialized memory. This is by design: sparseset membership test reads
+the sparse array slot first, then validates via the dense array. The hello world
+control has more errors than the bug reproducer.
+
+**Conclusion:** The ICE is genuinely fixed. Valgrind errors are unrelated IRA noise.
+Bug can be closed as FIXED with a testcase.
