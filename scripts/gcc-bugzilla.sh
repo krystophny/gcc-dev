@@ -5,6 +5,7 @@
 #   gcc-bugzilla.sh info <pr-number>                          # Show bug info
 #   gcc-bugzilla.sh search <term>                             # Search fortran bugs
 #   gcc-bugzilla.sh regressions                               # List open fortran regressions
+#   gcc-bugzilla.sh comment <pr-number> <text>                  # Post a comment
 #   gcc-bugzilla.sh attach <pr-number> <file> [desc] [comment]  # Attach with optional comment
 #   gcc-bugzilla.sh login                                     # Login to GCC Bugzilla
 #   gcc-bugzilla.sh submit <pr-number> [branch] [--execute]   # Submit generated packet
@@ -23,6 +24,7 @@ usage() {
     echo "  info <pr-number>                          Show bug status, summary, and details"
     echo "  search <term>                             Search open fortran bugs by summary text"
     echo "  regressions                               List all open fortran regressions"
+    echo "  comment <pr-number> <text>                  Post a comment on a bug"
     echo "  attach <pr-number> <file> [desc] [comment]  Attach a file (requires login)"
     echo "  login                                     Login to GCC Bugzilla (saves token)"
     echo "  submit <pr-number> [branch] [--execute]   Submit generated workflow packet"
@@ -33,6 +35,7 @@ usage() {
     echo "  $0 regressions"
     echo "  $0 attach 123280 pr/123280/0001-fix.patch"
     echo "  $0 attach 123280 pr/123280/0001-fix.patch 'Proposed patch' 'Fixes the ICE by...'"
+    echo "  $0 comment 124512 'Reproduced on cfarm428...'"
     echo "  $0 submit 120723 gcc-15 --execute"
     exit 1
 }
@@ -78,6 +81,39 @@ cmd_regressions() {
         --status=UNCONFIRMED,NEW,ASSIGNED,SUSPENDED,WAITING,REOPENED \
         --summary="regression" \
         --outputformat="%{bug_id} [%{bug_status}] %{short_desc}"
+}
+
+cmd_comment() {
+    local pr="$1"
+    local text="$2"
+
+    echo "Posting comment on bug $pr..."
+    echo ""
+    echo "  Bug:     https://gcc.gnu.org/bugzilla/show_bug.cgi?id=$pr"
+    echo ""
+    echo "--- Comment text ---"
+    echo "$text"
+    echo "--- End ---"
+    echo ""
+    local confirm="${GCC_BUGZILLA_ASSUME_YES:-}"
+    if [[ -z "$confirm" ]]; then
+        read -rp "Proceed? [y/N] " confirm
+    fi
+    if [[ "$confirm" != "1" && "$confirm" != "y" && "$confirm" != "Y" ]]; then
+        echo "Aborted."
+        exit 0
+    fi
+
+    python3 - "$pr" "$text" <<'PYEOF'
+import sys, bugzilla
+pr, text = sys.argv[1], sys.argv[2]
+bz = bugzilla.Bugzilla("https://gcc.gnu.org/bugzilla/xmlrpc.cgi")
+bug = bz.getbug(int(pr))
+bz.update_bugs(int(pr), bz.build_update(comment=text))
+print(f"Comment posted on bug {pr}")
+print(f"https://gcc.gnu.org/bugzilla/show_bug.cgi?id={pr}")
+PYEOF
+    echo "Done."
 }
 
 cmd_attach() {
@@ -142,6 +178,10 @@ case "$1" in
         ;;
     regressions)
         cmd_regressions
+        ;;
+    comment)
+        [[ $# -lt 3 ]] && { echo "Error: missing PR number or comment text"; usage; }
+        cmd_comment "$2" "$3"
         ;;
     attach)
         [[ $# -lt 3 ]] && { echo "Error: missing PR number or file"; usage; }
