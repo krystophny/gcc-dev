@@ -2,7 +2,7 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124512
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/104
-- **Status:** INVESTIGATING (P1, Andre Vehreschild actively working)
+- **Status:** PENDING (patch on fork, branch pr124512-fix)
 
 ## Summary
 
@@ -78,6 +78,41 @@ libgfortran/caf/shmem/thread_support.c:79:13: error: implicit declaration of fun
 'pthread_condattr_setpshared'; did you mean 'pthread_condattr_destroy'?
 ```
   Fails at `-Wimplicit-function-declaration` (treated as error via `-Werror`).
+
+## Fix
+
+Branch `pr124512-fix` on `origin/` (krystophny/gcc fork).
+
+### Approach: configure-time detection (Strategy 1)
+
+Add `AC_CHECK_FUNC([pthread_mutexattr_setpshared])` after `AX_PTHREAD`.
+If the function is absent, disable `ENABLE_CAF_SHMEM` entirely.
+Also add `aarch64*-*-netbsd*` to `config.host` host detection pattern.
+
+### Files changed
+
+- `gcc/config.host`: add `aarch64*-*-netbsd*` to host_detect_local_cpu pattern
+- `libgfortran/configure.ac`: add AC_CHECK_FUNC for pthread_mutexattr_setpshared
+- `libgfortran/configure`: hand-edited to match (autoconf 2.69 not available)
+
+### Platform survey: pthread_mutexattr_setpshared availability
+
+| Platform | Machine | Available | Shmem CAF |
+|----------|---------|-----------|-----------|
+| Linux x86_64 | local | yes | enabled |
+| NetBSD 10.1 aarch64 | cfarm428 | **no** | disabled |
+| OpenBSD 7.8 amd64 | cfarm220 | **no** | disabled |
+| OpenBSD 7.8 aarch64 | cfarm429 | **no** | disabled |
+| FreeBSD 16 aarch64 | cfarm427 | yes | enabled |
+| DragonFly 6.4 amd64 | cfarm152 | yes | enabled |
+| GNU/Hurd amd64 | cfarm431 | yes | enabled |
+
+### Verification
+
+- **cfarm428 (NetBSD aarch64):** full build succeeds, shmem CAF disabled
+  (`ENABLE_CAF_SHMEM_TRUE='#'`), no thread_support.o built
+- **Local (Linux x86_64):** build succeeds, shmem CAF still enabled
+  (`ac_cv_func_pthread_mutexattr_setpshared=yes`), check-gfortran pending
 
 ## Key participants
 
