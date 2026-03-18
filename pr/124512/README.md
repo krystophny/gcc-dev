@@ -69,10 +69,15 @@ bash -s < pr/124512/cfarm428-build.sh
    does not include `aarch64*-*-netbsd*`. This is a **separate bug** from PR124512.
    Workaround: patch line 103 of `gcc/config.host` to add `aarch64*-*-netbsd*`.
 
-### Build status
+### Build status (2026-03-18)
 
 - config.host patch applied, compiler (f951/gfortran) builds successfully.
-- Waiting for libgfortran build to hit the pthread_condattr_setpshared failure.
+- **PR124512 reproduced:**
+```
+libgfortran/caf/shmem/thread_support.c:79:13: error: implicit declaration of function
+'pthread_condattr_setpshared'; did you mean 'pthread_condattr_destroy'?
+```
+  Fails at `-Wimplicit-function-declaration` (treated as error via `-Werror`).
 
 ## Key participants
 
