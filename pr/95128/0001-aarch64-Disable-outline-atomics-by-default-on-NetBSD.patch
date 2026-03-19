@@ -1,0 +1,49 @@
+From d55b622d7ee0223e1af5162b76d1ec7b8b00a13d Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Thu, 19 Mar 2026 00:47:06 +0100
+Subject: [PATCH] aarch64: Disable outline-atomics by default on NetBSD
+ [PR95128]
+
+NetBSD's libgcc does not include t-lse, so the out-of-line atomic
+helper functions (__aarch64_ldadd4_relax etc.) are never built.  The
+LSE runtime detection in lse-init.c is also Linux-specific, using
+__getauxval which is unavailable on NetBSD.
+
+Disable outline-atomics by default via CC1_SPEC so that -lcaf_single,
+-latomic and LTO link steps succeed.  Users can still force it with
+an explicit -moutline-atomics.
+
+	PR target/95128
+
+gcc/ChangeLog:
+
+	* config/aarch64/aarch64-netbsd.h (CC1_SPEC): Add
+	-mno-outline-atomics unless user passes -moutline-atomics.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/config/aarch64/aarch64-netbsd.h | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/gcc/config/aarch64/aarch64-netbsd.h b/gcc/config/aarch64/aarch64-netbsd.h
+index 2efd1c16d09..7eb2c9a7374 100644
+--- a/gcc/config/aarch64/aarch64-netbsd.h
++++ b/gcc/config/aarch64/aarch64-netbsd.h
+@@ -40,8 +40,13 @@
+   "%(netbsd_link_spec)"
+ 
+ 
++/* Outline-atomics require LSE detection via __getauxval which is
++   Linux-specific.  NetBSD does not build libgcc's t-lse, so the
++   out-of-line helpers are absent.  Disable by default; the user
++   can still override with -moutline-atomics.  */
+ #ifndef CC1_SPEC
+-# define CC1_SPEC AARCH64_ERRATA_COMPILE_SPEC
++# define CC1_SPEC \
++  "%{!moutline-atomics:-mno-outline-atomics} " AARCH64_ERRATA_COMPILE_SPEC
+ #endif
+ 
+ #ifndef CC1PLUS_SPEC
+-- 
+2.53.0
+
