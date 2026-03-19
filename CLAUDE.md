@@ -70,9 +70,16 @@ Fortran-only, debug build for quick iteration:
 ```bash
 mkdir -p gcc-build && cd gcc-build
 ../gcc/configure --enable-languages=fortran --disable-multilib \
-  --disable-bootstrap CFLAGS='-Og -g' CXXFLAGS='-Og -g'
+  --disable-bootstrap --enable-valgrind-annotations \
+  CFLAGS='-Og -g' CXXFLAGS='-Og -g'
 make -j32
 ```
+
+`--enable-valgrind-annotations` is enabled by default in local builds.  This
+keeps direct `valgrind .../f951` investigations meaningful by suppressing known
+sparse-set false positives.  Outside Valgrind, these annotations compile to
+client-request sequences that return default values on the real CPU, so the
+expected cost for normal development builds is negligible.
 
 ### Rebuilding libgomp Only
 
