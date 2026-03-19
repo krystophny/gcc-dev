@@ -1,19 +1,16 @@
-! PR84779: ICE with -O1 -fdefault-integer-8 and ENTRY
-! Compile: gfortran -O1 -fdefault-integer-8 reproducer.f90
-function f1 (n)
-  integer, intent(in) :: n
-  integer :: f1, e1
-  f1 = n
-  return
-entry e1 (n)
-  e1 = n + 1
-end function
+! PR84779: mixed ENTRY results with -O1 -fdefault-integer-8
+! Minimal reproducer from Bugzilla comment #13.
+! Compile: gfortran -O1 -fdefault-integer-8 -c reproducer.f90
+complex function f2 (a)
+  implicit none
+  integer :: a
+  logical :: e2
 
-program test
-  integer :: f1, e1
-  logical(8) :: r
-  r = f1(0) == 0
-  if (.not. r) stop 1
-  r = e1(0) == 1
-  if (.not. r) stop 2
-end program
+  entry e2 (a)
+
+  if (a > 0) then
+    e2 = .true.
+  else
+    f2 = 45
+  endif
+end
