@@ -1,9 +1,9 @@
 # Sparse-set valgrind false positives on non-annotated GCC builds
 
-- **Bugzilla:** none yet
+- **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124574
 - **Historical related PR:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=33796
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/107
-- **Status:** PATCH READY (local branch `sparseset-valgrind-fix-v2`)
+- **Status:** ON BUGZILLA (patch attached as attachment 63971)
 
 ## Summary
 
@@ -41,6 +41,7 @@ After commit `6d3ccffc0e8f216a8c691907717aa4fe5b052d92`:
 - branch: `sparseset-valgrind-fix-v2`
 - commit: `6d3ccffc0e8f216a8c691907717aa4fe5b052d92`
 - patch: `0001-sparseset-Initialize-sparse-indices-for-valgrind-cle.patch`
+- Bugzilla attachment: `63971`
 
 ## Notes
 
