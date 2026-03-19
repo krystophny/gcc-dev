@@ -1,0 +1,63 @@
+From 6d3ccffc0e8f216a8c691907717aa4fe5b052d92 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Thu, 19 Mar 2026 09:54:36 +0100
+Subject: [PATCH] sparseset: Initialize sparse indices for valgrind-clean
+ probes
+
+Initialize the sparse index vector when allocating a sparse set so
+sparseset_bit_p can probe sparse[e] without reading uninitialized
+memory on compiler builds that were not configured with
+--enable-valgrind-annotations.
+
+Keep the dense vector non-cleared so sparseset_clear still stays O(1).
+
+gcc/ChangeLog:
+
+	* sparseset.cc (sparseset_alloc): Initialize the sparse index
+	vector once and narrow the valgrind annotation to the header.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/sparseset.cc | 19 ++++++++++++-------
+ 1 file changed, 12 insertions(+), 7 deletions(-)
+
+diff --git a/gcc/sparseset.cc b/gcc/sparseset.cc
+index c06cfcd4eb2..d3c89e113fd 100644
+--- a/gcc/sparseset.cc
++++ b/gcc/sparseset.cc
+@@ -32,15 +32,21 @@ sparseset_alloc (SPARSESET_ELT_TYPE n_elms)
+ 
+   sparseset set = XNEWVAR (struct sparseset_def, n_bytes);
+ 
+-  /* Mark the sparseset as defined to silence some valgrind uninitialized
+-     read errors when accessing set->sparse[n] when "n" is not, and never has
+-     been, in the set.  These uninitialized reads are expected, by design and
+-     harmless.  */
+-  VALGRIND_DISCARD (VALGRIND_MAKE_MEM_DEFINED (set, n_bytes));
+-
+   set->dense = &(set->elms[0]);
+   set->sparse = &(set->elms[n_elms]);
+   set->size = n_elms;
++
++  /* sparseset_bit_p reads sparse[e] before it can prove whether E is a
++     member.  Initialize the sparse index vector once so that those probes are
++     well-defined even for elements that have never been inserted.  */
++  memset (set->sparse, 0, n_elms * sizeof (*set->sparse));
++
++  /* Dense elements are only consulted when the corresponding sparse index is
++     below the current member count, so they still do not need eager clearing.
++     Keep the annotation for valgrind builds to cover the header fields too.  */
++  VALGRIND_DISCARD (VALGRIND_MAKE_MEM_DEFINED (set,
++					      sizeof (struct sparseset_def)));
++
+   sparseset_clear (set);
+   return set;
+ }
+@@ -236,4 +242,3 @@ sparseset_equal_p (sparseset a, sparseset b)
+ 
+   return true;
+ }
+-
+-- 
+2.53.0
+
