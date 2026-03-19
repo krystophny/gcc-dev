@@ -3,7 +3,7 @@
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124574
 - **Historical related PR:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=33796
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/107
-- **Status:** ON BUGZILLA (patch attached as attachment 63971)
+- **Status:** ON BUGZILLA (patch attached as attachment 63971; full local GCC regression comparison shows no patch-attributable failures)
 
 ## Summary
 
@@ -35,6 +35,28 @@ After commit `6d3ccffc0e8f216a8c691907717aa4fe5b052d92`:
 - `valgrind f951 /tmp/hello84779.f90`: `0 errors from 0 contexts`
 - `valgrind f951 pr/84779/reproducer.f90`: `0 errors from 0 contexts`
 - `valgrind f951 gcc/testsuite/gfortran.fortran-torture/execute/entry_4.f90`: `0 errors from 0 contexts`
+
+Full local regression comparison:
+
+- patched build dir: `gcc-regtest-build`
+- baseline build dir: `gcc-regtest-base-build`
+- source baseline: `upstream/master` at `a0d6c3f23cc`
+- configure: `--enable-languages=c,c++,fortran,lto --disable-multilib --disable-bootstrap --enable-valgrind-annotations CFLAGS='-Og -g' CXXFLAGS='-Og -g'`
+- test command: `make -j32 -k check`
+
+Normalized `FAIL`/`XPASS` outcome comparison of the full logs:
+
+- patched-only outcomes: `0`
+- baseline-only outcomes: `1`
+
+The single baseline-only outcome was:
+
+- `gfortran.dg/coarray/send_array.f90 -fcoarray=lib -pthread -O2 -lcaf_shmem -lrt execution test`
+
+That full-run baseline failure was a timeout only.  A direct rerun of
+`caf.exp=send_array.f90` immediately afterward passed in both the patched and
+baseline builds, so it is treated as flaky/environmental noise rather than a
+real delta caused by the sparse-set patch.
 
 ## Patch
 
