@@ -148,6 +148,7 @@ if [ ! -f Makefile ]; then
         --enable-languages=fortran,c,c++,lto \
         --disable-multilib \
         --with-build-config=bootstrap-lto \
+        --enable-valgrind-annotations \
         CFLAGS='-O2' CXXFLAGS='-O2' 2>&1 | tail -5
 fi
 
@@ -171,6 +172,7 @@ if [ ! -f Makefile ]; then
         --enable-languages=fortran \
         --disable-multilib \
         --disable-bootstrap \
+        --enable-valgrind-annotations \
         CFLAGS='-Og -g' CXXFLAGS='-Og -g'
 fi
 
