@@ -1,0 +1,37 @@
+From 2b3bc4e55788c6e4b39845fe446f7fdf85f9863a Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Fri, 20 Mar 2026 21:40:00 +0100
+Subject: [PATCH] aarch64: Add aarch64-netbsd to host_detect_local_cpu pattern
+ [PR124586]
+
+Native aarch64-netbsd builds need driver-aarch64.o so the driver links
+host_detect_local_cpu.  config.host already enables that path for
+FreeBSD, Linux, Fuchsia, and Darwin hosts; extend it to NetBSD as well.
+
+	PR target/124586
+
+gcc/ChangeLog:
+
+	* config.host: Add aarch64*-*-netbsd* to host_detect_local_cpu
+	pattern.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/config.host | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/gcc/config.host b/gcc/config.host
+index 8b809a8d5dd..82a5da67670 100644
+--- a/gcc/config.host
++++ b/gcc/config.host
+@@ -100,7 +100,7 @@ esac
+ 
+ case ${host} in
+   aarch64*-*-freebsd* | aarch64*-*-linux* | aarch64*-*-fuchsia* |\
+-  aarch64*-*-darwin*)
++  aarch64*-*-darwin* | aarch64*-*-netbsd*)
+     case ${target} in
+       aarch64*-*-*)
+ 	host_extra_gcc_objs="driver-aarch64.o"
+-- 
+2.53.0

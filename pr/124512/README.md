@@ -1,118 +1,156 @@
-# Bug 124512: libgfortran shmem caf: NetBSD has no pthread_condattr_setpshared
+# Bug 124512: libgfortran shmem caf: NetBSD lacks usable process-shared pthread support
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124512
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/104
-- **Status:** PENDING (patch on fork, branch pr124512-fix)
+- **Status:** PENDING (validated locally and on cfarm, not reposted to Bugzilla yet)
 
 ## Summary
 
 Recent shared-memory coarray (CAF) implementation in libgfortran uses
-`pthread_condattr_setpshared()` and `pthread_mutexattr_setpshared()`,
-which NetBSD does not support. Build failure on NetBSD targets.
+process-shared pthread mutex and condition attributes.  On NetBSD/aarch64,
+the needed APIs are not usable through the default pthread headers, so the
+build fails in `libgfortran/caf/shmem/thread_support.c` unless `caf_shmem`
+is disabled at configure time.
 
-Additionally, an undefined reference to `host_detect_local_cpu()` was
-reported during stage1 build on aarch64-netbsd10.1, though this may be
-a separate aarch64-specific issue.
+The `host_detect_local_cpu()` link failure seen during native
+`aarch64-netbsd` builds has been split out into PR124586.
 
 ## Fix strategies
 
-### Strategy 1: Configure-time detection (suggested by reporter)
-- Use `AC_CHECK_FUNCS` to detect `pthread_condattr_setpshared` availability.
-- Guard the shmem CAF implementation with `#ifdef HAVE_PTHREAD_CONDATTR_SETPSHARED`.
-- Fallback to disabling shmem CAF on platforms without support.
+### Strategy now implemented
+- Keep PR124512 scoped to `libgfortran` only.
+- Use a real configure-time compile probe for:
+  - `pthread_mutexattr_setpshared`
+  - `pthread_condattr_setpshared`
+  - `PTHREAD_PROCESS_SHARED`
+- Disable `caf_shmem` when that probe fails.
+- Remove `libcaf_shmem.la` from `cafexeclib_LTLIBRARIES` when disabled so the
+  build no longer leaves behind a broken no-op target.
+- Keep the probe safe for cross configuration: `AX_PTHREAD` establishes the
+  baseline pthread flags, and the extra check only verifies that the
+  process-shared API surface is visible through the default headers.
 
-### Strategy 2: Configure option (suggested by richi)
-- Add `--disable-shmem-caf` configure flag.
-- Or use target blacklisting to exclude known-unsupported platforms.
-
-### Strategy 3: Alternative synchronization primitives
-- Replace `pthread_*attr_setpshared` with platform-portable alternatives.
-- E.g., use `sem_init(pshared=1)` or file-based locks as fallback.
-- More complex but provides broader platform support.
-
-### aarch64-netbsd issue
-- Undefined reference to `host_detect_local_cpu()` in `driver-aarch64.cc`.
-- Likely a build system issue (missing object linkage), not directly related
-  to the pthread problem.
-- May be a parallel build race condition or missing dependency.
+### Separate host-side issue
+- PR124586 tracks the native `aarch64-netbsd` link failure for
+  `host_detect_local_cpu()`.
+- That issue is a `gcc/config.host` host-detection problem, not a
+  `libgfortran` shmem CAF problem.
 
 ## Reproduction
 
 ### cfarm428.cfarm.net (NetBSD 10.1, aarch64/evbarm, 16 cores, 1TB disk)
 
-Confirmed `pthread_condattr_setpshared` is missing:
+Confirmed default-header failure on cfarm428:
 ```
-$ cc -o /tmp/test_pshared /tmp/test_pshared.c -lpthread
-warning: implicit declaration of function 'pthread_condattr_setpshared'
-ld: undefined reference to `pthread_condattr_setpshared'
+$ cc -c /tmp/pr124512-default.c -pthread
+error: 'pthread_mutexattr_setpshared' undeclared
+error: 'pthread_condattr_setpshared' undeclared
 ```
 
-Build script: `cfarm428-build.sh` (run via `ssh cfarm428.cfarm.net 'bash -s' < pr/124512/cfarm428-build.sh`)
-
-```bash
-# One-time setup
-ssh cfarm428.cfarm.net
-mkdir -p ~/gcc-dev && cd ~/gcc-dev
-git clone --depth 1 git://gcc.gnu.org/git/gcc.git
-
-# Build (handles all workarounds)
-bash -s < pr/124512/cfarm428-build.sh
-```
+Forcing `_PTHREAD_PSHARED` before `<pthread.h>` makes the same test compile,
+matching Andre Vehreschild's observation that hidden NetBSD pthread APIs can be
+forced on but do not yield a working coarray backend.
 
 ### Platform quirks discovered (2026-03-18)
 
 1. **BSD make vs GNU make**: NetBSD default `make` is BSD make; must use `gmake`.
 2. **GMP/MPFR/MPC in /usr/pkg**: Need `--with-gmp=/usr/pkg --with-mpfr=/usr/pkg --with-mpc=/usr/pkg`.
 3. **libisl.so.23 in /usr/pkg/lib**: Need `LD_LIBRARY_PATH=/usr/pkg/lib` for self-tests.
-4. **config.host missing NetBSD for aarch64**: `host_detect_local_cpu` not linked.
-   Pattern `aarch64*-*-freebsd* | aarch64*-*-linux* | aarch64*-*-fuchsia* | aarch64*-*-darwin*`
-   does not include `aarch64*-*-netbsd*`. This is a **separate bug** from PR124512.
-   Workaround: patch line 103 of `gcc/config.host` to add `aarch64*-*-netbsd*`.
+4. **Separate host bug**: native `aarch64-netbsd` builds also need
+   `driver-aarch64.o` linked for `host_detect_local_cpu`; that split-out
+   fix is tracked in PR124586.
 
-### Build status (2026-03-18)
+### Build status (2026-03-20)
 
-- config.host patch applied, compiler (f951/gfortran) builds successfully.
-- **PR124512 reproduced:**
-```
-libgfortran/caf/shmem/thread_support.c:79:13: error: implicit declaration of function
-'pthread_condattr_setpshared'; did you mean 'pthread_condattr_destroy'?
-```
-  Fails at `-Wimplicit-function-declaration` (treated as error via `-Werror`).
+- with the separate PR124586 workaround applied, a native NetBSD/aarch64 build
+  reaches `libgfortran`.
+- with the updated PR124512 patch, `libgfortran/configure` reports:
+  `checking for usable process-shared pthread support for caf_shmem... no`
+- the generated `libgfortran/Makefile` no longer tries to build
+  `libcaf_shmem.la` when `ENABLE_CAF_SHMEM` is false.
 
 ## Fix
 
 Branch `pr124512-fix` on `origin/` (krystophny/gcc fork).
 
-### Approach: configure-time detection (Strategy 1)
+### Approach: compile-only usability probe
 
-Add `AC_CHECK_FUNC([pthread_mutexattr_setpshared])` after `AX_PTHREAD`.
-If the function is absent, disable `ENABLE_CAF_SHMEM` entirely.
-Also add `aarch64*-*-netbsd*` to `config.host` host detection pattern.
+After `AX_PTHREAD`, use an `AC_COMPILE_IFELSE` probe that includes
+`<pthread.h>` and attempts to initialize pthread attribute objects and call
+`pthread_mutexattr_setpshared` / `pthread_condattr_setpshared` with
+`PTHREAD_PROCESS_SHARED`.
+
+If the probe fails, disable `ENABLE_CAF_SHMEM`.
+
+This started as an `AC_LINK_IFELSE` probe, but that is wrong after
+`GCC_NO_EXECUTABLES` in cross configurations.  The final patch keeps the
+same native behavior while avoiding forbidden post-`GCC_NO_EXECUTABLES`
+link tests.
+
+In addition, conditionally add `libcaf_shmem.la` to
+`cafexeclib_LTLIBRARIES` only when `ENABLE_CAF_SHMEM` is true, so the build
+does not try to invoke an empty `libcaf_shmem` link rule.
 
 ### Files changed
 
-- `gcc/config.host`: add `aarch64*-*-netbsd*` to host_detect_local_cpu pattern
-- `libgfortran/configure.ac`: add AC_CHECK_FUNC for pthread_mutexattr_setpshared
-- `libgfortran/configure`: hand-edited to match (autoconf 2.69 not available)
-
-### Platform survey: pthread_mutexattr_setpshared availability
-
-| Platform | Machine | Available | Shmem CAF |
-|----------|---------|-----------|-----------|
-| Linux x86_64 | local | yes | enabled |
-| NetBSD 10.1 aarch64 | cfarm428 | **no** | disabled |
-| OpenBSD 7.8 amd64 | cfarm220 | **no** | disabled |
-| OpenBSD 7.8 aarch64 | cfarm429 | **no** | disabled |
-| FreeBSD 16 aarch64 | cfarm427 | yes | enabled |
-| DragonFly 6.4 amd64 | cfarm152 | yes | enabled |
-| GNU/Hurd amd64 | cfarm431 | yes | enabled |
+- `libgfortran/configure.ac`: add a compile-only usability probe for
+  process-shared pthread support
+- `libgfortran/configure`: hand-edited to match
+- `libgfortran/Makefile.am`: conditionally add `libcaf_shmem.la` to
+  `cafexeclib_LTLIBRARIES`
+- `libgfortran/Makefile.in`: hand-edited to match
 
 ### Verification
 
-- **cfarm428 (NetBSD aarch64):** full build succeeds, shmem CAF disabled
-  (`ENABLE_CAF_SHMEM_TRUE='#'`), no thread_support.o built
-- **Local (Linux x86_64):** build succeeds, shmem CAF still enabled
-  (`ac_cv_func_pthread_mutexattr_setpshared=yes`), check-gfortran pending
+- **Local Linux x86_64:**
+  - top-level `libgfortran/config.log` reports
+    `checking for usable process-shared pthread support for caf_shmem... yes`
+  - standalone native `libgfortran/configure` reports the same `... yes`
+  - standalone cross configure reaches the same probe with a compile test and
+    does **not** trip the old
+    `Link tests are not allowed after GCC_NO_EXECUTABLES` failure
+  - native build produces `libgfortran`, `libcaf_single`, and `libcaf_shmem`
+  - serial `gfortran.dg/coarray/caf.exp` is clean:
+    - `# of expected passes 720`
+    - `# of unsupported tests 6`
+    - `0` FAIL / XPASS / UNRESOLVED
+- **cfarm428 (NetBSD 10.1 aarch64):**
+  - default-header probe fails with undeclared
+    `pthread_mutexattr_setpshared` / `pthread_condattr_setpshared`
+  - patched `libgfortran/configure` reports `... no`
+  - clean build produces `libgfortran` and `libcaf_single`, but no
+    `libcaf_shmem`
+  - no `thread_support.c` compile appears in the build log
+
+### Coarray findings
+
+- The first cfarm coarray failures after disabling `caf_shmem` were **not**
+  caused by PR124512.
+- They came from `-lcaf_single` link failures against
+  `__aarch64_ldadd4_relax`, `__aarch64_ldclr4_relax`,
+  `__aarch64_ldset4_relax`, and `__aarch64_ldeor4_relax`.
+- Those failures are the separate NetBSD/aarch64 outline-atomics problem
+  tracked by PR95128.
+- After layering PR95128 for testing, rebuilding `libatomic` and
+  `libgfortran`, and rerunning `gfortran.dg/coarray/caf.exp` serially on
+  cfarm428:
+  - `# of expected passes 480`
+  - `# of unsupported tests 4`
+  - `0` FAIL / XPASS / UNRESOLVED
+
+### Full tests
+
+- A serial `check-gfortran` run on cfarm428 with PR124586 + PR124512 +
+  PR95128 exposed unrelated runtime crashes in non-coarray tests such as:
+  - `gfortran.dg/internal_dummy_2.f08`
+  - `gfortran.dg/internal_dummy_3.f08`
+  - `gfortran.dg/proc_ptr_47.f90`
+  - `gfortran.dg/reduce_1.f90`
+- Those failures are outside PR124512 scope.  This patch only affects whether
+  `libcaf_shmem` is configured and built.
+- Focused coarray reruns remain clean:
+  - cfarm428: `# of expected passes 480`, `# of unsupported tests 4`
+  - local Linux: `# of expected passes 720`, `# of unsupported tests 6`
 
 ## Key participants
 

@@ -1,0 +1,155 @@
+From e451446d5aff441ce7c98599cf3ee830c55f5c42 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Fri, 20 Mar 2026 23:09:26 +0100
+Subject: [PATCH] libgfortran: Disable caf_shmem without usable process-shared
+ pthreads [PR124512]
+
+Use a compile-time usability probe for the process-shared pthread API
+required by caf_shmem and only build libcaf_shmem when that probe succeeds.
+
+	PR fortran/124512
+
+libgfortran/ChangeLog:
+
+	* Makefile.am:
+	* Makefile.in:
+	* configure: Regenerate.
+	* configure.ac:
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ libgfortran/Makefile.am  |  3 ++-
+ libgfortran/Makefile.in  |  3 ++-
+ libgfortran/configure    | 41 +++++++++++++++++++++++++++++++++++++++-
+ libgfortran/configure.ac | 24 +++++++++++++++++++++++
+ 4 files changed, 68 insertions(+), 3 deletions(-)
+
+diff --git a/libgfortran/Makefile.am b/libgfortran/Makefile.am
+index c57c5bec0e6..da865af51cf 100644
+--- a/libgfortran/Makefile.am
++++ b/libgfortran/Makefile.am
+@@ -61,7 +61,7 @@ libgfortran_la_DEPENDENCIES = $(version_dep) libgfortran.spec $(LIBQUADLIB_DEP)
+ libcaf_shared_DEPS = caf/libcaf.h caf/caf_error.h
+ libcaf_shared_SRCS = caf/caf_error.c
+ 
+-cafexeclib_LTLIBRARIES = libcaf_single.la libcaf_shmem.la
++cafexeclib_LTLIBRARIES = libcaf_single.la
+ cafexeclibdir = $(libdir)/gcc/$(target_alias)/$(gcc_version)$(MULTISUBDIR)
+ libcaf_single_la_SOURCES = caf/single.c $(libcaf_shared_SRCS)
+ libcaf_single_la_LDFLAGS = -static
+@@ -69,6 +69,7 @@ libcaf_single_la_DEPENDENCIES = $(libcaf_shared_DEPS)
+ libcaf_single_la_LINK = $(LINK) $(libcaf_single_la_LDFLAGS)
+ 
+ if ENABLE_CAF_SHMEM
++cafexeclib_LTLIBRARIES += libcaf_shmem.la
+ libcaf_shmem_la_CFLAGS = $(CAF_SHMEM_CFLAGS)
+ libcaf_shmem_la_SOURCES = $(libcaf_shared_SRCS) \
+ 	caf/shmem.c caf/shmem/alloc.c caf/shmem/allocator.c \
+diff --git a/libgfortran/Makefile.in b/libgfortran/Makefile.in
+index 4a13e3820bd..e093e2773a1 100644
+--- a/libgfortran/Makefile.in
++++ b/libgfortran/Makefile.in
+@@ -989,7 +989,8 @@ libgfortran_la_LDFLAGS = -version-info `grep -v '^\#' $(srcdir)/libtool-version`
+ libgfortran_la_DEPENDENCIES = $(version_dep) libgfortran.spec $(LIBQUADLIB_DEP)
+ libcaf_shared_DEPS = caf/libcaf.h caf/caf_error.h
+ libcaf_shared_SRCS = caf/caf_error.c
+-cafexeclib_LTLIBRARIES = libcaf_single.la libcaf_shmem.la
++cafexeclib_LTLIBRARIES = libcaf_single.la
++@ENABLE_CAF_SHMEM_TRUE@cafexeclib_LTLIBRARIES += libcaf_shmem.la
+ cafexeclibdir = $(libdir)/gcc/$(target_alias)/$(gcc_version)$(MULTISUBDIR)
+ libcaf_single_la_SOURCES = caf/single.c $(libcaf_shared_SRCS)
+ libcaf_single_la_LDFLAGS = -static
+diff --git a/libgfortran/configure b/libgfortran/configure
+index d0ebed7ea84..3d2d65b2721 100755
+--- a/libgfortran/configure
++++ b/libgfortran/configure
+@@ -18413,6 +18413,46 @@ ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ ac_compiler_gnu=$ac_cv_c_compiler_gnu
+ 
++# caf_shmem needs process-shared pthread primitives that are visible through
++# the default pthread headers.  AX_PTHREAD already established the baseline
++# pthread flags; this additional check only verifies that the specific
++# process-shared API surface is usable for caf/shmem/thread_support.c.
++if test x$enable_caf_shmem = xtrue; then
++  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for usable process-shared pthread support for caf_shmem" >&5
++$as_echo_n "checking for usable process-shared pthread support for caf_shmem... " >&6; }
++  save_CFLAGS="$CFLAGS"
++  CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
++cat confdefs.h - <<_ACEOF >conftest.$ac_ext
++/* end confdefs.h.  */
++#include <pthread.h>
++
++int
++main ()
++{
++pthread_mutexattr_t mattr;
++        pthread_condattr_t cattr;
++        (void) &pthread_mutexattr_setpshared;
++        (void) &pthread_condattr_setpshared;
++        return pthread_mutexattr_init (&mattr)
++          || pthread_condattr_init (&cattr)
++          || pthread_mutexattr_setpshared (&mattr, PTHREAD_PROCESS_SHARED)
++          || pthread_condattr_setpshared (&cattr, PTHREAD_PROCESS_SHARED);
++  ;
++  return 0;
++}
++_ACEOF
++if ac_fn_c_try_compile "$LINENO"; then :
++  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
++$as_echo "yes" >&6; }
++else
++  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
++$as_echo "no" >&6; }
++  enable_caf_shmem=false
++fi
++rm -f core conftest.err conftest.$ac_objext \
++    conftest$ac_exeext conftest.$ac_ext
++  CFLAGS="$save_CFLAGS"
++fi
+ 
+  if test x$enable_caf_shmem = xtrue; then
+   ENABLE_CAF_SHMEM_TRUE=
+@@ -35718,4 +35758,3 @@ if test -n "$ac_unrecognized_opts" && test "$enable_option_checking" != no; then
+   { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: unrecognized options: $ac_unrecognized_opts" >&5
+ $as_echo "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
+ fi
+-
+diff --git a/libgfortran/configure.ac b/libgfortran/configure.ac
+index 530d15f0152..da9ae604cab 100644
+--- a/libgfortran/configure.ac
++++ b/libgfortran/configure.ac
+@@ -351,6 +351,30 @@ AX_PTHREAD([
+   ], [
+   enable_caf_shmem=false
+   ])
++# caf_shmem needs process-shared pthread primitives that are visible through
++# the default pthread headers.  AX_PTHREAD already established the baseline
++# pthread flags; this additional check only verifies that the specific
++# process-shared API surface is usable for caf/shmem/thread_support.c.
++if test x$enable_caf_shmem = xtrue; then
++  AC_MSG_CHECKING([for usable process-shared pthread support for caf_shmem])
++  save_CFLAGS="$CFLAGS"
++  CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
++  AC_COMPILE_IFELSE(
++    [AC_LANG_PROGRAM(
++      [[#include <pthread.h>]],
++      [[pthread_mutexattr_t mattr;
++        pthread_condattr_t cattr;
++        (void) &pthread_mutexattr_setpshared;
++        (void) &pthread_condattr_setpshared;
++        return pthread_mutexattr_init (&mattr)
++          || pthread_condattr_init (&cattr)
++          || pthread_mutexattr_setpshared (&mattr, PTHREAD_PROCESS_SHARED)
++          || pthread_condattr_setpshared (&cattr, PTHREAD_PROCESS_SHARED);]])],
++    [AC_MSG_RESULT([yes])],
++    [AC_MSG_RESULT([no])
++     enable_caf_shmem=false])
++  CFLAGS="$save_CFLAGS"
++fi
+ AM_CONDITIONAL([ENABLE_CAF_SHMEM], [test x$enable_caf_shmem = xtrue])
+ 
+ # Check strerror_r, cannot be above as versions with two and three arguments exist
+-- 
+2.53.0
+
