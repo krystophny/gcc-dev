@@ -49,6 +49,7 @@ LD_LIBRARY_PATH=/opt/gcc16/lib64 ./a.out
 
 - [CLAUDE.md](CLAUDE.md) - Complete development guide
 - [pr/README.md](pr/README.md) - PR tracking overview
+- [pr/regression-status.md](pr/regression-status.md) - Current Fortran regression summary
 - [pr/backport-matrix.md](pr/backport-matrix.md) - Regression backport status
 
 ## Backport Workflow

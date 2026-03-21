@@ -74,6 +74,12 @@ pr/backport-matrix.md
 pr/backport-matrix.json
 ```
 
+Manual regression status summary:
+
+```
+pr/regression-status.md
+```
+
 ## Usage
 
 ```bash
