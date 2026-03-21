@@ -2,7 +2,7 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124512
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/104
-- **Status:** PENDING (validated locally and on cfarm, not reposted to Bugzilla yet)
+- **Status:** PENDING (updated patch posted to Bugzilla as attachment 63985)
 
 ## Summary
 
@@ -140,17 +140,33 @@ does not try to invoke an empty `libcaf_shmem` link rule.
 
 ### Full tests
 
+- Local Linux x86_64 full `check-gfortran` is clean:
+  - `# of expected passes 75272`
+  - `# of expected failures 345`
+  - `# of unsupported tests 84`
+  - `0` FAIL / XPASS / UNRESOLVED
 - A serial `check-gfortran` run on cfarm428 with PR124586 + PR124512 +
-  PR95128 exposed unrelated runtime crashes in non-coarray tests such as:
+  PR95128 completes with:
+  - `# of expected passes 74188`
+  - `# of unexpected failures 87`
+  - `# of unresolved testcases 2`
+  - `# of expected failures 345`
+  - `# of unsupported tests 171`
+- Those NetBSD/aarch64 failures are outside PR124512 scope.  The failing
+  tests are in unrelated runtime/platform areas such as:
+  - `gfortran.dg/c-interop/ubound-poly.f90`
+  - `gfortran.dg/bind-c-intent-out.f90`
+  - `gfortran.dg/dec_math.f90`
   - `gfortran.dg/internal_dummy_2.f08`
   - `gfortran.dg/internal_dummy_3.f08`
-  - `gfortran.dg/proc_ptr_47.f90`
-  - `gfortran.dg/reduce_1.f90`
-- Those failures are outside PR124512 scope.  This patch only affects whether
-  `libcaf_shmem` is configured and built.
+  - `gfortran.dg/optional_absent_7.f90`
 - Focused coarray reruns remain clean:
   - cfarm428: `# of expected passes 480`, `# of unsupported tests 4`
   - local Linux: `# of expected passes 720`, `# of unsupported tests 6`
+- Host-side PR124586 alone is not sufficient: with only that fix applied,
+  native `aarch64-netbsd` builds get past the stage1 driver link and then fail
+  in `libgfortran/caf/shmem/thread_support.c` on
+  `pthread_mutexattr_setpshared` / `pthread_condattr_setpshared`.
 
 ## Key participants
 

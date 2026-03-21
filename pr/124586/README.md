@@ -53,3 +53,6 @@ host_extra_gcc_objs="driver-aarch64.o"
 
 - Related discovery thread: PR124512 comment trail on 2026-03-20.
 - Older analogue: PR77800 covered `netbsd/arm`; this is the `aarch64` case.
+- Host-side support alone is not sufficient for native NetBSD/aarch64 builds:
+  once this fix is applied, the build proceeds to `libgfortran` and then hits
+  PR124512 in `libgfortran/caf/shmem/thread_support.c`.
