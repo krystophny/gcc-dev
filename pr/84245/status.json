@@ -1,0 +1,101 @@
+{
+  "artifacts": {
+    "bugzilla_comment": "submission/bugzilla-comment.txt",
+    "mailing_list_cover": "submission/mailing-list-cover.txt",
+    "maintainer_summary": "submission/maintainer-summary.md"
+  },
+  "backports": {
+    "gcc-13": {
+      "apply_mode": "unknown",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    },
+    "gcc-14": {
+      "apply_mode": "unknown",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    },
+    "gcc-15": {
+      "apply_mode": "unknown",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    }
+  },
+  "bugzilla": {
+    "id": 84245,
+    "keywords": [
+      "error-recovery",
+      "ice-on-invalid-code"
+    ],
+    "refreshed_at": "2026-03-21T20:38:13Z",
+    "resolution": "",
+    "status": "NEW",
+    "summary": "[13/14/15/16 Regression] ICE in delete_root, at fortran/bbt.c:150",
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=84245"
+  },
+  "classification": {
+    "regression": true,
+    "severity": "ice-on-invalid",
+    "validity_class": "invalid-code"
+  },
+  "fix_status": "open",
+  "github_issue": 57,
+  "notes": "",
+  "pr": 84245,
+  "submission_status": {
+    "on_bugzilla": false,
+    "on_mailing_list": false,
+    "sent": false
+  },
+  "title": "ICE in `delete_root` during invalid `SELECT TYPE`",
+  "trunk": {
+    "branch": null,
+    "commit": null,
+    "patch": null
+  },
+  "updated_at": "2026-03-21T20:38:13Z",
+  "validation": {
+    "baseline": {
+      "contains_any": [
+        "internal compiler error",
+        "ICE in"
+      ],
+      "exit": "nonzero",
+      "not_contains": []
+    },
+    "compile": [
+      "gcc-build/gcc/gfortran",
+      "-B",
+      "gcc-build/gcc",
+      "-c",
+      "pr/84245/reproducer.f90",
+      "-o",
+      "/dev/null"
+    ],
+    "env": {},
+    "fixed": {
+      "contains_any": [],
+      "exit": "zero",
+      "not_contains": [
+        "internal compiler error"
+      ]
+    },
+    "kind": "compile",
+    "run": []
+  }
+}
