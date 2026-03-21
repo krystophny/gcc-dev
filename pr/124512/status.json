@@ -37,38 +37,37 @@
     }
   },
   "bugzilla": {
-    "id": 120723,
+    "id": 124512,
     "keywords": [
-      "ice-on-valid-code",
-      "openacc"
+      "build"
     ],
-    "refreshed_at": "2026-03-21T20:02:37Z",
+    "refreshed_at": "2026-03-21T19:56:25Z",
     "resolution": "",
     "status": "NEW",
-    "summary": "[13/14/15/16 Regression][OpenACC] '!$acc ... attach(scalar)' \u2013 ICE 'unexpected pointer mapping node'",
-    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=120723"
+    "summary": "[16 Regression] libgfortran shmem caf: NetBSD has no pthread_condattr_setpshared",
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124512"
   },
   "classification": {
     "regression": true,
-    "severity": "ice-on-valid",
+    "severity": "runtime-crash",
     "validity_class": "valid-code"
   },
-  "fix_status": "merged",
-  "github_issue": 96,
+  "fix_status": "patch-ready",
+  "github_issue": 104,
   "notes": "",
-  "pr": 120723,
+  "pr": 124512,
   "submission_status": {
-    "on_bugzilla": false,
+    "on_bugzilla": true,
     "on_mailing_list": false,
     "sent": false
   },
-  "title": "OpenACC scalar `attach`/`detach` ICE",
+  "title": "libgfortran shmem caf: NetBSD lacks usable process-shared pthread support",
   "trunk": {
-    "branch": "origin/pr120723-fix",
-    "commit": "0af9613810ecdc991633f58f5dd81a574aa2af31",
-    "patch": "0001-fortran-Fix-scalar-OpenACC-attach-detach-lowering-PR.patch"
+    "branch": null,
+    "commit": null,
+    "patch": "0001-libgfortran-Disable-caf_shmem-without-usable-process.patch"
   },
-  "updated_at": "2026-03-21T20:02:37Z",
+  "updated_at": "2026-03-21T19:56:25Z",
   "validation": {
     "baseline": {
       "contains_any": [
@@ -83,7 +82,7 @@
       "-B",
       "gcc-build/gcc",
       "-c",
-      "pr/120723/reproducer.f90",
+      "pr/124512/reproducer.f90",
       "-o",
       "/dev/null"
     ],

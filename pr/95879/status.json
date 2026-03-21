@@ -37,38 +37,37 @@
     }
   },
   "bugzilla": {
-    "id": 120723,
+    "id": 95879,
     "keywords": [
-      "ice-on-valid-code",
-      "openacc"
+      "ice-on-invalid-code"
     ],
-    "refreshed_at": "2026-03-21T20:02:37Z",
+    "refreshed_at": "2026-03-21T20:02:39Z",
     "resolution": "",
     "status": "NEW",
-    "summary": "[13/14/15/16 Regression][OpenACC] '!$acc ... attach(scalar)' \u2013 ICE 'unexpected pointer mapping node'",
-    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=120723"
+    "summary": "[13/14/15/16 Regression] ICE in gfc_resolve_formal_arglist, at fortran/resolve.c:313",
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95879"
   },
   "classification": {
     "regression": true,
     "severity": "ice-on-valid",
     "validity_class": "valid-code"
   },
-  "fix_status": "merged",
-  "github_issue": 96,
+  "fix_status": "patch-ready",
+  "github_issue": 69,
   "notes": "",
-  "pr": 120723,
+  "pr": 95879,
   "submission_status": {
-    "on_bugzilla": false,
+    "on_bugzilla": true,
     "on_mailing_list": false,
     "sent": false
   },
-  "title": "OpenACC scalar `attach`/`detach` ICE",
+  "title": "Use-after-free in gfc_resolve_formal_arglist",
   "trunk": {
-    "branch": "origin/pr120723-fix",
-    "commit": "0af9613810ecdc991633f58f5dd81a574aa2af31",
-    "patch": "0001-fortran-Fix-scalar-OpenACC-attach-detach-lowering-PR.patch"
+    "branch": null,
+    "commit": null,
+    "patch": "0001-fortran-Fix-use-after-free-in-gfc_fixup_sibling_symb.patch"
   },
-  "updated_at": "2026-03-21T20:02:37Z",
+  "updated_at": "2026-03-21T20:02:39Z",
   "validation": {
     "baseline": {
       "contains_any": [
@@ -83,7 +82,7 @@
       "-B",
       "gcc-build/gcc",
       "-c",
-      "pr/120723/reproducer.f90",
+      "pr/95879/y1.f90",
       "-o",
       "/dev/null"
     ],

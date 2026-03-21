@@ -1,7 +1,7 @@
 # Bug 95879: Use-after-free in gfc_resolve_formal_arglist
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95879
-- **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/108
+- **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/69
 - **Status:** PENDING (patch on fork, attached to Bugzilla)
 
 ## Summary

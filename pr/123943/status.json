@@ -38,14 +38,23 @@
   },
   "bugzilla": {
     "id": 123943,
+    "keywords": [
+      "ice-on-valid-code",
+      "needs-bisection",
+      "needs-reduction"
+    ],
+    "refreshed_at": "2026-03-21T20:02:38Z",
+    "resolution": "FIXED",
+    "status": "RESOLVED",
+    "summary": "[16 Regression] ice in gfc_resolve_forall, at fortran/resolve.cc:12646",
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123943"
   },
   "classification": {
-    "regression": false,
-    "severity": "other",
+    "regression": true,
+    "severity": "ice-on-valid",
     "validity_class": "valid-code"
   },
-  "fix_status": "patch-ready",
+  "fix_status": "merged",
   "github_issue": null,
   "notes": "",
   "pr": 123943,
@@ -54,13 +63,13 @@
     "on_mailing_list": false,
     "sent": false
   },
-  "title": "123943",
+  "title": "DO CONCURRENT nested-in-block iterator counting ICE",
   "trunk": {
     "branch": null,
-    "commit": null,
+    "commit": "edced0fe1e28a37c75b4e2c80a2a12db93d5002c",
     "patch": "0001-fortran-Fix-DO-CONCURRENT-nested-in-block-iterator-c.patch"
   },
-  "updated_at": "2026-03-11T20:09:43Z",
+  "updated_at": "2026-03-21T20:02:38Z",
   "validation": {
     "baseline": {
       "contains_any": [

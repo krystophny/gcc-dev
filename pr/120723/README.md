@@ -3,7 +3,7 @@
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=120723
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/96
 - **Branch:** `pr120723-fix`
-- **Status:** PATCH READY (signed patch on fork)
+- **Status:** MERGED upstream (commit `0af9613810ecdc991633f58f5dd81a574aa2af31`)
 
 ## Summary
 
@@ -68,7 +68,8 @@ Expected result after the fix:
 
 ## Patch Artifacts
 
-- GCC commit: `5fae5d7c4e9c25d18c52a14d5ff8779030908ff5`
+- Upstream commit: `0af9613810ecdc991633f58f5dd81a574aa2af31`
+- Patch branch commit: `5fae5d7c4e9c25d18c52a14d5ff8779030908ff5`
 - Exported patch:
   `pr/120723/0001-fortran-Fix-scalar-OpenACC-attach-detach-lowering-PR.patch`
 - Branch: `origin/pr120723-fix`
