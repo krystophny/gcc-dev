@@ -31,13 +31,13 @@ Each task goes through the same stages:
 
 ### T1: PR84245
 
-- [ ] Deep dive: reproduce on clean trunk; inspect Bugzilla patch; confirm root cause in parser cleanup path.
-- [ ] Meta docs: add `pr/84245/README.md`, reproducer, and status notes.
-- [ ] Clean fix: implement the minimal trunk fix from first principles or refine the attached patch.
-- [ ] Critical review: compare against PR106946 / PR82721 cleanup logic for unintended rollback interactions.
-- [ ] Full revision: rebuild, targeted validation, and full `check-gfortran`.
-- [ ] Emit patch: branch, commit, export patch, verify metadata.
-- [ ] Bugzilla: post/refresh patch with an explanation of the exact broken cleanup path and why the fix is minimal.
+- [x] Deep dive: reproduced on clean trunk, inspected the existing Bugzilla patch, and confirmed the failure in the parser cleanup path.
+- [x] Meta docs: added `pr/84245/README.md`, reproducer, status, and submission packet files.
+- [x] Clean fix: implemented the minimal trunk fix in `gfc_match_select_type`.
+- [x] Critical review: checked the fix shape against the same rollback/error-recovery family as PR106946 / PR82721.
+- [x] Full revision: rebuilt, validated the direct reproducer, ran `dg.exp=pr84245.f90`, and completed full `check-gfortran`.
+- [x] Emit patch: committed, verified with `gcc-verify`, exported patch, and pushed `origin/pr84245-fix`.
+- [x] Bugzilla: refreshed patch posted as attachment 63998 with the cleanup-path explanation and validation summary.
 
 ### T2: PR108382
 
@@ -71,7 +71,10 @@ Each task goes through the same stages:
 
 ## Current Execution Target
 
-Start with `T1 / PR84245`.  It has the best effort-to-progress ratio because:
+`T1 / PR84245` is complete through Bugzilla posting.  Next up is
+`T2 / PR108382`.
+
+`T1` had the best effort-to-progress ratio because:
 
 - there is already a candidate Bugzilla patch to validate,
 - the failure is in a parser/error-recovery area where we already have recent fix experience,

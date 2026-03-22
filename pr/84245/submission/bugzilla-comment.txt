@@ -1,0 +1,26 @@
+Refreshed trunk fix for PR84245, validated on current upstream master.
+
+The ICE happens in `gfc_match_select_type` after the temporary block
+namespace has already been created and expression matching returns
+`MATCH_ERROR` for invalid `SELECT TYPE` syntax. The old code treated any
+non-`MATCH_YES` result like `MATCH_NO`, swapped the temporary namespace back,
+and freed it through the normal rollback path. On `MATCH_ERROR` that
+temporary namespace can already contain broken parser state, and the cleanup
+later trips the `compare_symtree` / `delete_root` path reported in this PR.
+
+This patch narrows that cleanup:
+
+- free the temporary namespace only for `MATCH_NO`
+- return immediately for `MATCH_ERROR`
+
+That leaves the normal no-match path unchanged and only avoids the rollback
+free path for the already-broken error case.
+
+Validation on current trunk:
+
+- branch: `pr84245-fix`
+- commit: `e0115b2d28e1a030c6158f2c57a2ebfd62507d1b`
+- patch: `0001-fortran-Avoid-rollback-ICE-after-invalid-SELECT-TYPE.patch`
+- direct reproducer: no ICE; frontend diagnostics only
+- targeted testcase: `gfortran.dg/pr84245.f90` passes
+- full `check-gfortran`: passes with no `FAIL`/`XPASS` entries

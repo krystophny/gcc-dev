@@ -333,6 +333,10 @@ def pr_dirs(selected: Optional[Iterable[str]] = None) -> List[Path]:
     return [p for p in dirs if p.name in wanted]
 
 
+def status_pr_dirs(selected: Optional[Iterable[str]] = None) -> List[Path]:
+    return [p for p in pr_dirs(selected) if (p / "status.json").exists()]
+
+
 def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8") if path.exists() else ""
 
@@ -676,62 +680,75 @@ def maintainer_summary(meta: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def bugzilla_comment(meta: Dict[str, Any], branch: str = "trunk") -> str:
-    if branch == "trunk":
-        patch = meta["trunk"].get("patch") or "missing patch"
-        commit = meta["trunk"].get("commit") or "n/a"
-        return textwrap.dedent(
-            f"""\
-            Proposed trunk fix for PR{meta['pr']}.
-
-            Summary:
-            - regression: {'yes' if meta['classification']['regression'] else 'no'}
-            - severity: {meta['classification']['severity']}
-            - trunk commit: {commit}
-            - patch: {patch}
-
-            Validation:
-            - targeted validation: completed locally
-            - full check-gfortran: passed locally
-
-            Maintainer summary and branch matrix are available in the local packet.
-            """
-        ).strip() + "\n"
-    info = meta["backports"][branch]
-    branch_patch = info.get("branch_patch") or meta["trunk"].get("patch") or "missing patch"
+def submission_placeholder(kind: str, meta: Dict[str, Any], branch: str = "trunk") -> str:
+    patch = (
+        meta["trunk"].get("patch")
+        if branch == "trunk"
+        else meta["backports"][branch].get("branch_patch") or meta["trunk"].get("patch")
+    ) or "missing patch"
+    branch_note = "trunk" if branch == "trunk" else branch
     return textwrap.dedent(
         f"""\
-        Backport candidate for {branch} for PR{meta['pr']}.
+        TODO: write the {kind} text for PR{meta['pr']} ({branch_note}).
 
-        Branch status:
-        - reproduces on {branch}: {bool_text(info.get('reproduces'))}
-        - candidate: {bool_text(info.get('backport_candidate'))}
-        - apply mode: {info.get('apply_mode', 'unknown')}
-        - targeted tests: {info.get('targeted_tests', 'not-run')}
-        - full check-gfortran: {info.get('full_suite', 'not-run')}
-        - patch: {branch_patch}
-
-        This branch result was generated from the structured backport matrix in the meta-repo.
-        """
-    ).strip() + "\n"
-
-
-def mailing_list_cover(meta: Dict[str, Any], branch: str = "trunk") -> str:
-    prefix = "" if branch == "trunk" else f"[{branch}] "
-    commit = meta["trunk"].get("commit") or "n/a"
-    return textwrap.dedent(
-        f"""\
-        {prefix}PR{meta['pr']} submission packet
+        This file is used verbatim by the submission helper.
+        Replace this placeholder before running submit.
 
         Bugzilla: {meta['bugzilla']['url']}
-        Regression: {'yes' if meta['classification']['regression'] else 'no'}
-        Severity: {meta['classification']['severity']}
-        Trunk commit: {commit}
-
-        This packet was generated from the meta-repo workflow and includes
-        branch applicability data for active release branches.
+        Patch: {patch}
         """
     ).strip() + "\n"
+
+
+def submission_text_path(pr_dir: Path, basename: str, branch: str = "trunk") -> Path:
+    submission_dir = pr_dir / "submission"
+    if branch != "trunk":
+        stem, suffix = os.path.splitext(basename)
+        candidate = submission_dir / f"{stem}-{branch}{suffix}"
+        if candidate.exists():
+            return candidate
+    return submission_dir / basename
+
+
+def ensure_submission_text(pr_dir: Path, meta: Dict[str, Any], basename: str, kind: str, branch: str = "trunk") -> Path:
+    path = submission_text_path(pr_dir, basename, branch)
+    if path.exists():
+        return path
+    path.write_text(submission_placeholder(kind, meta, branch), encoding="utf-8")
+    return path
+
+
+def is_generated_submission_text(text: str) -> bool:
+    stripped = text.strip()
+    if stripped.startswith("TODO:"):
+        return True
+    generated_prefixes = (
+        "Proposed trunk fix for PR",
+        "Backport candidate for ",
+    )
+    if stripped.startswith(generated_prefixes):
+        return True
+    if re.match(r"^(?:\[[^\]]+\]\s+)?PR\d+\s+submission packet\b", stripped):
+        return True
+    return "This packet was generated from the meta-repo workflow" in stripped
+
+
+def load_submission_text(pr_dir: Path, meta: Dict[str, Any], basename: str, kind: str, branch: str = "trunk") -> Tuple[Path, str]:
+    path = submission_text_path(pr_dir, basename, branch)
+    if not path.exists():
+        raise WorkflowError(
+            f"PR{meta['pr']} is missing {path.relative_to(ROOT)}; write the {kind} text first"
+        )
+    text = path.read_text(encoding="utf-8").strip()
+    if not text:
+        raise WorkflowError(
+            f"PR{meta['pr']} has an empty {path.relative_to(ROOT)}; write the {kind} text first"
+        )
+    if is_generated_submission_text(text):
+        raise WorkflowError(
+            f"PR{meta['pr']} still has placeholder or autogenerated text in {path.relative_to(ROOT)}; replace it before submission"
+        )
+    return path, text + "\n"
 
 
 def render_packet(meta: Dict[str, Any]) -> None:
@@ -741,18 +758,16 @@ def render_packet(meta: Dict[str, Any]) -> None:
     (submission_dir / "maintainer-summary.md").write_text(
         maintainer_summary(meta), encoding="utf-8"
     )
-    (submission_dir / "bugzilla-comment.txt").write_text(
-        bugzilla_comment(meta), encoding="utf-8"
-    )
-    (submission_dir / "mailing-list-cover.txt").write_text(
-        mailing_list_cover(meta), encoding="utf-8"
-    )
+    ensure_submission_text(pr_dir, meta, "bugzilla-comment.txt", "Bugzilla comment")
+    ensure_submission_text(pr_dir, meta, "mailing-list-cover.txt", "mailing-list cover")
     backports_dir = pr_dir / "backports"
     backports_dir.mkdir(parents=True, exist_ok=True)
     for branch, info in meta["backports"].items():
         branch_dir = backports_dir / branch
         branch_dir.mkdir(parents=True, exist_ok=True)
         write_json(branch_dir / "status.json", info)
+        ensure_submission_text(pr_dir, meta, "bugzilla-comment.txt", "Bugzilla comment", branch)
+        ensure_submission_text(pr_dir, meta, "mailing-list-cover.txt", "mailing-list cover", branch)
         (branch_dir / "summary.md").write_text(
             maintainer_summary(
                 {
@@ -765,15 +780,19 @@ def render_packet(meta: Dict[str, Any]) -> None:
 
 
 def render_packets(paths: List[Path], regressions_only: bool) -> None:
-    rows = []
     for pr_dir in paths:
         meta = load_status(pr_dir)
         if regressions_only and not meta["classification"]["regression"]:
             continue
         render_packet(meta)
-        rows.append(meta)
         print(f"rendered packet for PR{meta['pr']}")
-    write_backport_matrix(rows)
+    matrix_rows = []
+    for pr_dir in status_pr_dirs():
+        meta = load_status(pr_dir)
+        if regressions_only and not meta["classification"]["regression"]:
+            continue
+        matrix_rows.append(meta)
+    write_backport_matrix(matrix_rows)
 
 
 def write_backport_matrix(metadata_rows: List[Dict[str, Any]]) -> None:
@@ -1268,9 +1287,12 @@ def selected_patch(meta: Dict[str, Any], branch: str) -> Path:
 
 
 def submit_bugzilla(pr: int, branch: str, execute: bool) -> None:
-    meta = load_status(PR_ROOT / str(pr))
+    pr_dir = PR_ROOT / str(pr)
+    meta = load_status(pr_dir)
     patch = selected_patch(meta, branch)
-    comment = bugzilla_comment(meta, branch)
+    comment_path, comment = load_submission_text(
+        pr_dir, meta, "bugzilla-comment.txt", "Bugzilla comment", branch
+    )
     cmd = [
         str(ROOT / "scripts" / "gcc-bugzilla.sh"),
         "attach",
@@ -1284,17 +1306,23 @@ def submit_bugzilla(pr: int, branch: str, execute: bool) -> None:
     else:
         print("dry-run:")
         print(" ".join(shlex.quote(x) for x in cmd))
+        print(f"using comment from: {comment_path.relative_to(ROOT)}")
         print(comment)
 
 
 def submit_mail(pr: int, branch: str, execute: bool) -> None:
-    meta = load_status(PR_ROOT / str(pr))
+    pr_dir = PR_ROOT / str(pr)
+    meta = load_status(pr_dir)
     patch = selected_patch(meta, branch)
+    cover_path, cover = load_submission_text(
+        pr_dir, meta, "mailing-list-cover.txt", "mailing-list cover", branch
+    )
     cmd = [str(ROOT / "scripts" / "gcc-send-patch.sh")]
     if not execute:
         cmd.append("--dry-run")
     cmd.append(str(patch))
-    print(mailing_list_cover(meta, branch))
+    print(f"using cover from: {cover_path.relative_to(ROOT)}")
+    print(cover)
     run(cmd, capture=False, env={"GCC_SEND_PATCH_ASSUME_YES": "1"})
 
 
@@ -1348,10 +1376,10 @@ def main() -> int:
         sync_metadata(paths, args.refresh_bugzilla)
         return 0
     if args.cmd == "scan-regressions":
-        scan_regressions(pr_dirs(args.prs or None))
+        scan_regressions(status_pr_dirs(args.prs or None))
         return 0
     if args.cmd == "render-packet":
-        paths = pr_dirs(None if args.all or not args.prs else args.prs)
+        paths = status_pr_dirs(None if args.all or not args.prs else args.prs)
         render_packets(paths, regressions_only=args.regressions)
         return 0
     if args.cmd == "branch-check":
@@ -1359,7 +1387,7 @@ def main() -> int:
         unknown = [branch for branch in branches if branch not in ACTIVE_BRANCHES]
         if unknown:
             raise WorkflowError(f"unknown branches: {', '.join(unknown)}")
-        branch_check(pr_dirs(args.prs or None), branches, full_suite=not args.no_full_suite)
+        branch_check(status_pr_dirs(args.prs or None), branches, full_suite=not args.no_full_suite)
         return 0
     if args.cmd == "submit-bugzilla":
         submit_bugzilla(args.pr, args.branch, args.execute)

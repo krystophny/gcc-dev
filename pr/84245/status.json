@@ -53,22 +53,22 @@
     "severity": "ice-on-invalid",
     "validity_class": "invalid-code"
   },
-  "fix_status": "open",
+  "fix_status": "patch-ready",
   "github_issue": 57,
-  "notes": "",
+  "notes": "Direct reproducer no longer ICEs on clean trunk; invalid source still exits nonzero with frontend diagnostics only. Targeted testcase and full check-gfortran passed locally.",
   "pr": 84245,
   "submission_status": {
-    "on_bugzilla": false,
+    "on_bugzilla": true,
     "on_mailing_list": false,
     "sent": false
   },
   "title": "ICE in `delete_root` during invalid `SELECT TYPE`",
   "trunk": {
-    "branch": null,
-    "commit": null,
-    "patch": null
+    "branch": "pr84245-fix",
+    "commit": "e0115b2d28e1a030c6158f2c57a2ebfd62507d1b",
+    "patch": "0001-fortran-Avoid-rollback-ICE-after-invalid-SELECT-TYPE.patch"
   },
-  "updated_at": "2026-03-21T20:38:13Z",
+  "updated_at": "2026-03-22T06:00:00Z",
   "validation": {
     "baseline": {
       "contains_any": [
@@ -79,9 +79,9 @@
       "not_contains": []
     },
     "compile": [
-      "gcc-build/gcc/gfortran",
+      "gcc-trunk-build/gcc/gfortran",
       "-B",
-      "gcc-build/gcc",
+      "gcc-trunk-build/gcc",
       "-c",
       "pr/84245/reproducer.f90",
       "-o",
@@ -89,8 +89,11 @@
     ],
     "env": {},
     "fixed": {
-      "contains_any": [],
-      "exit": "zero",
+      "contains_any": [
+        "Unexpected '%'",
+        "Expecting END PROGRAM statement"
+      ],
+      "exit": "nonzero",
       "not_contains": [
         "internal compiler error"
       ]
