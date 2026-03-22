@@ -34,6 +34,7 @@ It does not just mean `patch-ready` on the fork.
 | PR | P | Summary | State | BZ |
 |---|---:|---|---|---|
 | 84245 | P4 | ICE in `delete_root` | patch on BZ; parser error-recovery fix validated on trunk | [84245](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=84245) |
+| 108382 | P4 | wrong parsing with mixed acc/omp | patch on BZ; reviewed trunk fix validated by focused tests and `goacc.exp` sweep | [108382](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=108382) |
 | 124512 | P1 | `libgfortran` shmem CAF pthread support | patch on BZ; still open on trunk | [124512](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124512) |
 | 102430 | P2 | ICE in OMP `linear(array)` | patch on BZ; also on ML; still open on trunk | [102430](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102430) |
 | 95879 | P4 | UAF / ICE in `gfc_resolve_formal_arglist` | patch on BZ; still open on trunk | [95879](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95879) |
@@ -61,7 +62,6 @@ It does not just mean `patch-ready` on the fork.
 | 103367 | P4 | ICE in `gfc_conv_array_initializer` | PDT array + `REAL` index | [103367](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=103367) |
 | 105168 | P4 | ICE in `gfc_maybe_dereference_var` | CLASS array + `size()` in result | [105168](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105168) |
 | 107425 | P4 | ICE in `gimplify_var_or_parm_decl` | undeclared var in OMP iterator | [107425](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=107425) |
-| 108382 | P4 | wrong parsing with mixed acc/omp | continuation line misclassified | [108382](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=108382) |
 | 109788 | P4 | runtime error: shift exponent 64 | open, no patch | [109788](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=109788) |
 | 110626 | P4 | duplicated finalization in derived | open, no patch | [110626](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=110626) |
 | 119273 | P4 | subclass access in `associate` | wrong index with `-fcheck=bounds` | [119273](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=119273) |

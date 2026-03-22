@@ -1,0 +1,34 @@
+Reviewed trunk fix for PR108382, validated on current upstream master.
+
+The regression is in the free-form scanner state, not in later OpenMP/OpenACC
+parsing. A continued free-form `!$acc` directive can leave `openacc_flag` live
+across the next fresh `!$omp` directive line, and vice versa. When the next
+continued line is read, the scanner then misclassifies it as a mixed
+continuation and emits bogus diagnostics such as:
+
+- `Wrong OpenACC continuation ... expected !$ACC, got !$OMP`
+- `Wrong OpenMP continuation ... expected !$OMP, got !$ACC`
+
+The fix is narrow:
+
+- in `skip_free_oacc_sentinel`, clear `openmp_flag` only for a fresh free-form
+  OpenACC directive start (`!continue_flag` plus ordinary directive whitespace)
+- in `skip_free_omp_sentinel`, clear `openacc_flag` only for the analogous
+  fresh OpenMP directive start
+
+That keeps real mixed-continuation diagnostics intact and matches the
+fixed-form behavior already added earlier in `4facf2bf5b7`.
+
+Validation on current trunk:
+
+- branch: `pr108382-fix`
+- commit: `f738265ceff7bc2fa3ebcbaf0dc7d807e81d81a8`
+- patch: `0001-fortran-Fix-free-form-mixed-OpenACC-OpenMP-continuat.patch`
+- original Bugzilla reproducer: now compiles cleanly with `-fopenmp -fopenacc`
+- reduced reproducer (`!$acc enter data &` followed by `!$omp flush &`): now
+  compiles cleanly
+- preserved negative mixed-continuation case: still diagnoses
+  `Wrong OpenACC continuation`
+- focused tests: `goacc.exp=omp-108382.f90` passes, `goacc.exp=omp.f95` passes
+- broader OpenACC frontend sweep: `goacc.exp` completes with `3951` expected
+  passes and `281` expected failures, with no unexpected results

@@ -41,13 +41,13 @@ Each task goes through the same stages:
 
 ### T2: PR108382
 
-- [ ] Deep dive: reduce/reproduce the continuation-line parser bug on clean trunk and isolate the flag state transition.
-- [ ] Meta docs: add `pr/108382/README.md`, testcase, and parser-state notes.
-- [ ] Clean fix: reset only the necessary continuation/directive state on mixed OpenACC/OpenMP continuations.
-- [ ] Critical review: cross-check against fixed-form and swapped-pragma variants.
-- [ ] Full revision: targeted parser tests plus full `check-gfortran`.
-- [ ] Emit patch: branch, commit, export patch, verify metadata.
-- [ ] Bugzilla: post patch with a clear explanation of the mixed-directive continuation state machine.
+- [x] Deep dive: reduced/reproduced the free-form continuation bug on clean trunk and isolated the stale opposite-flag transition in the scanner helpers.
+- [x] Meta docs: added `pr/108382/README.md`, testcase, status, patch, and submission packet files.
+- [x] Clean fix: reset only the necessary opposite directive flag on fresh free-form OpenACC/OpenMP directive starts.
+- [x] Critical review: cross-checked against preserved negative mixed-continuation cases and the existing fixed-form behavior from `4facf2bf5b7`.
+- [ ] Full revision: direct reproducers, focused `goacc.exp` checks, and a broader `goacc.exp` sweep are clean; a wrapper-based full `check-gfortran` attempt hits unrelated `c-interop/*` failures and is not a trustworthy gate.
+- [x] Emit patch: branch `pr108382-fix`, commit `f738265ceff7bc2fa3ebcbaf0dc7d807e81d81a8`, exported patch, `gcc-verify`, pushed to fork.
+- [x] Bugzilla: posted reviewed patch as attachment 63999 with the scanner-state explanation and validation summary.
 
 ### T3: PR85352 + PR96986
 
@@ -71,8 +71,9 @@ Each task goes through the same stages:
 
 ## Current Execution Target
 
-`T1 / PR84245` is complete through Bugzilla posting.  Next up is
-`T2 / PR108382`.
+`T1 / PR84245` is complete through Bugzilla posting. `T2 / PR108382` is now on
+Bugzilla as well; the remaining follow-up there is a standard full-suite pass
+in a clean harness if we want that extra gate before mailing-list submission.
 
 `T1` had the best effort-to-progress ratio because:
 
