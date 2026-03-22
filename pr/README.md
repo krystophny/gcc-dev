@@ -78,6 +78,7 @@ Manual regression status summary:
 
 ```
 pr/regression-status.md
+pr/bugzilla-review-pending.md
 ```
 
 ## Usage
