@@ -139,6 +139,7 @@ def make_chart(
 
 def render_markdown(
     *,
+    title: str,
     repo: pathlib.Path,
     ref: str,
     start: str,
@@ -162,7 +163,7 @@ def render_markdown(
 
     generated = dt.datetime.now(dt.UTC).strftime("%Y-%m-%d %H:%M UTC")
     lines = [
-        "# GCC Trunk Contributor Statistics",
+        f"# {title}",
         "",
         f"- **Generated:** {generated}",
         f"- **Repository:** `{repo}`",
@@ -215,13 +216,14 @@ def parse_args() -> argparse.Namespace:
         help="Path to the meta-repo used to derive the default start date.",
     )
     parser.add_argument("--ref", default="upstream/master", help="Git ref to analyse.")
+    parser.add_argument("--title", default="GCC Trunk Contributor Statistics", help="Markdown report title.")
     parser.add_argument("--start", help="Inclusive start date (YYYY-MM-DD). Defaults to meta-repo creation date.")
     parser.add_argument(
         "--end",
         default=dt.date.today().isoformat(),
         help="Inclusive end date (YYYY-MM-DD). Defaults to today.",
     )
-    parser.add_argument("--top", type=int, default=20, help="Number of rows per chart.")
+    parser.add_argument("--top", type=int, default=40, help="Number of rows per chart.")
     parser.add_argument("--width", type=int, default=40, help="Bar width in characters.")
     parser.add_argument("--output", help="Write markdown report to this file instead of stdout.")
     return parser.parse_args()
@@ -234,6 +236,7 @@ def main() -> int:
     start = args.start or first_meta_repo_date(meta_repo)
     commits = collect_commits(repo, args.ref, start, args.end)
     report = render_markdown(
+        title=args.title,
         repo=repo,
         ref=args.ref,
         start=start,
