@@ -2,7 +2,7 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124512
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/104
-- **Status:** PENDING (updated patch posted to Bugzilla as attachment 63985)
+- **Status:** ON BUGZILLA (attachment 63985; full local validation complete)
 
 ## Summary
 
@@ -72,6 +72,9 @@ forced on but do not yield a working coarray backend.
 ## Fix
 
 Branch `pr124512-fix` on `origin/` (krystophny/gcc fork).
+
+- Commit: `8e442e57d3a3476fa3c4c5936ad588d74b6b6959`
+- Patch: `0001-libgfortran-Disable-caf_shmem-without-usable-process.patch`
 
 ### Approach: compile-only usability probe
 
@@ -145,6 +148,7 @@ does not try to invoke an empty `libcaf_shmem` link rule.
   - `# of expected failures 345`
   - `# of unsupported tests 84`
   - `0` FAIL / XPASS / UNRESOLVED
+- Fresh local rerun on `pr124512-fix` also finished with `0` `FAIL` / `XPASS`.
 - A serial `check-gfortran` run on cfarm428 with PR124586 + PR124512 +
   PR95128 completes with:
   - `# of expected passes 74188`

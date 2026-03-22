@@ -2,7 +2,7 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=108382
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/110
-- **Status:** ON BUGZILLA (attachment 63999; reviewed trunk fix)
+- **Status:** ON BUGZILLA (attachment 63999; reviewed trunk fix, full validation complete)
 
 ## Summary
 
@@ -65,6 +65,5 @@ gcc-trunk-build/gcc/gfortran -B gcc-trunk-build/gcc -c -fopenmp -fopenacc \
   `goacc.exp=omp.f95`.
 - Broader `goacc.exp` sweep passes with the rebuilt trunk compiler wrapper:
   `3951` expected passes, `281` expected failures, no unexpected results.
-- A wrapper-based full `gfortran` sweep was attempted, but it quickly ran into
-  unrelated `c-interop/*` excess-error failures and unresolved cases, so it is
-  not being treated as a meaningful gate for this scanner-only change.
+- Full `check-gfortran` rerun on `pr108382-fix` finished clean with `0`
+  `FAIL` / `XPASS`.

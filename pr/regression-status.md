@@ -1,6 +1,6 @@
 # Fortran Regression Status
 
-Checked against `upstream/master` at `a60cf319b6c` on 2026-03-21.
+Checked against `upstream/master` at `569ace1fa50` on 2026-03-22.
 
 `Patch on Bugzilla` means a patch is actually posted on Bugzilla.
 It does not just mean `patch-ready` on the fork.
@@ -33,11 +33,11 @@ It does not just mean `patch-ready` on the fork.
 
 | PR | P | Summary | State | BZ |
 |---|---:|---|---|---|
-| 84245 | P4 | ICE in `delete_root` | patch on BZ; parser error-recovery fix validated on trunk | [84245](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=84245) |
-| 108382 | P4 | wrong parsing with mixed acc/omp | patch on BZ; reviewed trunk fix validated by focused tests and `goacc.exp` sweep | [108382](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=108382) |
-| 124512 | P1 | `libgfortran` shmem CAF pthread support | patch on BZ; still open on trunk | [124512](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124512) |
+| 84245 | P4 | ICE in `delete_root` | patch on BZ; full `check-gfortran` clean on patch branch | [84245](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=84245) |
+| 108382 | P4 | wrong parsing with mixed acc/omp | patch on BZ; full `check-gfortran` clean on patch branch | [108382](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=108382) |
+| 124512 | P1 | `libgfortran` shmem CAF pthread support | patch on BZ; full `check-gfortran` clean on patch branch | [124512](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124512) |
 | 102430 | P2 | ICE in OMP `linear(array)` | patch on BZ; also on ML; still open on trunk | [102430](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102430) |
-| 95879 | P4 | UAF / ICE in `gfc_resolve_formal_arglist` | patch on BZ; still open on trunk | [95879](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95879) |
+| 95879 | P4 | UAF / ICE in `gfc_resolve_formal_arglist` | patch on BZ; full `check-gfortran` clean on patch branch | [95879](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95879) |
 
 ## Still open
 

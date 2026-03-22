@@ -54,7 +54,7 @@
   },
   "fix_status": "patch-ready",
   "github_issue": 69,
-  "notes": "",
+  "notes": "Patch remains on Bugzilla. A fresh full check-gfortran rerun on pr95879-fix finished clean with 0 FAIL / XPASS.",
   "pr": 95879,
   "submission_status": {
     "on_bugzilla": true,
@@ -63,11 +63,11 @@
   },
   "title": "Use-after-free in gfc_resolve_formal_arglist",
   "trunk": {
-    "branch": null,
-    "commit": null,
+    "branch": "pr95879-fix",
+    "commit": "e2bb459d5d99d52b2b58656665fe0b9611b601be",
     "patch": "0001-fortran-Fix-use-after-free-in-gfc_fixup_sibling_symb.patch"
   },
-  "updated_at": "2026-03-21T20:02:39Z",
+  "updated_at": "2026-03-22T08:28:16Z",
   "validation": {
     "baseline": {
       "contains_any": [

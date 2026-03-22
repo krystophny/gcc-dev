@@ -54,7 +54,7 @@
   },
   "fix_status": "patch-ready",
   "github_issue": 104,
-  "notes": "",
+  "notes": "Updated patch remains on Bugzilla as attachment 63985. A fresh full check-gfortran rerun on pr124512-fix finished clean with 0 FAIL / XPASS.",
   "pr": 124512,
   "submission_status": {
     "on_bugzilla": true,
@@ -63,11 +63,11 @@
   },
   "title": "libgfortran shmem caf: NetBSD lacks usable process-shared pthread support",
   "trunk": {
-    "branch": null,
-    "commit": null,
+    "branch": "pr124512-fix",
+    "commit": "8e442e57d3a3476fa3c4c5936ad588d74b6b6959",
     "patch": "0001-libgfortran-Disable-caf_shmem-without-usable-process.patch"
   },
-  "updated_at": "2026-03-21T19:56:25Z",
+  "updated_at": "2026-03-22T08:28:16Z",
   "validation": {
     "baseline": {
       "contains_any": [

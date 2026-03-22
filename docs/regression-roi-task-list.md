@@ -1,6 +1,6 @@
 # Fortran Regression ROI Task List
 
-Checked against `upstream/master` (`a60cf319b6c`) on 2026-03-21.
+Checked against `upstream/master` (`569ace1fa50`) on 2026-03-22.
 
 This list combines lowest expected effort with highest user-visible gain from
 the current open regression set.  The goal is to keep tasks independent on top
@@ -45,7 +45,7 @@ Each task goes through the same stages:
 - [x] Meta docs: added `pr/108382/README.md`, testcase, status, patch, and submission packet files.
 - [x] Clean fix: reset only the necessary opposite directive flag on fresh free-form OpenACC/OpenMP directive starts.
 - [x] Critical review: cross-checked against preserved negative mixed-continuation cases and the existing fixed-form behavior from `4facf2bf5b7`.
-- [ ] Full revision: direct reproducers, focused `goacc.exp` checks, and a broader `goacc.exp` sweep are clean; a wrapper-based full `check-gfortran` attempt hits unrelated `c-interop/*` failures and is not a trustworthy gate.
+- [x] Full revision: direct reproducers, focused `goacc.exp` checks, broader `goacc.exp` coverage, and a fresh full `check-gfortran` rerun on `pr108382-fix` are clean.
 - [x] Emit patch: branch `pr108382-fix`, commit `f738265ceff7bc2fa3ebcbaf0dc7d807e81d81a8`, exported patch, `gcc-verify`, pushed to fork.
 - [x] Bugzilla: posted reviewed patch as attachment 63999 with the scanner-state explanation and validation summary.
 
@@ -71,9 +71,12 @@ Each task goes through the same stages:
 
 ## Current Execution Target
 
-`T1 / PR84245` is complete through Bugzilla posting. `T2 / PR108382` is now on
-Bugzilla as well; the remaining follow-up there is a standard full-suite pass
-in a clean harness if we want that extra gate before mailing-list submission.
+`T1 / PR84245` and `T2 / PR108382` are complete through Bugzilla posting and
+fresh full-suite reruns. The other active patch branches with Bugzilla-posted
+patches, `PR95879` and `PR124512`, were also rerun clean through full
+`check-gfortran` on 2026-03-22.
+
+The next execution target is `T3 / PR85352 + PR96986`.
 
 `T1` had the best effort-to-progress ratio because:
 
