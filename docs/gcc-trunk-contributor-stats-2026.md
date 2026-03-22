@@ -1,6 +1,6 @@
 # GCC Trunk Contributor Statistics (2026)
 
-- **Generated:** 2026-03-22 08:52 UTC
+- **Generated:** 2026-03-22 09:00 UTC
 - **Repository:** `/home/ert/code/gcc-dev/gcc`
 - **Reference:** `upstream/master`
 - **Date range:** `2026-01-01` to `2026-12-31`
@@ -11,8 +11,30 @@
 ## Attribution Rules
 
 - `Primary contributor` = first `Signed-off-by:` trailer when present, otherwise the Git author.
+- Commits are attributed once for contributor metrics; when `Signed-off-by:` is present, the committer is not counted as the contributor.
 - `Committer` = the person who landed the commit on trunk.
 - `Signed-off-by appearances` counts unique signers per commit.
+
+## Distribution Summary
+
+- **Contributors with at least one attributed patch:** `191`
+- **Christopher Albert primary-contributor patches:** `18`
+- **Christopher Albert primary-contributor rank:** `25` / `191`
+- **Christopher Albert quantile by rank:** `Q1`
+- **Christopher Albert percentile from bottom:** `87.4`
+
+## Histogram: Patches per Primary Contributor
+
+```text
+1        63  ########################################
+2        27  #################
+3-4      30  ###################
+5-9      31  ####################
+10-19    18  ###########
+20-49    14  #########
+50-99     7  ####
+100+      1  #
+```
 
 ## Top Primary Contributors
 
@@ -57,6 +79,58 @@ Robert Dubner                   11  ##
 Takayuki 'January June' Suwa    11  ##
 Roger Sayle                     10  ##
 Thomas Schwinge                 10  ##
+```
+
+## Lines of Code (Primary Contributor Attribution)
+
+- **Total lines added:** `1014829`
+- **Total lines deleted:** `735890`
+- **Total lines changed:** `1750719`
+- **Christopher Albert lines changed:** `917`
+
+### Top Primary Contributors by Lines Changed
+
+```text
+Joseph Myers                 1106154  ########################################
+Jakub Jelinek                264266  ##########
+Iain Buclaw                  85066  ###
+Valentyn Yukhymenko          49472  ##
+Sandra Loosemore             25036  #
+GCC Administrator            24054  #
+Robert Dubner                24003  #
+Iain Sandoe                  19703  #
+Pierre-Emmanuel Patry        12492  #
+Matthias Kretz               11957  #
+David Malcolm                8291  #
+Jose E. Marchesi             7446  #
+Andre Vehreschild            7259  #
+Jerry DeLisle                6837  #
+Rainer Orth                  4720  #
+Tonu Naks                    4539  #
+Nathan Myers                 4331  #
+Eric Botcazou                3896  #
+Tomasz Kamiński              3597  #
+Richard Biener               3550  #
+Marek Polacek                3051  #
+Stefan Schulze Frielinghaus  2882  #
+Robin Dapp                   2843  #
+Jonathan Wakely              2743  #
+Tamar Christina              2375  #
+Steve Baird                  2352  #
+Alice Carlotti               2158  #
+Viljar Indus                 2125  #
+Nathaniel Shead              1956  #
+Andrew Pinski                1870  #
+Paul Thomas                  1726  #
+Karl Meakin                  1628  #
+François Dumont              1592  #
+Piyush Raj                   1563  #
+Jeff Law                     1402  #
+Patrick Palka                1326  #
+Paul-Antoine Arras           1240  #
+Alfie Richards               1237  #
+Martin Jambor                1232  #
+Owen Avery                   1229  #
 ```
 
 ## Top Authors

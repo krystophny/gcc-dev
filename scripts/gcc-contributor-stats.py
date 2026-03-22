@@ -31,6 +31,8 @@ class CommitRecord:
     committer: Identity
     commit_date: str
     signed_off_by: list[Identity]
+    lines_added: int = 0
+    lines_deleted: int = 0
 
 
 def run_git(repo: pathlib.Path, *args: str) -> str:
@@ -82,7 +84,7 @@ def collect_commits(
     fmt = "%H" + FIELD_SEP + "%aN" + FIELD_SEP + "%aE" + FIELD_SEP
     fmt += "%cN" + FIELD_SEP + "%cE" + FIELD_SEP + "%cI" + FIELD_SEP + "%B" + RECORD_SEP
     raw = run_git(repo, "log", ref, f"--since={start}", f"--until={end}", f"--format={fmt}")
-    commits: list[CommitRecord] = []
+    commits_by_hash: dict[str, CommitRecord] = {}
     for chunk in raw.split(RECORD_SEP):
         if not chunk.strip():
             continue
@@ -90,18 +92,51 @@ def collect_commits(
         if len(parts) != 7:
             raise RuntimeError(f"Unexpected git log record shape: {parts!r}")
         commit_hash, author_name, author_email, committer_name, committer_email, commit_date, body = parts
+        commit_hash = commit_hash.strip()
+        author_name = author_name.strip()
+        author_email = author_email.strip()
+        committer_name = committer_name.strip()
+        committer_email = committer_email.strip()
+        commit_date = commit_date.strip()
         author = parse_identity(author_name, author_email)
         committer = parse_identity(committer_name, committer_email)
-        commits.append(
-            CommitRecord(
-                commit_hash=commit_hash,
-                author=author,
-                committer=committer,
-                commit_date=commit_date,
-                signed_off_by=extract_signed_off_by(body),
-            )
+        commits_by_hash[commit_hash] = CommitRecord(
+            commit_hash=commit_hash,
+            author=author,
+            committer=committer,
+            commit_date=commit_date,
+            signed_off_by=extract_signed_off_by(body),
         )
-    return commits
+    raw_numstat = run_git(
+        repo,
+        "log",
+        ref,
+        f"--since={start}",
+        f"--until={end}",
+        "--numstat",
+        "--format=%H",
+    )
+    current_hash: str | None = None
+    for line in raw_numstat.splitlines():
+        if not line:
+            continue
+        if len(line) == 40 and all(ch in "0123456789abcdef" for ch in line):
+            current_hash = line
+            continue
+        if current_hash is None:
+            continue
+        parts = line.split("\t", 2)
+        if len(parts) != 3:
+            continue
+        added_raw, deleted_raw, _path = parts
+        if added_raw == "-" or deleted_raw == "-":
+            continue
+        commit = commits_by_hash.get(current_hash)
+        if commit is None:
+            continue
+        commit.lines_added += int(added_raw)
+        commit.lines_deleted += int(deleted_raw)
+    return list(commits_by_hash.values())
 
 
 def count_by_identity(
@@ -137,6 +172,71 @@ def make_chart(
     return "\n".join(lines)
 
 
+def build_patch_histogram(counter: collections.Counter[str]) -> collections.Counter[str]:
+    buckets = collections.Counter()
+    for value in counter.values():
+        if value == 1:
+            label = "1"
+        elif value == 2:
+            label = "2"
+        elif value <= 4:
+            label = "3-4"
+        elif value <= 9:
+            label = "5-9"
+        elif value <= 19:
+            label = "10-19"
+        elif value <= 49:
+            label = "20-49"
+        elif value <= 99:
+            label = "50-99"
+        else:
+            label = "100+"
+        buckets[label] += 1
+    return buckets
+
+
+def make_histogram_chart(counter: collections.Counter[str], *, width: int) -> str:
+    order = ["1", "2", "3-4", "5-9", "10-19", "20-49", "50-99", "100+"]
+    items = [(label, counter[label]) for label in order if counter[label]]
+    if not items:
+        return "(no data)"
+    max_value = max(value for _, value in items)
+    max_name = max(len(label) for label, _ in items)
+    lines = []
+    for label, value in items:
+        bar_len = max(1, round(value * width / max_value))
+        lines.append(f"{label:<{max_name}}  {value:>4}  {'#' * bar_len}")
+    return "\n".join(lines)
+
+
+def count_loc_by_identity(
+    identities: list[Identity],
+    commits: list[CommitRecord],
+) -> tuple[collections.Counter[str], collections.Counter[str], collections.Counter[str], dict[str, str]]:
+    added = collections.Counter()
+    deleted = collections.Counter()
+    changed = collections.Counter()
+    display: dict[str, str] = {}
+    for identity, commit in zip(identities, commits, strict=True):
+        added[identity.key] += commit.lines_added
+        deleted[identity.key] += commit.lines_deleted
+        changed[identity.key] += commit.lines_added + commit.lines_deleted
+        display.setdefault(identity.key, identity.name)
+    return added, deleted, changed, display
+
+
+def quantile_by_rank(counter: collections.Counter[str], target_key: str) -> tuple[int, int, int, float] | None:
+    ordered = sorted(counter.items(), key=lambda item: (-item[1], item[0]))
+    total = len(ordered)
+    try:
+        rank = next(index for index, (key, _value) in enumerate(ordered, start=1) if key == target_key)
+    except StopIteration:
+        return None
+    quartile = min(4, ((rank - 1) * 4) // total + 1)
+    percentile_from_bottom = 100.0 * (total - rank + 1) / total
+    return rank, total, quartile, percentile_from_bottom
+
+
 def render_markdown(
     *,
     title: str,
@@ -160,8 +260,39 @@ def render_markdown(
     signoff_appearances, signoff_display = count_by_identity(
         [identity for commit in commits for identity in commit.signed_off_by]
     )
+    primary_identities = [commit.signed_off_by[0] if commit.signed_off_by else commit.author for commit in commits]
+    primary_loc_added, primary_loc_deleted, primary_loc_changed, primary_loc_display = count_loc_by_identity(
+        primary_identities,
+        commits,
+    )
+    patch_histogram = build_patch_histogram(primary_contributors)
+    total_added = sum(commit.lines_added for commit in commits)
+    total_deleted = sum(commit.lines_deleted for commit in commits)
+    total_changed = total_added + total_deleted
+    christopher = parse_identity("Christopher Albert", "")
+    christopher_quantile = quantile_by_rank(
+        primary_contributors,
+        christopher.key,
+    )
+    contributor_count = len(primary_contributors)
+    christopher_patches = primary_contributors[christopher.key]
+    christopher_loc = primary_loc_changed[christopher.key]
 
     generated = dt.datetime.now(dt.UTC).strftime("%Y-%m-%d %H:%M UTC")
+    distribution_lines = [
+        f"- **Contributors with at least one attributed patch:** `{contributor_count}`",
+        f"- **Christopher Albert primary-contributor patches:** `{christopher_patches}`",
+    ]
+    if christopher_quantile is not None:
+        christopher_rank, _total, christopher_quartile, christopher_percentile = christopher_quantile
+        distribution_lines.extend(
+            [
+                f"- **Christopher Albert primary-contributor rank:** `{christopher_rank}` / `{contributor_count}`",
+                f"- **Christopher Albert quantile by rank:** `Q{christopher_quartile}`",
+                f"- **Christopher Albert percentile from bottom:** `{christopher_percentile:.1f}`",
+            ]
+        )
+
     lines = [
         f"# {title}",
         "",
@@ -176,13 +307,37 @@ def render_markdown(
         "## Attribution Rules",
         "",
         "- `Primary contributor` = first `Signed-off-by:` trailer when present, otherwise the Git author.",
+        "- Commits are attributed once for contributor metrics; when `Signed-off-by:` is present, the committer is not counted as the contributor.",
         "- `Committer` = the person who landed the commit on trunk.",
         "- `Signed-off-by appearances` counts unique signers per commit.",
+        "",
+        "## Distribution Summary",
+        "",
+        *distribution_lines,
+        "",
+        "## Histogram: Patches per Primary Contributor",
+        "",
+        "```text",
+        make_histogram_chart(patch_histogram, width=width),
+        "```",
         "",
         "## Top Primary Contributors",
         "",
         "```text",
         make_chart(primary_contributors, primary_display, top=top, width=width),
+        "```",
+        "",
+        "## Lines of Code (Primary Contributor Attribution)",
+        "",
+        f"- **Total lines added:** `{total_added}`",
+        f"- **Total lines deleted:** `{total_deleted}`",
+        f"- **Total lines changed:** `{total_changed}`",
+        f"- **Christopher Albert lines changed:** `{christopher_loc}`",
+        "",
+        "### Top Primary Contributors by Lines Changed",
+        "",
+        "```text",
+        make_chart(primary_loc_changed, primary_loc_display, top=top, width=width),
         "```",
         "",
         "## Top Authors",
