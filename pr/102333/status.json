@@ -1,0 +1,94 @@
+{
+  "artifacts": {},
+  "backports": {
+    "gcc-13": {
+      "apply_mode": "not-needed",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "No fix yet; testcase-only commit is on trunk.",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    },
+    "gcc-14": {
+      "apply_mode": "not-needed",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "No fix yet; testcase-only commit is on trunk.",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    },
+    "gcc-15": {
+      "apply_mode": "not-needed",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "No fix yet; testcase-only commit is on trunk.",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    }
+  },
+  "bugzilla": {
+    "id": 102333,
+    "keywords": [
+      "accepts-invalid"
+    ],
+    "resolution": "",
+    "status": "REOPENED",
+    "summary": "Invalid PROCEDURE statement accepted.",
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102333"
+  },
+  "classification": {
+    "regression": true,
+    "severity": "accepts-invalid",
+    "validity_class": "invalid-code"
+  },
+  "fix_status": "patch-ready",
+  "github_issue": 78,
+  "notes": "ICE fixed earlier; testcase committed as r16-8026-g8a0a1a0c7b1. The remaining accepts-invalid frontend fix is on origin/pr102333-fix at 0cbbde19fd43 and attached on Bugzilla as attachment 64064.",
+  "pr": 102333,
+  "submission_status": {
+    "on_bugzilla": true,
+    "on_mailing_list": false,
+    "sent": false
+  },
+  "title": "invalid PROCEDURE statement accepted",
+  "trunk": {
+    "branch": "pr102333-fix",
+    "commit": "8a0a1a0c7b187415e34dcf7a5cbf5e314c9de78a",
+    "patch": "0001-fortran-Reject-invalid-host-result-PROCEDURE-interfa.patch"
+  },
+  "updated_at": "2026-03-28T21:45:22Z",
+  "validation": {
+    "baseline": {
+      "contains_any": [],
+      "exit": "zero",
+      "not_contains": [
+        "Error:"
+      ]
+    },
+    "compile": [
+      "gcc-build/gcc/gfortran",
+      "-B",
+      "gcc-build/gcc",
+      "-c",
+      "pr/102333/reproducer.f90",
+      "-o",
+      "/dev/null"
+    ],
+    "env": {},
+    "fixed": {
+      "contains_any": [
+        "Error:"
+      ],
+      "exit": "nonzero",
+      "not_contains": []
+    },
+    "kind": "compile",
+    "run": []
+  }
+}

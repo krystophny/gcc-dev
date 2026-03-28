@@ -1,6 +1,6 @@
 # Fortran Regression Status
 
-Checked against `upstream/master` at `ee931e5b7ea` on 2026-03-28.
+Checked against `upstream/master` at `a3b49ec48b7` on 2026-03-28.
 
 `Patch on Bugzilla` means a patch is actually posted on Bugzilla.
 It does not just mean `patch-ready` on the fork.
@@ -42,6 +42,7 @@ It does not just mean `patch-ready` on the fork.
 | 108382 | P4 | wrong parsing with mixed acc/omp | patch on BZ; full `check-gfortran` clean on patch branch | [108382](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=108382) |
 | 124661 | P4 | SIGSEGV with `-fcheck=bounds` | patch on BZ as attachment 64058; full `check-gfortran` clean on patch branch | [124661](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124661) |
 | 102430 | P2 | ICE in OMP `linear(array)` | patch on BZ; also on ML; still open on trunk | [102430](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102430) |
+| 102333 | P4 | invalid `PROCEDURE` statement accepted | attachment 64064 on BZ; branch `origin/pr102333-fix`; full `check-gfortran` and `check-target-libgomp-fortran` clean | [102333](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102333) |
 
 ## Still open
 

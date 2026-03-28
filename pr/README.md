@@ -7,6 +7,7 @@ Minimal reproducers and patches for GCC Fortran and libgomp bugs.
 | PR | Title | GitHub Issue |
 |----|-------|--------------|
 | [102430](102430/) | OpenMP linear(array) ICE | [#9](https://github.com/krystophny/gcc-dev/issues/9) |
+| [102333](102333/) | Invalid `PROCEDURE` statement accepted | [#78](https://github.com/krystophny/gcc-dev/issues/78) |
 | [103276](103276/) | OpenACC ENTER DATA duplicate mapping | [#10](https://github.com/krystophny/gcc-dev/issues/10) |
 | [120723](120723/) | OpenACC `attach(scalar)` ICE | [#96](https://github.com/krystophny/gcc-dev/issues/96) |
 | [123252](123252/) | OpenACC scalar member wrong value | [#11](https://github.com/krystophny/gcc-dev/issues/11) |

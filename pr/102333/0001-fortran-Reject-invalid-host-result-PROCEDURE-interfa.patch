@@ -1,0 +1,158 @@
+From 0cbbde19fd431c64e871fccf415935c94d1b6705 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Sat, 28 Mar 2026 22:43:31 +0100
+Subject: [PATCH] fortran: Reject invalid host result PROCEDURE interfaces
+
+Reject contained PROCEDURE declarations that use the host function as
+an interface when that host function has an unlimited polymorphic
+pointer or allocatable result.
+
+PR fortran/102333
+
+gcc/fortran/ChangeLog:
+
+	* resolve.cc (check_function_result_proc_interface): New function.
+	(resolve_procedure_interface): Reject invalid host-function
+	interfaces for function results.
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/pr102333a.f90: New test.
+	* gfortran.dg/pr102333b.f90: New test.
+	* gfortran.dg/pr102333c.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/resolve.cc                  | 47 +++++++++++++++++++++++--
+ gcc/testsuite/gfortran.dg/pr102333a.f90 | 11 ++++++
+ gcc/testsuite/gfortran.dg/pr102333b.f90 | 10 ++++++
+ gcc/testsuite/gfortran.dg/pr102333c.f90 | 10 ++++++
+ 4 files changed, 76 insertions(+), 2 deletions(-)
+ create mode 100644 gcc/testsuite/gfortran.dg/pr102333a.f90
+ create mode 100644 gcc/testsuite/gfortran.dg/pr102333b.f90
+ create mode 100644 gcc/testsuite/gfortran.dg/pr102333c.f90
+
+diff --git a/gcc/fortran/resolve.cc b/gcc/fortran/resolve.cc
+index 767bbdea114..987b47d8094 100644
+--- a/gcc/fortran/resolve.cc
++++ b/gcc/fortran/resolve.cc
+@@ -180,6 +180,46 @@ check_proc_interface (gfc_symbol *ifc, locus *where)
+ }
+ 
+ 
++static bool
++check_function_result_proc_interface (gfc_symbol *sym, gfc_symbol *ifc,
++				      locus *where)
++{
++  gfc_symbol *result;
++  bool allocatable_or_pointer;
++
++  if (!sym->ns || !sym->ns->proc_name || !sym->ns->proc_name->attr.function)
++    return true;
++
++  if (!(sym->attr.result || sym == sym->ns->proc_name))
++    return true;
++
++  if (!sym->ns->parent || sym->ns->parent->proc_name != ifc)
++    return true;
++
++  if (!ifc->attr.function)
++    return true;
++
++  result = ifc->result ? ifc->result : ifc;
++  allocatable_or_pointer = result->ts.type == BT_CLASS && CLASS_DATA (result)
++			   ? (CLASS_DATA (result)->attr.allocatable
++			      || CLASS_DATA (result)->attr.pointer)
++			   : (result->attr.allocatable
++			      || result->attr.pointer);
++
++  if (UNLIMITED_POLY (result) && allocatable_or_pointer)
++    {
++      gfc_error ("Interface %qs at %L may not be used in PROCEDURE "
++		 "declaration of function result %qs because it has a "
++		 "pointer or allocatable unlimited polymorphic "
++		 "function result",
++		 ifc->name, where, sym->name);
++      return false;
++    }
++
++  return true;
++}
++
++
+ static void resolve_symbol (gfc_symbol *sym);
+ 
+ 
+@@ -208,6 +248,9 @@ resolve_procedure_interface (gfc_symbol *sym)
+       resolve_symbol (ifc);
+       if (ifc->attr.intrinsic)
+ 	gfc_resolve_intrinsic (ifc, &ifc->declared_at);
++      if (!check_function_result_proc_interface (sym, ifc,
++						 &sym->declared_at))
++	return false;
+ 
+       if (ifc->result)
+ 	{
+@@ -18913,8 +18956,8 @@ skip_interfaces:
+ 	  || (a->dummy && !a->pointer && a->intent == INTENT_OUT
+ 	      && sym->ns->proc_name->attr.if_source != IFSRC_IFBODY))
+ 	apply_default_init (sym);
+-      else if (a->function && !a->pointer && !a->allocatable
+-	       && !a->use_assoc && !a->used_in_submodule && sym->result)
++      else if (a->function && !a->pointer && !a->allocatable && !a->use_assoc
++	       && sym->result)
+ 	/* Default initialization for function results.  */
+ 	apply_default_init (sym->result);
+       else if (a->function && sym->result && a->access != ACCESS_PRIVATE
+diff --git a/gcc/testsuite/gfortran.dg/pr102333a.f90 b/gcc/testsuite/gfortran.dg/pr102333a.f90
+new file mode 100644
+index 00000000000..e94650343a5
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr102333a.f90
+@@ -0,0 +1,11 @@
++! { dg-do compile }
++! PR fortran/102333
++! Contributed by G. Steinmetz <gscfq@t-online.de>
++
++function f(x) result(y)
++   class(*), pointer :: y
++contains
++   function g() result(z) ! { dg-error "pointer or allocatable unlimited polymorphic function result" }
++      procedure(f), pointer :: z
++   end
++end
+diff --git a/gcc/testsuite/gfortran.dg/pr102333b.f90 b/gcc/testsuite/gfortran.dg/pr102333b.f90
+new file mode 100644
+index 00000000000..87481620a1f
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr102333b.f90
+@@ -0,0 +1,10 @@
++! { dg-do compile }
++! PR fortran/102333
++
++function f(x)
++  class(*), pointer :: f
++contains
++  function g()
++    procedure(f), pointer :: g ! { dg-error "pointer or allocatable unlimited polymorphic function result" }
++  end
++end
+diff --git a/gcc/testsuite/gfortran.dg/pr102333c.f90 b/gcc/testsuite/gfortran.dg/pr102333c.f90
+new file mode 100644
+index 00000000000..5ee80bb7386
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr102333c.f90
+@@ -0,0 +1,10 @@
++! { dg-do compile }
++! PR fortran/102333
++
++function f(x)
++  class(*), allocatable :: f
++contains
++  function g()
++    procedure(f), pointer :: g ! { dg-error "pointer or allocatable unlimited polymorphic function result" }
++  end
++end
+-- 
+2.53.0
+
