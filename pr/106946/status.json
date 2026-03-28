@@ -67,7 +67,7 @@
     "commit": null,
     "patch": "0001-fortran-Fix-ICE-on-invalid-CLASS-component-in-derive.patch"
   },
-  "updated_at": "2026-03-28T12:56:50Z",
+  "updated_at": "2026-03-28T14:09:57Z",
   "validation": {
     "baseline": {
       "contains_any": [

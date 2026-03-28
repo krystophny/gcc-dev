@@ -1,0 +1,138 @@
+From 96e43eec01c18acf4bc3a909009de0046dbf2b6d Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Sat, 28 Mar 2026 14:41:01 +0100
+Subject: [PATCH] fortran: Fix descriptor factoring for bounds-checked
+ component arrays [PR124661]
+
+Keep a factored descriptor reference once it has been saved across an
+INDIRECT_REF walk and derive later data/offset accesses from that same
+factored descriptor. This avoids emitting a saved pointer temporary after
+bounds checks for array-valued component references inside type-bound
+procedures.
+
+	PR fortran/124661
+
+gcc/fortran/ChangeLog:
+
+	* trans-array.cc (set_factored_descriptor_value): Keep the inner
+	pointer candidate only when no descriptor reference was already saved.
+	(gfc_conv_ss_descriptor): Use the factored descriptor for later data
+	and offset accesses.
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/pr124661.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/trans-array.cc             | 22 +++++++++-----
+ gcc/testsuite/gfortran.dg/pr124661.f90 | 41 ++++++++++++++++++++++++++
+ 2 files changed, 55 insertions(+), 8 deletions(-)
+ create mode 100644 gcc/testsuite/gfortran.dg/pr124661.f90
+
+diff --git a/gcc/fortran/trans-array.cc b/gcc/fortran/trans-array.cc
+index a2da4fe7c7d..2a5a2e99d23 100644
+--- a/gcc/fortran/trans-array.cc
++++ b/gcc/fortran/trans-array.cc
+@@ -3565,6 +3565,8 @@ set_factored_descriptor_value (tree *desc_ptr, tree value, stmtblock_t *block)
+ 
+ 	  if (!maybe_reallocatable)
+ 	    {
++	      bool saved_prior_ref = false;
++
+ 	      if (saveable_ref != NULL_TREE && saveable_ref != data_ref)
+ 		{
+ 		  /* A reference worth saving has been seen, and now the pointer
+@@ -3573,13 +3575,17 @@ set_factored_descriptor_value (tree *desc_ptr, tree value, stmtblock_t *block)
+ 		     it now.  Otherwise drop it as we prefer saving the
+ 		     pointer.  */
+ 		  save_ref (accumulated_code, saveable_ref, replacement_roots);
++		  saved_prior_ref = true;
+ 		}
+ 
+-	      /* Don't evaluate the pointer to a variable yet; do it only if the
+-		 variable would be significantly more simple than the reference
+-		 it replaces.  That is if the reference contains anything
+-		 different from NOPs, COMPONENTs and DECLs.  */
+-	      saveable_ref = next_ref;
++	      if (!saved_prior_ref)
++		{
++		  /* Don't evaluate the pointer to a variable yet; do it only
++		     if the variable would be significantly more simple than the
++		     reference it replaces.  That is if the reference contains
++		     anything different from NOPs, COMPONENTs and DECLs.  */
++		  saveable_ref = next_ref;
++		}
+ 	    }
+ 	}
+       else if (TREE_CODE (data_ref) == COMPONENT_REF)
+@@ -3657,16 +3663,16 @@ gfc_conv_ss_descriptor (stmtblock_t * block, gfc_ss * ss, int base)
+ 						TYPE_NAME (arraytype)));
+ 	}
+       /* Also the data pointer.  */
+-      tmp = gfc_conv_array_data (se.expr);
++      tmp = gfc_conv_array_data (info->descriptor);
+       /* If this is a variable or address or a class array, use it directly.
+          Otherwise we must evaluate it now to avoid breaking dependency
+ 	 analysis by pulling the expressions for elemental array indices
+ 	 inside the loop.  */
+-      if (save_descriptor_data (se.expr, tmp) && !ss->is_alloc_lhs)
++      if (save_descriptor_data (info->descriptor, tmp) && !ss->is_alloc_lhs)
+ 	tmp = gfc_evaluate_now (tmp, block);
+       info->data = tmp;
+ 
+-      tmp = gfc_conv_array_offset (se.expr);
++      tmp = gfc_conv_array_offset (info->descriptor);
+       if (!ss->is_alloc_lhs)
+ 	tmp = gfc_evaluate_now (tmp, block);
+       info->offset = tmp;
+diff --git a/gcc/testsuite/gfortran.dg/pr124661.f90 b/gcc/testsuite/gfortran.dg/pr124661.f90
+new file mode 100644
+index 00000000000..205f5d178e2
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr124661.f90
+@@ -0,0 +1,41 @@
++! { dg-do run }
++! { dg-options "-fcheck=bounds" }
++!
++! PR fortran/124661
++
++module m
++  implicit none
++
++  type point_t
++    real :: coords(1:3)
++  end type point_t
++
++  type point_cloud_t
++    type(point_t), allocatable :: points(:)
++  contains
++    procedure :: init_point_cloud
++  end type point_cloud_t
++
++contains
++
++  subroutine init_point_cloud (c)
++    class(point_cloud_t) :: c
++    real :: expected(3)
++
++    expected = [1.0, 2.0, 3.0]
++    allocate (c%points(1))
++    c%points(1)%coords = expected
++
++    if (c%points(1)%coords(3) /= expected(3)) stop 1
++    print *, c%points(1)%coords
++    if (any (c%points(1)%coords /= expected)) stop 2
++  end subroutine init_point_cloud
++end module m
++
++program p
++  use m, only: point_cloud_t
++  implicit none
++  type(point_cloud_t) :: c
++
++  call c%init_point_cloud
++end program p
+-- 
+2.53.0
+

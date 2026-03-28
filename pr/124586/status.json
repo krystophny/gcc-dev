@@ -67,7 +67,7 @@
     "commit": null,
     "patch": "0001-aarch64-Add-aarch64-netbsd-to-host_detect_local_cpu.patch"
   },
-  "updated_at": "2026-03-28T12:57:21Z",
+  "updated_at": "2026-03-28T14:09:57Z",
   "validation": {
     "baseline": {
       "contains_any": [

@@ -68,7 +68,7 @@
     "commit": null,
     "patch": "0001-fortran-Preserve-scalar-class-pointers-in-OpenMP-pri.patch"
   },
-  "updated_at": "2026-03-28T12:56:56Z",
+  "updated_at": "2026-03-28T14:09:57Z",
   "validation": {
     "compile": [
       "gcc-build/gcc/gfortran",

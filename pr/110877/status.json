@@ -65,7 +65,7 @@
     "commit": "55493d38c019728320a728481b0f010dddf861fc",
     "patch": "0001-fortran-Fix-class-dummy-array-assignment-deep-copy-P.patch"
   },
-  "updated_at": "2026-03-28T12:56:55Z",
+  "updated_at": "2026-03-28T14:09:57Z",
   "validation": {
     "compile": [
       "gcc-build/gcc/gfortran",

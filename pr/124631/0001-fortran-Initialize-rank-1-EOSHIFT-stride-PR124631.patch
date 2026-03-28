@@ -1,0 +1,69 @@
+From 29b21a5605f095d526c8233134aad04620321c51 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Sat, 28 Mar 2026 15:07:57 +0100
+Subject: [PATCH] fortran: Initialize rank-1 EOSHIFT stride [PR124631]
+
+Initialize the rank-1 stride entry before gfc_simplify_eoshift
+uses it while folding EOSHIFT shape and kind inquiries.
+
+	PR fortran/124631
+gcc/fortran/ChangeLog:
+
+	* simplify.cc (gfc_simplify_eoshift): Initialize sstride[0].
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/pr124631.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/simplify.cc                |  1 +
+ gcc/testsuite/gfortran.dg/pr124631.f90 | 24 ++++++++++++++++++++++++
+ 2 files changed, 25 insertions(+)
+ create mode 100644 gcc/testsuite/gfortran.dg/pr124631.f90
+
+diff --git a/gcc/fortran/simplify.cc b/gcc/fortran/simplify.cc
+index 3340a20e227..04d4ffc54dd 100644
+--- a/gcc/fortran/simplify.cc
++++ b/gcc/fortran/simplify.cc
+@@ -2976,6 +2976,7 @@ gfc_simplify_eoshift (gfc_expr *array, gfc_expr *shift, gfc_expr *boundary,
+ 
+   resultvec = XCNEWVEC (gfc_expr *, arraysize);
+ 
++  sstride[0] = 0;
+   extent[0] = 1;
+   count[0] = 0;
+ 
+diff --git a/gcc/testsuite/gfortran.dg/pr124631.f90 b/gcc/testsuite/gfortran.dg/pr124631.f90
+new file mode 100644
+index 00000000000..e532cc70fe8
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr124631.f90
+@@ -0,0 +1,24 @@
++! { dg-do run }
++!
++! PR fortran/124631
++
++program main
++  implicit none
++
++  real, parameter :: b(8) = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
++  integer, parameter :: d = 4
++  real, parameter :: f = 3.0
++  integer, parameter :: g = 1
++  real :: h(8) = eoshift (b, d, f, g)
++  real :: m(8)
++  integer :: z(1)
++  integer :: n(1) = shape (eoshift (b, d, f, g))
++  integer :: o = kind (eoshift (b, d, f, g))
++
++  m = eoshift (b, d, f, g)
++  z = shape (eoshift (b, d, f, g))
++
++  if (any (h /= m)) stop 1
++  if (n(1) /= z(1)) stop 2
++  if (o /= kind (eoshift (b, d, f, g))) stop 3
++end program main
+-- 
+2.53.0
+

@@ -67,7 +67,7 @@
     "commit": "f57bcde85984d2751f7bc5fd8e3de11f5dc1255",
     "patch": "0001-libgfortran-Disable-caf_shmem-without-usable-process.patch"
   },
-  "updated_at": "2026-03-28T12:57:20Z",
+  "updated_at": "2026-03-28T14:09:57Z",
   "validation": {
     "baseline": {
       "contains_any": [

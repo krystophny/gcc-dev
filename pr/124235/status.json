@@ -67,7 +67,7 @@
     "commit": "e0b70284cfa",
     "patch": "0001-fortran-Fix-ICE-in-ALLOCATE-of-sub-objects-with-recu.patch"
   },
-  "updated_at": "2026-03-28T12:57:18Z",
+  "updated_at": "2026-03-28T14:09:57Z",
   "validation": {
     "baseline": {
       "contains_any": [

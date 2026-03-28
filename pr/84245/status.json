@@ -68,7 +68,7 @@
     "commit": "486169386603627f0cf2a5f12ea4f73a20d6df20",
     "patch": "0001-fortran-Avoid-rollback-ICE-after-invalid-SELECT-TYPE.patch"
   },
-  "updated_at": "2026-03-28T12:57:24Z",
+  "updated_at": "2026-03-28T14:09:57Z",
   "validation": {
     "baseline": {
       "contains_any": [

@@ -65,7 +65,7 @@
     "commit": "5bb465a7896",
     "patch": "0001-fortran-Finalize-function-results-per-F2003-4.5.5.2.patch"
   },
-  "updated_at": "2026-03-28T12:56:58Z",
+  "updated_at": "2026-03-28T14:09:57Z",
   "validation": {
     "baseline": {
       "contains_any": [

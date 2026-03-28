@@ -6,64 +6,59 @@
   },
   "backports": {
     "gcc-13": {
-      "apply_mode": "not-affected",
-      "backport_candidate": false,
+      "apply_mode": "unknown",
+      "backport_candidate": null,
       "branch_commit": null,
       "branch_patch": null,
       "full_suite": "not-run",
-      "notes": "baseline branch compiler does not match the recorded reproducer signature",
-      "reproduces": false,
+      "notes": "",
+      "reproduces": null,
       "targeted_tests": "not-run"
     },
     "gcc-14": {
-      "apply_mode": "not-affected",
-      "backport_candidate": false,
+      "apply_mode": "unknown",
+      "backport_candidate": null,
       "branch_commit": null,
       "branch_patch": null,
       "full_suite": "not-run",
-      "notes": "baseline branch compiler does not match the recorded reproducer signature",
-      "reproduces": false,
+      "notes": "",
+      "reproduces": null,
       "targeted_tests": "not-run"
     },
     "gcc-15": {
-      "apply_mode": "not-affected",
-      "backport_candidate": false,
+      "apply_mode": "unknown",
+      "backport_candidate": null,
       "branch_commit": null,
       "branch_patch": null,
       "full_suite": "not-run",
-      "notes": "baseline branch compiler does not match the recorded reproducer signature",
-      "reproduces": false,
+      "notes": "",
+      "reproduces": null,
       "targeted_tests": "not-run"
     }
   },
   "bugzilla": {
-    "id": 124208,
-    "keywords": [],
-    "refreshed_at": "2026-03-28T12:57:17Z",
-    "resolution": "FIXED",
-    "status": "RESOLVED",
-    "summary": "[16 Regression] ice in gfc_resolve_forall, at fortran/resolve.cc:12703",
-    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124208"
+    "id": 124574,
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124574"
   },
   "classification": {
-    "regression": true,
-    "severity": "wrong-code",
+    "regression": false,
+    "severity": "ice-on-valid",
     "validity_class": "valid-code"
   },
-  "fix_status": "merged",
-  "github_issue": 100,
+  "fix_status": "open",
+  "github_issue": 107,
   "notes": "",
-  "pr": 124208,
+  "pr": 107,
   "submission_status": {
-    "on_bugzilla": false,
+    "on_bugzilla": true,
     "on_mailing_list": false,
     "sent": false
   },
-  "title": "ICE in gfc_resolve_forall with nested ASSOCIATE/BLOCK",
+  "title": "Sparse-set valgrind false positives on non-annotated GCC builds",
   "trunk": {
     "branch": null,
-    "commit": "97965bdc1ed",
-    "patch": "0001-fortran-Fix-iterator-counting-in-nested-block-scopes.patch"
+    "commit": "6d3ccffc0e8f216a8c691907717aa4fe5b052d92",
+    "patch": "0001-sparseset-Initialize-sparse-indices-for-valgrind-cle.patch"
   },
   "updated_at": "2026-03-28T14:09:57Z",
   "validation": {
@@ -80,7 +75,7 @@
       "-B",
       "gcc-build/gcc",
       "-c",
-      "pr/124208/reproducer.f90",
+      "pr/107/reproducer.f90",
       "-o",
       "/dev/null"
     ],

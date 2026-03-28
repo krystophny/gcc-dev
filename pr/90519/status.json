@@ -65,7 +65,7 @@
     "commit": "1eb696fc092",
     "patch": "0001-fortran-Fix-ICE-and-self-assignment-bugs-with-recurs.patch"
   },
-  "updated_at": "2026-03-28T12:57:26Z",
+  "updated_at": "2026-03-28T14:09:57Z",
   "validation": {
     "baseline": {
       "contains_any": [

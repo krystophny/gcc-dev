@@ -6,64 +6,59 @@
   },
   "backports": {
     "gcc-13": {
-      "apply_mode": "not-affected",
-      "backport_candidate": false,
+      "apply_mode": "unknown",
+      "backport_candidate": null,
       "branch_commit": null,
       "branch_patch": null,
       "full_suite": "not-run",
-      "notes": "baseline branch compiler does not match the recorded reproducer signature",
-      "reproduces": false,
+      "notes": "",
+      "reproduces": null,
       "targeted_tests": "not-run"
     },
     "gcc-14": {
-      "apply_mode": "not-affected",
-      "backport_candidate": false,
+      "apply_mode": "unknown",
+      "backport_candidate": null,
       "branch_commit": null,
       "branch_patch": null,
       "full_suite": "not-run",
-      "notes": "baseline branch compiler does not match the recorded reproducer signature",
-      "reproduces": false,
+      "notes": "",
+      "reproduces": null,
       "targeted_tests": "not-run"
     },
     "gcc-15": {
-      "apply_mode": "not-affected",
-      "backport_candidate": false,
+      "apply_mode": "unknown",
+      "backport_candidate": null,
       "branch_commit": null,
       "branch_patch": null,
       "full_suite": "not-run",
-      "notes": "baseline branch compiler does not match the recorded reproducer signature",
-      "reproduces": false,
+      "notes": "",
+      "reproduces": null,
       "targeted_tests": "not-run"
     }
   },
   "bugzilla": {
-    "id": 124208,
-    "keywords": [],
-    "refreshed_at": "2026-03-28T12:57:17Z",
-    "resolution": "FIXED",
-    "status": "RESOLVED",
-    "summary": "[16 Regression] ice in gfc_resolve_forall, at fortran/resolve.cc:12703",
-    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124208"
+    "id": 124661,
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124661"
   },
   "classification": {
     "regression": true,
-    "severity": "wrong-code",
+    "severity": "runtime-crash",
     "validity_class": "valid-code"
   },
-  "fix_status": "merged",
-  "github_issue": 100,
-  "notes": "",
-  "pr": 124208,
+  "fix_status": "patch-ready",
+  "github_issue": 112,
+  "notes": "Reproducer now runs clean with -fcheck=bounds. Targeted pr124661.f90 and assign_14.f90 tests pass, and a full check-gfortran rerun on pr124661-fix4 finished with 0 FAIL / XPASS.",
+  "pr": 124661,
   "submission_status": {
     "on_bugzilla": false,
     "on_mailing_list": false,
     "sent": false
   },
-  "title": "ICE in gfc_resolve_forall with nested ASSOCIATE/BLOCK",
+  "title": "SIGSEGV with -fcheck=bounds from type-bound procedure",
   "trunk": {
-    "branch": null,
-    "commit": "97965bdc1ed",
-    "patch": "0001-fortran-Fix-iterator-counting-in-nested-block-scopes.patch"
+    "branch": "pr124661-fix4",
+    "commit": "96e43eec01c",
+    "patch": "0001-fortran-Fix-descriptor-factoring-for-bounds-checked-.patch"
   },
   "updated_at": "2026-03-28T14:09:57Z",
   "validation": {
@@ -80,7 +75,7 @@
       "-B",
       "gcc-build/gcc",
       "-c",
-      "pr/124208/reproducer.f90",
+      "pr/124661/reproducer.f90",
       "-o",
       "/dev/null"
     ],

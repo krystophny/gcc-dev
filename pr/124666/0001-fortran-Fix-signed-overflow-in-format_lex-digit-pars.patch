@@ -1,0 +1,68 @@
+From b6951283208002d113ed462a2e039327e69bd062 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Sat, 28 Mar 2026 15:07:26 +0100
+Subject: [PATCH] fortran: Fix signed overflow in format_lex digit parsing
+ [PR124666]
+
+Parenthesize the decimal-digit update so the lexer computes the
+character value before adding it to the accumulated integer.
+
+	PR fortran/124666
+gcc/fortran/ChangeLog:
+
+	* io.cc (format_lex): Parenthesize the decimal-digit update
+	to preserve the intended arithmetic.
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/pr124666.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/io.cc                      |  4 ++--
+ gcc/testsuite/gfortran.dg/pr124666.f90 | 11 +++++++++++
+ 2 files changed, 13 insertions(+), 2 deletions(-)
+ create mode 100644 gcc/testsuite/gfortran.dg/pr124666.f90
+
+diff --git a/gcc/fortran/io.cc b/gcc/fortran/io.cc
+index 5bffed22eb8..2db2245351e 100644
+--- a/gcc/fortran/io.cc
++++ b/gcc/fortran/io.cc
+@@ -256,7 +256,7 @@ format_lex (void)
+ 	{
+ 	  c = next_char_not_space ();
+ 	  if (ISDIGIT (c))
+-	    value = 10 * value + c - '0';
++	    value = 10 * value + (c - '0');
+ 	}
+       while (ISDIGIT (c));
+ 
+@@ -287,7 +287,7 @@ format_lex (void)
+ 	  c = next_char_not_space ();
+ 	  if (ISDIGIT (c))
+ 	    {
+-	      value = 10 * value + c - '0';
++	      value = 10 * value + (c - '0');
+ 	      if (c != '0')
+ 		zflag = 0;
+ 	    }
+diff --git a/gcc/testsuite/gfortran.dg/pr124666.f90 b/gcc/testsuite/gfortran.dg/pr124666.f90
+new file mode 100644
+index 00000000000..efb96219429
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr124666.f90
+@@ -0,0 +1,11 @@
++! { dg-do compile }
++!
++! PR fortran/124666
++
++integer :: n_part(10) = 1
++
++write(1,'(32767(tr1,i0))') n_part
++write(1,'(32768(tr1,i0))') n_part
++write(1,'(1000000(tr1,i0))') n_part
++write(1,'(2147483647(tr1,i0))') n_part
++end
+-- 
+2.53.0
+
