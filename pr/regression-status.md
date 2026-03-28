@@ -1,6 +1,6 @@
 # Fortran Regression Status
 
-Checked against `upstream/master` at `569ace1fa50` on 2026-03-22.
+Checked against `upstream/master` at `ee931e5b7ea` on 2026-03-28.
 
 `Patch on Bugzilla` means a patch is actually posted on Bugzilla.
 It does not just mean `patch-ready` on the fork.
@@ -14,6 +14,7 @@ It does not just mean `patch-ready` on the fork.
 | 95338 | P4 | ICE in `component_ref` conversion | merged on trunk; BZ still `NEW` | [95338](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95338) |
 | 102459 | P4 | ICE in `gfc_conv_scalarized_array_ref` | merged on trunk; BZ still `NEW` | [102459](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102459) |
 | 102596 | P4 | ICE in `gfc_omp_clause_default_ctor` | merged on trunk; BZ still `NEW` | [102596](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102596) |
+| 102619 | P4 | ICE in `gfc_conv_descriptor_dtype` | merged on trunk; backports pending | [102619](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102619) |
 | 106946 | P4 | ICE in `resolve_component` | merged on trunk; BZ `RESOLVED FIXED` | [106946](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=106946) |
 | 120286 | P3 | OpenMP double free class pointers | merged on trunk; BZ still `NEW` | [120286](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=120286) |
 | 120723 | P3 | OpenACC ICE on `attach(scalar)` | merged on trunk; BZ still `NEW` | [120723](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=120723) |
@@ -28,16 +29,19 @@ It does not just mean `patch-ready` on the fork.
 | 124208 | P4 | ICE in nested `ASSOCIATE/BLOCK` | merged on trunk; BZ `RESOLVED FIXED` | [124208](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124208) |
 | 124235 | P4 | ICE in `ALLOCATE` of sub-objects | merged on trunk; BZ `RESOLVED FIXED` | [124235](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124235) |
 | 124482 | P4 | SEGV in `resolve_cyclic_derived_type` | merged on trunk; BZ `RESOLVED FIXED` | [124482](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124482) |
+| 119273 | P4 | subclass access in `associate` | merged on trunk and release branches | [119273](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=119273) |
+| 124631 | P4 | UBSAN in `gfc_simplify_eoshift` | merged on trunk; BZ still `ASSIGNED` | [124631](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124631) |
+| 95879 | P4 | UAF / ICE in `gfc_resolve_formal_arglist` | merged on trunk; backports pending | [95879](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95879) |
+| 84245 | P4 | ICE in `delete_root` | merged on trunk; BZ `RESOLVED FIXED` | [84245](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=84245) |
+| 124512 | P1 | `libgfortran` shmem CAF pthread support | merged on trunk; BZ `RESOLVED FIXED` | [124512](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124512) |
 
 ## Patch on Bugzilla
 
 | PR | P | Summary | State | BZ |
 |---|---:|---|---|---|
-| 84245 | P4 | ICE in `delete_root` | patch on BZ; full `check-gfortran` clean on patch branch | [84245](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=84245) |
 | 108382 | P4 | wrong parsing with mixed acc/omp | patch on BZ; full `check-gfortran` clean on patch branch | [108382](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=108382) |
-| 124512 | P1 | `libgfortran` shmem CAF pthread support | patch on BZ; full `check-gfortran` clean on patch branch | [124512](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124512) |
+| 124661 | P4 | SIGSEGV with `-fcheck=bounds` | patch on BZ as attachment 64058; full `check-gfortran` clean on patch branch | [124661](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124661) |
 | 102430 | P2 | ICE in OMP `linear(array)` | patch on BZ; also on ML; still open on trunk | [102430](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102430) |
-| 95879 | P4 | UAF / ICE in `gfc_resolve_formal_arglist` | patch on BZ; full `check-gfortran` clean on patch branch | [95879](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95879) |
 
 ## Still open
 
@@ -58,10 +62,8 @@ It does not just mean `patch-ready` on the fork.
 | 100194 | P4 | ICE in `gfc_trans_create_temp_array` | assumed-rank contiguous | [100194](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=100194) |
 | 101760 | P4 | ICE in `make_ssa_name_fn` | open, no patch | [101760](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=101760) |
 | 102314 | P4 | ICE in `verify_ssa` | now ICEs at `-O0` too | [102314](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102314) |
-| 102619 | P4 | ICE in `gfc_conv_descriptor_dtype` | assumed-rank + `product(shape())` | [102619](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102619) |
 | 103367 | P4 | ICE in `gfc_conv_array_initializer` | PDT array + `REAL` index | [103367](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=103367) |
 | 105168 | P4 | ICE in `gfc_maybe_dereference_var` | CLASS array + `size()` in result | [105168](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105168) |
 | 107425 | P4 | ICE in `gimplify_var_or_parm_decl` | undeclared var in OMP iterator | [107425](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=107425) |
 | 109788 | P4 | runtime error: shift exponent 64 | open, no patch | [109788](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=109788) |
 | 110626 | P4 | duplicated finalization in derived | open, no patch | [110626](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=110626) |
-| 119273 | P4 | subclass access in `associate` | wrong index with `-fcheck=bounds` | [119273](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=119273) |

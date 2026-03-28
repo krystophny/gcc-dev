@@ -47,10 +47,10 @@
   },
   "fix_status": "patch-ready",
   "github_issue": 112,
-  "notes": "Reproducer now runs clean with -fcheck=bounds. Targeted pr124661.f90 and assign_14.f90 tests pass, and a full check-gfortran rerun on pr124661-fix4 finished with 0 FAIL / XPASS.",
+  "notes": "Patch posted to Bugzilla as attachment 64058. Reproducer now runs clean with -fcheck=bounds. Targeted pr124661.f90 and assign_14.f90 tests pass, and a full check-gfortran rerun on pr124661-fix4 finished with 0 FAIL / XPASS.",
   "pr": 124661,
   "submission_status": {
-    "on_bugzilla": false,
+    "on_bugzilla": true,
     "on_mailing_list": false,
     "sent": false
   },

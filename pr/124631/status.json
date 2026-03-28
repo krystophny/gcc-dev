@@ -45,9 +45,9 @@
     "severity": "runtime-crash",
     "validity_class": "valid-code"
   },
-  "fix_status": "patch-ready",
+  "fix_status": "merged",
   "github_issue": 111,
-  "notes": "Reproducer now runs clean. Targeted pr124631.f90 testcase passes, and a full check-gfortran rerun on pr124631-fix finished with 0 FAIL / XPASS.",
+  "notes": "Merged upstream as r16-8308-g73933cdc44dea4b1bd5e1a2ef04d1df6edeb27c6 (commit 73933cdc44dea4b1bd5e1a2ef04d1df6edeb27c6). Reproducer now runs clean. Targeted pr124631.f90 testcase passes, and a full check-gfortran rerun on pr124631-fix finished with 0 FAIL / XPASS. The local patch was superseded by the upstream commit before Bugzilla posting.",
   "pr": 124631,
   "submission_status": {
     "on_bugzilla": false,
@@ -56,8 +56,8 @@
   },
   "title": "[UBSAN] simplify.cc:3088:12 runtime error",
   "trunk": {
-    "branch": "pr124631-fix",
-    "commit": "29b21a5605f",
+    "branch": null,
+    "commit": "73933cdc44dea4b1bd5e1a2ef04d1df6edeb27c6",
     "patch": "0001-fortran-Initialize-rank-1-EOSHIFT-stride-PR124631.patch"
   },
   "updated_at": "2026-03-28T14:09:57Z",

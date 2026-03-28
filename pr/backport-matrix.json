@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-28T12:58:10Z",
+  "generated_at": "2026-03-28T14:22:45Z",
   "rows": [
     {
       "backports": {
@@ -834,6 +834,120 @@
       },
       "fix_status": "merged",
       "pr": 124512,
+      "regression": true,
+      "severity": "runtime-crash"
+    },
+    {
+      "backports": {
+        "gcc-13": {
+          "apply_mode": "unknown",
+          "backport_candidate": null,
+          "branch_commit": null,
+          "branch_patch": null,
+          "full_suite": "not-run",
+          "notes": "",
+          "reproduces": null,
+          "targeted_tests": "not-run"
+        },
+        "gcc-14": {
+          "apply_mode": "unknown",
+          "backport_candidate": null,
+          "branch_commit": null,
+          "branch_patch": null,
+          "full_suite": "not-run",
+          "notes": "",
+          "reproduces": null,
+          "targeted_tests": "not-run"
+        },
+        "gcc-15": {
+          "apply_mode": "unknown",
+          "backport_candidate": null,
+          "branch_commit": null,
+          "branch_patch": null,
+          "full_suite": "not-run",
+          "notes": "",
+          "reproduces": null,
+          "targeted_tests": "not-run"
+        }
+      },
+      "fix_status": "patch-ready",
+      "pr": 124631,
+      "regression": true,
+      "severity": "runtime-crash"
+    },
+    {
+      "backports": {
+        "gcc-13": {
+          "apply_mode": "unknown",
+          "backport_candidate": null,
+          "branch_commit": null,
+          "branch_patch": null,
+          "full_suite": "not-run",
+          "notes": "",
+          "reproduces": null,
+          "targeted_tests": "not-run"
+        },
+        "gcc-14": {
+          "apply_mode": "unknown",
+          "backport_candidate": null,
+          "branch_commit": null,
+          "branch_patch": null,
+          "full_suite": "not-run",
+          "notes": "",
+          "reproduces": null,
+          "targeted_tests": "not-run"
+        },
+        "gcc-15": {
+          "apply_mode": "unknown",
+          "backport_candidate": null,
+          "branch_commit": null,
+          "branch_patch": null,
+          "full_suite": "not-run",
+          "notes": "",
+          "reproduces": null,
+          "targeted_tests": "not-run"
+        }
+      },
+      "fix_status": "patch-ready",
+      "pr": 124661,
+      "regression": true,
+      "severity": "runtime-crash"
+    },
+    {
+      "backports": {
+        "gcc-13": {
+          "apply_mode": "unknown",
+          "backport_candidate": null,
+          "branch_commit": null,
+          "branch_patch": null,
+          "full_suite": "not-run",
+          "notes": "",
+          "reproduces": null,
+          "targeted_tests": "not-run"
+        },
+        "gcc-14": {
+          "apply_mode": "unknown",
+          "backport_candidate": null,
+          "branch_commit": null,
+          "branch_patch": null,
+          "full_suite": "not-run",
+          "notes": "",
+          "reproduces": null,
+          "targeted_tests": "not-run"
+        },
+        "gcc-15": {
+          "apply_mode": "unknown",
+          "backport_candidate": null,
+          "branch_commit": null,
+          "branch_patch": null,
+          "full_suite": "not-run",
+          "notes": "",
+          "reproduces": null,
+          "targeted_tests": "not-run"
+        }
+      },
+      "fix_status": "patch-ready",
+      "pr": 124666,
       "regression": true,
       "severity": "runtime-crash"
     }

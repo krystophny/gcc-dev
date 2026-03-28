@@ -2,7 +2,7 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124661
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/112
-- **Status:** PENDING (patch on fork; not yet posted to Bugzilla)
+- **Status:** ON BUGZILLA (attachment 64058)
 
 ## Summary
 
@@ -15,6 +15,7 @@ walked the wrong tree and crashed instead of using the saved descriptor.
 - Branch: `pr124661-fix4`
 - Commit: `96e43eec01c`
 - Patch: `0001-fortran-Fix-descriptor-factoring-for-bounds-checked-.patch`
+- Bugzilla attachment: `64058`
 
 Keep the saved descriptor when stripping an `INDIRECT_REF` in
 `set_factored_descriptor_value`, and use `info->descriptor` for the later
@@ -26,4 +27,3 @@ data/offset accesses in `gfc_conv_ss_descriptor`.
 - `make check-gfortran RUNTESTFLAGS='dg.exp=pr124661.f90'`
 - `make check-gfortran RUNTESTFLAGS='dg.exp=assign_14.f90'`
 - Full `check-gfortran`: `0` `FAIL` / `XPASS`
-

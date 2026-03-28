@@ -52,9 +52,9 @@
     "severity": "ice-on-valid",
     "validity_class": "valid-code"
   },
-  "fix_status": "patch-ready",
+  "fix_status": "merged",
   "github_issue": 69,
-  "notes": "Patch remains on Bugzilla. A fresh full check-gfortran rerun on pr95879-fix finished clean with 0 FAIL / XPASS.",
+  "notes": "Merged upstream as r16-8320-gee931e5b7eab59916f4dd77a4ad20c1202153036 (commit ee931e5b7eab59916f4dd77a4ad20c1202153036). A fresh full check-gfortran rerun on pr95879-fix finished clean with 0 FAIL / XPASS. Paul Thomas noted that backports should wait a couple of weeks.",
   "pr": 95879,
   "submission_status": {
     "on_bugzilla": true,
@@ -63,8 +63,8 @@
   },
   "title": "Use-after-free in gfc_resolve_formal_arglist",
   "trunk": {
-    "branch": "pr95879-fix",
-    "commit": "e2bb459d5d99d52b2b58656665fe0b9611b601be",
+    "branch": null,
+    "commit": "ee931e5b7eab59916f4dd77a4ad20c1202153036",
     "patch": "0001-fortran-Fix-use-after-free-in-gfc_fixup_sibling_symb.patch"
   },
   "updated_at": "2026-03-28T14:09:57Z",

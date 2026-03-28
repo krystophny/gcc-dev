@@ -2,7 +2,7 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95879
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/69
-- **Status:** ON BUGZILLA (patch attached; full validation complete)
+- **Status:** MERGED upstream (`ee931e5b7eab59916f4dd77a4ad20c1202153036`; backports pending)
 
 ## Summary
 
@@ -36,6 +36,8 @@ needed.
 - Branch: `pr95879-fix`
 - Commit: `e2bb459d5d99d52b2b58656665fe0b9611b601be`
 - Patch: `0001-fortran-Fix-use-after-free-in-gfc_fixup_sibling_symb.patch`
+- Upstream commit: `ee931e5b7eab59916f4dd77a4ad20c1202153036`
+- Upstream revision: `r16-8320-gee931e5b7eab59916f4dd77a4ad20c1202153036`
 
 ## Test Results
 
