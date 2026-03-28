@@ -1,0 +1,160 @@
+From f87d2443e27cafde0de1923cd186be92f9cef2a0 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Sat, 28 Mar 2026 17:26:05 +0100
+Subject: [PATCH] fortran: Avoid bogus do-subscript warnings in skipped inner
+ loops [PR94978]
+
+Do not warn from an outer-loop bound substitution when a nested inner loop may
+be zero-trip after that substitution, because the guarded array reference may
+then be unreachable.
+
+gcc/fortran/ChangeLog:
+
+	PR fortran/94978
+	* frontend-passes.cc (evaluate_loop_bound): New helper.
+	(inner_loop_may_be_skipped): New helper.
+	(do_subscript): Skip outer-loop bound warnings when nested inner loops
+	may be zero-trip for the substituted bound.
+
+gcc/testsuite/ChangeLog:
+
+	PR fortran/94978
+	* gfortran.dg/pr94978.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/frontend-passes.cc        | 69 ++++++++++++++++++++++++++-
+ gcc/testsuite/gfortran.dg/pr94978.f90 | 24 ++++++++++
+ 2 files changed, 91 insertions(+), 2 deletions(-)
+ create mode 100644 gcc/testsuite/gfortran.dg/pr94978.f90
+
+diff --git a/gcc/fortran/frontend-passes.cc b/gcc/fortran/frontend-passes.cc
+index 56d8e21b9f4..fa508794e20 100644
+--- a/gcc/fortran/frontend-passes.cc
++++ b/gcc/fortran/frontend-passes.cc
+@@ -2746,6 +2746,66 @@ insert_index (gfc_expr *e, gfc_symbol *sym, mpz_t val, mpz_t ret)
+ 
+ }
+ 
++static bool
++evaluate_loop_bound (gfc_expr *e, gfc_symbol *sym, mpz_t val, mpz_t ret)
++{
++  if (e->expr_type == EXPR_CONSTANT)
++    {
++      mpz_init_set (ret, e->value.integer);
++      return true;
++    }
++
++  return insert_index (e, sym, val, ret);
++}
++
++/* Return true if any loop nested inside LOOP_INDEX is not provably entered
++   after substituting OUTER_VAL for OUTER_SYM.  In that case the guarded array
++   reference may never be evaluated, so do not warn from the outer loop alone.  */
++
++static bool
++inner_loop_may_be_skipped (int loop_index, gfc_symbol *outer_sym, mpz_t outer_val)
++{
++  int k;
++  do_t *lp;
++
++  FOR_EACH_VEC_ELT_FROM (doloop_list, k, lp, loop_index + 1)
++    {
++      gfc_code *loop = lp->c;
++      int sgn, cmp;
++      mpz_t do_start, do_end, do_step;
++
++      if (loop == NULL || loop->ext.iterator == NULL || loop->ext.iterator->var == NULL)
++	return true;
++
++      if (!evaluate_loop_bound (loop->ext.iterator->step, outer_sym, outer_val, do_step))
++	return true;
++
++      sgn = mpz_cmp_ui (do_step, 0);
++      if (sgn == 0)
++	{
++	  mpz_clear (do_step);
++	  return true;
++	}
++
++      if (!evaluate_loop_bound (loop->ext.iterator->start, outer_sym, outer_val, do_start)
++	  || !evaluate_loop_bound (loop->ext.iterator->end, outer_sym, outer_val, do_end))
++	{
++	  mpz_clear (do_step);
++	  return true;
++	}
++
++      cmp = mpz_cmp (do_end, do_start);
++      mpz_clear (do_start);
++      mpz_clear (do_end);
++      mpz_clear (do_step);
++
++      if ((sgn > 0 && cmp < 0) || (sgn < 0 && cmp > 0))
++	return true;
++    }
++
++  return false;
++}
++
+ /* Check array subscripts for possible out-of-bounds accesses in DO
+    loops with constant bounds.  */
+ 
+@@ -2880,10 +2940,15 @@ do_subscript (gfc_expr **e)
+ 		  mpz_clear (rem);
+ 		}
+ 
++	      bool skip_start = have_do_start
++				&& inner_loop_may_be_skipped (j, do_sym, do_start);
++	      bool skip_end = have_do_end
++			      && inner_loop_may_be_skipped (j, do_sym, do_end);
++
+ 	      for (i = 0; i< ar->dimen; i++)
+ 		{
+ 		  mpz_t val;
+-		  if (ar->dimen_type[i] == DIMEN_ELEMENT && have_do_start
++		  if (ar->dimen_type[i] == DIMEN_ELEMENT && have_do_start && !skip_start
+ 		      && insert_index (ar->start[i], do_sym, do_start, val))
+ 		    {
+ 		      if (ar->as->lower[i]
+@@ -2909,7 +2974,7 @@ do_subscript (gfc_expr **e)
+ 		      mpz_clear (val);
+ 		    }
+ 
+-		  if (ar->dimen_type[i] == DIMEN_ELEMENT && have_do_end
++		  if (ar->dimen_type[i] == DIMEN_ELEMENT && have_do_end && !skip_end
+ 		      && insert_index (ar->start[i], do_sym, do_end, val))
+ 		    {
+ 		      if (ar->as->lower[i]
+diff --git a/gcc/testsuite/gfortran.dg/pr94978.f90 b/gcc/testsuite/gfortran.dg/pr94978.f90
+new file mode 100644
+index 00000000000..5d64d227fdc
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr94978.f90
+@@ -0,0 +1,24 @@
++! { dg-do compile }
++! { dg-options "-Wdo-subscript" }
++
++implicit none
++
++integer(4) :: i, j
++integer(4) :: pascal(0:8, 0:8)
++
++do i = 0, 8
++  pascal(i, 0) = 1
++  do j = 1, i - 1
++    pascal(i, j) = pascal(i - 1, j) + pascal(i - 1, j - 1) ! { dg-bogus "Array reference at \\(1\\) out of bounds" }
++  end do
++  do j = i, 8
++    pascal(i, j) = 0
++  end do
++  pascal(i, i) = 1
++end do
++
++do i = 0, 8
++  print '(9I4)', pascal(i, :)
++end do
++
++end
+-- 
+2.53.0
+

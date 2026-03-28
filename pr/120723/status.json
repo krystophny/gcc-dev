@@ -68,7 +68,7 @@
     "commit": "0af9613810ecdc991633f58f5dd81a574aa2af31",
     "patch": "0001-fortran-Fix-scalar-OpenACC-attach-detach-lowering-PR.patch"
   },
-  "updated_at": "2026-03-28T14:09:57Z",
+  "updated_at": "2026-03-28T16:27:43Z",
   "validation": {
     "baseline": {
       "contains_any": [

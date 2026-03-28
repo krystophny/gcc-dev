@@ -65,7 +65,7 @@
     "commit": "42475cae6d7cce30aabfac660a55c2d9e5b38e68",
     "patch": null
   },
-  "updated_at": "2026-03-28T14:09:57Z",
+  "updated_at": "2026-03-28T16:27:43Z",
   "validation": {
     "kind": "special-env",
     "reason": "requires NVPTX OpenACC runtime/offload execution to reproduce the size bug"

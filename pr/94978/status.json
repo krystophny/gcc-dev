@@ -37,28 +37,28 @@
     }
   },
   "bugzilla": {
-    "id": 124574,
-    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124574"
+    "id": 94978,
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=94978"
   },
   "classification": {
-    "regression": false,
-    "severity": "ice-on-valid",
+    "regression": true,
+    "severity": "diagnostic",
     "validity_class": "valid-code"
   },
-  "fix_status": "open",
-  "github_issue": 107,
+  "fix_status": "patch-ready",
+  "github_issue": 66,
   "notes": "",
-  "pr": 107,
+  "pr": 94978,
   "submission_status": {
     "on_bugzilla": true,
     "on_mailing_list": false,
     "sent": false
   },
-  "title": "Sparse-set valgrind false positives on non-annotated GCC builds",
+  "title": "bogus do-subscript warning",
   "trunk": {
     "branch": null,
-    "commit": "6d3ccffc0e8f216a8c691907717aa4fe5b052d92",
-    "patch": "0001-sparseset-Initialize-sparse-indices-for-valgrind-cle.patch"
+    "commit": null,
+    "patch": "0001-fortran-Avoid-bogus-do-subscript-warnings-in-skipped.patch"
   },
   "updated_at": "2026-03-28T16:27:43Z",
   "validation": {
@@ -75,7 +75,7 @@
       "-B",
       "gcc-build/gcc",
       "-c",
-      "pr/107/reproducer.f90",
+      "pr/94978/reproducer.f90",
       "-o",
       "/dev/null"
     ],

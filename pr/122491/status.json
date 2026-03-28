@@ -68,7 +68,7 @@
     "commit": "ff2f6c5153e",
     "patch": "0001-fortran-Avoid-UAF-on-missing-END-BLOCK-cleanup-PR122.patch"
   },
-  "updated_at": "2026-03-28T14:09:57Z",
+  "updated_at": "2026-03-28T16:27:43Z",
   "validation": {
     "kind": "special-env",
     "reason": "requires sanitizer-instrumented branch compiler to observe the UAF"

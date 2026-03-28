@@ -65,7 +65,7 @@
     "commit": "ca448bc5e435",
     "patch": "0001-fortran-Fix-memory-leak-on-assignment-with-nested-al.patch"
   },
-  "updated_at": "2026-03-28T14:09:57Z",
+  "updated_at": "2026-03-28T16:27:43Z",
   "validation": {
     "kind": "special-env",
     "reason": "requires Valgrind or equivalent leak checking to validate the regression"

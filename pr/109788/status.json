@@ -37,28 +37,28 @@
     }
   },
   "bugzilla": {
-    "id": 124574,
-    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124574"
+    "id": 109788,
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=109788"
   },
   "classification": {
-    "regression": false,
-    "severity": "ice-on-valid",
+    "regression": true,
+    "severity": "runtime-crash",
     "validity_class": "valid-code"
   },
-  "fix_status": "open",
-  "github_issue": 107,
+  "fix_status": "patch-ready",
+  "github_issue": 91,
   "notes": "",
-  "pr": 107,
+  "pr": 109788,
   "submission_status": {
     "on_bugzilla": true,
     "on_mailing_list": false,
     "sent": false
   },
-  "title": "Sparse-set valgrind false positives on non-annotated GCC builds",
+  "title": "character SPREAD runtime error",
   "trunk": {
     "branch": null,
-    "commit": "6d3ccffc0e8f216a8c691907717aa4fe5b052d92",
-    "patch": "0001-sparseset-Initialize-sparse-indices-for-valgrind-cle.patch"
+    "commit": null,
+    "patch": "0001-fortran-Fix-character-SPREAD-intrinsic-lowering-PR10.patch"
   },
   "updated_at": "2026-03-28T16:27:43Z",
   "validation": {
@@ -75,7 +75,7 @@
       "-B",
       "gcc-build/gcc",
       "-c",
-      "pr/107/reproducer.f90",
+      "pr/109788/reproducer.f90",
       "-o",
       "/dev/null"
     ],

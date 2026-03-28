@@ -58,7 +58,7 @@
   "notes": "",
   "pr": 102430,
   "submission_status": {
-    "on_bugzilla": false,
+    "on_bugzilla": true,
     "on_mailing_list": false,
     "sent": false
   },
@@ -68,7 +68,7 @@
     "commit": "d498fe6e019",
     "patch": "0001-fortran-Reject-array-allocatable-LINEAR-on-DO-PR1024.patch"
   },
-  "updated_at": "2026-03-28T14:09:57Z",
+  "updated_at": "2026-03-28T16:27:43Z",
   "validation": {
     "baseline": {
       "contains_any": [

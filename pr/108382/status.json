@@ -69,7 +69,7 @@
     "commit": "f738265ceff7bc2fa3ebcbaf0dc7d807e81d81a8",
     "patch": "0001-fortran-Fix-free-form-mixed-OpenACC-OpenMP-continuat.patch"
   },
-  "updated_at": "2026-03-28T14:09:57Z",
+  "updated_at": "2026-03-28T16:27:43Z",
   "validation": {
     "baseline": {
       "contains_any": [

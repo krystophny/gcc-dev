@@ -1,0 +1,303 @@
+From fefd0c1107b4609ffcf45ad4a481e9f3b0bb7979 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Sat, 28 Mar 2026 17:04:12 +0100
+Subject: [PATCH] fortran: Accept valid ENTRY specification expressions
+ [PR85352]
+
+Remember the dummy whose bounds or character length are currently being
+resolved as a specification expression so sibling ENTRY arguments in the
+same unresolved ENTRY can be accepted.
+
+gcc/fortran/ChangeLog:
+
+	PR fortran/85352
+	* resolve.cc (specification_expr_symbol): New variable.
+	(entry_dummy_seen_p): Return whether a dummy appears in an already
+	seen ENTRY.
+	(gfc_resolve_formal_arglist): Remember the dummy whose specification
+	expressions are being resolved.
+	(resolve_variable): Accept unresolved sibling ENTRY dummy arguments
+	while resolving the current dummy's specification expressions.
+	(resolve_fl_variable): Preserve specification_expr_symbol.
+	(resolve_symbol_array_spec): Likewise.
+
+gcc/testsuite/ChangeLog:
+
+	PR fortran/85352
+	* gfortran.dg/pr85352.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/resolve.cc                | 71 ++++++++++++++++++++-------
+ gcc/testsuite/gfortran.dg/pr85352.f90 | 44 +++++++++++++++++
+ 2 files changed, 96 insertions(+), 19 deletions(-)
+ create mode 100644 gcc/testsuite/gfortran.dg/pr85352.f90
+
+diff --git a/gcc/fortran/resolve.cc b/gcc/fortran/resolve.cc
+index 767bbdea114..cf440c2e884 100644
+--- a/gcc/fortran/resolve.cc
++++ b/gcc/fortran/resolve.cc
+@@ -82,6 +82,9 @@ static int omp_workshare_flag;
+ 
+ /* True if we are resolving a specification expression.  */
+ static bool specification_expr = false;
++/* The dummy whose character length or array bounds are currently being
++   resolved as a specification expression.  */
++static gfc_symbol *specification_expr_symbol = NULL;
+ 
+ /* The id of the last entry seen.  */
+ static int current_entry_id;
+@@ -92,6 +95,24 @@ static bitmap_obstack labels_obstack;
+ /* True when simplifying a EXPR_VARIABLE argument to an inquiry function.  */
+ static bool inquiry_argument = false;
+ 
++static bool
++entry_dummy_seen_p (gfc_symbol *sym)
++{
++  gfc_entry_list *entry;
++  gfc_formal_arglist *formal;
++
++  gcc_checking_assert (sym->attr.dummy && sym->ns == gfc_current_ns);
++
++  for (entry = gfc_current_ns->entries;
++       entry && entry->id <= current_entry_id;
++       entry = entry->next)
++    for (formal = entry->sym->formal; formal; formal = formal->next)
++      if (formal->sym && sym->name == formal->sym->name)
++	return true;
++
++  return false;
++}
++
+ 
+ /* Is the symbol host associated?  */
+ static bool
+@@ -289,6 +310,7 @@ gfc_resolve_formal_arglist (gfc_symbol *proc)
+   for (f = proc->formal; f; f = f->next)
+     {
+       gfc_array_spec *as;
++      gfc_symbol *saved_specification_expr_symbol;
+ 
+       sym = f->sym;
+ 
+@@ -337,9 +359,12 @@ gfc_resolve_formal_arglist (gfc_symbol *proc)
+ 	   ? CLASS_DATA (sym)->as : sym->as;
+ 
+       saved_specification_expr = specification_expr;
++      saved_specification_expr_symbol = specification_expr_symbol;
+       specification_expr = true;
++      specification_expr_symbol = sym;
+       gfc_resolve_array_spec (as, 0);
+       specification_expr = saved_specification_expr;
++      specification_expr_symbol = saved_specification_expr_symbol;
+ 
+       /* We can't tell if an array with dimension (:) is assumed or deferred
+ 	 shape until we know if it has the pointer or allocatable attributes.
+@@ -6669,32 +6694,23 @@ resolve_variable (gfc_expr *e)
+       && cs_base->current
+       && cs_base->current->op != EXEC_ENTRY)
+     {
+-      gfc_entry_list *entry;
+-      gfc_formal_arglist *formal;
+       int n;
+-      bool seen, saved_specification_expr;
++      bool saved_specification_expr;
++      gfc_symbol *saved_specification_expr_symbol;
+ 
+       /* If the symbol is a dummy...  */
+       if (sym->attr.dummy && sym->ns == gfc_current_ns)
+ 	{
+-	  entry = gfc_current_ns->entries;
+-	  seen = false;
+-
+-	  /* ...test if the symbol is a parameter of previous entries.  */
+-	  for (; entry && entry->id <= current_entry_id; entry = entry->next)
+-	    for (formal = entry->sym->formal; formal; formal = formal->next)
+-	      {
+-		if (formal->sym && sym->name == formal->sym->name)
+-		  {
+-		    seen = true;
+-		    break;
+-		  }
+-	      }
+-
+ 	  /*  If it has not been seen as a dummy, this is an error.  */
+-	  if (!seen)
++	  if (!entry_dummy_seen_p (sym))
+ 	    {
+-	      if (specification_expr)
++	      if (specification_expr
++		  && specification_expr_symbol
++		  && specification_expr_symbol->attr.dummy
++		  && specification_expr_symbol->ns == gfc_current_ns
++		  && !entry_dummy_seen_p (specification_expr_symbol))
++		;
++	      else if (specification_expr)
+ 		gfc_error ("Variable %qs, used in a specification expression"
+ 			   ", is referenced at %L before the ENTRY statement "
+ 			   "in which it is a parameter",
+@@ -6709,7 +6725,9 @@ resolve_variable (gfc_expr *e)
+ 
+       /* Now do the same check on the specification expressions.  */
+       saved_specification_expr = specification_expr;
++      saved_specification_expr_symbol = specification_expr_symbol;
+       specification_expr = true;
++      specification_expr_symbol = sym;
+       if (sym->ts.type == BT_CHARACTER
+ 	  && !gfc_resolve_expr (sym->ts.u.cl->length))
+ 	t = false;
+@@ -6725,6 +6743,7 @@ resolve_variable (gfc_expr *e)
+ 	    }
+ 	}
+       specification_expr = saved_specification_expr;
++      specification_expr_symbol = saved_specification_expr_symbol;
+ 
+       if (t)
+ 	/* Update the symbol's entry level.  */
+@@ -15339,7 +15358,9 @@ resolve_fl_variable (gfc_symbol *sym, int mp_flag)
+      This check is effected by the call to gfc_resolve_expr through
+      is_non_constant_shape_array.  */
+   bool saved_specification_expr = specification_expr;
++  gfc_symbol *saved_specification_expr_symbol = specification_expr_symbol;
+   specification_expr = true;
++  specification_expr_symbol = sym;
+ 
+   if (sym->ns->proc_name
+       && (sym->ns->proc_name->attr.flavor == FL_MODULE
+@@ -15354,6 +15375,7 @@ resolve_fl_variable (gfc_symbol *sym, int mp_flag)
+       gfc_error ("The module or main program array %qs at %L must "
+ 		 "have constant shape", sym->name, &sym->declared_at);
+       specification_expr = saved_specification_expr;
++      specification_expr_symbol = saved_specification_expr_symbol;
+       return false;
+     }
+ 
+@@ -15379,6 +15401,7 @@ resolve_fl_variable (gfc_symbol *sym, int mp_flag)
+ 	  gfc_error ("Entity with assumed character length at %L must be a "
+ 		     "dummy argument or a PARAMETER", &sym->declared_at);
+ 	  specification_expr = saved_specification_expr;
++	  specification_expr_symbol = saved_specification_expr_symbol;
+ 	  return false;
+ 	}
+ 
+@@ -15386,6 +15409,7 @@ resolve_fl_variable (gfc_symbol *sym, int mp_flag)
+ 	{
+ 	  gfc_error (auto_save_msg, sym->name, &sym->declared_at);
+ 	  specification_expr = saved_specification_expr;
++	  specification_expr_symbol = saved_specification_expr_symbol;
+ 	  return false;
+ 	}
+ 
+@@ -15400,6 +15424,7 @@ resolve_fl_variable (gfc_symbol *sym, int mp_flag)
+ 	      gfc_error ("%qs at %L must have constant character length "
+ 			"in this context", sym->name, &sym->declared_at);
+ 	      specification_expr = saved_specification_expr;
++	      specification_expr_symbol = saved_specification_expr_symbol;
+ 	      return false;
+ 	    }
+ 	  if (sym->attr.in_common)
+@@ -15407,6 +15432,7 @@ resolve_fl_variable (gfc_symbol *sym, int mp_flag)
+ 	      gfc_error ("COMMON variable %qs at %L must have constant "
+ 			 "character length", sym->name, &sym->declared_at);
+ 	      specification_expr = saved_specification_expr;
++	      specification_expr_symbol = saved_specification_expr_symbol;
+ 	      return false;
+ 	    }
+ 	}
+@@ -15439,6 +15465,7 @@ resolve_fl_variable (gfc_symbol *sym, int mp_flag)
+ 	{
+ 	  gfc_error (auto_save_msg, sym->name, &sym->declared_at);
+ 	  specification_expr = saved_specification_expr;
++	  specification_expr_symbol = saved_specification_expr_symbol;
+ 	  return false;
+ 	}
+     }
+@@ -15472,6 +15499,7 @@ resolve_fl_variable (gfc_symbol *sym, int mp_flag)
+       else
+ 	goto no_init_error;
+       specification_expr = saved_specification_expr;
++      specification_expr_symbol = saved_specification_expr_symbol;
+       return false;
+     }
+ 
+@@ -15480,10 +15508,12 @@ no_init_error:
+     {
+       bool res = resolve_fl_variable_derived (sym, no_init_flag);
+       specification_expr = saved_specification_expr;
++      specification_expr_symbol = saved_specification_expr_symbol;
+       return res;
+     }
+ 
+   specification_expr = saved_specification_expr;
++  specification_expr_symbol = saved_specification_expr_symbol;
+   return true;
+ }
+ 
+@@ -18058,11 +18088,14 @@ resolve_symbol_array_spec (gfc_symbol *sym, int check_constant)
+   gfc_current_ns = gfc_get_spec_ns (sym);
+ 
+   bool saved_specification_expr = specification_expr;
++  gfc_symbol *saved_specification_expr_symbol = specification_expr_symbol;
+   specification_expr = true;
++  specification_expr_symbol = sym;
+ 
+   bool result = gfc_resolve_array_spec (sym->as, check_constant);
+ 
+   specification_expr = saved_specification_expr;
++  specification_expr_symbol = saved_specification_expr_symbol;
+   gfc_current_ns = orig_current_ns;
+ 
+   return result;
+diff --git a/gcc/testsuite/gfortran.dg/pr85352.f90 b/gcc/testsuite/gfortran.dg/pr85352.f90
+new file mode 100644
+index 00000000000..fb071fe127c
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr85352.f90
+@@ -0,0 +1,44 @@
++! { dg-do compile }
++
++subroutine expa (ip, iq, sabb)
++  implicit none
++  integer, intent(in) :: ip, iq
++  real :: sabb(25, 8), arg(25), argj, dist
++  integer :: i, j
++  integer :: nuca, nucb, nucab, nuco
++
++  arg = [(i * 7.5, i = 1, 25)]
++  nuca = nuco (ip)
++  nucb = nuco (iq)
++  nucab = nuca * nucb
++  dist = 0.7854
++  do j = 1, nucab
++    argj = min (arg(j) * dist, 80.0)
++    sabb(j, 1) = exp (-argj)
++  end do
++  call acomp (sabb, nuca)
++  return
++entry rfinit
++  stop 1
++end subroutine expa
++
++subroutine acomp (saab, nuca)
++  implicit none
++  real :: aaint, saab
++  integer :: i, ip, iq, j, nuc1, nuca
++  dimension saab(nuca, nuca), aaint(nuc1, nuc1)
++
++  do i = 2, nuca
++    do j = 1, i - 1
++      saab(j, i) = saab(j, i) * 2.0d0
++      saab(i, j) = 0.0d0
++    end do
++  end do
++  return
++entry aaexp (aaint, nuc1)
++  do ip = 2, nuc1
++    do iq = 1, ip - 1
++      aaint(iq, ip) = 0.5d0 * (aaint(iq, ip) + aaint(ip, iq))
++    end do
++  end do
++end subroutine acomp
+-- 
+2.53.0
+

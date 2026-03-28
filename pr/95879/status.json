@@ -63,11 +63,11 @@
   },
   "title": "Use-after-free in gfc_resolve_formal_arglist",
   "trunk": {
-    "branch": null,
+    "branch": "pr95879-fix",
     "commit": "ee931e5b7eab59916f4dd77a4ad20c1202153036",
     "patch": "0001-fortran-Fix-use-after-free-in-gfc_fixup_sibling_symb.patch"
   },
-  "updated_at": "2026-03-28T14:09:57Z",
+  "updated_at": "2026-03-28T16:27:43Z",
   "validation": {
     "baseline": {
       "contains_any": [

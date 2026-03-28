@@ -143,6 +143,20 @@ cd gcc-build/gcc && make -j32 -k check-gfortran > /tmp/test.log 2>&1
 grep -cE "^FAIL|^XPASS" testsuite/gfortran/gfortran.sum  # must be 0 new
 ```
 
+`check-gfortran` covers the frontend `gomp`, `goacc`, and `goacc-gomp`
+directories, but it does not cover the libgomp Fortran runtime harnesses.
+Before posting any patch, also run this from `gcc-build/`:
+
+```bash
+make -j32 check-target-libgomp-fortran > /tmp/libgomp-fortran.log 2>&1
+```
+
+Treat any `FAIL` or `XPASS` in that runtime run as blocking, exactly like
+`check-gfortran`, and verify in the log that both
+`libgomp.fortran/fortran.exp` and `libgomp.oacc-fortran/fortran.exp` ran.
+If either harness is missing, run it explicitly via `check-target-libgomp`
+before posting.
+
 Compare FAIL/XPASS counts against baseline recorded before fixes. If a fix
 introduces regressions, fix them or revert the patch.
 
@@ -151,6 +165,10 @@ introduces regressions, fix them or revert the patch.
 OpenACC runtime tests require actual GPU offload. Tests marked with
 `{ dg-skip-if "" { *-*-* } { "*" } { "-DACC_MEM_SHARED=0" } }` only run
 when ACC_MEM_SHARED=0 (real GPU, not unified memory).
+
+For libgomp Fortran runtime coverage, review the `check-target-libgomp-fortran`
+log and confirm that `libgomp.oacc-fortran/fortran.exp` ran. If not, rerun
+that harness explicitly with `check-target-libgomp` before posting.
 
 In gcc-build without NVPTX offload, these tests show as UNSUPPORTED.
 Verify manually with the offload build:

@@ -41,7 +41,7 @@
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124666"
   },
   "classification": {
-    "regression": true,
+    "regression": false,
     "severity": "runtime-crash",
     "validity_class": "valid-code"
   },
@@ -50,7 +50,7 @@
   "notes": "UBSAN reproducer now compiles clean. Targeted pr124666.f90 passes, and a full check-gfortran rerun on pr124666-fix finished with 0 FAIL / XPASS.",
   "pr": 124666,
   "submission_status": {
-    "on_bugzilla": false,
+    "on_bugzilla": true,
     "on_mailing_list": false,
     "sent": false
   },
@@ -60,7 +60,7 @@
     "commit": "b6951283208",
     "patch": "0001-fortran-Fix-signed-overflow-in-format_lex-digit-pars.patch"
   },
-  "updated_at": "2026-03-28T14:09:57Z",
+  "updated_at": "2026-03-28T16:27:43Z",
   "validation": {
     "baseline": {
       "contains_any": [

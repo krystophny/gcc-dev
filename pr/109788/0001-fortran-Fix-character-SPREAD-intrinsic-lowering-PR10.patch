@@ -1,0 +1,89 @@
+From 89512f25a0c7248aaefc0bfb8497b784d55d1c8e Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Sat, 28 Mar 2026 16:57:02 +0100
+Subject: [PATCH] fortran: Fix character SPREAD intrinsic lowering [PR109788]
+
+Copy the SPREAD intrinsic descriptor before specializing the character
+formal argument type so other uses keep the generic signature.
+
+	PR fortran/109788
+	PR 109788
+gcc/fortran/ChangeLog:
+
+	* iresolve.cc (copy_intrinsic_sym): New helper.
+	(gfc_resolve_spread): Copy the intrinsic descriptor before
+	specializing the character formal argument type.
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/pr109788.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/iresolve.cc                | 25 ++++++++++++++++++++++++-
+ gcc/testsuite/gfortran.dg/pr109788.f90 | 10 ++++++++++
+ 2 files changed, 34 insertions(+), 1 deletion(-)
+ create mode 100644 gcc/testsuite/gfortran.dg/pr109788.f90
+
+diff --git a/gcc/fortran/iresolve.cc b/gcc/fortran/iresolve.cc
+index 833701da5df..7ec821baa9e 100644
+--- a/gcc/fortran/iresolve.cc
++++ b/gcc/fortran/iresolve.cc
+@@ -103,6 +103,25 @@ check_charlen_present (gfc_expr *source)
+     }
+ }
+ 
++static gfc_intrinsic_sym *
++copy_intrinsic_sym (const gfc_intrinsic_sym *src)
++{
++  gfc_intrinsic_sym *copy = XCNEW (gfc_intrinsic_sym);
++  gfc_intrinsic_arg *head = NULL;
++  gfc_intrinsic_arg **tail = &head;
++
++  *copy = *src;
++  for (const gfc_intrinsic_arg *arg = src->formal; arg; arg = arg->next)
++    {
++      *tail = XCNEW (gfc_intrinsic_arg);
++      **tail = *arg;
++      (*tail)->next = NULL;
++      tail = &(*tail)->next;
++    }
++  copy->formal = head;
++  return copy;
++}
++
+ /* Helper function for resolving the "mask" argument.  */
+ 
+ static void
+@@ -2958,7 +2977,11 @@ gfc_resolve_spread (gfc_expr *f, gfc_expr *source, gfc_expr *dim,
+     gfc_resolve_substring_charlen (source);
+ 
+   if (source->ts.type == BT_CHARACTER)
+-    check_charlen_present (source);
++    {
++      check_charlen_present (source);
++      f->value.function.isym = copy_intrinsic_sym (f->value.function.isym);
++      f->value.function.isym->formal->ts = source->ts;
++    }
+ 
+   f->ts = source->ts;
+   f->rank = source->rank + 1;
+diff --git a/gcc/testsuite/gfortran.dg/pr109788.f90 b/gcc/testsuite/gfortran.dg/pr109788.f90
+new file mode 100644
+index 00000000000..d581b7a70fe
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr109788.f90
+@@ -0,0 +1,10 @@
++! { dg-do compile }
++! { dg-options "-Os -fdump-tree-original-raw" }
++! { dg-final { scan-tree-dump {(?s)identifier_node  strg: _gfortran_spread_char_scalar.*?function_type.*?prms: @[0-9]+.*?tree_list[^\n]*chan: @[0-9]+.*?tree_list[^\n]*chan: @[0-9]+.*?tree_list[^\n]*chan: @[0-9]+.*?tree_list[^\n]*chan: @[0-9]+.*?tree_list[^\n]*chan: @[0-9]+.*?tree_list[^\n]*chan: @8} "original" } }
++
++character(3) :: a = 'abc'
++
++associate (y => spread(trim(a), 1, 2) // 'd')
++  if (size(y) /= 2) stop 1
++end associate
++end
+-- 
+2.53.0
+

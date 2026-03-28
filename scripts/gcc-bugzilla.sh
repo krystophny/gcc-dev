@@ -16,6 +16,7 @@ set -euo pipefail
 
 BUGZILLA_URL="https://gcc.gnu.org/bugzilla/xmlrpc.cgi"
 BZ="bugzilla --bugzilla=$BUGZILLA_URL"
+AUTO_CC_DEFAULT="${GCC_BUGZILLA_AUTO_CC:-albert@tugraz.at,jvdelisle@gcc.gnu.org}"
 
 usage() {
     echo "Usage: $0 <command> [args...]"
@@ -26,6 +27,7 @@ usage() {
     echo "  regressions                               List all open fortran regressions"
     echo "  comment <pr-number> <text>                  Post a comment on a bug"
     echo "  attach <pr-number> <file> [desc] [comment]  Attach a file (requires login)"
+    echo "  ensure-cc <pr-number> [email[,email...]]   Add CC entries to a bug"
     echo "  login                                     Login to GCC Bugzilla (saves token)"
     echo "  submit <pr-number> [branch] [--execute]   Submit generated workflow packet"
     echo ""
@@ -36,6 +38,7 @@ usage() {
     echo "  $0 attach 123280 pr/123280/0001-fix.patch"
     echo "  $0 attach 123280 pr/123280/0001-fix.patch 'Proposed patch' 'Fixes the ICE by...'"
     echo "  $0 comment 124512 'Reproduced on cfarm428...'"
+    echo "  $0 ensure-cc 108382"
     echo "  $0 submit 120723 gcc-15 --execute"
     exit 1
 }
@@ -86,6 +89,7 @@ cmd_regressions() {
 cmd_comment() {
     local pr="$1"
     local text="$2"
+    local auto_cc="$AUTO_CC_DEFAULT"
 
     echo "Posting comment on bug $pr..."
     echo ""
@@ -104,12 +108,12 @@ cmd_comment() {
         exit 0
     fi
 
-    python3 - "$pr" "$text" <<'PYEOF'
+    python3 - "$pr" "$text" "$auto_cc" <<'PYEOF'
 import sys, bugzilla
-pr, text = sys.argv[1], sys.argv[2]
+pr, text, auto_cc = sys.argv[1], sys.argv[2], sys.argv[3]
 bz = bugzilla.Bugzilla("https://gcc.gnu.org/bugzilla/xmlrpc.cgi")
 bug = bz.getbug(int(pr))
-bz.update_bugs(int(pr), bz.build_update(comment=text))
+bz.update_bugs(int(pr), bz.build_update(comment=text, cc_add=[email for email in auto_cc.split(",") if email]))
 print(f"Comment posted on bug {pr}")
 print(f"https://gcc.gnu.org/bugzilla/show_bug.cgi?id={pr}")
 PYEOF
@@ -121,6 +125,7 @@ cmd_attach() {
     local file="$2"
     local desc="${3:-$(basename "$file")}"
     local comment="${4:-}"
+    local auto_cc="$AUTO_CC_DEFAULT"
 
     if [[ ! -f "$file" ]]; then
         echo "Error: file not found: $file" >&2
@@ -145,15 +150,45 @@ cmd_attach() {
         exit 0
     fi
 
-    python3 - "$pr" "$file" "$desc" "$comment" <<'PYEOF'
+    python3 - "$pr" "$file" "$desc" "$comment" "$auto_cc" <<'PYEOF'
 import sys, bugzilla
-pr, path, desc, comment = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+pr, path, desc, comment, auto_cc = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5]
 bz = bugzilla.Bugzilla("https://gcc.gnu.org/bugzilla/xmlrpc.cgi")
 kwargs = dict(content_type="text/plain", is_patch=True)
 if comment:
     kwargs["comment"] = comment
 att_id = bz.attachfile(int(pr), path, desc, **kwargs)
+bz.update_bugs(int(pr), bz.build_update(cc_add=[email for email in auto_cc.split(",") if email]))
 print(f"Attachment ID: {att_id}")
+print(f"https://gcc.gnu.org/bugzilla/show_bug.cgi?id={pr}")
+PYEOF
+    echo "Done."
+}
+
+cmd_ensure_cc() {
+    local pr="$1"
+    local cc_list="${2:-$AUTO_CC_DEFAULT}"
+
+    echo "Adding CC entries on bug $pr..."
+    echo ""
+    echo "  Bug: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=$pr"
+    echo "  CC:  $cc_list"
+    echo ""
+    local confirm="${GCC_BUGZILLA_ASSUME_YES:-}"
+    if [[ -z "$confirm" ]]; then
+        read -rp "Proceed? [y/N] " confirm
+    fi
+    if [[ "$confirm" != "1" && "$confirm" != "y" && "$confirm" != "Y" ]]; then
+        echo "Aborted."
+        exit 0
+    fi
+
+    python3 - "$pr" "$cc_list" <<'PYEOF'
+import sys, bugzilla
+pr, cc_list = sys.argv[1], sys.argv[2]
+bz = bugzilla.Bugzilla("https://gcc.gnu.org/bugzilla/xmlrpc.cgi")
+bz.update_bugs(int(pr), bz.build_update(cc_add=[email for email in cc_list.split(",") if email]))
+print(f"Updated CC on bug {pr}")
 print(f"https://gcc.gnu.org/bugzilla/show_bug.cgi?id={pr}")
 PYEOF
     echo "Done."
@@ -186,6 +221,10 @@ case "$1" in
     attach)
         [[ $# -lt 3 ]] && { echo "Error: missing PR number or file"; usage; }
         cmd_attach "$2" "$3" "${4:-}" "${5:-}"
+        ;;
+    ensure-cc)
+        [[ $# -lt 2 ]] && { echo "Error: missing PR number"; usage; }
+        cmd_ensure_cc "$2" "${3:-}"
         ;;
     login)
         cmd_login
