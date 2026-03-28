@@ -38,6 +38,14 @@
   },
   "bugzilla": {
     "id": 123282,
+    "keywords": [
+      "openacc",
+      "wrong-code"
+    ],
+    "refreshed_at": "2026-03-28T12:57:08Z",
+    "resolution": "",
+    "status": "UNCONFIRMED",
+    "summary": "[OpenACC/Fortran] Illegal memory access with derived type component in repeated alloc/dealloc cycle (order-dependent)",
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123282"
   },
   "classification": {
@@ -60,7 +68,7 @@
     "commit": "1afc4672561a",
     "patch": "0001-libgomp-Fix-OpenACC-refcount-for-Fortran-allocatable.patch"
   },
-  "updated_at": "2026-03-11T20:09:43Z",
+  "updated_at": "2026-03-28T12:57:08Z",
   "validation": {
     "baseline": {
       "contains_any": [

@@ -38,6 +38,13 @@
   },
   "bugzilla": {
     "id": 96080,
+    "keywords": [
+      "openacc"
+    ],
+    "refreshed_at": "2026-03-28T12:57:32Z",
+    "resolution": "",
+    "status": "WAITING",
+    "summary": "OpenACC/Fortran runtime library routines vs. Fortran 'pointer'",
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96080"
   },
   "classification": {
@@ -60,7 +67,7 @@
     "commit": null,
     "patch": null
   },
-  "updated_at": "2026-03-11T20:09:43Z",
+  "updated_at": "2026-03-28T12:57:32Z",
   "validation": {
     "baseline": {
       "contains_any": [

@@ -38,6 +38,14 @@
   },
   "bugzilla": {
     "id": 124482,
+    "keywords": [
+      "ice-on-valid-code",
+      "testsuite-fail"
+    ],
+    "refreshed_at": "2026-03-28T12:57:19Z",
+    "resolution": "FIXED",
+    "status": "RESOLVED",
+    "summary": "[16 Regression] SEGV in resolve_cyclic_derived_type",
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124482"
   },
   "classification": {
@@ -60,7 +68,7 @@
     "commit": "d8b00bf2e1514cd132a9febaa9849ab46cd316f5",
     "patch": "0001-fortran-Fix-use-after-free-in-CLASS-component-error-.patch"
   },
-  "updated_at": "2026-03-16T22:46:23Z",
+  "updated_at": "2026-03-28T12:57:19Z",
   "validation": {
     "baseline": {
       "contains_any": [

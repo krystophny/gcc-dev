@@ -42,7 +42,7 @@
       "ice-on-valid-code",
       "openacc"
     ],
-    "refreshed_at": "2026-03-21T20:02:37Z",
+    "refreshed_at": "2026-03-28T12:56:57Z",
     "resolution": "",
     "status": "NEW",
     "summary": "[13/14/15/16 Regression][OpenACC] '!$acc ... attach(scalar)' \u2013 ICE 'unexpected pointer mapping node'",
@@ -68,7 +68,7 @@
     "commit": "0af9613810ecdc991633f58f5dd81a574aa2af31",
     "patch": "0001-fortran-Fix-scalar-OpenACC-attach-detach-lowering-PR.patch"
   },
-  "updated_at": "2026-03-21T20:02:37Z",
+  "updated_at": "2026-03-28T12:56:57Z",
   "validation": {
     "baseline": {
       "contains_any": [

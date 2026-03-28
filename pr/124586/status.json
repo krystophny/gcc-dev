@@ -37,39 +37,37 @@
     }
   },
   "bugzilla": {
-    "id": 123943,
+    "id": 124586,
     "keywords": [
-      "ice-on-valid-code",
-      "needs-bisection",
-      "needs-reduction"
+      "build"
     ],
-    "refreshed_at": "2026-03-28T12:57:13Z",
-    "resolution": "FIXED",
-    "status": "RESOLVED",
-    "summary": "[16 Regression] ice in gfc_resolve_forall, at fortran/resolve.cc:12646",
-    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123943"
+    "refreshed_at": "2026-03-28T12:57:21Z",
+    "resolution": "",
+    "status": "UNCONFIRMED",
+    "summary": "aarch64-netbsd native build misses driver-aarch64.o for host_detect_local_cpu",
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124586"
   },
   "classification": {
-    "regression": true,
-    "severity": "ice-on-valid",
+    "regression": false,
+    "severity": "other",
     "validity_class": "valid-code"
   },
-  "fix_status": "merged",
-  "github_issue": null,
+  "fix_status": "patch-ready",
+  "github_issue": 109,
   "notes": "",
-  "pr": 123943,
+  "pr": 124586,
   "submission_status": {
-    "on_bugzilla": false,
+    "on_bugzilla": true,
     "on_mailing_list": false,
     "sent": false
   },
-  "title": "DO CONCURRENT nested-in-block iterator counting ICE",
+  "title": "aarch64-netbsd native build misses driver-aarch64.o for host_detect_local_cpu",
   "trunk": {
     "branch": null,
-    "commit": "edced0fe1e28a37c75b4e2c80a2a12db93d5002c",
-    "patch": "0001-fortran-Fix-DO-CONCURRENT-nested-in-block-iterator-c.patch"
+    "commit": null,
+    "patch": "0001-aarch64-Add-aarch64-netbsd-to-host_detect_local_cpu.patch"
   },
-  "updated_at": "2026-03-28T12:57:13Z",
+  "updated_at": "2026-03-28T12:57:21Z",
   "validation": {
     "baseline": {
       "contains_any": [
@@ -84,7 +82,7 @@
       "-B",
       "gcc-build/gcc",
       "-c",
-      "pr/123943/reproducer.f90",
+      "pr/124586/reproducer.f90",
       "-o",
       "/dev/null"
     ],

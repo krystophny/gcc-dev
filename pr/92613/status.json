@@ -38,6 +38,13 @@
   },
   "bugzilla": {
     "id": 92613,
+    "keywords": [
+      "diagnostic"
+    ],
+    "refreshed_at": "2026-03-28T12:57:27Z",
+    "resolution": "FIXED",
+    "status": "RESOLVED",
+    "summary": "Bogus warning with -cpp and -fpreprocessed",
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92613"
   },
   "classification": {
@@ -60,7 +67,7 @@
     "commit": "15ffee4e129",
     "patch": "0001-fortran-Fix-bogus-warning-with-cpp-fpreprocessed-PR9.patch"
   },
-  "updated_at": "2026-03-11T20:09:43Z",
+  "updated_at": "2026-03-28T12:57:27Z",
   "validation": {
     "baseline": {
       "contains_any": [

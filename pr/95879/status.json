@@ -41,10 +41,10 @@
     "keywords": [
       "ice-on-invalid-code"
     ],
-    "refreshed_at": "2026-03-21T20:02:39Z",
+    "refreshed_at": "2026-03-28T12:57:31Z",
     "resolution": "",
     "status": "NEW",
-    "summary": "[13/14/15/16 Regression] ICE in gfc_resolve_formal_arglist, at fortran/resolve.c:313",
+    "summary": "[13/14/15 Regression] ICE in gfc_resolve_formal_arglist, at fortran/resolve.c:313",
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95879"
   },
   "classification": {
@@ -67,7 +67,7 @@
     "commit": "e2bb459d5d99d52b2b58656665fe0b9611b601be",
     "patch": "0001-fortran-Fix-use-after-free-in-gfc_fixup_sibling_symb.patch"
   },
-  "updated_at": "2026-03-22T08:28:16Z",
+  "updated_at": "2026-03-28T12:57:31Z",
   "validation": {
     "baseline": {
       "contains_any": [

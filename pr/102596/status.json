@@ -38,10 +38,18 @@
   },
   "bugzilla": {
     "id": 102596,
+    "keywords": [
+      "ice-on-valid-code",
+      "openmp"
+    ],
+    "refreshed_at": "2026-03-28T12:56:48Z",
+    "resolution": "",
+    "status": "NEW",
+    "summary": "[13/14/15/16 Regression] ICE in gfc_omp_clause_default_ctor, at fortran/trans-openmp.c:713 since r11-4883-ge929ef532ad52cde",
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102596"
   },
   "classification": {
-    "regression": false,
+    "regression": true,
     "severity": "ice-on-valid",
     "validity_class": "valid-code"
   },
@@ -60,7 +68,7 @@
     "commit": null,
     "patch": "0001-fortran-Allow-task-reduction-allocatable-scalars-wit.patch"
   },
-  "updated_at": "2026-03-16T22:28:29Z",
+  "updated_at": "2026-03-28T12:56:48Z",
   "validation": {
     "baseline": {
       "contains_any": [

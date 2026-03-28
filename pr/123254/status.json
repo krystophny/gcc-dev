@@ -38,6 +38,11 @@
   },
   "bugzilla": {
     "id": 123254,
+    "keywords": [],
+    "refreshed_at": "2026-03-28T12:57:03Z",
+    "resolution": "WORKSFORME",
+    "status": "RESOLVED",
+    "summary": "OpenACC: SIGSEGV in GOACC_parallel_keyed when using present() clause for derived type dummy argument",
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123254"
   },
   "classification": {
@@ -45,7 +50,7 @@
     "severity": "runtime-crash",
     "validity_class": "valid-code"
   },
-  "fix_status": "open",
+  "fix_status": "worksforme",
   "github_issue": null,
   "notes": "",
   "pr": 123254,
@@ -60,7 +65,7 @@
     "commit": "769041822723208bf85a91ac409b9b0bdae3fff0",
     "patch": null
   },
-  "updated_at": "2026-03-11T20:09:43Z",
+  "updated_at": "2026-03-28T12:57:03Z",
   "validation": {
     "baseline": {
       "contains_any": [

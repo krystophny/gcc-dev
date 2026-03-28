@@ -37,39 +37,35 @@
     }
   },
   "bugzilla": {
-    "id": 123943,
-    "keywords": [
-      "ice-on-valid-code",
-      "needs-bisection",
-      "needs-reduction"
-    ],
-    "refreshed_at": "2026-03-28T12:57:13Z",
-    "resolution": "FIXED",
-    "status": "RESOLVED",
-    "summary": "[16 Regression] ice in gfc_resolve_forall, at fortran/resolve.cc:12646",
-    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123943"
+    "id": 95128,
+    "keywords": [],
+    "refreshed_at": "2026-03-28T12:57:28Z",
+    "resolution": "",
+    "status": "NEW",
+    "summary": "aarch64: configure option for outline-atomics",
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95128"
   },
   "classification": {
-    "regression": true,
-    "severity": "ice-on-valid",
+    "regression": false,
+    "severity": "runtime-crash",
     "validity_class": "valid-code"
   },
-  "fix_status": "merged",
-  "github_issue": null,
+  "fix_status": "patch-ready",
+  "github_issue": 106,
   "notes": "",
-  "pr": 123943,
+  "pr": 95128,
   "submission_status": {
     "on_bugzilla": false,
     "on_mailing_list": false,
     "sent": false
   },
-  "title": "DO CONCURRENT nested-in-block iterator counting ICE",
+  "title": "aarch64: configure option for outline-atomics",
   "trunk": {
     "branch": null,
-    "commit": "edced0fe1e28a37c75b4e2c80a2a12db93d5002c",
-    "patch": "0001-fortran-Fix-DO-CONCURRENT-nested-in-block-iterator-c.patch"
+    "commit": null,
+    "patch": "0001-aarch64-Disable-outline-atomics-by-default-on-NetBSD.patch"
   },
-  "updated_at": "2026-03-28T12:57:13Z",
+  "updated_at": "2026-03-28T12:57:28Z",
   "validation": {
     "baseline": {
       "contains_any": [
@@ -84,7 +80,7 @@
       "-B",
       "gcc-build/gcc",
       "-c",
-      "pr/123943/reproducer.f90",
+      "pr/95128/reproducer.f90",
       "-o",
       "/dev/null"
     ],

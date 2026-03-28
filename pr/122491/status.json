@@ -38,6 +38,14 @@
   },
   "bugzilla": {
     "id": 122491,
+    "keywords": [
+      "ice-on-invalid-code",
+      "needs-bisection"
+    ],
+    "refreshed_at": "2026-03-28T12:57:01Z",
+    "resolution": "FIXED",
+    "status": "RESOLVED",
+    "summary": "[16 Regression] asan instrumented gcc: heap-use-after-free in fortran/parse.cc:1861 while running gfortran.dg/pr103508.f90",
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=122491"
   },
   "classification": {
@@ -60,7 +68,7 @@
     "commit": "ff2f6c5153e",
     "patch": "0001-fortran-Avoid-UAF-on-missing-END-BLOCK-cleanup-PR122.patch"
   },
-  "updated_at": "2026-03-11T20:11:32Z",
+  "updated_at": "2026-03-28T12:57:01Z",
   "validation": {
     "kind": "special-env",
     "reason": "requires sanitizer-instrumented branch compiler to observe the UAF"

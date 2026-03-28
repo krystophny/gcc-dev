@@ -363,6 +363,9 @@ def parse_github_issue(readme: str) -> Optional[int]:
 
 def parse_trunk_commit(readme: str) -> Optional[str]:
     patterns = [
+        r"Upstream GCC commit:\s*`([0-9a-f]{7,40})`",
+        r"Upstream commit:\s*`([0-9a-f]{7,40})`",
+        r"Commit:\s*`([0-9a-f]{7,40})`",
         r"GCC commit:\s*`([0-9a-f]{7,40})`",
         r"commit `([0-9a-f]{7,40})`",
         r"commit ([0-9a-f]{7,40})",
@@ -413,6 +416,10 @@ def parse_fix_status(status_line: str, pr_dir: Path) -> str:
         return "worksforme"
     if "PATCH READY" in upper:
         return "patch-ready"
+    if ("ON BUGZILLA" in upper or "ON MAILING LIST" in upper) and list(
+        pr_dir.glob("0001-*.patch")
+    ):
+        return "patch-ready"
     if "PENDING" in upper and list(pr_dir.glob("0001-*.patch")):
         return "patch-ready"
     if status_line:
@@ -428,6 +435,19 @@ def parse_submission_status(status_line: str) -> Dict[str, bool]:
         "on_bugzilla": "bugzilla" in lower and "awaiting" not in lower,
         "on_mailing_list": "mailing-list" in lower or "mailing list" in lower,
         "sent": False,
+    }
+
+
+def merge_submission_status(
+    inferred: Dict[str, bool], existing: Optional[Dict[str, Any]]
+) -> Dict[str, bool]:
+    existing = existing or {}
+    return {
+        "on_bugzilla": bool(inferred.get("on_bugzilla") or existing.get("on_bugzilla")),
+        "on_mailing_list": bool(
+            inferred.get("on_mailing_list") or existing.get("on_mailing_list")
+        ),
+        "sent": bool(inferred.get("sent") or existing.get("sent")),
     }
 
 
@@ -559,50 +579,67 @@ def ensure_branch_matrix(existing: Optional[Dict[str, Any]]) -> Dict[str, Any]:
 
 
 def build_status(pr_dir: Path, refresh_bugzilla: bool, existing: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    existing = existing or {}
     pr = int(pr_dir.name)
     readme = read_text(pr_dir / "README.md")
     status_line = parse_status_line(readme)
-    bugzilla_info = existing.get("bugzilla", {}) if existing else {}
+    bugzilla = parse_bugzilla(readme, pr)
+    bugzilla_info = existing.get("bugzilla", {})
     if refresh_bugzilla:
         try:
-            bugzilla_info = bugzilla_lookup(pr)
+            bugzilla_info = bugzilla_lookup(bugzilla)
         except Exception as exc:  # pragma: no cover - network-dependent
             bugzilla_info = {**bugzilla_info, "lookup_error": str(exc)}
-    bugzilla = parse_bugzilla(readme, pr)
     patch_files = sorted(p.name for p in pr_dir.glob("0001-*.patch"))
-    existing_patch = existing.get("trunk", {}).get("patch") if existing else None
-    trunk_commit = parse_trunk_commit(readme)
+    existing_trunk = existing.get("trunk", {})
+    existing_classification = existing.get("classification", {})
+    trunk_commit = parse_trunk_commit(readme) or existing_trunk.get("commit")
+    trunk_branch = parse_branch_name(readme) or existing_trunk.get("branch")
+    existing_patch = existing_trunk.get("patch")
     fix_status = parse_fix_status(status_line, pr_dir)
-    severity = infer_severity(pr, readme)
+    if bugzilla_info.get("status") == "RESOLVED":
+        if bugzilla_info.get("resolution") == "WORKSFORME":
+            fix_status = "worksforme"
+        elif bugzilla_info.get("resolution") == "FIXED":
+            fix_status = "merged"
+    elif existing.get("fix_status") == "patch-ready" and fix_status == "open":
+        fix_status = "patch-ready"
+    elif existing.get("fix_status") == "merged" and fix_status == "open":
+        fix_status = "merged"
+    severity = existing_classification.get("severity") or infer_severity(pr, readme)
+    validation = existing.get("validation") or default_validation(pr, pr_dir)
     metadata = {
         "pr": pr,
-        "title": parse_title(readme, pr_dir.name),
+        "title": existing.get("title") or parse_title(readme, pr_dir.name),
         "bugzilla": {
             "id": bugzilla,
             "url": f"https://gcc.gnu.org/bugzilla/show_bug.cgi?id={bugzilla}",
             **bugzilla_info,
         },
-        "github_issue": parse_github_issue(readme),
+        "github_issue": parse_github_issue(readme) or existing.get("github_issue"),
         "fix_status": fix_status,
-        "submission_status": parse_submission_status(status_line),
+        "submission_status": merge_submission_status(
+            parse_submission_status(status_line), existing.get("submission_status")
+        ),
         "trunk": {
-            "branch": parse_branch_name(readme),
+            "branch": trunk_branch,
             "commit": trunk_commit,
             "patch": parse_patch_name(readme, patch_files, existing_patch),
         },
         "classification": {
             "regression": infer_regression(pr, readme, status_line, bugzilla_info),
             "severity": severity,
-            "validity_class": infer_validity_class(pr, severity),
+            "validity_class": existing_classification.get("validity_class")
+            or infer_validity_class(pr, severity),
         },
-        "validation": default_validation(pr, pr_dir),
+        "validation": validation,
         "artifacts": {
             "maintainer_summary": "submission/maintainer-summary.md",
             "bugzilla_comment": "submission/bugzilla-comment.txt",
             "mailing_list_cover": "submission/mailing-list-cover.txt",
         },
-        "backports": ensure_branch_matrix(existing.get("backports") if existing else None),
-        "notes": existing.get("notes", "") if existing else "",
+        "backports": ensure_branch_matrix(existing.get("backports")),
+        "notes": existing.get("notes", ""),
         "updated_at": timestamp(),
     }
     return metadata
@@ -610,6 +647,10 @@ def build_status(pr_dir: Path, refresh_bugzilla: bool, existing: Optional[Dict[s
 
 def sync_metadata(paths: List[Path], refresh_bugzilla: bool) -> None:
     for pr_dir in paths:
+        readme = read_text(pr_dir / "README.md")
+        if not parse_first_match(r"show_bug\.cgi\?id=(\d+)", readme):
+            print(f"skipped {pr_dir.relative_to(ROOT)} (no Bugzilla URL)")
+            continue
         existing = {}
         status_path = pr_dir / "status.json"
         if status_path.exists():

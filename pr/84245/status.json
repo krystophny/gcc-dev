@@ -42,9 +42,9 @@
       "error-recovery",
       "ice-on-invalid-code"
     ],
-    "refreshed_at": "2026-03-21T20:38:13Z",
-    "resolution": "",
-    "status": "NEW",
+    "refreshed_at": "2026-03-28T12:57:24Z",
+    "resolution": "FIXED",
+    "status": "RESOLVED",
     "summary": "[13/14/15/16 Regression] ICE in delete_root, at fortran/bbt.c:150",
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=84245"
   },
@@ -53,7 +53,7 @@
     "severity": "ice-on-invalid",
     "validity_class": "invalid-code"
   },
-  "fix_status": "patch-ready",
+  "fix_status": "merged",
   "github_issue": 57,
   "notes": "Direct reproducer no longer ICEs on clean trunk; invalid source still exits nonzero with frontend diagnostics only. Targeted testcase and repeated full check-gfortran reruns on pr84245-fix passed locally with 0 FAIL / XPASS.",
   "pr": 84245,
@@ -64,11 +64,11 @@
   },
   "title": "ICE in `delete_root` during invalid `SELECT TYPE`",
   "trunk": {
-    "branch": "pr84245-fix",
-    "commit": "e0115b2d28e1a030c6158f2c57a2ebfd62507d1b",
+    "branch": null,
+    "commit": "486169386603627f0cf2a5f12ea4f73a20d6df20",
     "patch": "0001-fortran-Avoid-rollback-ICE-after-invalid-SELECT-TYPE.patch"
   },
-  "updated_at": "2026-03-22T08:28:16Z",
+  "updated_at": "2026-03-28T12:57:24Z",
   "validation": {
     "baseline": {
       "contains_any": [

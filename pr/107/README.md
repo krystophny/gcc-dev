@@ -3,7 +3,7 @@
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124574
 - **Historical related PR:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=33796
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/107
-- **Status:** ON BUGZILLA (patch attached as attachment 63971; full local GCC regression comparison shows no patch-attributable failures)
+- **Status:** LOCAL FOLLOW-UP (no GCC Bugzilla PR; patch exists locally, validation complete)
 
 ## Summary
 

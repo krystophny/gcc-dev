@@ -38,6 +38,11 @@
   },
   "bugzilla": {
     "id": 123868,
+    "keywords": [],
+    "refreshed_at": "2026-03-28T12:57:10Z",
+    "resolution": "FIXED",
+    "status": "RESOLVED",
+    "summary": "[16-regession] Memory leak on assignment",
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123868"
   },
   "classification": {
@@ -60,7 +65,7 @@
     "commit": "ca448bc5e435",
     "patch": "0001-fortran-Fix-memory-leak-on-assignment-with-nested-al.patch"
   },
-  "updated_at": "2026-03-11T20:11:36Z",
+  "updated_at": "2026-03-28T12:57:10Z",
   "validation": {
     "kind": "special-env",
     "reason": "requires Valgrind or equivalent leak checking to validate the regression"

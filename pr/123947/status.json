@@ -38,6 +38,14 @@
   },
   "bugzilla": {
     "id": 123947,
+    "keywords": [
+      "ice-checking",
+      "ice-on-invalid-code"
+    ],
+    "refreshed_at": "2026-03-28T12:57:15Z",
+    "resolution": "FIXED",
+    "status": "RESOLVED",
+    "summary": "[16 regression] crash in gfc_build_addr_expr at trans.cc:350",
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123947"
   },
   "classification": {
@@ -60,7 +68,7 @@
     "commit": "841b68e48c4",
     "patch": "0001-fortran-Fix-recursive-deep-copy-helper-generation-PR.patch"
   },
-  "updated_at": "2026-03-11T20:11:40Z",
+  "updated_at": "2026-03-28T12:57:15Z",
   "validation": {
     "baseline": {
       "contains_any": [

@@ -37,39 +37,37 @@
     }
   },
   "bugzilla": {
-    "id": 123943,
+    "id": 84779,
     "keywords": [
-      "ice-on-valid-code",
-      "needs-bisection",
-      "needs-reduction"
+      "ice-on-valid-code"
     ],
-    "refreshed_at": "2026-03-28T12:57:13Z",
-    "resolution": "FIXED",
-    "status": "RESOLVED",
-    "summary": "[16 Regression] ice in gfc_resolve_forall, at fortran/resolve.cc:12646",
-    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123943"
+    "refreshed_at": "2026-03-28T12:57:25Z",
+    "resolution": "",
+    "status": "NEW",
+    "summary": "[13/14/15/16 Regression] Compiling gfortran.fortran-torture/execute/entry_4.f90 with -O1 or -Os and -fdefault-integer-8 gives an ICE",
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=84779"
   },
   "classification": {
     "regression": true,
     "severity": "ice-on-valid",
     "validity_class": "valid-code"
   },
-  "fix_status": "merged",
-  "github_issue": null,
+  "fix_status": "open",
+  "github_issue": 103,
   "notes": "",
-  "pr": 123943,
+  "pr": 84779,
   "submission_status": {
     "on_bugzilla": false,
     "on_mailing_list": false,
     "sent": false
   },
-  "title": "DO CONCURRENT nested-in-block iterator counting ICE",
+  "title": "ICE compiling entry_4.f90 with -O1 and -fdefault-integer-8",
   "trunk": {
     "branch": null,
-    "commit": "edced0fe1e28a37c75b4e2c80a2a12db93d5002c",
-    "patch": "0001-fortran-Fix-DO-CONCURRENT-nested-in-block-iterator-c.patch"
+    "commit": "694613a7f9ad",
+    "patch": null
   },
-  "updated_at": "2026-03-28T12:57:13Z",
+  "updated_at": "2026-03-28T12:57:25Z",
   "validation": {
     "baseline": {
       "contains_any": [
@@ -84,7 +82,7 @@
       "-B",
       "gcc-build/gcc",
       "-c",
-      "pr/123943/reproducer.f90",
+      "pr/84779/reproducer.f90",
       "-o",
       "/dev/null"
     ],

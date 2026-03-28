@@ -38,10 +38,17 @@
   },
   "bugzilla": {
     "id": 102459,
+    "keywords": [
+      "openmp"
+    ],
+    "refreshed_at": "2026-03-28T12:56:47Z",
+    "resolution": "",
+    "status": "NEW",
+    "summary": "[13/14/15/16 Regression] ICE in gfc_conv_scalarized_array_ref, at fortran/trans-array.c:3549 since r12-1108-g9a5de4d5af1c10a8",
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102459"
   },
   "classification": {
-    "regression": false,
+    "regression": true,
     "severity": "ice-on-valid",
     "validity_class": "valid-code"
   },
@@ -60,7 +67,7 @@
     "commit": null,
     "patch": "0001-fortran-Fix-OpenMP-iterator-depend-lowering-for-comp.patch"
   },
-  "updated_at": "2026-03-16T22:28:29Z",
+  "updated_at": "2026-03-28T12:56:47Z",
   "validation": {
     "baseline": {
       "contains_any": [

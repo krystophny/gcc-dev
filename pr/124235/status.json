@@ -38,6 +38,13 @@
   },
   "bugzilla": {
     "id": 124235,
+    "keywords": [
+      "ice-on-valid-code"
+    ],
+    "refreshed_at": "2026-03-28T12:57:18Z",
+    "resolution": "FIXED",
+    "status": "RESOLVED",
+    "summary": "[16 Regression] ICE in ALLOCATE of sub-objects",
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124235"
   },
   "classification": {
@@ -60,7 +67,7 @@
     "commit": "e0b70284cfa",
     "patch": "0001-fortran-Fix-ICE-in-ALLOCATE-of-sub-objects-with-recu.patch"
   },
-  "updated_at": "2026-03-11T20:11:54Z",
+  "updated_at": "2026-03-28T12:57:18Z",
   "validation": {
     "baseline": {
       "contains_any": [

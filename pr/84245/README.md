@@ -2,7 +2,7 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=84245
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/57
-- **Status:** ON BUGZILLA (attachment 63998; full trunk validation complete)
+- **Status:** MERGED upstream (`48616938660`; Bugzilla RESOLVED FIXED)
 
 ## Summary
 
@@ -27,8 +27,9 @@ Expected result after the fix:
 
 ## Patch
 
-- GCC branch: `pr84245-fix`
-- GCC commit: `e0115b2d28e1a030c6158f2c57a2ebfd62507d1b`
+- Upstream GCC commit: `486169386603627f0cf2a5f12ea4f73a20d6df20`
+- Local branch: `pr84245-fix`
+- Local validation commit: `e0115b2d28e1a030c6158f2c57a2ebfd62507d1b`
 - Exported patch: `0001-fortran-Avoid-rollback-ICE-after-invalid-SELECT-TYPE.patch`
 
 ## Fix approach
@@ -48,4 +49,4 @@ Expected result after the fix:
 
 - This is in the same general parser/error-recovery family as PR106946 and
   PR82721, but the failing path is in `gfc_match_select_type`.
-- Bugzilla already has a candidate patch with the same basic control-flow fix.
+- Bugzilla is now `RESOLVED FIXED`.

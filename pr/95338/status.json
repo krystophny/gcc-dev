@@ -38,10 +38,17 @@
   },
   "bugzilla": {
     "id": 95338,
+    "keywords": [
+      "ice-on-valid-code"
+    ],
+    "refreshed_at": "2026-03-28T12:57:30Z",
+    "resolution": "",
+    "status": "NEW",
+    "summary": "[13/14/15/16 Regression] ICE non-trivial conversion in component_ref",
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95338"
   },
   "classification": {
-    "regression": false,
+    "regression": true,
     "severity": "ice-on-valid",
     "validity_class": "valid-code"
   },
@@ -60,7 +67,7 @@
     "commit": null,
     "patch": "0001-fortran-Fix-mixed-ENTRY-union-ABI-under-ff2c-PR95338.patch"
   },
-  "updated_at": "2026-03-16T22:28:29Z",
+  "updated_at": "2026-03-28T12:57:30Z",
   "validation": {
     "baseline": {
       "contains_any": [

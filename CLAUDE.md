@@ -26,6 +26,20 @@ git -C gcc log upstream/master..origin/master --oneline  # patches on fork
 git -C gcc format-patch -1 HEAD -o ../pr/<number>/       # export patch
 ```
 
+## Git Workflow Note
+
+Once you are comfortable with Git, a lot of GCC maintenance becomes much
+easier to do directly and safely with it.  Prefer standard Git workflows
+plus the existing `git gcc-*` helpers over ad-hoc manual bookkeeping:
+
+- use branches, explicit ref updates, and worktrees to keep local fix work
+  isolated from fork synchronization
+- use `git gcc-verify` before pushing patch branches
+- use `git gcc-commit-mklog`, `git gcc-mklog`, and related helpers instead of
+  hand-rolling GCC ChangeLog text or commit metadata
+- use `git gcc-descr` / `git gcc-undescr` when you need GCC revision-style
+  identifiers
+
 ## Installed Compilers
 
 ### Offload Build (gcc-offload-build/install)

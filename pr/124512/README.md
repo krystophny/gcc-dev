@@ -2,7 +2,7 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124512
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/104
-- **Status:** ON BUGZILLA (attachment 63985; full local validation complete)
+- **Status:** MERGED upstream (`f57bcde8598`; Bugzilla RESOLVED FIXED)
 
 ## Summary
 
@@ -71,9 +71,11 @@ forced on but do not yield a working coarray backend.
 
 ## Fix
 
-Branch `pr124512-fix` on `origin/` (krystophny/gcc fork).
+Merged upstream in GCC as:
 
-- Commit: `8e442e57d3a3476fa3c4c5936ad588d74b6b6959`
+- Upstream commit: `f57bcde85984d2751f7bc5fd8e3de11f5dc1255`
+- Local validation branch: `pr124512-fix`
+- Local validation commit: `8e442e57d3a3476fa3c4c5936ad588d74b6b6959`
 - Patch: `0001-libgfortran-Disable-caf_shmem-without-usable-process.patch`
 
 ### Approach: compile-only usability probe
