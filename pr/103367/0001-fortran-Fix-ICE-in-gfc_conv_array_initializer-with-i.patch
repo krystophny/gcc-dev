@@ -1,0 +1,75 @@
+From 3f7a5c8d4ad0865465975a17c15c75c613e2764c Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Sun, 29 Mar 2026 22:18:43 +0200
+Subject: [PATCH] fortran: Fix ICE in gfc_conv_array_initializer with invalid
+ index [PR103367]
+
+An undefined variable used as an array index in a parameter initializer
+expression reaches gfc_conv_array_initializer after parameter substitution
+with an unexpected expression type, hitting gcc_unreachable().
+
+Guard against unexpected expression types by returning a zero-filled
+constructor, since the frontend has already diagnosed the error.
+
+	PR fortran/103367
+
+gcc/fortran/ChangeLog:
+
+	* trans-array.cc (gfc_conv_array_initializer): Return empty
+	constructor for unexpected expression types after parameter
+	substitution.
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/pr103367.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/trans-array.cc             |  9 +++++++++
+ gcc/testsuite/gfortran.dg/pr103367.f90 | 14 ++++++++++++++
+ 2 files changed, 23 insertions(+)
+ create mode 100644 gcc/testsuite/gfortran.dg/pr103367.f90
+
+diff --git a/gcc/fortran/trans-array.cc b/gcc/fortran/trans-array.cc
+index a2da4fe7c7d..8d41804f5f5 100644
+--- a/gcc/fortran/trans-array.cc
++++ b/gcc/fortran/trans-array.cc
+@@ -7075,6 +7075,15 @@ gfc_conv_array_initializer (tree type, gfc_expr * expr)
+       && expr->symtree->n.sym->value)
+     expr = expr->symtree->n.sym->value;
+ 
++  /* After parameter substitution the expression should be a constant, array
++     constructor, structure constructor, or NULL.  Anything else means the
++     frontend already diagnosed an error; return a zero-filled array.  */
++  if (expr->expr_type != EXPR_CONSTANT
++      && expr->expr_type != EXPR_STRUCTURE
++      && expr->expr_type != EXPR_ARRAY
++      && expr->expr_type != EXPR_NULL)
++    return build_constructor (type, NULL);
++
+   switch (expr->expr_type)
+     {
+     case EXPR_CONSTANT:
+diff --git a/gcc/testsuite/gfortran.dg/pr103367.f90 b/gcc/testsuite/gfortran.dg/pr103367.f90
+new file mode 100644
+index 00000000000..c4c860c65ff
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr103367.f90
+@@ -0,0 +1,14 @@
++! { dg-do compile }
++!
++! PR fortran/103367
++! An undefined variable in a parameter array initializer reached
++! gfc_conv_array_initializer and hit gcc_unreachable().
++
++program p
++  type t
++    integer :: a(1,2) = 3
++  end type
++  type(t), parameter :: x(1) = t(4)
++  integer :: y(1,2) = (x(b)%a)  ! { dg-warning "Legacy Extension" }
++  print *, y
++end
+-- 
+2.53.0
+
