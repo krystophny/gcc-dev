@@ -2,7 +2,7 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124661
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/112
-- **Status:** ON BUGZILLA (attachment 64069)
+- **Status:** ON BUGZILLA (attachment 64069) -- Mikael (assignee) posted alternative fix (attachment 64071), actively working on it
 
 ## Summary
 

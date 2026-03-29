@@ -2,7 +2,7 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124666
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/113
-- **Status:** PENDING (patch on fork; not yet posted to Bugzilla)
+- **Status:** MERGED upstream r16-8321-g0ac324783dfb76 (fixed by Jerry DeLisle)
 
 ## Summary
 
