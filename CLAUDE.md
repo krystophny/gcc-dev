@@ -774,7 +774,7 @@ SSH agent forwarding (`-A`) is used throughout for GitHub fork access.
 - Updating Bugzilla (posting comments, attaching files)
 - Any external communication
 
-**NEVER use git send-email, gcc-send-patch.sh, or gcc-bugzilla.sh attach
+**NEVER use git send-email, gcc-send-patch.sh, or gcc-bugzilla.sh attach/comment/reply
 without the user explicitly requesting it - this is a HARD RULE.**
 
 Permitted without approval:
@@ -782,7 +782,7 @@ Permitted without approval:
 - Push to origin (krystophny/gcc fork)
 - Create PRs in the fork
 - Export patches with `git format-patch`
-- Query Bugzilla for bug info (`gcc-bugzilla.sh info <number>`)
+- Read-only Bugzilla queries: `info`, `comments`, `attachments`, `download`, `search`, `regressions`
 
 ### Tooling
 
@@ -807,24 +807,55 @@ python3 scripts/gcc-workflow.py branch-check --branches gcc-15,gcc-14,gcc-13
 
 **Bugzilla CLI** (`python-bugzilla`):
 ```bash
-# Query bug info (always permitted)
+# --- Read-only (always permitted) ---
+
+# Query bug info
 scripts/gcc-bugzilla.sh info <pr-number>
 
-# Search open fortran bugs by summary text (always permitted)
+# Show all comments on a bug
+scripts/gcc-bugzilla.sh comments <pr-number>
+
+# List all attachments on a bug
+scripts/gcc-bugzilla.sh attachments <pr-number>
+
+# Download all non-obsolete patch attachments
+scripts/gcc-bugzilla.sh download <pr-number>              # default: pr/<n>/upstream-patches/
+scripts/gcc-bugzilla.sh download <pr-number> /tmp/patches  # custom output dir
+
+# Search open fortran bugs by summary text
 scripts/gcc-bugzilla.sh search "ICE in fold_convert"
 
-# List all open fortran regressions (always permitted)
+# List all open fortran regressions
 scripts/gcc-bugzilla.sh regressions
-
-# Attach a patch (REQUIRES explicit user permission)
-scripts/gcc-bugzilla.sh attach <pr-number> <file>
 
 # Login (one-time, saves token in ~/.bugzillarc)
 scripts/gcc-bugzilla.sh login
 
-# Submit the generated packet (REQUIRES explicit user permission)
+# --- Write operations (REQUIRE explicit user permission) ---
+
+# Post a plain comment
+scripts/gcc-bugzilla.sh comment <pr-number> "<text>"
+
+# Quote-reply to a specific comment (Bugzilla "> " quoting style)
+scripts/gcc-bugzilla.sh reply <pr-number> <comment-number> "<text>"
+
+# Attach a patch (optionally obsolete previous attachments)
+scripts/gcc-bugzilla.sh attach <pr-number> <file> [description] [comment]
+scripts/gcc-bugzilla.sh attach --obsolete <att-id> <pr-number> <file> [description]
+
+# Add CC entries to a bug
+scripts/gcc-bugzilla.sh ensure-cc <pr-number> [email[,email...]]
+
+# Submit the generated workflow packet
 scripts/gcc-bugzilla.sh submit <pr-number> [--branch trunk|gcc-15|gcc-14|gcc-13] [--execute]
 ```
+
+Write operations have an interactive `[y/N]` confirmation prompt.  Set
+`GCC_BUGZILLA_ASSUME_YES=y` to skip the prompt in scripted use.
+
+When replying to Bugzilla comments, always use `reply` instead of `comment`
+to produce proper quote-reply formatting.  This matches the convention used
+by other GCC contributors (e.g., Mikael Morin) and keeps the thread readable.
 
 **Mailing list** (`git send-email`, configured in gcc/):
 ```bash
