@@ -9,6 +9,7 @@
 #   gcc-bugzilla.sh search <term>                             # Search fortran bugs
 #   gcc-bugzilla.sh regressions                               # List open fortran regressions
 #   gcc-bugzilla.sh comment <pr-number> <text>                  # Post a comment
+#   gcc-bugzilla.sh reply <pr-number> <comment-number> <text>   # Quote-reply to a comment
 #   gcc-bugzilla.sh attach [--obsolete <id[,id...]>] <pr-number> <file> [desc] [comment]
 #                                                             # Attach with optional comment and supersede older attachments
 #   gcc-bugzilla.sh login                                     # Login to GCC Bugzilla
@@ -33,6 +34,7 @@ usage() {
     echo "  search <term>                             Search open fortran bugs by summary text"
     echo "  regressions                               List all open fortran regressions"
     echo "  comment <pr-number> <text>                  Post a comment on a bug"
+    echo "  reply <pr-number> <comment#> <text>         Quote-reply to a specific comment"
     echo "  attach [--obsolete <id[,id...]>] <pr-number> <file> [desc] [comment]"
     echo "                                              Attach a file (requires login)"
     echo "  ensure-cc <pr-number> [email[,email...]]   Add CC entries to a bug"
@@ -47,6 +49,7 @@ usage() {
     echo "  $0 attach 123280 pr/123280/0001-fix.patch 'Proposed patch' 'Fixes the ICE by...'"
     echo "  $0 attach --obsolete 64064 102333 pr/102333/0002-fix.patch 'v2 patch'"
     echo "  $0 comment 124512 'Reproduced on cfarm428...'"
+    echo "  $0 reply 124661 7 'Your approach with find_tree is cleaner.'"
     echo "  $0 ensure-cc 108382"
     echo "  $0 comments 123280"
     echo "  $0 attachments 123280"
@@ -214,6 +217,60 @@ PYEOF
     echo "Done."
 }
 
+cmd_reply() {
+    local pr="$1"
+    local comment_num="$2"
+    local text="$3"
+    local auto_cc="$AUTO_CC_DEFAULT"
+
+    # Build the full reply text: quote header + quoted comment + reply
+    local full_text
+    full_text=$(python3 - "$pr" "$comment_num" "$text" <<'PYEOF'
+import sys, bugzilla
+pr, cnum, reply = sys.argv[1], int(sys.argv[2]), sys.argv[3]
+bz = bugzilla.Bugzilla("https://gcc.gnu.org/bugzilla/xmlrpc.cgi")
+bug = bz.getbug(int(pr))
+comments = bug.getcomments()
+if cnum < 0 or cnum >= len(comments):
+    print(f"Error: comment #{cnum} does not exist (bug has {len(comments)} comments)", file=sys.stderr)
+    sys.exit(1)
+c = comments[cnum]
+author = c.get("creator", c.get("author", "unknown"))
+body = c.get("text", "")
+quoted = "\n".join(f"> {line}" for line in body.splitlines())
+header = f"(In reply to {author} from comment #{cnum})"
+print(f"{header}\n{quoted}\n\n{reply}")
+PYEOF
+    ) || exit 1
+
+    echo "Posting quote-reply on bug $pr (quoting comment #$comment_num)..."
+    echo ""
+    echo "  Bug:     https://gcc.gnu.org/bugzilla/show_bug.cgi?id=$pr"
+    echo ""
+    echo "--- Comment text ---"
+    echo "$full_text"
+    echo "--- End ---"
+    echo ""
+    local confirm="${GCC_BUGZILLA_ASSUME_YES:-}"
+    if [[ -z "$confirm" ]]; then
+        read -rp "Proceed? [y/N] " confirm
+    fi
+    if [[ "$confirm" != "1" && "$confirm" != "y" && "$confirm" != "Y" ]]; then
+        echo "Aborted."
+        exit 0
+    fi
+
+    python3 - "$pr" "$full_text" "$auto_cc" <<'PYEOF'
+import sys, bugzilla
+pr, text, auto_cc = sys.argv[1], sys.argv[2], sys.argv[3]
+bz = bugzilla.Bugzilla("https://gcc.gnu.org/bugzilla/xmlrpc.cgi")
+bz.update_bugs(int(pr), bz.build_update(comment=text, cc_add=[email for email in auto_cc.split(",") if email]))
+print(f"Comment posted on bug {pr}")
+print(f"https://gcc.gnu.org/bugzilla/show_bug.cgi?id={pr}")
+PYEOF
+    echo "Done."
+}
+
 cmd_attach() {
     local obsolete_ids=""
 
@@ -337,6 +394,10 @@ case "$1" in
     comment)
         [[ $# -lt 3 ]] && { echo "Error: missing PR number or comment text"; usage; }
         cmd_comment "$2" "$3"
+        ;;
+    reply)
+        [[ $# -lt 4 ]] && { echo "Error: missing PR number, comment number, or reply text"; usage; }
+        cmd_reply "$2" "$3" "$4"
         ;;
     attach)
         if [[ "${2:-}" == "--obsolete" ]]; then
