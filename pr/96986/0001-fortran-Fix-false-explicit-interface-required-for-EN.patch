@@ -1,0 +1,104 @@
+From a6b8866a0ef41fa2b5a63fa82d39f036dc5fa91d Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Sun, 29 Mar 2026 21:52:37 +0200
+Subject: [PATCH] fortran: Fix false explicit-interface-required for ENTRY with
+ volatile [PR96986]
+
+When resolving a call to an ENTRY procedure, the entry lookup that
+replaces the master procedure's def_sym with the specific entry symbol
+was inside the 'resolved != -1' block.  During recursive resolution the
+namespace is marked resolved == -1, so the lookup was skipped and the
+explicit interface check used the master procedure's combined formal
+argument list instead of the entry's own formals.
+
+Move the entry lookup after the resolution block so it runs regardless
+of the namespace resolution state.
+
+	PR fortran/96986
+
+gcc/fortran/ChangeLog:
+
+	* resolve.cc (resolve_global_procedure): Move entry symbol
+	lookup outside the resolved != -1 block.
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/pr96986.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/resolve.cc                | 25 +++++++++++++++----------
+ gcc/testsuite/gfortran.dg/pr96986.f90 | 24 ++++++++++++++++++++++++
+ 2 files changed, 39 insertions(+), 10 deletions(-)
+ create mode 100644 gcc/testsuite/gfortran.dg/pr96986.f90
+
+diff --git a/gcc/fortran/resolve.cc b/gcc/fortran/resolve.cc
+index 767bbdea114..3212c748110 100644
+--- a/gcc/fortran/resolve.cc
++++ b/gcc/fortran/resolve.cc
+@@ -2762,17 +2762,22 @@ resolve_global_procedure (gfc_symbol *sym, locus *where, int sub)
+ 	  /* This can happen if a binding name has been specified.  */
+ 	  if (gsym->binding_label && gsym->sym_name != def_sym->name)
+ 	    gfc_find_symbol (gsym->sym_name, gsym->ns, 0, &def_sym);
++	}
+ 
+-	  if (def_sym->attr.entry_master || def_sym->attr.entry)
+-	    {
+-	      gfc_entry_list *entry;
+-	      for (entry = gsym->ns->entries; entry; entry = entry->next)
+-		if (strcmp (entry->sym->name, sym->name) == 0)
+-		  {
+-		    def_sym = entry->sym;
+-		    break;
+-		  }
+-	    }
++      /* Look up the specific entry symbol so that interface checks use
++	 the entry's own formal argument list, not the entry master's.
++	 This must run even when resolved == -1 (recursive resolution in
++	 progress), because def_sym starts as the namespace proc_name
++	 which is the entry master with the combined formals.  */
++      if (def_sym->attr.entry_master || def_sym->attr.entry)
++	{
++	  gfc_entry_list *entry;
++	  for (entry = gsym->ns->entries; entry; entry = entry->next)
++	    if (strcmp (entry->sym->name, sym->name) == 0)
++	      {
++		def_sym = entry->sym;
++		break;
++	      }
+ 	}
+ 
+       if (sym->attr.function && !gfc_compare_types (&sym->ts, &def_sym->ts))
+diff --git a/gcc/testsuite/gfortran.dg/pr96986.f90 b/gcc/testsuite/gfortran.dg/pr96986.f90
+new file mode 100644
+index 00000000000..33bc437d548
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr96986.f90
+@@ -0,0 +1,24 @@
++! { dg-do compile }
++! { dg-options "-std=legacy" }
++!
++! PR fortran/96986
++! Calling an ENTRY with no volatile arguments incorrectly required an
++! explicit interface because the volatile attribute from a sibling ENTRY
++! was checked against the master procedure's combined formal list.
++
++subroutine volatile_test ()
++  implicit none
++  integer, volatile :: va
++
++  entry fun_a()
++  return
++
++  entry fun_b(va)
++  return
++end subroutine volatile_test
++
++subroutine fun_c ()
++  implicit none
++  call fun_a()  ! Must not require explicit interface
++  return
++end subroutine fun_c
+-- 
+2.53.0
+
