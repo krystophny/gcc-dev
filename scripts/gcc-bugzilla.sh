@@ -3,6 +3,9 @@
 #
 # Usage:
 #   gcc-bugzilla.sh info <pr-number>                          # Show bug info
+#   gcc-bugzilla.sh comments <pr-number>                      # Show all comments
+#   gcc-bugzilla.sh attachments <pr-number>                   # List attachments
+#   gcc-bugzilla.sh download <pr-number> [outdir]             # Download all patches
 #   gcc-bugzilla.sh search <term>                             # Search fortran bugs
 #   gcc-bugzilla.sh regressions                               # List open fortran regressions
 #   gcc-bugzilla.sh comment <pr-number> <text>                  # Post a comment
@@ -24,6 +27,9 @@ usage() {
     echo ""
     echo "Commands:"
     echo "  info <pr-number>                          Show bug status, summary, and details"
+    echo "  comments <pr-number>                      Show all comments on a bug"
+    echo "  attachments <pr-number>                   List all attachments on a bug"
+    echo "  download <pr-number> [outdir]             Download all patch attachments"
     echo "  search <term>                             Search open fortran bugs by summary text"
     echo "  regressions                               List all open fortran regressions"
     echo "  comment <pr-number> <text>                  Post a comment on a bug"
@@ -42,6 +48,9 @@ usage() {
     echo "  $0 attach --obsolete 64064 102333 pr/102333/0002-fix.patch 'v2 patch'"
     echo "  $0 comment 124512 'Reproduced on cfarm428...'"
     echo "  $0 ensure-cc 108382"
+    echo "  $0 comments 123280"
+    echo "  $0 attachments 123280"
+    echo "  $0 download 123280 pr/123280/upstream-patches"
     echo "  $0 submit 120723 gcc-15 --execute"
     exit 1
 }
@@ -68,6 +77,88 @@ Assignee:  %{assigned_to}
 CC:        %{cc}
 Blocks:    %{blocks}
 Depends:   %{depends_on}"
+}
+
+cmd_comments() {
+    local pr="$1"
+    python3 - "$pr" <<'PYEOF'
+import sys, bugzilla
+pr = sys.argv[1]
+bz = bugzilla.Bugzilla("https://gcc.gnu.org/bugzilla/xmlrpc.cgi")
+bug = bz.getbug(int(pr))
+comments = bug.getcomments()
+for i, c in enumerate(comments):
+    author = c.get("creator", c.get("author", "unknown"))
+    date = c.get("creation_time", "unknown")
+    text = c.get("text", "")
+    print(f"--- Comment #{i} by {author} ({date}) ---")
+    print(text)
+    print()
+PYEOF
+}
+
+cmd_attachments() {
+    local pr="$1"
+    python3 - "$pr" <<'PYEOF'
+import sys, bugzilla
+pr = sys.argv[1]
+bz = bugzilla.Bugzilla("https://gcc.gnu.org/bugzilla/xmlrpc.cgi")
+atts = bz._proxy.Bug.attachments({"ids": [int(pr)]})
+bug_atts = atts.get("bugs", {}).get(str(pr), atts.get("bugs", {}).get(int(pr), []))
+if not bug_atts:
+    print("No attachments.")
+    sys.exit(0)
+for att in bug_atts:
+    obs = " [OBSOLETE]" if att["is_obsolete"] else ""
+    patch = " [PATCH]" if att["is_patch"] else ""
+    data = att.get("data")
+    if data is None:
+        size = att.get("size", "?")
+    elif hasattr(data, "data"):
+        size = len(data.data)
+    elif isinstance(data, (bytes, str)):
+        size = len(data)
+    else:
+        size = "?"
+    print(f"ID {att['id']}: {att['file_name']}{patch}{obs} ({size} bytes) - {att.get('summary', att.get('description', 'N/A'))} by {att['creator']}")
+PYEOF
+}
+
+cmd_download() {
+    local pr="$1"
+    local outdir="${2:-pr/$pr/upstream-patches}"
+    mkdir -p "$outdir"
+    python3 - "$pr" "$outdir" <<'PYEOF'
+import sys, os, base64, bugzilla
+pr, outdir = sys.argv[1], sys.argv[2]
+bz = bugzilla.Bugzilla("https://gcc.gnu.org/bugzilla/xmlrpc.cgi")
+atts = bz._proxy.Bug.attachments({"ids": [int(pr)]})
+bug_atts = atts.get("bugs", {}).get(str(pr), atts.get("bugs", {}).get(int(pr), []))
+patches = [a for a in bug_atts if a["is_patch"] and not a["is_obsolete"]]
+if not patches:
+    print("No non-obsolete patch attachments found.")
+    all_atts = [a for a in bug_atts if a["is_patch"]]
+    if all_atts:
+        print(f"({len(all_atts)} obsolete patch(es) skipped; use 'attachments' to see all)")
+    sys.exit(0)
+for att in patches:
+    data = att.get("data")
+    if data is None:
+        print(f"  Skipping {att['file_name']}: no data returned")
+        continue
+    if isinstance(data, str):
+        content = base64.b64decode(data)
+    elif hasattr(data, "data"):
+        content = data.data if isinstance(data.data, bytes) else base64.b64decode(data.data)
+    else:
+        content = bytes(data) if not isinstance(data, bytes) else data
+    fname = f"{att['id']:05d}-{att['file_name']}"
+    path = os.path.join(outdir, fname)
+    with open(path, "wb") as f:
+        f.write(content)
+    print(f"  {path} ({len(content)} bytes)")
+print(f"Downloaded {len(patches)} patch(es) to {outdir}/")
+PYEOF
 }
 
 cmd_search() {
@@ -223,6 +314,18 @@ case "$1" in
     info)
         [[ $# -lt 2 ]] && { echo "Error: missing PR number"; usage; }
         cmd_info "$2"
+        ;;
+    comments)
+        [[ $# -lt 2 ]] && { echo "Error: missing PR number"; usage; }
+        cmd_comments "$2"
+        ;;
+    attachments)
+        [[ $# -lt 2 ]] && { echo "Error: missing PR number"; usage; }
+        cmd_attachments "$2"
+        ;;
+    download)
+        [[ $# -lt 2 ]] && { echo "Error: missing PR number"; usage; }
+        cmd_download "$2" "${3:-}"
         ;;
     search)
         [[ $# -lt 2 ]] && { echo "Error: missing search term"; usage; }
