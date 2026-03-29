@@ -2,34 +2,34 @@
   "artifacts": {},
   "backports": {
     "gcc-13": {
-      "apply_mode": "not-needed",
-      "backport_candidate": null,
-      "branch_commit": null,
+      "apply_mode": "evidence-only",
+      "backport_candidate": true,
+      "branch_commit": "e8896d8d6c4275bbd00ae6fba4b3f609e6affaba",
       "branch_patch": null,
       "full_suite": "not-run",
-      "notes": "No fix yet; testcase-only commit is on trunk.",
-      "reproduces": null,
-      "targeted_tests": "not-run"
+      "notes": "Comment 0 and both comment 2 variants still ICE. Comment 1 is still accepted.",
+      "reproduces": true,
+      "targeted_tests": "manual-matrix"
     },
     "gcc-14": {
-      "apply_mode": "not-needed",
-      "backport_candidate": null,
-      "branch_commit": null,
+      "apply_mode": "evidence-only",
+      "backport_candidate": true,
+      "branch_commit": "f8cc39faaa3cfa44efb484a60d2eb7684572b85c",
       "branch_patch": null,
       "full_suite": "not-run",
-      "notes": "No fix yet; testcase-only commit is on trunk.",
-      "reproduces": null,
-      "targeted_tests": "not-run"
+      "notes": "Comment 0 and both comment 2 variants still ICE. Comment 1 is rejected.",
+      "reproduces": true,
+      "targeted_tests": "manual-matrix"
     },
     "gcc-15": {
-      "apply_mode": "not-needed",
-      "backport_candidate": null,
-      "branch_commit": null,
+      "apply_mode": "evidence-only",
+      "backport_candidate": false,
+      "branch_commit": "9cefb203c4010b139a69f1575fcdec14075d2731",
       "branch_patch": null,
       "full_suite": "not-run",
-      "notes": "No fix yet; testcase-only commit is on trunk.",
-      "reproduces": null,
-      "targeted_tests": "not-run"
+      "notes": "Old ICE no longer reproduces. Comment 1 is rejected; pointer forms are still accepted.",
+      "reproduces": false,
+      "targeted_tests": "manual-matrix"
     }
   },
   "bugzilla": {
@@ -49,7 +49,7 @@
   },
   "fix_status": "open",
   "github_issue": 78,
-  "notes": "ICE fixed earlier; testcase committed as r16-8026-g8a0a1a0c7b1. Re-checking on 2026-03-29 showed that comment 1 is already rejected on clean trunk, attachment 64064 is too broad because it rejects valid pointer cases, and Paul Thomas's suggested decl.cc line is a no-op for this PR.",
+  "notes": "Rerunning the exact Bugzilla sources on upstream branch heads on 2026-03-29 shows a split state: gcc-13 and gcc-14 still ICE on comment 0 and both comment 2 variants, gcc-15 and trunk no longer ICE, comment 1 is rejected on gcc-14/gcc-15/trunk but still accepted on gcc-13. Attachment 64064 is too broad because it rejects valid pointer cases, and Paul Thomas's suggested decl.cc line is absent from all current upstream branches.",
   "pr": 102333,
   "submission_status": {
     "on_bugzilla": true,
@@ -62,7 +62,7 @@
     "commit": "8a0a1a0c7b187415e34dcf7a5cbf5e314c9de78a",
     "patch": null
   },
-  "updated_at": "2026-03-29T05:30:01Z",
+  "updated_at": "2026-03-29T08:05:00Z",
   "validation": {
     "baseline": {
       "contains_any": [

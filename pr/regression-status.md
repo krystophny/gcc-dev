@@ -62,7 +62,7 @@ It does not just mean `patch-ready` on the fork.
 | 100194 | P4 | ICE in `gfc_trans_create_temp_array` | assumed-rank contiguous | [100194](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=100194) |
 | 101760 | P4 | ICE in `make_ssa_name_fn` | open, no patch | [101760](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=101760) |
 | 102314 | P4 | ICE in `verify_ssa` | now ICEs at `-O0` too | [102314](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102314) |
-| 102333 | P4 | invalid `PROCEDURE` statement accepted | comment 1 already rejected on clean trunk; attachment 64064 is too broad and should be obsoleted; Paul's simpler `decl.cc` line is a no-op | [102333](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102333) |
+| 102333 | P4 | invalid `PROCEDURE` statement accepted | current heads split: gcc-13/14 still ICE on comments 0 and 2, gcc-15/trunk no longer ICE; comment 1 rejected on gcc-14/15/trunk but still accepted on gcc-13; attachment 64064 is obsolete | [102333](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102333) |
 | 103367 | P4 | ICE in `gfc_conv_array_initializer` | PDT array + `REAL` index | [103367](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=103367) |
 | 105168 | P4 | ICE in `gfc_maybe_dereference_var` | CLASS array + `size()` in result | [105168](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105168) |
 | 107425 | P4 | ICE in `gimplify_var_or_parm_decl` | undeclared var in OMP iterator | [107425](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=107425) |
