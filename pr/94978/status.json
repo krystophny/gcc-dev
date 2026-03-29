@@ -38,6 +38,13 @@
   },
   "bugzilla": {
     "id": 94978,
+    "keywords": [
+      "diagnostic"
+    ],
+    "refreshed_at": "2026-03-29T11:23:56Z",
+    "resolution": "",
+    "status": "NEW",
+    "summary": "[13/14/15/16 Regression] Bogus warning \"Array reference at (1) out of bounds in loop beginning at (2)\"",
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=94978"
   },
   "classification": {
@@ -60,7 +67,7 @@
     "commit": null,
     "patch": "0001-fortran-Avoid-bogus-do-subscript-warnings-in-skipped.patch"
   },
-  "updated_at": "2026-03-28T16:27:43Z",
+  "updated_at": "2026-03-29T11:23:56Z",
   "validation": {
     "baseline": {
       "contains_any": [

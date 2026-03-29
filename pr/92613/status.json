@@ -41,7 +41,7 @@
     "keywords": [
       "diagnostic"
     ],
-    "refreshed_at": "2026-03-28T12:57:27Z",
+    "refreshed_at": "2026-03-29T11:23:55Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "Bogus warning with -cpp and -fpreprocessed",
@@ -67,7 +67,7 @@
     "commit": "15ffee4e129",
     "patch": "0001-fortran-Fix-bogus-warning-with-cpp-fpreprocessed-PR9.patch"
   },
-  "updated_at": "2026-03-28T16:27:43Z",
+  "updated_at": "2026-03-29T11:23:55Z",
   "validation": {
     "baseline": {
       "contains_any": [

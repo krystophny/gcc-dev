@@ -39,7 +39,7 @@
   "bugzilla": {
     "id": 123868,
     "keywords": [],
-    "refreshed_at": "2026-03-28T12:57:10Z",
+    "refreshed_at": "2026-03-29T11:23:36Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "[16-regession] Memory leak on assignment",
@@ -65,7 +65,7 @@
     "commit": "ca448bc5e435",
     "patch": "0001-fortran-Fix-memory-leak-on-assignment-with-nested-al.patch"
   },
-  "updated_at": "2026-03-28T16:27:43Z",
+  "updated_at": "2026-03-29T11:23:36Z",
   "validation": {
     "kind": "special-env",
     "reason": "requires Valgrind or equivalent leak checking to validate the regression"

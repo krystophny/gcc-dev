@@ -1,0 +1,10 @@
+{
+  "apply_mode": "evidence-only",
+  "backport_candidate": true,
+  "branch_commit": "e8896d8d6c4275bbd00ae6fba4b3f609e6affaba",
+  "branch_patch": null,
+  "full_suite": "not-run",
+  "notes": "Comment 0 and both comment 2 variants still ICE. Comment 1 is still accepted.",
+  "reproduces": true,
+  "targeted_tests": "manual-matrix"
+}

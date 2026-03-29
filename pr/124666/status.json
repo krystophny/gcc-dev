@@ -38,10 +38,15 @@
   },
   "bugzilla": {
     "id": 124666,
+    "keywords": [],
+    "refreshed_at": "2026-03-29T11:23:48Z",
+    "resolution": "",
+    "status": "NEW",
+    "summary": "[16 Regression] [UBSAN] io.cc:290:27: runtime error:",
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124666"
   },
   "classification": {
-    "regression": false,
+    "regression": true,
     "severity": "runtime-crash",
     "validity_class": "valid-code"
   },
@@ -60,7 +65,7 @@
     "commit": "b6951283208",
     "patch": "0001-fortran-Fix-signed-overflow-in-format_lex-digit-pars.patch"
   },
-  "updated_at": "2026-03-28T16:27:43Z",
+  "updated_at": "2026-03-29T11:23:48Z",
   "validation": {
     "baseline": {
       "contains_any": [

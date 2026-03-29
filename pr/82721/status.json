@@ -42,7 +42,7 @@
       "error-recovery",
       "ice-on-invalid-code"
     ],
-    "refreshed_at": "2026-03-28T12:57:23Z",
+    "refreshed_at": "2026-03-29T11:23:50Z",
     "resolution": "",
     "status": "NEW",
     "summary": "[13/14/15/16 Regression] Error message with corrupted text, sometimes ICE",
@@ -68,7 +68,7 @@
     "commit": null,
     "patch": "0001-fortran-Fix-ICE-after-rejected-CHARACTER-duplicate-d.patch"
   },
-  "updated_at": "2026-03-28T16:27:43Z",
+  "updated_at": "2026-03-29T11:23:50Z",
   "validation": {
     "baseline": {
       "contains_any": [

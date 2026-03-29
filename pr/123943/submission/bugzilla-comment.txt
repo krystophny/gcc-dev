@@ -1,0 +1,7 @@
+TODO: write the Bugzilla comment text for PR123943 (trunk).
+
+This file is used verbatim by the submission helper.
+Replace this placeholder before running submit.
+
+Bugzilla: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123943
+Patch: 0001-fortran-Fix-DO-CONCURRENT-nested-in-block-iterator-c.patch

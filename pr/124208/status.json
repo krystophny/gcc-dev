@@ -39,7 +39,7 @@
   "bugzilla": {
     "id": 124208,
     "keywords": [],
-    "refreshed_at": "2026-03-28T12:57:17Z",
+    "refreshed_at": "2026-03-29T11:23:40Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "[16 Regression] ice in gfc_resolve_forall, at fortran/resolve.cc:12703",
@@ -65,7 +65,7 @@
     "commit": "97965bdc1ed",
     "patch": "0001-fortran-Fix-iterator-counting-in-nested-block-scopes.patch"
   },
-  "updated_at": "2026-03-28T16:27:43Z",
+  "updated_at": "2026-03-29T11:23:40Z",
   "validation": {
     "baseline": {
       "contains_any": [

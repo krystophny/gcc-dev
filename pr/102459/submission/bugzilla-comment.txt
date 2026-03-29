@@ -1,0 +1,7 @@
+TODO: write the Bugzilla comment text for PR102459 (trunk).
+
+This file is used verbatim by the submission helper.
+Replace this placeholder before running submit.
+
+Bugzilla: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102459
+Patch: 0001-fortran-Fix-OpenMP-iterator-depend-lowering-for-comp.patch

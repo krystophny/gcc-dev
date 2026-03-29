@@ -2,11 +2,11 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=106946
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/88
-- **Fix status:** patch-ready
+- **Fix status:** merged
 - **Regression:** yes
 - **Severity:** ice-on-invalid
 - **Validity class:** invalid-code
-- **Trunk commit:** d02ccf8946c3f4b28a1fa85dba2593eb2a8d0f21
+- **Trunk commit:** n/a
 - **Trunk patch:** 0001-fortran-Fix-ICE-on-invalid-CLASS-component-in-derive.patch
 
 ## Active Release Branch Matrix

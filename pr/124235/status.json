@@ -41,7 +41,7 @@
     "keywords": [
       "ice-on-valid-code"
     ],
-    "refreshed_at": "2026-03-28T12:57:18Z",
+    "refreshed_at": "2026-03-29T11:23:41Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "[16 Regression] ICE in ALLOCATE of sub-objects",
@@ -67,7 +67,7 @@
     "commit": "e0b70284cfa",
     "patch": "0001-fortran-Fix-ICE-in-ALLOCATE-of-sub-objects-with-recu.patch"
   },
-  "updated_at": "2026-03-28T16:27:43Z",
+  "updated_at": "2026-03-29T11:23:41Z",
   "validation": {
     "baseline": {
       "contains_any": [

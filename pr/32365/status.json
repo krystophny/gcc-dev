@@ -41,7 +41,7 @@
     "keywords": [
       "diagnostic"
     ],
-    "refreshed_at": "2026-03-28T12:57:22Z",
+    "refreshed_at": "2026-03-29T11:23:49Z",
     "resolution": "",
     "status": "NEW",
     "summary": "Better error message for specification statement in executable section",
@@ -67,7 +67,7 @@
     "commit": "7db49bf4be2",
     "patch": "0001-fortran-enforce-spec-statements-ordering.patch"
   },
-  "updated_at": "2026-03-28T16:27:43Z",
+  "updated_at": "2026-03-29T11:23:49Z",
   "validation": {
     "baseline": {
       "contains_any": [

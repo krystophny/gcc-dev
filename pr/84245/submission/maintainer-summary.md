@@ -2,11 +2,11 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=84245
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/57
-- **Fix status:** patch-ready
+- **Fix status:** merged
 - **Regression:** yes
 - **Severity:** ice-on-invalid
 - **Validity class:** invalid-code
-- **Trunk commit:** e0115b2d28e1a030c6158f2c57a2ebfd62507d1b
+- **Trunk commit:** 486169386603627f0cf2a5f12ea4f73a20d6df20
 - **Trunk patch:** 0001-fortran-Avoid-rollback-ICE-after-invalid-SELECT-TYPE.patch
 
 ## Active Release Branch Matrix
@@ -23,4 +23,4 @@ This is a `ice-on-invalid` fix against `invalid-code`. Branch-specific patch dat
 
 ## Notes
 
-Direct reproducer no longer ICEs on clean trunk; invalid source still exits nonzero with frontend diagnostics only. Targeted testcase and full check-gfortran passed locally.
+Direct reproducer no longer ICEs on clean trunk; invalid source still exits nonzero with frontend diagnostics only. Targeted testcase and repeated full check-gfortran reruns on pr84245-fix passed locally with 0 FAIL / XPASS.

@@ -1,0 +1,7 @@
+TODO: write the mailing-list cover text for PR102596 (trunk).
+
+This file is used verbatim by the submission helper.
+Replace this placeholder before running submit.
+
+Bugzilla: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102596
+Patch: 0001-fortran-Allow-task-reduction-allocatable-scalars-wit.patch

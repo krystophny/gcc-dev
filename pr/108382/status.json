@@ -43,7 +43,7 @@
       "openmp",
       "rejects-valid"
     ],
-    "refreshed_at": "2026-03-28T12:56:54Z",
+    "refreshed_at": "2026-03-29T11:23:21Z",
     "resolution": "",
     "status": "NEW",
     "summary": "[13/14/15/16 Regression] Incorrect parsing when acc and omp coexist and -fopenmp -fopenacc is used.",
@@ -69,7 +69,7 @@
     "commit": "f738265ceff7bc2fa3ebcbaf0dc7d807e81d81a8",
     "patch": "0001-fortran-Fix-free-form-mixed-OpenACC-OpenMP-continuat.patch"
   },
-  "updated_at": "2026-03-28T16:27:43Z",
+  "updated_at": "2026-03-29T11:23:21Z",
   "validation": {
     "baseline": {
       "contains_any": [

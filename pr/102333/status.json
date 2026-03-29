@@ -1,5 +1,9 @@
 {
-  "artifacts": {},
+  "artifacts": {
+    "bugzilla_comment": "submission/bugzilla-comment.txt",
+    "mailing_list_cover": "submission/mailing-list-cover.txt",
+    "maintainer_summary": "submission/maintainer-summary.md"
+  },
   "backports": {
     "gcc-13": {
       "apply_mode": "evidence-only",
@@ -37,13 +41,14 @@
     "keywords": [
       "accepts-invalid"
     ],
+    "refreshed_at": "2026-03-29T11:23:12Z",
     "resolution": "",
     "status": "REOPENED",
     "summary": "Invalid PROCEDURE statement accepted.",
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102333"
   },
   "classification": {
-    "regression": true,
+    "regression": false,
     "severity": "accepts-invalid",
     "validity_class": "invalid-code"
   },
@@ -60,9 +65,9 @@
   "trunk": {
     "branch": null,
     "commit": "8a0a1a0c7b187415e34dcf7a5cbf5e314c9de78a",
-    "patch": null
+    "patch": "0001-fortran-Reject-invalid-host-result-PROCEDURE-interfa.patch"
   },
-  "updated_at": "2026-03-29T08:05:00Z",
+  "updated_at": "2026-03-29T11:23:12Z",
   "validation": {
     "baseline": {
       "contains_any": [

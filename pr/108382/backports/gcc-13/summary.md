@@ -21,4 +21,4 @@ This is a `wrong-code` fix against `valid-code`. Branch-specific patch data and 
 
 ## Notes
 
-Patch posted to Bugzilla as attachment 63999. Validation complete on the rebuilt trunk compiler: original and reduced reproducers fixed, preserved negative case still diagnoses, goacc.exp=omp-108382.f90 passes, goacc.exp=omp.f95 passes, and a broader goacc.exp sweep finishes with 3951 expected passes and 281 expected failures. A wrapper-based full gfortran sweep quickly hits unrelated c-interop excess-error failures and unresolved cases, so it is not treated as a meaningful gate for this scanner-only fix.
+Patch posted to Bugzilla as attachment 63999. Validation on pr108382-fix is now complete: original and reduced reproducers fixed, preserved negative case still diagnoses, goacc.exp=omp-108382.f90 passes, goacc.exp=omp.f95 passes, the broader goacc.exp sweep is clean, and a fresh full check-gfortran rerun finished with 0 FAIL / XPASS.

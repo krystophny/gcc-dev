@@ -38,6 +38,11 @@
   },
   "bugzilla": {
     "id": 124574,
+    "keywords": [],
+    "refreshed_at": "2026-03-29T11:23:19Z",
+    "resolution": "WONTFIX",
+    "status": "RESOLVED",
+    "summary": "sparseset_bit_p causes valgrind false positives on non-annotated compiler builds",
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124574"
   },
   "classification": {
@@ -60,7 +65,7 @@
     "commit": "6d3ccffc0e8f216a8c691907717aa4fe5b052d92",
     "patch": "0001-sparseset-Initialize-sparse-indices-for-valgrind-cle.patch"
   },
-  "updated_at": "2026-03-28T16:27:43Z",
+  "updated_at": "2026-03-29T11:23:19Z",
   "validation": {
     "baseline": {
       "contains_any": [

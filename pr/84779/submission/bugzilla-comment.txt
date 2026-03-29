@@ -1,0 +1,7 @@
+TODO: write the Bugzilla comment text for PR84779 (trunk).
+
+This file is used verbatim by the submission helper.
+Replace this placeholder before running submit.
+
+Bugzilla: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=84779
+Patch: missing patch

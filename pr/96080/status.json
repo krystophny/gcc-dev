@@ -41,7 +41,7 @@
     "keywords": [
       "openacc"
     ],
-    "refreshed_at": "2026-03-28T12:57:32Z",
+    "refreshed_at": "2026-03-29T11:24:00Z",
     "resolution": "",
     "status": "WAITING",
     "summary": "OpenACC/Fortran runtime library routines vs. Fortran 'pointer'",
@@ -67,7 +67,7 @@
     "commit": null,
     "patch": null
   },
-  "updated_at": "2026-03-28T16:27:43Z",
+  "updated_at": "2026-03-29T11:24:00Z",
   "validation": {
     "baseline": {
       "contains_any": [

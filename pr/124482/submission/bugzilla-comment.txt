@@ -1,0 +1,7 @@
+TODO: write the Bugzilla comment text for PR124482 (trunk).
+
+This file is used verbatim by the submission helper.
+Replace this placeholder before running submit.
+
+Bugzilla: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124482
+Patch: 0001-fortran-Fix-use-after-free-in-CLASS-component-error-.patch

@@ -41,7 +41,7 @@
     "keywords": [
       "ice-on-valid-code"
     ],
-    "refreshed_at": "2026-03-28T12:57:30Z",
+    "refreshed_at": "2026-03-29T11:23:58Z",
     "resolution": "",
     "status": "NEW",
     "summary": "[13/14/15/16 Regression] ICE non-trivial conversion in component_ref",
@@ -67,7 +67,7 @@
     "commit": null,
     "patch": "0001-fortran-Fix-mixed-ENTRY-union-ABI-under-ff2c-PR95338.patch"
   },
-  "updated_at": "2026-03-28T16:27:43Z",
+  "updated_at": "2026-03-29T11:23:58Z",
   "validation": {
     "baseline": {
       "contains_any": [

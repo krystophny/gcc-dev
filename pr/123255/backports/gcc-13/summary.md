@@ -2,7 +2,7 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123255
 - **GitHub issue:** n/a
-- **Fix status:** open
+- **Fix status:** worksforme
 - **Regression:** yes
 - **Severity:** wrong-code
 - **Validity class:** valid-code

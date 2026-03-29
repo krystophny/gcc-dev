@@ -1,0 +1,10 @@
+{
+  "apply_mode": "evidence-only",
+  "backport_candidate": false,
+  "branch_commit": "9cefb203c4010b139a69f1575fcdec14075d2731",
+  "branch_patch": null,
+  "full_suite": "not-run",
+  "notes": "Old ICE no longer reproduces. Comment 1 is rejected; pointer forms are still accepted.",
+  "reproduces": false,
+  "targeted_tests": "manual-matrix"
+}

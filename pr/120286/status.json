@@ -42,7 +42,7 @@
       "openmp",
       "wrong-code"
     ],
-    "refreshed_at": "2026-03-28T12:56:56Z",
+    "refreshed_at": "2026-03-29T11:23:24Z",
     "resolution": "",
     "status": "NEW",
     "summary": "[13/14/15/16 regression] [OpenMP] Double free detected when using openmp",
@@ -68,7 +68,7 @@
     "commit": null,
     "patch": "0001-fortran-Preserve-scalar-class-pointers-in-OpenMP-pri.patch"
   },
-  "updated_at": "2026-03-28T16:27:43Z",
+  "updated_at": "2026-03-29T11:23:24Z",
   "validation": {
     "compile": [
       "gcc-build/gcc/gfortran",

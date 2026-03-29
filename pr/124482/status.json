@@ -42,7 +42,7 @@
       "ice-on-valid-code",
       "testsuite-fail"
     ],
-    "refreshed_at": "2026-03-28T12:57:19Z",
+    "refreshed_at": "2026-03-29T11:23:42Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "[16 Regression] SEGV in resolve_cyclic_derived_type",
@@ -68,7 +68,7 @@
     "commit": "d8b00bf2e1514cd132a9febaa9849ab46cd316f5",
     "patch": "0001-fortran-Fix-use-after-free-in-CLASS-component-error-.patch"
   },
-  "updated_at": "2026-03-28T16:27:43Z",
+  "updated_at": "2026-03-29T11:23:42Z",
   "validation": {
     "baseline": {
       "contains_any": [

@@ -1,0 +1,7 @@
+TODO: write the Bugzilla comment text for PR95338 (trunk).
+
+This file is used verbatim by the submission helper.
+Replace this placeholder before running submit.
+
+Bugzilla: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95338
+Patch: 0001-fortran-Fix-mixed-ENTRY-union-ABI-under-ff2c-PR95338.patch

@@ -41,7 +41,7 @@
     "keywords": [
       "wrong-code"
     ],
-    "refreshed_at": "2026-03-28T12:56:53Z",
+    "refreshed_at": "2026-03-29T11:23:20Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "Lost typespec with constant expressions using array constructors and parentheses",
@@ -67,7 +67,7 @@
     "commit": "c50d263beff",
     "patch": "0001-fortran-Honor-array-constructor-type-spec-during-fol.patch"
   },
-  "updated_at": "2026-03-28T16:27:43Z",
+  "updated_at": "2026-03-29T11:23:20Z",
   "validation": {
     "baseline": {
       "contains_any": [

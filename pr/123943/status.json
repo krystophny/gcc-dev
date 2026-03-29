@@ -43,7 +43,7 @@
       "needs-bisection",
       "needs-reduction"
     ],
-    "refreshed_at": "2026-03-28T12:57:13Z",
+    "refreshed_at": "2026-03-29T11:23:37Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "[16 Regression] ice in gfc_resolve_forall, at fortran/resolve.cc:12646",
@@ -69,7 +69,7 @@
     "commit": "edced0fe1e28a37c75b4e2c80a2a12db93d5002c",
     "patch": "0001-fortran-Fix-DO-CONCURRENT-nested-in-block-iterator-c.patch"
   },
-  "updated_at": "2026-03-28T16:27:43Z",
+  "updated_at": "2026-03-29T11:23:37Z",
   "validation": {
     "baseline": {
       "contains_any": [
