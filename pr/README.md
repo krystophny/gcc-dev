@@ -7,7 +7,6 @@ Minimal reproducers and patches for GCC Fortran and libgomp bugs.
 | PR | Title | GitHub Issue |
 |----|-------|--------------|
 | [102430](102430/) | OpenMP linear(array) ICE | [#9](https://github.com/krystophny/gcc-dev/issues/9) |
-| [102333](102333/) | Invalid `PROCEDURE` statement accepted | [#78](https://github.com/krystophny/gcc-dev/issues/78) |
 | [103276](103276/) | OpenACC ENTER DATA duplicate mapping | [#10](https://github.com/krystophny/gcc-dev/issues/10) |
 | [120723](120723/) | OpenACC `attach(scalar)` ICE | [#96](https://github.com/krystophny/gcc-dev/issues/96) |
 | [123252](123252/) | OpenACC scalar member wrong value | [#11](https://github.com/krystophny/gcc-dev/issues/11) |
@@ -22,6 +21,7 @@ Minimal reproducers and patches for GCC Fortran and libgomp bugs.
 | 42954 | TARGET_*_CPP_BUILTINS missing | [#52](https://github.com/krystophny/gcc-dev/issues/52) |
 | 60576 | assumed_rank_7.f90 failure | [#53](https://github.com/krystophny/gcc-dev/issues/53) |
 | 79524 | Valgrind/ASan error in `fimplicit_none_2.f90` | [#55](https://github.com/krystophny/gcc-dev/issues/55) |
+| [102333](102333/) | Invalid `PROCEDURE` statement accepted | [#78](https://github.com/krystophny/gcc-dev/issues/78) |
 | 101760 | Deferred-length char + OMP target ICE | [#76](https://github.com/krystophny/gcc-dev/issues/76) |
 | 109788 | UB shift exponent 64 in IPA/Fortran path | [#91](https://github.com/krystophny/gcc-dev/issues/91) |
 | 110626 | Duplicated finalization in derived assignment | [#92](https://github.com/krystophny/gcc-dev/issues/92) |

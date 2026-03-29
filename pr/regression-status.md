@@ -1,6 +1,6 @@
 # Fortran Regression Status
 
-Checked against `upstream/master` at `a3b49ec48b7` on 2026-03-28.
+Checked against `upstream/master` at `a3b49ec48b7` on 2026-03-29.
 
 `Patch on Bugzilla` means a patch is actually posted on Bugzilla.
 It does not just mean `patch-ready` on the fork.
@@ -42,7 +42,6 @@ It does not just mean `patch-ready` on the fork.
 | 108382 | P4 | wrong parsing with mixed acc/omp | patch on BZ; full `check-gfortran` clean on patch branch | [108382](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=108382) |
 | 124661 | P4 | SIGSEGV with `-fcheck=bounds` | patch on BZ as attachment 64058; full `check-gfortran` clean on patch branch | [124661](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124661) |
 | 102430 | P2 | ICE in OMP `linear(array)` | patch on BZ; also on ML; still open on trunk | [102430](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102430) |
-| 102333 | P4 | invalid `PROCEDURE` statement accepted | attachment 64064 on BZ; branch `origin/pr102333-fix`; full `check-gfortran` and `check-target-libgomp-fortran` clean | [102333](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102333) |
 
 ## Still open
 
@@ -63,6 +62,7 @@ It does not just mean `patch-ready` on the fork.
 | 100194 | P4 | ICE in `gfc_trans_create_temp_array` | assumed-rank contiguous | [100194](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=100194) |
 | 101760 | P4 | ICE in `make_ssa_name_fn` | open, no patch | [101760](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=101760) |
 | 102314 | P4 | ICE in `verify_ssa` | now ICEs at `-O0` too | [102314](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102314) |
+| 102333 | P4 | invalid `PROCEDURE` statement accepted | comment 1 already rejected on clean trunk; attachment 64064 is too broad and should be obsoleted; Paul's simpler `decl.cc` line is a no-op | [102333](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102333) |
 | 103367 | P4 | ICE in `gfc_conv_array_initializer` | PDT array + `REAL` index | [103367](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=103367) |
 | 105168 | P4 | ICE in `gfc_maybe_dereference_var` | CLASS array + `size()` in result | [105168](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105168) |
 | 107425 | P4 | ICE in `gimplify_var_or_parm_decl` | undeclared var in OMP iterator | [107425](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=107425) |

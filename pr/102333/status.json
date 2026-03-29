@@ -47,9 +47,9 @@
     "severity": "accepts-invalid",
     "validity_class": "invalid-code"
   },
-  "fix_status": "patch-ready",
+  "fix_status": "open",
   "github_issue": 78,
-  "notes": "ICE fixed earlier; testcase committed as r16-8026-g8a0a1a0c7b1. The remaining accepts-invalid frontend fix is on origin/pr102333-fix at 0cbbde19fd43 and attached on Bugzilla as attachment 64064.",
+  "notes": "ICE fixed earlier; testcase committed as r16-8026-g8a0a1a0c7b1. Re-checking on 2026-03-29 showed that comment 1 is already rejected on clean trunk, attachment 64064 is too broad because it rejects valid pointer cases, and Paul Thomas's suggested decl.cc line is a no-op for this PR.",
   "pr": 102333,
   "submission_status": {
     "on_bugzilla": true,
@@ -58,32 +58,32 @@
   },
   "title": "invalid PROCEDURE statement accepted",
   "trunk": {
-    "branch": "pr102333-fix",
+    "branch": null,
     "commit": "8a0a1a0c7b187415e34dcf7a5cbf5e314c9de78a",
-    "patch": "0001-fortran-Reject-invalid-host-result-PROCEDURE-interfa.patch"
+    "patch": null
   },
-  "updated_at": "2026-03-28T21:45:22Z",
+  "updated_at": "2026-03-29T05:30:01Z",
   "validation": {
     "baseline": {
-      "contains_any": [],
-      "exit": "zero",
-      "not_contains": [
-        "Error:"
-      ]
+      "contains_any": [
+        "PROCEDURE attribute conflicts with ALLOCATABLE attribute"
+      ],
+      "exit": "nonzero",
+      "not_contains": []
     },
     "compile": [
-      "gcc-build/gcc/gfortran",
+      "gcc-build-pr102333-alt/gcc/gfortran",
       "-B",
-      "gcc-build/gcc",
+      "gcc-build-pr102333-alt/gcc",
       "-c",
-      "pr/102333/reproducer.f90",
+      "/tmp/pr102333-c1.f90",
       "-o",
       "/dev/null"
     ],
     "env": {},
     "fixed": {
       "contains_any": [
-        "Error:"
+        "PROCEDURE attribute conflicts with ALLOCATABLE attribute"
       ],
       "exit": "nonzero",
       "not_contains": []
