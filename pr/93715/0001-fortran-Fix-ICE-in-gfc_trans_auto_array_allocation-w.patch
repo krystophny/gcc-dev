@@ -1,0 +1,76 @@
+From 7aabb20a7cfca36e40314ae95147b6d5042d38c7 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Sun, 29 Mar 2026 20:52:26 +0200
+Subject: [PATCH] fortran: Fix ICE in gfc_trans_auto_array_allocation with
+ scalar coarray [PR93715]
+
+A scalar coarray variable (e.g. integer :: b[*]) used in asynchronous
+I/O causes an ICE in gfc_trans_auto_array_allocation because the
+variable reaches gfc_trans_auto_array_allocation which asserts
+GFC_ARRAY_TYPE_P on the backend declaration type.  For scalar coarrays,
+the backend type is a plain scalar, not a GFC array type.
+
+The root cause is in gfc_trans_deferred_vars: scalar coarray variables
+enter the AS_EXPLICIT case because sym->attr.codimension is set and the
+coarray spec type is AS_EXPLICIT.  The existing guard for static coarray
+variables does not catch non-static scalar coarrays, so they fall
+through to gfc_trans_auto_array_allocation.
+
+Add a check for scalar coarrays (codimension without dimension) to skip
+array allocation, since these variables have no array rank and do not
+need auto array allocation.
+
+	PR fortran/93715
+
+gcc/fortran/ChangeLog:
+
+	* trans-decl.cc (gfc_trans_deferred_vars): Skip auto array
+	allocation for scalar coarrays.
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/pr93715.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/trans-decl.cc             |  5 +++++
+ gcc/testsuite/gfortran.dg/pr93715.f90 | 11 +++++++++++
+ 2 files changed, 16 insertions(+)
+ create mode 100644 gcc/testsuite/gfortran.dg/pr93715.f90
+
+diff --git a/gcc/fortran/trans-decl.cc b/gcc/fortran/trans-decl.cc
+index 0080e83fc36..5304507d477 100644
+--- a/gcc/fortran/trans-decl.cc
++++ b/gcc/fortran/trans-decl.cc
+@@ -5147,6 +5147,11 @@ gfc_trans_deferred_vars (gfc_symbol * proc_sym, gfc_wrapped_block * block)
+ 					NULL_TREE);
+ 		  continue;
+ 		}
++	      else if (sym->attr.codimension && !sym->attr.dimension)
++		{
++		  /* Scalar coarrays do not need array allocation.  */
++		  continue;
++		}
+ 	      else
+ 		{
+ 		  loc = input_location;
+diff --git a/gcc/testsuite/gfortran.dg/pr93715.f90 b/gcc/testsuite/gfortran.dg/pr93715.f90
+new file mode 100644
+index 00000000000..5dba371bea5
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr93715.f90
+@@ -0,0 +1,11 @@
++! { dg-do compile }
++! { dg-options "-fcoarray=single" }
++!
++! PR fortran/93715
++! A scalar coarray used in asynchronous I/O caused an ICE in
++! gfc_trans_auto_array_allocation.
++
++program p
++   integer :: a, b[*]
++   read (1, *, asynchronous='yes') a, b
++end
+-- 
+2.53.0
+
