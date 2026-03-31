@@ -1,4 +1,4 @@
-From 11ae98bda1c7781ca17b248d74e7f49770725f86 Mon Sep 17 00:00:00 2001
+From 2d0dca791712599d549952a377d6b91cbe0eaf80 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Tue, 31 Mar 2026 08:45:28 +0200
 Subject: [PATCH] fortran: Fix ICE in build_entry_thunks with CHARACTER bind(c)
@@ -33,16 +33,16 @@ gcc/testsuite/ChangeLog:
 
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
- gcc/fortran/trans-decl.cc             | 66 +++++++++++++++++-
+ gcc/fortran/trans-decl.cc             | 68 +++++++++++++++++-
  gcc/testsuite/gfortran.dg/pr93814.f90 | 99 +++++++++++++++++++++++++++
- 2 files changed, 162 insertions(+), 3 deletions(-)
+ 2 files changed, 164 insertions(+), 3 deletions(-)
  create mode 100644 gcc/testsuite/gfortran.dg/pr93814.f90
 
 diff --git a/gcc/fortran/trans-decl.cc b/gcc/fortran/trans-decl.cc
-index 0080e83fc36..b74ed027fbd 100644
+index 0080e83fc36..3e60fb41f12 100644
 --- a/gcc/fortran/trans-decl.cc
 +++ b/gcc/fortran/trans-decl.cc
-@@ -3129,15 +3129,58 @@ build_entry_thunks (gfc_namespace * ns, bool global)
+@@ -3129,15 +3129,60 @@ build_entry_thunks (gfc_namespace * ns, bool global)
        tmp = build_int_cst (gfc_array_index_type, el->id);
        vec_safe_push (args, tmp);
  
@@ -77,7 +77,9 @@ index 0080e83fc36..b74ed027fbd 100644
 +		  gfc_se se;
 +		  gfc_init_se (&se, NULL);
 +		  gfc_conv_expr (&se, thunk_sym->ts.u.cl->length);
++		  gfc_add_block_to_block (&body, &se.pre);
 +		  len = se.expr;
++		  gfc_add_block_to_block (&body, &se.post);
 +		}
 +	      else
 +		len = build_int_cst (gfc_charlen_type_node, 1);
@@ -103,7 +105,7 @@ index 0080e83fc36..b74ed027fbd 100644
  	}
  
        for (formal = gfc_sym_get_dummy_args (ns->proc_name); formal;
-@@ -3184,7 +3227,24 @@ build_entry_thunks (gfc_namespace * ns, bool global)
+@@ -3184,7 +3229,24 @@ build_entry_thunks (gfc_namespace * ns, bool global)
        vec_safe_splice (args, string_args);
        tmp = ns->proc_name->backend_decl;
        tmp = build_call_expr_loc_vec (input_location, tmp, args);

@@ -1,4 +1,4 @@
-From 09bde402e9284b59a8ea39c7df3ecf3d71479d51 Mon Sep 17 00:00:00 2001
+From caf91d81c275675c4528881c513da661d455974f Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Tue, 31 Mar 2026 08:26:57 +0200
 Subject: [PATCH] fortran: Fix ICE in gfc_trans_create_temp_array for
@@ -17,6 +17,7 @@ via the runtime pack/unpack functions.
 gcc/fortran/ChangeLog:
 
 	PR fortran/100194
+	PR fortran/102729
 	* trans-expr.cc (gfc_conv_procedure_call): Skip
 	gfc_conv_subref_array_arg for assumed-rank actual arguments
 	(e->rank == -1) when the dummy is contiguous.
@@ -24,6 +25,7 @@ gcc/fortran/ChangeLog:
 gcc/testsuite/ChangeLog:
 
 	PR fortran/100194
+	PR fortran/102729
 	* gfortran.dg/pr100194.f90: New test.
 
 Signed-off-by: Christopher Albert <albert@tugraz.at>

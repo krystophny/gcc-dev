@@ -1,4 +1,4 @@
-From 1dbefef35ecbbfc061cec98d2ddeeb968c16d485 Mon Sep 17 00:00:00 2001
+From 18c3b48f5e197c13c3ed6cee7512e93011d0cc34 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
 Date: Tue, 31 Mar 2026 08:08:01 +0200
 Subject: [PATCH] fortran: Fix heap-use-after-free in resolve_charlen [PR79524]
@@ -34,16 +34,16 @@ gcc/testsuite/ChangeLog:
 
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
- gcc/fortran/resolve.cc                | 50 +++++++++++++++++++++++++++
- gcc/testsuite/gfortran.dg/pr79524.f90 | 10 ++++++
- 2 files changed, 60 insertions(+)
+ gcc/fortran/resolve.cc                | 70 +++++++++++++++++++++++++++
+ gcc/testsuite/gfortran.dg/pr79524.f90 | 11 +++++
+ 2 files changed, 81 insertions(+)
  create mode 100644 gcc/testsuite/gfortran.dg/pr79524.f90
 
 diff --git a/gcc/fortran/resolve.cc b/gcc/fortran/resolve.cc
-index 767bbdea114..2e22311c7cc 100644
+index 767bbdea114..b52b367f3ec 100644
 --- a/gcc/fortran/resolve.cc
 +++ b/gcc/fortran/resolve.cc
-@@ -14868,6 +14868,45 @@ resolve_index_expr (gfc_expr *e)
+@@ -14868,6 +14868,65 @@ resolve_index_expr (gfc_expr *e)
  }
  
  
@@ -63,11 +63,38 @@ index 767bbdea114..2e22311c7cc 100644
 +}
 +
 +
-+/* Return true if CL->length is an expression whose primary symtree has been
-+   freed during statement rejection (PR79524).  After reject_statement calls
-+   gfc_undo_symbols, new symbols and their symtrees are deleted, but charlen
-+   nodes on the namespace cl_list survive.  Any attempt to resolve the dangling
-+   expression would access freed memory.  */
++/* Return true if E (or any sub-expression of E) contains a symtree pointer
++   that is no longer reachable from the namespace BBT.  This detects dangling
++   references left behind when reject_statement calls gfc_undo_symbols but
++   charlen nodes on the namespace cl_list survive (PR79524).  */
++
++static bool
++expr_has_dangling_symtree (gfc_expr *e, gfc_symtree *sym_root)
++{
++  if (e == NULL)
++    return false;
++
++  if ((e->expr_type == EXPR_VARIABLE || e->expr_type == EXPR_FUNCTION)
++      && e->symtree != NULL
++      && !symtree_in_bbt (sym_root, e->symtree))
++    return true;
++
++  /* Recurse into operator sub-expressions.  */
++  if (e->expr_type == EXPR_OP)
++    return expr_has_dangling_symtree (e->value.op.op1, sym_root)
++	   || expr_has_dangling_symtree (e->value.op.op2, sym_root);
++
++  /* Recurse into function actual arguments.  */
++  if (e->expr_type == EXPR_FUNCTION)
++    for (gfc_actual_arglist *a = e->value.function.actual; a; a = a->next)
++      if (expr_has_dangling_symtree (a->expr, sym_root))
++	return true;
++
++  return false;
++}
++
++
++/* Return true if CL->length contains any dangling symtree references.  */
 +
 +static bool
 +charlen_has_dangling_reference (gfc_charlen *cl)
@@ -75,21 +102,14 @@ index 767bbdea114..2e22311c7cc 100644
 +  if (cl->length == NULL)
 +    return false;
 +
-+  if (cl->length->expr_type != EXPR_VARIABLE
-+      && cl->length->expr_type != EXPR_FUNCTION)
-+    return false;
-+
-+  if (cl->length->symtree == NULL)
-+    return false;
-+
-+  return !symtree_in_bbt (gfc_current_ns->sym_root, cl->length->symtree);
++  return expr_has_dangling_symtree (cl->length, gfc_current_ns->sym_root);
 +}
 +
 +
  /* Resolve a charlen structure.  */
  
  static bool
-@@ -14883,6 +14922,17 @@ resolve_charlen (gfc_charlen *cl)
+@@ -14883,6 +14942,17 @@ resolve_charlen (gfc_charlen *cl)
    saved_specification_expr = specification_expr;
    specification_expr = true;
  
@@ -109,10 +129,10 @@ index 767bbdea114..2e22311c7cc 100644
        if (!gfc_resolve_expr (cl->length))
 diff --git a/gcc/testsuite/gfortran.dg/pr79524.f90 b/gcc/testsuite/gfortran.dg/pr79524.f90
 new file mode 100644
-index 00000000000..71205b96654
+index 00000000000..06ae1c38025
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/pr79524.f90
-@@ -0,0 +1,10 @@
+@@ -0,0 +1,11 @@
 +! { dg-do compile }
 +! PR fortran/79524 - heap-use-after-free in resolve_charlen
 +! The array constructor typespec character(n) creates a charlen on the
@@ -122,6 +142,7 @@ index 00000000000..71205b96654
 +! dereferencing the dangling symtree pointer.
 +program p
 +   character(*), parameter :: z(2) = [character(n) :: 'x', 'y'] ! { dg-error "Cannot initialize parameter array" }
++   character(*), parameter :: w(2) = [character(n+1) :: 'a', 'b'] ! { dg-error "Cannot initialize parameter array" }
 +end
 -- 
 2.53.0
