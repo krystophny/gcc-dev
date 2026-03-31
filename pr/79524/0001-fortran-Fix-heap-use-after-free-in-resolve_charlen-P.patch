@@ -1,0 +1,128 @@
+From 1dbefef35ecbbfc061cec98d2ddeeb968c16d485 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Tue, 31 Mar 2026 08:08:01 +0200
+Subject: [PATCH] fortran: Fix heap-use-after-free in resolve_charlen [PR79524]
+
+When compiling invalid code containing an array constructor with a
+variable-length character typespec (e.g., [character(n) :: 'x', 'y']),
+the charlen created for character(n) references the implicitly typed
+symbol n via a symtree pointer.  When the declaration is rejected,
+gfc_undo_symbols frees n's symtree, but the charlen survives on the
+namespace cl_list.  Later, resolve_charlen attempts to resolve the
+dangling expression, triggering a heap-use-after-free in
+check_host_association.
+
+Fix by detecting dangling symtree references before resolution.
+The new helper verifies that a charlen expression's symtree is still
+present in the namespace's symtree BBT; if not, the expression is
+discarded and resolution fails gracefully.
+
+gcc/fortran/ChangeLog:
+
+	PR fortran/79524
+	* resolve.cc (symtree_in_bbt): New helper to check whether a
+	symtree pointer is still in a namespace BBT.
+	(charlen_has_dangling_reference): New helper to detect charlen
+	expressions referencing freed symtrees.
+	(resolve_charlen): Detect and discard charlen expressions with
+	dangling symtree references before attempting resolution.
+
+gcc/testsuite/ChangeLog:
+
+	PR fortran/79524
+	* gfortran.dg/pr79524.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/resolve.cc                | 50 +++++++++++++++++++++++++++
+ gcc/testsuite/gfortran.dg/pr79524.f90 | 10 ++++++
+ 2 files changed, 60 insertions(+)
+ create mode 100644 gcc/testsuite/gfortran.dg/pr79524.f90
+
+diff --git a/gcc/fortran/resolve.cc b/gcc/fortran/resolve.cc
+index 767bbdea114..2e22311c7cc 100644
+--- a/gcc/fortran/resolve.cc
++++ b/gcc/fortran/resolve.cc
+@@ -14868,6 +14868,45 @@ resolve_index_expr (gfc_expr *e)
+ }
+ 
+ 
++/* Return true if the symtree node ST is reachable from the BBT rooted
++   at ROOT.  Used to detect dangling symtree pointers left behind by
++   gfc_undo_symbols when a rejected statement's charlen expression
++   references a symbol whose symtree has already been freed.  */
++
++static bool
++symtree_in_bbt (gfc_symtree *root, gfc_symtree *st)
++{
++  if (root == NULL)
++    return false;
++  if (root == st)
++    return true;
++  return symtree_in_bbt (root->left, st) || symtree_in_bbt (root->right, st);
++}
++
++
++/* Return true if CL->length is an expression whose primary symtree has been
++   freed during statement rejection (PR79524).  After reject_statement calls
++   gfc_undo_symbols, new symbols and their symtrees are deleted, but charlen
++   nodes on the namespace cl_list survive.  Any attempt to resolve the dangling
++   expression would access freed memory.  */
++
++static bool
++charlen_has_dangling_reference (gfc_charlen *cl)
++{
++  if (cl->length == NULL)
++    return false;
++
++  if (cl->length->expr_type != EXPR_VARIABLE
++      && cl->length->expr_type != EXPR_FUNCTION)
++    return false;
++
++  if (cl->length->symtree == NULL)
++    return false;
++
++  return !symtree_in_bbt (gfc_current_ns->sym_root, cl->length->symtree);
++}
++
++
+ /* Resolve a charlen structure.  */
+ 
+ static bool
+@@ -14883,6 +14922,17 @@ resolve_charlen (gfc_charlen *cl)
+   saved_specification_expr = specification_expr;
+   specification_expr = true;
+ 
++  /* Detect charlen expressions left dangling by rejected statements
++     (PR79524).  The symtree has been freed by gfc_undo_symbols; resolve
++     would dereference freed memory.  Discard the expression and fail.  */
++  if (charlen_has_dangling_reference (cl))
++    {
++      gfc_free_expr (cl->length);
++      cl->length = NULL;
++      specification_expr = saved_specification_expr;
++      return false;
++    }
++
+   if (cl->length_from_typespec)
+     {
+       if (!gfc_resolve_expr (cl->length))
+diff --git a/gcc/testsuite/gfortran.dg/pr79524.f90 b/gcc/testsuite/gfortran.dg/pr79524.f90
+new file mode 100644
+index 00000000000..71205b96654
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr79524.f90
+@@ -0,0 +1,10 @@
++! { dg-do compile }
++! PR fortran/79524 - heap-use-after-free in resolve_charlen
++! The array constructor typespec character(n) creates a charlen on the
++! namespace cl_list whose length expression references the implicitly typed
++! symbol n.  When the declaration is rejected, gfc_undo_symbols frees n's
++! symtree, but the charlen survives.  resolve_charlen then crashed
++! dereferencing the dangling symtree pointer.
++program p
++   character(*), parameter :: z(2) = [character(n) :: 'x', 'y'] ! { dg-error "Cannot initialize parameter array" }
++end
+-- 
+2.53.0
+
