@@ -553,6 +553,93 @@ x86_64 catches these even when the crash only manifests on other platforms.
 7. **Skip runtime testing** - compile-time analysis misses refcount/state bugs
 8. **Trust asymmetric enter/exit** - if enter does X, exit should undo X
 
+## Bug Triage Workflow
+
+Before writing any fix, verify the bug and record its status across branches.
+
+### Step 1: Verify on current trunk
+
+```bash
+# Build trunk (gcc-build/ should already track upstream/master)
+cd gcc-build/gcc && make -j32
+
+# Compile/run the reproducer from Bugzilla
+gcc-build/gcc/gfortran -B gcc-build/gcc reproducer.f90 -o /tmp/test && /tmp/test
+```
+
+If the bug **no longer reproduces on trunk**, the fix was silently merged.
+Proceed to Step 1b. Otherwise skip to Step 2.
+
+### Step 1b: Bug already fixed — bisect and add test coverage
+
+```bash
+# Bisect the fixing commit
+cd gcc && git bisect start upstream/master <last-known-bad-commit>
+git bisect run ../scripts/bisect-test.sh reproducer.f90
+```
+
+Record the fixing commit in `pr/<number>/README.md`. Then write a testcase
+(if none exists) to prevent regressions and submit it as a standalone patch:
+
+```bash
+# Add testcase only — no code fix needed
+git checkout upstream/master && git checkout -b pr<number>-testcase
+cp reproducer.f90 gcc/testsuite/gfortran.dg/pr<number>.f90
+# Add DejaGnu directives, commit, verify, push
+```
+
+### Step 2: Check release branches
+
+Test the reproducer on each active release branch to determine where the
+regression exists. Record results in `pr/<number>/README.md`:
+
+```bash
+for branch in releases/gcc-15 releases/gcc-14 releases/gcc-13; do
+  echo "=== $branch ==="
+  # Use a dedicated build dir or the bisect build
+  git -C gcc checkout $branch
+  cd gcc-build && make -j32 2>&1 | tail -3
+  cd gcc && gcc-build/gcc/gfortran -B gcc-build/gcc reproducer.f90 -o /tmp/test 2>&1
+  /tmp/test 2>&1 || true
+done
+```
+
+Update `pr/<number>/README.md` with:
+```markdown
+## Affected Versions
+| Branch | Reproduces? | Notes |
+|--------|-------------|-------|
+| trunk (r16-NNNN) | yes/no | ... |
+| releases/gcc-15 | yes/no | ... |
+| releases/gcc-14 | yes/no | ... |
+| releases/gcc-13 | yes/no | ... |
+```
+
+This table is required for later Bugzilla comments and backport decisions.
+
+### Step 3: Fix development
+
+Proceed to the Patch Workflow below.
+
+### Step 4: Final validation (MANDATORY before posting)
+
+Every patch MUST pass ALL of the following test suites with zero new
+FAIL/XPASS entries compared to baseline:
+
+1. `check-gfortran` — Fortran frontend + gomp/goacc/goacc-gomp directories
+2. `check-target-libgomp-fortran` — libgomp Fortran runtime harnesses
+
+```bash
+cd gcc-build/gcc
+make -j32 -k check-gfortran > /tmp/check-gfortran.log 2>&1
+grep -cE "^FAIL|^XPASS" testsuite/gfortran/gfortran.sum  # must be 0 new
+
+cd gcc-build
+make -j32 check-target-libgomp-fortran > /tmp/libgomp-fortran.log 2>&1
+```
+
+Partial passes are failure. Fix until zero new failures.
+
 ## Patch Workflow (MANDATORY)
 
 ### Prerequisites (one-time setup in gcc/)
@@ -665,6 +752,14 @@ README.md header format:
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123280
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/12
 - **Status:** PENDING (patch on fork) | MERGED (gcc commit abc123)
+
+## Affected Versions
+| Branch | Reproduces? | Notes |
+|--------|-------------|-------|
+| trunk (r16-NNNN) | yes/no | ... |
+| releases/gcc-15 | yes/no | ... |
+| releases/gcc-14 | yes/no | ... |
+| releases/gcc-13 | yes/no | ... |
 ```
 
 ## Issue Management (krystophny/gcc-dev)
