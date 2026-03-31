@@ -801,11 +801,14 @@ https://gcc.gnu.org/git/?p=gcc.git;a=commit;h=e0b70284cfa...
 
 | PR | Branch | Description |
 |----|--------|-------------|
+| 79524 | `pr79524-fix` | Fix heap-use-after-free in resolve_charlen |
 | 85352 | `pr85352-fix` | Fix bogus reject of ENTRY specification expressions |
 | 93715 | `pr93715-fix` | Fix ICE in gfc_trans_auto_array_allocation for scalar coarray |
+| 93814 | `pr93814-fix` | Fix ICE in build_entry_thunks with CHARACTER bind(c) ENTRY |
 | 94978 | `pr94978-fix` | Fix bogus array-out-of-bounds warning in do-loop |
 | 96986 | `pr96986-fix` | Fix false explicit-interface-required for ENTRY with volatile |
 | 102430 | `origin/master` | Reject array/allocatable LINEAR on DO |
+| 100194 | `pr100194-fix` | Fix ICE in gfc_trans_create_temp_array for assumed-rank |
 | 103367 | `pr103367-fix` | Fix ICE in gfc_conv_array_initializer with invalid index |
 | 109788 | `pr109788-fix` | Fix character SPREAD intrinsic descriptor specialization |
 | 123280+96080 | `pr123280-fix` | Fix acc_is_present for assumed-shape and pointers |
