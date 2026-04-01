@@ -1,0 +1,28 @@
+Supersedes attachment 64103.
+
+Mikael was right that the earlier resolve_charlen-based approach was fixing
+this too late and at the wrong level.
+
+The attached patch instead cleans up the declaration-local gfc_charlen nodes in
+decl.cc when the parameter-array declaration is rejected.  In this path we
+clear the surviving owners first and then drop only the charlens created by
+that rejected declaration, so resolve_charlen never sees the stale
+character(n) / character(n+1) nodes later.
+
+This avoids both the original invalid-memory access and the later stray
+"Scalar INTEGER expression expected" diagnostic, without adding namespace-tree
+walks to charlen resolution.
+
+Local validation:
+
+- direct compile of pr/79524/reproducer.f90: PASS
+- direct compile of the two-declaration reproducer: PASS
+- valgrind compile of the two-declaration reproducer: PASS
+- valgrind compile of the -fimplicit-none reproducer: PASS
+- make -C gcc-build/gcc check-gfortran RUNTESTFLAGS="dg.exp=pr79524.f90": PASS
+- make -C gcc-build/gcc check-gfortran RUNTESTFLAGS="dg.exp=fimplicit_none_2.f90": PASS
+- grep -E '^FAIL|^XPASS' gcc-build/gcc/testsuite/gfortran/gfortran.sum | wc -l: 0
+- grep -E '^FAIL|^XPASS' gcc-build/x86_64-pc-linux-gnu/libgomp/testsuite/libgomp.sum | wc -l: 0
+
+For the libgomp runtime coverage, the local check-target-libgomp-fortran run
+reached both libgomp.fortran/fortran.exp and libgomp.oacc-fortran/fortran.exp.

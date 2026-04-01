@@ -1,0 +1,93 @@
+{
+  "artifacts": {
+    "bugzilla_comment": "submission/bugzilla-comment.txt",
+    "mailing_list_cover": "submission/mailing-list-cover.txt",
+    "maintainer_summary": "submission/maintainer-summary.md"
+  },
+  "backports": {
+    "gcc-13": {
+      "apply_mode": "unknown",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    },
+    "gcc-14": {
+      "apply_mode": "unknown",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    },
+    "gcc-15": {
+      "apply_mode": "unknown",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    }
+  },
+  "bugzilla": {
+    "id": 79524,
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=79524"
+  },
+  "classification": {
+    "regression": false,
+    "severity": "other",
+    "validity_class": "valid-code"
+  },
+  "fix_status": "patch-ready",
+  "github_issue": 55,
+  "notes": "",
+  "pr": 79524,
+  "submission_status": {
+    "on_bugzilla": true,
+    "on_mailing_list": false,
+    "sent": false
+  },
+  "title": "stale charlen after rejected parameter array declaration",
+  "trunk": {
+    "branch": null,
+    "commit": null,
+    "patch": "0001-fortran-Clean-up-charlens-after-rejected-parameter-a.patch"
+  },
+  "updated_at": "2026-04-01T06:03:22Z",
+  "validation": {
+    "baseline": {
+      "contains_any": [
+        "internal compiler error",
+        "ICE in"
+      ],
+      "exit": "nonzero",
+      "not_contains": []
+    },
+    "compile": [
+      "gcc-build/gcc/gfortran",
+      "-B",
+      "gcc-build/gcc",
+      "-c",
+      "pr/79524/reproducer.f90",
+      "-o",
+      "/dev/null"
+    ],
+    "env": {},
+    "fixed": {
+      "contains_any": [],
+      "exit": "zero",
+      "not_contains": [
+        "internal compiler error"
+      ]
+    },
+    "kind": "compile",
+    "run": []
+  }
+}

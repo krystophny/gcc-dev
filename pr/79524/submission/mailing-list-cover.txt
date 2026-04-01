@@ -1,0 +1,7 @@
+TODO: write the mailing-list cover text for PR79524 (trunk).
+
+This file is used verbatim by the submission helper.
+Replace this placeholder before running submit.
+
+Bugzilla: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=79524
+Patch: 0001-fortran-Fix-heap-use-after-free-in-resolve_charlen-P.patch

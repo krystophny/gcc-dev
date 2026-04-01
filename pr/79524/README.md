@@ -1,62 +1,80 @@
-# Bug 79524: Heap-use-after-free in resolve_charlen with implicit typing
+# Bug 79524: stale charlen after rejected parameter array declaration
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=79524
-- **Status:** PENDING (patch on fork, branch `pr79524-fix`)
+- **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/55
+- **Branch:** `pr79524-decl-cleanup`
+- **Status:** ON BUGZILLA (attachment 64114)
 
-## Description
+## Summary
 
-Compiling the following invalid code **without** `-fimplicit-none` triggers a
-heap-use-after-free segfault in `resolve_charlen` -> `gfc_resolve_expr` ->
-`check_host_association`:
+`character(*), parameter :: z(2) = [character(n) :: 'x', 'y']` rejects the
+declaration, but the rejection can leave declaration-local `gfc_charlen` nodes
+on the namespace `cl_list`.  Later resolution revisits the stale
+`character(n)` length expression and, before this fix, could walk freed symbol
+state in `resolve_charlen`.
 
-```fortran
-program p
-   character(*), parameter :: z(2) = [character(n) :: 'x', 'y']
-end
+The old local patch tried to make `resolve_charlen` detect dangling symtrees.
+Review on Bugzilla pushed back on that approach because it added a namespace
+tree walk to resolution and kept the real problem alive longer than necessary.
+The fix now cleans up the declaration-local charlens at the rejection point in
+`decl.cc`, after clearing the surviving owners in that path.
+
+## Reproducer
+
+`reproducer.f90`
+
+Compile command:
+
+```bash
+gcc-build/gcc/gfortran -B gcc-build/gcc -fsyntax-only pr/79524/reproducer.f90
 ```
 
-With `-fimplicit-none`, symbol `n` is caught as undeclared before the
-problematic path is reached (existing test `fimplicit_none_2.f90`).
+Expected result after the fix:
 
-## Root Cause
+- user-facing diagnostic only
+- no later `Scalar INTEGER expression expected` from the rejected declaration
+- no Valgrind invalid read
 
-1. Parsing `character(n)` inside the array constructor typespec creates a
-   charlen node on the namespace `cl_list`, with its `length` expression
-   referencing an implicitly typed symbol `n` via a symtree pointer.
+## Local Fix
 
-2. The declaration fails ("Cannot initialize parameter array with variable
-   length elements"), triggering `reject_statement` -> `gfc_undo_symbols`,
-   which frees `n`'s symtree via `gfc_delete_symtree`.
+- Add `discard_pending_charlens` in `gcc/fortran/decl.cc`.
+- Save the namespace `cl_list` head before matching declarations that can feed
+  `add_init_expr_to_sym`.
+- In the variable-length parameter-array rejection path, clear
+  `sym->ts.u.cl` and `init->ts.u.cl`, then drop only the charlens created by
+  that declaration after the saved list head.
+- Keep the cleanup in declaration processing instead of adding a defensive
+  scan in `resolve_charlen`.
+- Add `gfortran.dg/pr79524.f90` to cover both `character(n)` and
+  `character(n+1)` in the rejected parameter-array path.  The existing
+  `fimplicit_none_2.f90` already covers the `-fimplicit-none` diagnostic path.
 
-3. The charlen node survives on `cl_list` with a dangling `length->symtree`
-   pointer (the old `old_cl_list` cleanup mechanism was removed in r243463
-   for PR65173/69064/69859/78350).
+## Validation
 
-4. Later, `resolve_types` iterates `cl_list` and calls `resolve_charlen`,
-   which calls `gfc_resolve_expr(cl->length)`, which dereferences the freed
-   symtree in `check_host_association`.
+- Direct compile of `reproducer.f90`: PASS
+- Direct compile of two-declaration variant: PASS
+- Valgrind compile of two-declaration variant: PASS
+- Valgrind compile of `-fimplicit-none` reproducer: PASS
+- Targeted DejaGnu test:
+  `make -C gcc-build/gcc check-gfortran RUNTESTFLAGS="dg.exp=pr79524.f90"`:
+  PASS
+- Existing `fimplicit_none_2.f90` targeted rerun:
+  `make -C gcc-build/gcc check-gfortran RUNTESTFLAGS="dg.exp=fimplicit_none_2.f90"`:
+  PASS
+- Full `check-gfortran`:
+  PASS (`0` `FAIL`/`XPASS` lines in `gcc-build/gcc/testsuite/gfortran/gfortran.sum`)
+- `check-target-libgomp-fortran`:
+  PASS (`0` `FAIL`/`XPASS` lines in `gcc-build/x86_64-pc-linux-gnu/libgomp/testsuite/libgomp.sum`)
 
-## Fix
+## Review Notes
 
-Add a guard in `resolve_charlen` that detects dangling symtree references
-before resolution.  Two new helpers:
+- The fix follows Mikael Morin's review direction from comments 20-21:
+  remove the stale charlen instead of teaching `resolve_charlen` to scan for
+  dangling symbols.
+- The cleanup is intentionally limited to the current rejection path after
+  clearing the live owners; it does not restore the old blanket
+  `reject_statement` charlen rollback.
 
-- `symtree_in_bbt`: walks the namespace symtree BBT checking if a given
-  symtree pointer is still present (pointer comparison, no dereference).
-- `charlen_has_dangling_reference`: checks if a charlen's length expression
-  references a symtree that is no longer in the namespace.
+## Patch Artifact
 
-If a dangling reference is detected, the expression is freed and resolution
-fails gracefully.
-
-## Affected Versions
-
-| Branch | Affected | Notes |
-|--------|----------|-------|
-| trunk  | Yes      | Fixed by this patch |
-| gcc-15 | Yes      | Same vulnerable code pattern |
-| gcc-14 | Yes      | Same vulnerable code pattern |
-| gcc-13 | Yes      | Same vulnerable code pattern |
-
-The bug exists since r243463 (2016-12-08) which removed the `old_cl_list`
-cleanup mechanism.
+- `pr/79524/0001-fortran-Clean-up-charlens-after-rejected-parameter-a.patch`
