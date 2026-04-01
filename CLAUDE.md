@@ -808,7 +808,6 @@ https://gcc.gnu.org/git/?p=gcc.git;a=commit;h=e0b70284cfa...
 | 94978 | `pr94978-fix` | Fix bogus array-out-of-bounds warning in do-loop |
 | 96986 | `pr96986-fix` | Fix false explicit-interface-required for ENTRY with volatile |
 | 102430 | `origin/master` | Reject array/allocatable LINEAR on DO |
-| 100194 | `pr100194-fix` | Fix ICE in gfc_trans_create_temp_array for assumed-rank |
 | 103367 | `pr103367-fix` | Fix ICE in gfc_conv_array_initializer with invalid index |
 | 109788 | `pr109788-fix` | Fix character SPREAD intrinsic descriptor specialization |
 | 123280+96080 | `pr123280-fix` | Fix acc_is_present for assumed-shape and pointers |
@@ -816,7 +815,7 @@ https://gcc.gnu.org/git/?p=gcc.git;a=commit;h=e0b70284cfa...
 | 123252 | `pr123252-fix` | Map scalar fields on enter data for components |
 | 123282 | `pr123282-fix` | Fix OpenACC refcount for Fortran allocatable array descriptors |
 
-**Merged upstream:** 32365, 82721, 90519, 92613, 95338, 96255, 102459, 102596, 103139, 106946, 107721, 108382, 110877, 120286, 120723, 121472, 121475, 121628, 123868, 123943, 123947, 123949, 124208, 124235, 124482, 124512, 124631, 124666
+**Merged upstream:** 32365, 82721, 90519, 92613, 95338, 96255, 100194, 102459, 102596, 103139, 106946, 107721, 108382, 110877, 120286, 120723, 121472, 121475, 121628, 123868, 123943, 123947, 123949, 124208, 124235, 124482, 124512, 124631, 124661, 124666
 
 ## aarch64 Testing (Hetzner Cloud)
 
