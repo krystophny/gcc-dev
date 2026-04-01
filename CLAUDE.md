@@ -874,18 +874,18 @@ SSH agent forwarding (`-A`) is used throughout for GitHub fork access.
 **ABSOLUTELY FORBIDDEN without explicit user permission:**
 - `git send-email` to gcc-patches@gcc.gnu.org
 - Posting to any GCC mailing list
-- Updating Bugzilla (posting comments, attaching files)
-- Any external communication
 
-**NEVER use git send-email, gcc-send-patch.sh, or gcc-bugzilla.sh attach/comment/reply
-without the user explicitly requesting it - this is a HARD RULE.**
+**NEVER use git send-email or gcc-send-patch.sh without the user explicitly
+requesting it - this is a HARD RULE.**
 
 Permitted without approval:
 - Prepare patches, run tests, document readiness
 - Push to origin (krystophny/gcc fork)
 - Create PRs in the fork
 - Export patches with `git format-patch`
-- Read-only Bugzilla queries: `info`, `comments`, `attachments`, `download`, `search`, `regressions`
+- All Bugzilla operations: `info`, `comments`, `attachments`, `download`,
+  `search`, `regressions`, `comment`, `reply`, `attach`, `ensure-cc`
+- Posting comments and attaching patches to Bugzilla
 
 ### Tooling
 
