@@ -1,16 +1,20 @@
-From a79a2a3d805f9525eda50579998003f257f8b64b Mon Sep 17 00:00:00 2001
+From 3f500986c7fa6e8a437689a532ec8b5da65a530b Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
-Date: Wed, 1 Apr 2026 08:00:46 +0200
+Date: Fri, 3 Apr 2026 12:45:57 +0200
 Subject: [PATCH] fortran: Clean up charlens after rejected parameter arrays
  [PR79524]
 
 When a parameter array declaration such as
 character(*), parameter :: z(2) = [character(n) :: 'x', 'y']
 is rejected, declaration-local charlen nodes from that statement can remain on
-cl_list and later be resolved again.
+cl_list and later be resolved again.  The charlen's length expression still
+references the symbol 'n' whose symtree was already freed by gfc_undo_symbols,
+causing a heap-use-after-free in resolve_charlen.
 
 Clean up those statement-local charlens at the rejection point in decl.cc,
 after clearing the surviving owners in that path.
+
+	PR fortran/79524
 
 gcc/fortran/ChangeLog:
 
@@ -36,7 +40,7 @@ Signed-off-by: Christopher Albert <albert@tugraz.at>
  create mode 100644 gcc/testsuite/gfortran.dg/pr79524.f90
 
 diff --git a/gcc/fortran/decl.cc b/gcc/fortran/decl.cc
-index 454b65f2c47..eaaa8b9f45a 100644
+index f585800d9c9..6e48909c43a 100644
 --- a/gcc/fortran/decl.cc
 +++ b/gcc/fortran/decl.cc
 @@ -131,6 +131,27 @@ discard_pending_charlen (gfc_charlen *cl)
@@ -131,7 +135,7 @@ index 454b65f2c47..eaaa8b9f45a 100644
  	    goto cleanup;
  
  	}
-@@ -10159,9 +10196,12 @@ do_parm (void)
+@@ -10167,9 +10204,12 @@ do_parm (void)
  {
    gfc_symbol *sym;
    gfc_expr *init;
@@ -144,7 +148,7 @@ index 454b65f2c47..eaaa8b9f45a 100644
    m = gfc_match_symbol (&sym, 0);
    if (m == MATCH_NO)
      gfc_error ("Expected variable name at %C in PARAMETER statement");
-@@ -10202,7 +10242,8 @@ do_parm (void)
+@@ -10210,7 +10250,8 @@ do_parm (void)
        goto cleanup;
      }
  
@@ -154,7 +158,7 @@ index 454b65f2c47..eaaa8b9f45a 100644
    return (t) ? MATCH_YES : MATCH_ERROR;
  
  cleanup:
-@@ -11622,6 +11663,7 @@ enumerator_decl (void)
+@@ -11630,6 +11671,7 @@ enumerator_decl (void)
    char name[GFC_MAX_SYMBOL_LEN + 1];
    gfc_expr *initializer;
    gfc_array_spec *as = NULL;
@@ -162,7 +166,7 @@ index 454b65f2c47..eaaa8b9f45a 100644
    gfc_symbol *sym;
    locus var_locus;
    match m;
-@@ -11629,6 +11671,7 @@ enumerator_decl (void)
+@@ -11637,6 +11679,7 @@ enumerator_decl (void)
    locus old_locus;
  
    initializer = NULL;
@@ -170,7 +174,7 @@ index 454b65f2c47..eaaa8b9f45a 100644
    old_locus = gfc_current_locus;
  
    /* When we get here, we've just matched a list of attributes and
-@@ -11685,7 +11728,8 @@ enumerator_decl (void)
+@@ -11693,7 +11736,8 @@ enumerator_decl (void)
       to be parsed.  add_init_expr_to_sym() zeros initializer, so we
       use last_initializer below.  */
    last_initializer = initializer;
@@ -182,7 +186,7 @@ index 454b65f2c47..eaaa8b9f45a 100644
    gfc_find_symbol (name, NULL, 0, &sym);
 diff --git a/gcc/testsuite/gfortran.dg/pr79524.f90 b/gcc/testsuite/gfortran.dg/pr79524.f90
 new file mode 100644
-index 00000000000..d4f877219a4
+index 00000000000..0b2bfe092ad
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/pr79524.f90
 @@ -0,0 +1,9 @@
@@ -195,7 +199,6 @@ index 00000000000..d4f877219a4
 +  character(*), parameter :: z(2) = [character(n) :: 'x', 'y'] ! { dg-error "Cannot initialize parameter array" }
 +  character(*), parameter :: w(2) = [character(n+1) :: 'a', 'b'] ! { dg-error "Cannot initialize parameter array" }
 +end
-\ No newline at end of file
 -- 
 2.53.0
 
