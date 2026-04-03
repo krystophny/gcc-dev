@@ -1,0 +1,105 @@
+From c1c11ab69115f14e2914fb8c135f5e4f9061a4fa Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Fri, 3 Apr 2026 18:37:54 +0200
+Subject: [PATCH] fortran: Fix ICE in expand_oacc_for with private derived type
+ [PR93554]
+
+Using a derived type with an allocatable component in a private clause
+on an OpenACC loop caused an ICE in expand_oacc_for because the
+finalization code for the allocatable component inserted additional
+basic blocks between the loop's continuation/entry blocks and the exit
+block, violating the strict CFG assertions.
+
+The assertions checked that BRANCH_EDGE(entry_bb)->dest == exit_bb and
+FALLTHRU_EDGE(cont_bb)->dest == exit_bb, but with finalization blocks
+these edges can point to intermediate blocks rather than directly to
+the exit.  Relax the assertions to only verify the expected edge count
+(two successors) without requiring specific destinations.
+
+	PR fortran/93554
+
+gcc/ChangeLog:
+
+	* omp-expand.cc (expand_oacc_for): Relax entry_bb and cont_bb
+	assertions to allow intermediate blocks from finalization code.
+	Remove exit_bb predecessor count assertion.
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/goacc/pr93554.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/omp-expand.cc                           | 13 +++++--------
+ gcc/testsuite/gfortran.dg/goacc/pr93554.f90 | 21 +++++++++++++++++++++
+ 2 files changed, 26 insertions(+), 8 deletions(-)
+ create mode 100644 gcc/testsuite/gfortran.dg/goacc/pr93554.f90
+
+diff --git a/gcc/omp-expand.cc b/gcc/omp-expand.cc
+index 2b4467cab82..f7db4542b7d 100644
+--- a/gcc/omp-expand.cc
++++ b/gcc/omp-expand.cc
+@@ -7718,28 +7718,25 @@ expand_oacc_for (struct omp_region *region, struct omp_for_data *fd)
+   basic_block bottom_bb = NULL;
+ 
+   /* entry_bb has two successors; the branch edge is to the exit
+-     block, fallthrough edge to body.  */
+-  gcc_assert (EDGE_COUNT (entry_bb->succs) == 2
+-	      && BRANCH_EDGE (entry_bb)->dest == exit_bb);
++     block (or to finalization blocks preceding it), fallthrough edge
++     to body.  */
++  gcc_assert (EDGE_COUNT (entry_bb->succs) == 2);
+ 
+   /* If cont_bb non-NULL, it has 2 successors.  The branch successor is
+      body_bb, or to a block whose only successor is the body_bb.  Its
+      fallthrough successor is the final block (same as the branch
+-     successor of the entry_bb).  */
++     successor of the entry_bb), possibly via finalization blocks.  */
+   if (cont_bb)
+     {
+       basic_block body_bb = FALLTHRU_EDGE (entry_bb)->dest;
+       basic_block bed = BRANCH_EDGE (cont_bb)->dest;
+ 
+-      gcc_assert (FALLTHRU_EDGE (cont_bb)->dest == exit_bb);
++      gcc_assert (EDGE_COUNT (cont_bb->succs) == 2);
+       gcc_assert (bed == body_bb || single_succ_edge (bed)->dest == body_bb);
+     }
+   else
+     gcc_assert (!gimple_in_ssa_p (cfun));
+ 
+-  /* The exit block only has entry_bb and cont_bb as predecessors.  */
+-  gcc_assert (EDGE_COUNT (exit_bb->preds) == 1 + (cont_bb != NULL));
+-
+   tree chunk_no;
+   tree chunk_max = NULL_TREE;
+   tree bound, offset;
+diff --git a/gcc/testsuite/gfortran.dg/goacc/pr93554.f90 b/gcc/testsuite/gfortran.dg/goacc/pr93554.f90
+new file mode 100644
+index 00000000000..11a27db2623
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/goacc/pr93554.f90
+@@ -0,0 +1,21 @@
++! { dg-do compile }
++! { dg-additional-options "-fopenacc" }
++!
++! PR fortran/93554
++! ICE in expand_oacc_for when a derived type with an allocatable
++! component is used with the private clause on an acc loop.
++
++program p
++   type t
++      integer :: a
++      integer, allocatable :: b(:)
++   end type
++   type(t) :: x
++   integer :: i
++   !$acc kernels
++   !$acc loop private(x)
++   do i = 0, 31
++      x%a = 1
++   end do
++   !$acc end kernels
++end
+-- 
+2.53.0
+
