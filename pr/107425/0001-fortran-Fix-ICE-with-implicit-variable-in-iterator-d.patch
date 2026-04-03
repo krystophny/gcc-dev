@@ -1,0 +1,101 @@
+From 91d12928ed35f3df9a9563993bd5b9d400a0eff7 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Fri, 3 Apr 2026 17:50:05 +0200
+Subject: [PATCH] fortran: Fix ICE with implicit variable in iterator depend
+ clause [PR107425]
+
+An implicitly typed variable used as a subscript in an OpenMP iterator
+depend clause (e.g., x(j) where j is implicit and only referenced in
+the clause) caused an ICE in gimplify_var_or_parm_decl because the
+variable's decl was never associated with a BIND_EXPR.
+
+The root cause is that gfc_match_iterator creates a block namespace
+(via gfc_build_block_ns) for iterator variables.  When the locator
+expression x(j) is parsed with gfc_current_ns set to this iterator
+namespace, the implicit variable j is created there rather than in the
+enclosing program namespace.  In gfc_finish_var_decl, the FL_LABEL
+check for BLOCK constructs matched before the omp_affinity_iterators
+check, routing j through add_decl_as_local.  Unlike real BLOCK
+construct variables, these never get a proper BIND_EXPR, so the
+gimplifier rejects them.
+
+Fixed by checking for omp_affinity_iterators before the FL_LABEL
+BLOCK construct check, and only treating actual iterator variables
+(those on the omp_affinity_iterators chain) as block-local.  Other
+variables in the iterator namespace are added to the enclosing
+function scope.
+
+	PR fortran/107425
+
+gcc/fortran/ChangeLog:
+
+	* trans-decl.cc (gfc_finish_var_decl): Check for
+	omp_affinity_iterators namespace before FL_LABEL BLOCK check.
+	Only route actual iterator variables through add_decl_as_local;
+	add other variables to the enclosing function.
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/gomp/pr107425.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/trans-decl.cc                   | 19 ++++++++++++++++---
+ gcc/testsuite/gfortran.dg/gomp/pr107425.f90 | 11 +++++++++++
+ 2 files changed, 27 insertions(+), 3 deletions(-)
+ create mode 100644 gcc/testsuite/gfortran.dg/gomp/pr107425.f90
+
+diff --git a/gcc/fortran/trans-decl.cc b/gcc/fortran/trans-decl.cc
+index 0080e83fc36..f0b46d0b841 100644
+--- a/gcc/fortran/trans-decl.cc
++++ b/gcc/fortran/trans-decl.cc
+@@ -666,13 +666,26 @@ gfc_finish_var_decl (tree decl, gfc_symbol * sym)
+ 	  && (sym->ns->proc_name->backend_decl == current_function_decl
+ 	      || sym->result == sym))
+ 	gfc_add_decl_to_function (decl);
++      else if (sym->ns->omp_affinity_iterators)
++	{
++	  /* Iterator variables are block-local; other variables in the
++	     iterator namespace (e.g. implicitly typed host-associated
++	     ones used in locator expressions) belong in the enclosing
++	     function.  */
++	  gfc_symbol *iter;
++	  for (iter = sym->ns->omp_affinity_iterators; iter;
++	       iter = iter->tlink)
++	    if (iter == sym)
++	      break;
++	  if (iter)
++	    add_decl_as_local (decl);
++	  else
++	    gfc_add_decl_to_function (decl);
++	}
+       else if (sym->ns->proc_name
+ 	       && sym->ns->proc_name->attr.flavor == FL_LABEL)
+ 	/* This is a BLOCK construct.  */
+ 	add_decl_as_local (decl);
+-      else if (sym->ns->omp_affinity_iterators)
+-	/* This is a block-local iterator.  */
+-	add_decl_as_local (decl);
+       else
+ 	gfc_add_decl_to_parent_function (decl);
+     }
+diff --git a/gcc/testsuite/gfortran.dg/gomp/pr107425.f90 b/gcc/testsuite/gfortran.dg/gomp/pr107425.f90
+new file mode 100644
+index 00000000000..77c31c20065
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/gomp/pr107425.f90
+@@ -0,0 +1,11 @@
++! { dg-do compile }
++! { dg-options "-fopenmp" }
++!
++! PR fortran/107425
++! ICE in gimplify_var_or_parm_decl when an implicitly typed variable
++! is used as a subscript in an iterator depend clause.
++
++program p
++   integer :: x(8)
++   !$omp taskwait depend(iterator(i=1:8), in:x(j))
++end
+-- 
+2.53.0
+
