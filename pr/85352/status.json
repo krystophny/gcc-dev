@@ -52,7 +52,7 @@
     "severity": "rejects-valid",
     "validity_class": "valid-code"
   },
-  "fix_status": "patch-ready",
+  "fix_status": "merged",
   "github_issue": 59,
   "notes": "",
   "pr": 85352,
@@ -64,10 +64,10 @@
   "title": "valid ENTRY specification expressions rejected",
   "trunk": {
     "branch": null,
-    "commit": null,
+    "commit": "bd0134b02896878319cbfd0c4128df49f8790019",
     "patch": "0001-fortran-Accept-valid-ENTRY-specification-expressions.patch"
   },
-  "updated_at": "2026-03-29T11:23:53Z",
+  "updated_at": "2026-04-11T12:02:31Z",
   "validation": {
     "baseline": {
       "contains_any": [

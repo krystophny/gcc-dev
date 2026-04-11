@@ -2,7 +2,8 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=108382
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/110
-- **Status:** ON BUGZILLA (attachment 63999; reviewed trunk fix, full validation complete)
+- **Status:** MERGED (r16-8329-g3d4039e95d851b)
+- **Upstream commit:** `3d4039e95d851b5e3d8241b1feaf1d5dcc00cb98`
 
 ## Summary
 
@@ -49,6 +50,7 @@ gcc-trunk-build/gcc/gfortran -B gcc-trunk-build/gcc -c -fopenmp -fopenacc \
 
 - Branch: `pr108382-fix`
 - Commit: `f738265ceff7bc2fa3ebcbaf0dc7d807e81d81a8`
+- Upstream commit: `3d4039e95d851b5e3d8241b1feaf1d5dcc00cb98`
 - Patch: `0001-fortran-Fix-free-form-mixed-OpenACC-OpenMP-continuat.patch`
 
 ## Validation

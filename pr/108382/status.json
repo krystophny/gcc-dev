@@ -54,7 +54,7 @@
     "severity": "wrong-code",
     "validity_class": "valid-code"
   },
-  "fix_status": "patch-ready",
+  "fix_status": "merged",
   "github_issue": 110,
   "notes": "Patch posted to Bugzilla as attachment 63999. Validation on pr108382-fix is now complete: original and reduced reproducers fixed, preserved negative case still diagnoses, goacc.exp=omp-108382.f90 passes, goacc.exp=omp.f95 passes, the broader goacc.exp sweep is clean, and a fresh full check-gfortran rerun finished with 0 FAIL / XPASS.",
   "pr": 108382,
@@ -66,10 +66,10 @@
   "title": "Mixed OpenACC/OpenMP continuation misparse",
   "trunk": {
     "branch": "pr108382-fix",
-    "commit": "f738265ceff7bc2fa3ebcbaf0dc7d807e81d81a8",
+    "commit": "3d4039e95d851b5e3d8241b1feaf1d5dcc00cb98",
     "patch": "0001-fortran-Fix-free-form-mixed-OpenACC-OpenMP-continuat.patch"
   },
-  "updated_at": "2026-03-29T11:23:21Z",
+  "updated_at": "2026-04-11T12:02:31Z",
   "validation": {
     "baseline": {
       "contains_any": [

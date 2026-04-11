@@ -8,7 +8,6 @@ Minimal reproducers and patches for GCC Fortran and libgomp bugs.
 |----|-------|--------------|
 | [102430](102430/) | OpenMP linear(array) ICE | [#9](https://github.com/krystophny/gcc-dev/issues/9) |
 | [103276](103276/) | OpenACC ENTER DATA duplicate mapping | [#10](https://github.com/krystophny/gcc-dev/issues/10) |
-| [120723](120723/) | OpenACC `attach(scalar)` ICE | [#96](https://github.com/krystophny/gcc-dev/issues/96) |
 | [123252](123252/) | OpenACC scalar member wrong value | [#11](https://github.com/krystophny/gcc-dev/issues/11) |
 | [123280](123280/) | acc_is_present fails for assumed-shape | [#12](https://github.com/krystophny/gcc-dev/issues/12) |
 | [96080](96080/) | acc_is_present fails for pointers | [#13](https://github.com/krystophny/gcc-dev/issues/13) |
@@ -20,10 +19,8 @@ Minimal reproducers and patches for GCC Fortran and libgomp bugs.
 |----|-------|--------------|
 | 42954 | TARGET_*_CPP_BUILTINS missing | [#52](https://github.com/krystophny/gcc-dev/issues/52) |
 | 60576 | assumed_rank_7.f90 failure | [#53](https://github.com/krystophny/gcc-dev/issues/53) |
-| 79524 | Valgrind/ASan error in `fimplicit_none_2.f90` | [#55](https://github.com/krystophny/gcc-dev/issues/55) |
 | [102333](102333/) | Invalid `PROCEDURE` statement accepted | [#78](https://github.com/krystophny/gcc-dev/issues/78) |
 | 101760 | Deferred-length char + OMP target ICE | [#76](https://github.com/krystophny/gcc-dev/issues/76) |
-| 109788 | UB shift exponent 64 in IPA/Fortran path | [#91](https://github.com/krystophny/gcc-dev/issues/91) |
 | 110626 | Duplicated finalization in derived assignment | [#92](https://github.com/krystophny/gcc-dev/issues/92) |
 
 ## Merged Upstream
@@ -31,17 +28,26 @@ Minimal reproducers and patches for GCC Fortran and libgomp bugs.
 | PR | Title | GCC Commit | GitHub Issue |
 |----|-------|------------|--------------|
 | [32365](32365/) | Spec-statement diagnostics | 7db49bf4be2 | [#3](https://github.com/krystophny/gcc-dev/issues/3) |
+| [79524](79524/) | Valgrind/ASan error in `fimplicit_none_2.f90` | 7660e306748 | [#55](https://github.com/krystophny/gcc-dev/issues/55) |
 | [82721](82721/) | CHARACTER duplicate declaration ICE | 5cfaad50af7 | [#56](https://github.com/krystophny/gcc-dev/issues/56) |
 | [90519](90519/) | FINAL + recursive allocatable ICE | 1eb696fc092 | [#4](https://github.com/krystophny/gcc-dev/issues/4) |
 | [92613](92613/) | -cpp -fpreprocessed warning | 15ffee4e129 | [#7](https://github.com/krystophny/gcc-dev/issues/7) |
+| [93715](93715/) | `gfc_trans_auto_array_allocation` scalar coarray ICE | 2b0a29a94c9 | [#63](https://github.com/krystophny/gcc-dev/issues/63) |
+| [94978](94978/) | Bogus do-subscript warning in skipped inner loops | 790671b7084 | [#66](https://github.com/krystophny/gcc-dev/issues/66) |
 | [95338](95338/) | ENTRY + `-ff2c` ICE | 490c7ba8d880 | [#68](https://github.com/krystophny/gcc-dev/issues/68) |
+| [96986](96986/) | False explicit-interface-required for `ENTRY` + `volatile` | 6be9db00081 | [#71](https://github.com/krystophny/gcc-dev/issues/71) |
 | [96255](96255/) | DO CONCURRENT type-spec | 5e62a23cc3a | [#1](https://github.com/krystophny/gcc-dev/issues/1) |
+| [102430](102430/) | OpenMP `linear(array)` reject-valid fix | 4f40d3a5b0d | [#9](https://github.com/krystophny/gcc-dev/issues/9) |
 | [102459](102459/) | OMP iterator component array ICE | d2ab04fbba7b | [#79](https://github.com/krystophny/gcc-dev/issues/79) |
 | [102596](102596/) | OMP task reduction ctor ICE | e53a7510be51 | [#80](https://github.com/krystophny/gcc-dev/issues/80) |
+| [103367](103367/) | Invalid array initializer after parameter substitution | 326fe37d698 | [#84](https://github.com/krystophny/gcc-dev/issues/84) |
 | [106946](106946/) | ICE on invalid CLASS component in derived type | 0d0fbb0a01e4 | [#88](https://github.com/krystophny/gcc-dev/issues/88) |
 | [107721](107721/) | Array constructor type-spec | c50d263beff | [#6](https://github.com/krystophny/gcc-dev/issues/6) |
+| [108382](108382/) | Mixed OpenACC/OpenMP continuation misparse | 3d4039e95d8 | [#110](https://github.com/krystophny/gcc-dev/issues/110) |
+| [109788](109788/) | Character `SPREAD` runtime error | ebc8ed3246f | [#91](https://github.com/krystophny/gcc-dev/issues/91) |
 | [110877](110877/) | Polymorphic dummy assignment drops alloc comps | b018656f8c01 | [#101](https://github.com/krystophny/gcc-dev/issues/101) |
 | [120286](120286/) | OpenMP polymorphic pointer privatization | 60fbabc1a182 | [#95](https://github.com/krystophny/gcc-dev/issues/95) |
+| [120723](120723/) | OpenACC scalar `attach`/`detach` ICE | 0af9613810e | [#96](https://github.com/krystophny/gcc-dev/issues/96) |
 | [121472](121472/) | Constructor/finalizer ICE | 5bb465a7896 | [#2](https://github.com/krystophny/gcc-dev/issues/2) |
 | [121475](121475/) | Function result finalization | a30b5f23b58 | [#8](https://github.com/krystophny/gcc-dev/issues/8) |
 | [121628](121628/) | Recursive allocatable deep copy | a1fe2cfa896 | [#5](https://github.com/krystophny/gcc-dev/issues/5) |

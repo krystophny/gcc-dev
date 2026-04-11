@@ -2,7 +2,8 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=109788
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/91
-- **Status:** ON BUGZILLA (attachment 64059)
+- **Status:** MERGED (r16-8474-gebc8ed3246ff59)
+- **Upstream commit:** `ebc8ed3246ff59d1df42545ffb6f5ee15118a6bc`
 - **Branch:** `origin/pr109788-fix`
 
 ## Summary

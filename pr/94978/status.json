@@ -52,7 +52,7 @@
     "severity": "diagnostic",
     "validity_class": "valid-code"
   },
-  "fix_status": "patch-ready",
+  "fix_status": "merged",
   "github_issue": 66,
   "notes": "",
   "pr": 94978,
@@ -64,10 +64,10 @@
   "title": "bogus do-subscript warning",
   "trunk": {
     "branch": null,
-    "commit": null,
+    "commit": "790671b708400d1fc6bb1abbf1601f3616e8220d",
     "patch": "0001-fortran-Avoid-bogus-do-subscript-warnings-in-skipped.patch"
   },
-  "updated_at": "2026-03-29T11:23:56Z",
+  "updated_at": "2026-04-11T12:02:31Z",
   "validation": {
     "baseline": {
       "contains_any": [

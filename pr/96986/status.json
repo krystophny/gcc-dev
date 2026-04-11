@@ -37,8 +37,8 @@
     }
   },
   "bugzilla": {
-    "id": 79524,
-    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=79524"
+    "id": 96986,
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96986"
   },
   "classification": {
     "regression": false,
@@ -46,19 +46,19 @@
     "validity_class": "valid-code"
   },
   "fix_status": "merged",
-  "github_issue": 55,
+  "github_issue": 71,
   "notes": "",
-  "pr": 79524,
+  "pr": 96986,
   "submission_status": {
-    "on_bugzilla": true,
+    "on_bugzilla": false,
     "on_mailing_list": false,
     "sent": false
   },
-  "title": "stale charlen after rejected parameter array declaration",
+  "title": "False explicit-interface-required for ENTRY with volatile",
   "trunk": {
     "branch": null,
-    "commit": "7660e306748115857c7aee783e3ca2381f1a7cad",
-    "patch": "0001-fortran-Clean-up-charlens-after-rejected-parameter-a.patch"
+    "commit": "6be9db000810a44c5b6b5af320723b3af175bb8a",
+    "patch": "0001-fortran-Fix-false-explicit-interface-required-for-EN.patch"
   },
   "updated_at": "2026-04-11T12:02:31Z",
   "validation": {
@@ -75,7 +75,7 @@
       "-B",
       "gcc-build/gcc",
       "-c",
-      "pr/79524/reproducer.f90",
+      "pr/96986/reproducer.f90",
       "-o",
       "/dev/null"
     ],

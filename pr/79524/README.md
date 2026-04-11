@@ -3,7 +3,8 @@
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=79524
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/55
 - **Branch:** `pr79524-decl-cleanup`
-- **Status:** ON BUGZILLA (attachment 64114)
+- **Status:** MERGED (r16-8479-g7660e306748115)
+- **Upstream commit:** `7660e306748115857c7aee783e3ca2381f1a7cad`
 
 ## Summary
 
