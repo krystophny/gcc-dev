@@ -934,6 +934,13 @@ scripts/gcc-bugzilla.sh regressions
 # Login (one-time, saves token in ~/.bugzillarc)
 scripts/gcc-bugzilla.sh login
 
+# Generate one-year daily bug/resolution stats and plots for:
+# - all GCC bugs
+# - all GCC regressions
+# - all Fortran bugs
+# - all Fortran regressions
+python3 scripts/gcc-bugzilla-stats.py --start 2025-04-14
+
 # --- Write operations (REQUIRE explicit user permission) ---
 
 # Post a plain comment
@@ -952,6 +959,16 @@ scripts/gcc-bugzilla.sh ensure-cc <pr-number> [email[,email...]]
 # Submit the generated workflow packet
 scripts/gcc-bugzilla.sh submit <pr-number> [--branch trunk|gcc-15|gcc-14|gcc-13] [--execute]
 ```
+
+The stats script is intentionally light on Bugzilla:
+- it uses the documented REST search endpoint `GET /bugzilla/rest.cgi/bug`
+  for the current open set, the created-in-range set, and the closed/changed-in-range set
+- it uses the documented bug history endpoint
+  `GET /bugzilla/rest.cgi/bug/<id>/history?new_since=YYYY-MM-DD`
+  only for bugs closed/changed in the requested window, caching responses under
+  `~/.cache/gcc-dev-bugzilla-stats/`
+- it derives exact first-resolution dates locally from history instead of issuing
+  hundreds of per-day count queries
 
 Write operations have an interactive `[y/N]` confirmation prompt.  Set
 `GCC_BUGZILLA_ASSUME_YES=y` to skip the prompt in scripted use.
