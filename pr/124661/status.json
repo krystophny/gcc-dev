@@ -41,9 +41,9 @@
     "keywords": [
       "wrong-code"
     ],
-    "refreshed_at": "2026-03-29T11:23:47Z",
-    "resolution": "",
-    "status": "ASSIGNED",
+    "refreshed_at": "2026-04-14T07:52:44Z",
+    "resolution": "FIXED",
+    "status": "RESOLVED",
     "summary": "[16 Regression] SIGSEGV with -fcheck=bounds from type-bound procedure",
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124661"
   },
@@ -52,7 +52,7 @@
     "severity": "runtime-crash",
     "validity_class": "valid-code"
   },
-  "fix_status": "patch-ready",
+  "fix_status": "merged",
   "github_issue": 112,
   "notes": "Replacement patch posted to Bugzilla as attachment 64069; attachment 64058 is obsolete. The original reproducer and the nested component-array variant from Bugzilla comment 4 now run clean with -fcheck=bounds. Targeted pr124661.f90 and assign_14.f90 tests pass, check-gfortran finished with 0 FAIL / XPASS, and check-target-libgomp-fortran shows no FAIL / XPASS.",
   "pr": 124661,
@@ -64,10 +64,10 @@
   "title": "SIGSEGV with -fcheck=bounds from type-bound procedure",
   "trunk": {
     "branch": "pr124661-fix6",
-    "commit": "2dd03ae06a4c",
+    "commit": "1c795ee4bc6",
     "patch": "0001-fortran-Fix-factored-descriptors-for-bounds-checked-.patch"
   },
-  "updated_at": "2026-03-29T11:38:14Z",
+  "updated_at": "2026-04-14T07:52:44Z",
   "validation": {
     "baseline": {
       "contains_any": [

@@ -41,9 +41,9 @@
     "keywords": [
       "diagnostic"
     ],
-    "refreshed_at": "2026-03-29T11:23:49Z",
-    "resolution": "",
-    "status": "NEW",
+    "refreshed_at": "2026-04-14T07:52:48Z",
+    "resolution": "FIXED",
+    "status": "RESOLVED",
     "summary": "Better error message for specification statement in executable section",
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=32365"
   },
@@ -67,7 +67,7 @@
     "commit": "7db49bf4be2",
     "patch": "0001-fortran-enforce-spec-statements-ordering.patch"
   },
-  "updated_at": "2026-03-29T11:23:49Z",
+  "updated_at": "2026-04-14T07:52:48Z",
   "validation": {
     "baseline": {
       "contains_any": [

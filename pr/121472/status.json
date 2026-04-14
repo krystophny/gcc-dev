@@ -39,7 +39,7 @@
   "bugzilla": {
     "id": 121472,
     "keywords": [],
-    "refreshed_at": "2026-03-29T11:23:26Z",
+    "refreshed_at": "2026-04-14T07:52:21Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "ICE in gimplify_expr",
@@ -65,7 +65,7 @@
     "commit": "5bb465a7896",
     "patch": "0001-fortran-Finalize-function-results-per-F2003-4.5.5.2.patch"
   },
-  "updated_at": "2026-03-29T11:23:26Z",
+  "updated_at": "2026-04-14T07:52:21Z",
   "validation": {
     "baseline": {
       "contains_any": [

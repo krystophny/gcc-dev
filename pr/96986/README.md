@@ -2,8 +2,6 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96986
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/71
-- **Status:** MERGED (r16-8539-g6be9db000810a4)
-- **Upstream commit:** `6be9db000810a44c5b6b5af320723b3af175bb8a`
 
 ## Summary
 
@@ -27,24 +25,3 @@ Move the entry symbol lookup after the `resolved != -1` block so it runs
 regardless of the namespace resolution state.
 
 Affects gcc-15, gcc-14, gcc-13 identically (same code structure).
-
-## Verification
-
-### Test fails on trunk (system gfortran 15.2.1)
-```
-$ gfortran -std=legacy -c reproducer.for
-reproducer.for:15:18:
-
-   15 |         call fun_a()
-      |                  1
-Error: Explicit interface required for 'fun_a' at (1): volatile argument
-```
-
-### Test passes after fix
-```
-$ gcc-build/gcc/gfortran -B gcc-build/gcc -std=legacy -c reproducer.for
-(clean, no output)
-```
-
-- `make check-gfortran RUNTESTFLAGS="dg.exp=pr96986.f90"`: PASS
-- Full `check-gfortran`: 0 FAIL / XPASS

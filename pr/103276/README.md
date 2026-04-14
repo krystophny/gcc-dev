@@ -2,10 +2,6 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=103276
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/10
-- **Branch:** `pr103276-fix` (also on integration branch `openacc`)
-- **Status:** PENDING (patch on fork, awaiting upstream submission)
-
-**Title:** [openacc] Trying to map already mapped data
 
 **Component:** fortran (OpenACC)
 
@@ -20,25 +16,6 @@ due to overlapping stack ranges, producing a runtime error like:
 
 The failure is reported as sporadic in practice (stack layout dependent).
 
-## Evidence (OMP lowering)
-
-Both reproducers show the same problematic OMP lowering in the tree dump:
-
-- `.omp_data_arr.*.var = &var;`
-- followed by `map(alloc:var [pointer assign, bias: 0])`
-
-This matches the Bugzilla discussion that the mapping should use the reference
-value, not the address of the dummy-argument slot.
-
-To inspect:
-
-```bash
-./gcc-build/gcc/gfortran -B ./gcc-build/gcc -O2 -fopenacc -c pr/103276/reproducer.f90 \
-  -fdump-tree-omplower -dumpdir /tmp/ -dumpbase pr103276_reproducer
-
-rg -n \"\\.omp_data_arr|&var|pointer assign\" /tmp/pr103276_reproducer.*.omplower
-```
-
 ## Reproducers
 
 - `reproducer.f90`: reduced runnable reproducer based on the local report
@@ -48,36 +25,3 @@ rg -n \"\\.omp_data_arr|&var|pointer assign\" /tmp/pr103276_reproducer.*.omplowe
 
 Both target the same symptom: ENTER DATA on derived types leading to duplicate
 mapping errors in libgomp.
-
-## Verification (regression test on integration branch)
-
-```
-PASS: gfortran.dg/goacc/pr103276.f90   -O  (test for excess errors)
-PASS: gfortran.dg/goacc/pr103276.f90   -O   scan-tree-dump-not omplower "\.omp_data_arr\..*= &var"
-```
-
-Full check-gfortran: 75,147 passes, 0 regressions (6 pre-existing bessel_6 failures).
-
-## Patch
-
-`0001-fortran-Skip-pointer-mapping-for-pass-by-ref-in-ENTE.patch`
-
-Fixes the root cause in `gcc/fortran/trans-openmp.cc` by skipping
-GOMP_MAP_POINTER mappings for ENTER/EXIT DATA on variables that are
-only pointers at tree level due to Fortran pass-by-reference, not
-actual POINTER/ALLOCATABLE variables.  This follows Tobias Burnus's
-analysis in Bugzilla comment #8-9.
-
-## Build / Run (NVPTX example)
-
-This is a runtime/offload issue; compiling to an object file is not sufficient.
-
-```bash
-gfortran -O2 -fopenacc -foffload=nvptx-none pr/103276/reproducer.f90 -o /tmp/pr103276.x
-
-# The error is reported to be sporadic; repeat runs if needed.
-/tmp/pr103276.x
-```
-
-If using the offload build, ensure the matching `libgomp` is used at runtime
-(via `LD_LIBRARY_PATH` or rpath).

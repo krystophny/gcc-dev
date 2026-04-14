@@ -2,7 +2,6 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121475
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/8
-- **Status:** MERGED (gcc commit a30b5f23b58)
 
 Related to PR 121472 (finalization issues).
 

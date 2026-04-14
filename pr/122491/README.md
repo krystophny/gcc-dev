@@ -2,7 +2,6 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=122491
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/50
-- **Status:** MERGED upstream (`r16-7577-gff2f6c5153ecc1`, commit `ff2f6c5153e`)
 
 ## Summary
 
@@ -43,14 +42,3 @@ Expected diagnostics:
 
 - `END BLOCK statement expected` on two lines
 - `Unexpected end of file`
-
-## Validation (2026-02-18)
-
-- Rebuilt front end in `gcc-build/gcc`.
-- Targeted test: `make -C gcc-build/gcc check-gfortran RUNTESTFLAGS="dg.exp=pr103508.f90"` passed.
-- Full suite: `make -C gcc-build/gcc -j32 -k check-gfortran` passed with no
-  `FAIL`/`XPASS` lines in `gcc-build/gcc/testsuite/gfortran/gfortran.sum`.
-
-## Patch Artifact
-
-- `pr/122491/0001-fortran-Avoid-UAF-on-missing-END-BLOCK-cleanup-PR122.patch`

@@ -2,7 +2,6 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124666
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/113
-- **Status:** MERGED upstream r16-8321-g0ac324783dfb76 (fixed by Jerry DeLisle)
 
 ## Summary
 
@@ -20,11 +19,3 @@ lexing large repeat counts.
 Parenthesize the digit conversion in both affected accumulation sites so the
 character is converted to its numeric value before it is added to the running
 count.
-
-## Verification
-
-- UBSAN reproducer `/tmp/pr124666.f90` compiles clean after the fix.
-- `make check-gfortran RUNTESTFLAGS='dg.exp=pr124666.f90'`
-- Full `check-gfortran`: `0` `FAIL` / `XPASS`, `# of expected passes 3357`,
-  `# of unsupported tests 6`
-

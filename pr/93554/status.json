@@ -37,16 +37,16 @@
     }
   },
   "bugzilla": {
-    "id": 102596,
+    "id": 93554,
     "keywords": [
       "ice-on-valid-code",
-      "openmp"
+      "openacc"
     ],
-    "refreshed_at": "2026-04-14T07:52:08Z",
-    "resolution": "FIXED",
-    "status": "RESOLVED",
-    "summary": "[13/14/15/16 Regression] ICE in gfc_omp_clause_default_ctor, at fortran/trans-openmp.c:713 since r11-4883-ge929ef532ad52cde",
-    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102596"
+    "refreshed_at": "2026-04-14T07:52:57Z",
+    "resolution": "",
+    "status": "NEW",
+    "summary": "[13/14/15/16 Regression] ICE in expand_oacc_for, at omp-expand.c:6035 since r6-4364-ge4834818d22f5c66",
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=93554"
   },
   "classification": {
     "regression": true,
@@ -54,21 +54,21 @@
     "validity_class": "valid-code"
   },
   "fix_status": "merged",
-  "github_issue": 80,
+  "github_issue": 62,
   "notes": "",
-  "pr": 102596,
+  "pr": 93554,
   "submission_status": {
     "on_bugzilla": false,
     "on_mailing_list": false,
     "sent": false
   },
-  "title": "ICE on OpenMP task reduction of allocatable scalar",
+  "title": "ICE in expand_oacc_for with private derived type",
   "trunk": {
     "branch": null,
-    "commit": null,
-    "patch": "0001-fortran-Allow-task-reduction-allocatable-scalars-wit.patch"
+    "commit": "010618b8dcb",
+    "patch": "0001-fortran-Fix-ICE-in-expand_oacc_for-with-private-deri.patch"
   },
-  "updated_at": "2026-04-14T07:52:08Z",
+  "updated_at": "2026-04-14T07:52:57Z",
   "validation": {
     "baseline": {
       "contains_any": [
@@ -83,7 +83,7 @@
       "-B",
       "gcc-build/gcc",
       "-c",
-      "pr/102596/reproducer.f90",
+      "pr/93554/reproducer.f90",
       "-o",
       "/dev/null"
     ],

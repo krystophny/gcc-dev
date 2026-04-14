@@ -2,7 +2,6 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=84245
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/57
-- **Status:** MERGED upstream (`48616938660`; Bugzilla RESOLVED FIXED)
 
 ## Summary
 
@@ -25,25 +24,12 @@ Expected result after the fix:
 - no internal compiler error
 - nonzero exit status is expected because the source is invalid
 
-## Patch
-
-- Upstream GCC commit: `486169386603627f0cf2a5f12ea4f73a20d6df20`
-- Local branch: `pr84245-fix`
-- Local validation commit: `e0115b2d28e1a030c6158f2c57a2ebfd62507d1b`
-- Exported patch: `0001-fortran-Avoid-rollback-ICE-after-invalid-SELECT-TYPE.patch`
-
 ## Fix approach
 
 - In `gfc_match_select_type`, distinguish `MATCH_NO` from `MATCH_ERROR`.
 - Only free the temporary namespace on `MATCH_NO`.
 - On `MATCH_ERROR`, return immediately and avoid running the normal rollback
   path over a partially broken namespace.
-
-## Validation
-
-- direct reproducer: fixed, no ICE, diagnostics only
-- targeted tests: `dg.exp=pr84245.f90` passed
-- full `check-gfortran`: passed with no `FAIL`/`XPASS` entries
 
 ## Notes
 

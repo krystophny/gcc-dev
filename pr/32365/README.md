@@ -2,7 +2,6 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=32365
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/3
-- **Status:** MERGED (gcc commits 7db49bf4be2 + 0ec9191dae0, 2025-11-17)
 
 **Component:** fortran
 **Version:** 4.3.0 (original report)
@@ -105,14 +104,6 @@ However, Tobias Burnus noted that `verify_st_order` in `parse.c` already has bet
 3. **Identify all affected statement types** (not just OpenMP threadprivate)
 4. **Implement improved error messages** that match Intel's clarity
 5. **Ensure no regression** in existing error handling
-
-## Files Created
-
-- `reproducer.f90` - Original OpenMP threadprivate reproducer from bug report
-- `common_test.f90` - Additional test case with COMMON statement in executable section
-- `simple_spec.f90` - Minimal test case with variable declaration in executable section
-- `Makefile` - Comprehensive testing with multiple compilers
-- `README.md` - This documentation
 
 ## Testing
 

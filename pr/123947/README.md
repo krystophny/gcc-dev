@@ -2,8 +2,6 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123947
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/48
-- **Branch:** `pr123947-fix` (historical local branch)
-- **Status:** MERGED upstream (fixed via `r16-7700-ge0b70284cfac5b`, testcase additions in `83ef3db4b38`)
 
 ## Summary
 
@@ -60,33 +58,3 @@ Behavioral changes:
    the per-type `FUNCTION_DECL` cache.
 5. Add second regression test (`pr123947_2.f90`) using a non-1:1 locally
    derived source-allocation pattern.
-
-## Validation (2026-02-22)
-
-Compiler under test:
-
-- `gcc-build/gcc/gfortran -B gcc-build/gcc`
-- `GNU Fortran (GCC) 16.0.1 20260221 (experimental)`
-
-Compile checks:
-
-- `attachment-63564-full.f90`: **PASS**
-- `attachment-63567-mre.f90`: **PASS**
-- `gfortran.dg/pr123947.f90`: **PASS**
-- `gfortran.dg/pr123947_2.f90`: **PASS**
-- local derived 0583-style testcase: **PASS**
-- Fujitsu reference file `0583_0023.f90` compiled locally for verification only:
-  **PASS**
-
-Targeted tests:
-
-- `make check-gfortran RUNTESTFLAGS="dg.exp=pr123947.f90"`: **PASS**
-- `make check-gfortran RUNTESTFLAGS="dg.exp=pr123947_2.f90"`: **PASS**
-
-Full tests:
-
-- `make -j32 -k check-gfortran`: completed
-  - `gfortran.dg/pr123947.f90`: PASS
-  - `gfortran.dg/pr123947_2.f90`: PASS
-  - `grep -E "^FAIL|^XPASS" gcc-build/gcc/testsuite/gfortran/gfortran.sum`:
-    no matches

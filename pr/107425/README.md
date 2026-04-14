@@ -2,15 +2,6 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=107425
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/89
-- **Status:** PENDING (patch on fork + Bugzilla)
-
-## Affected Versions
-| Branch | Reproduces? | Notes |
-|--------|-------------|-------|
-| trunk (r16-xxxx) | yes | ICE in gimplify_var_or_parm_decl |
-| releases/gcc-15 | yes | Same regression |
-| releases/gcc-14 | yes | Same regression |
-| releases/gcc-13 | yes | Same regression |
 
 ## Root Cause
 

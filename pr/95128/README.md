@@ -1,9 +1,9 @@
 # Bug 95128: aarch64: configure option for outline-atomics
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95128
-- **See also:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95129
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/106
-- **Status:** PENDING (patch on fork, branch pr95128-fix)
+
+- **See also:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95129
 
 ## Summary
 

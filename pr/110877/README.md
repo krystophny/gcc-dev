@@ -2,8 +2,6 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=110877
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/101
-- **Branch:** `pr110877-fix`
-- **Status:** MERGED (r16-8017-gb018656f8c016)
 
 ## Summary
 
@@ -43,41 +41,3 @@ Expected result after the fix:
 - Reuse the existing `_copy` machinery once the vptr has been recovered.
 - Add `gfortran.dg/pr110877.f90`, a runtime regression test that checks both
   `g = f` and `allocate(g, source=f)`.
-
-## Validation
-
-- Direct compile and run of `reproducer.f90`: PASS
-- Direct runtime check of the fixed compiler: reproducer now prints `T` then `T`
-- Direct runtime rechecks:
-  - `class_transformational_1.f90`: PASS
-  - `class_assign_4.f90`: PASS
-  - `finalize_59.f90`: PASS
-  - `class_dummy_6.f90`: PASS
-  - `pr99326.f90` (`-fsyntax-only`): PASS
-- Targeted `check-gfortran`:
-  - `pr110877.f90`: PASS
-  - `class_transformational_1.f90`: PASS
-  - `class_assign_4.f90`: PASS
-  - `finalize_59.f90`: PASS
-  - `class_dummy_6.f90`: PASS
-  - `pr99326.f90`: PASS
-- Full `check-gfortran`: PASS (`0` `FAIL`/`XPASS`)
-
-## Review Notes
-
-- A broader first attempt that routed more class-array assignments through
-  `_copy` fixed the bug but regressed `class_assign_4.f90` and
-  `finalize_38a.f90`.
-- A later dummy-variable-only attempt also regressed `finalize_59.f90` by
-  sending class pointer results through `_copy`.
-- The accepted fix is narrower: only scalarized elements of nonpointer,
-  nonallocatable class dummy arrays use the recovered-vptr path.
-- `finalize_38a.f90` was rechecked against a temporarily restored baseline and
-  already fails there, so it is not caused by this patch.
-
-## Patch Artifacts
-
-- GCC commit: `55493d38c019728320a728481b0f010dddf861fc`
-- Exported patch:
-  `pr/110877/0001-fortran-Fix-class-dummy-array-assignment-deep-copy-P.patch`
-- Branch: `origin/pr110877-fix`

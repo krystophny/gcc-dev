@@ -2,7 +2,7 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96080
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/13
-- **Status:** PENDING (fixed by PR 123280 patch, awaiting upstream submission)
+
 - **Related:** PR 123280 (same root cause, same patch)
 
 ## Summary
@@ -17,16 +17,6 @@ Same as PR 123280: `acc_is_present_array_h` in libgomp/openacc.f90 had `contiguo
 on its assumed-rank dummy argument. Fortran pointers have descriptors, and when
 passed to a `contiguous` dummy, gfortran creates a temporary copy. The lookup then
 checks the copy's address instead of the actual mapped data.
-
-## Test Results
-
-| Test | nvfortran | GCC (unfixed) | GCC (PR123280 fix) |
-|------|-----------|---------------|---------------------|
-| Map target, check via pointer | PASS | FAIL | PASS |
-| Map pointer directly | PASS | FAIL | PASS |
-| Map target + attach pointer | PASS | FAIL | PASS |
-| Pointer argument in subroutine | PASS | FAIL | PASS |
-| Pointer as assumed-shape | PASS | FAIL | PASS |
 
 ## Fix
 

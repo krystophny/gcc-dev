@@ -37,16 +37,15 @@
     }
   },
   "bugzilla": {
-    "id": 102596,
+    "id": 93715,
     "keywords": [
-      "ice-on-valid-code",
-      "openmp"
+      "ice-on-valid-code"
     ],
-    "refreshed_at": "2026-04-14T07:52:08Z",
-    "resolution": "FIXED",
-    "status": "RESOLVED",
-    "summary": "[13/14/15/16 Regression] ICE in gfc_omp_clause_default_ctor, at fortran/trans-openmp.c:713 since r11-4883-ge929ef532ad52cde",
-    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102596"
+    "refreshed_at": "2026-04-14T07:52:58Z",
+    "resolution": "",
+    "status": "NEW",
+    "summary": "[13/14/15 Regression] ICE in gfc_trans_auto_array_allocation, at fortran/trans-array.c:6320",
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=93715"
   },
   "classification": {
     "regression": true,
@@ -54,21 +53,21 @@
     "validity_class": "valid-code"
   },
   "fix_status": "merged",
-  "github_issue": 80,
+  "github_issue": 63,
   "notes": "",
-  "pr": 102596,
+  "pr": 93715,
   "submission_status": {
     "on_bugzilla": false,
     "on_mailing_list": false,
     "sent": false
   },
-  "title": "ICE on OpenMP task reduction of allocatable scalar",
+  "title": "ICE in gfc_trans_auto_array_allocation with scalar coarray",
   "trunk": {
     "branch": null,
-    "commit": null,
-    "patch": "0001-fortran-Allow-task-reduction-allocatable-scalars-wit.patch"
+    "commit": "2b0a29a94c9",
+    "patch": "0001-fortran-Fix-ICE-in-gfc_trans_auto_array_allocation-w.patch"
   },
-  "updated_at": "2026-04-14T07:52:08Z",
+  "updated_at": "2026-04-14T07:52:58Z",
   "validation": {
     "baseline": {
       "contains_any": [
@@ -83,7 +82,7 @@
       "-B",
       "gcc-build/gcc",
       "-c",
-      "pr/102596/reproducer.f90",
+      "pr/93715/reproducer.f90",
       "-o",
       "/dev/null"
     ],

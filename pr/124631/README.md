@@ -2,7 +2,6 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124631
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/111
-- **Status:** MERGED upstream (`73933cdc44dea4b1bd5e1a2ef04d1df6edeb27c6`; Bugzilla still `ASSIGNED`)
 
 ## Summary
 
@@ -21,9 +20,3 @@ then read the stale stride entry and trigger the UBSAN report from PR124631.
 Initialize `sstride[0]` to zero before entering the rank-1 simplification path.
 The local patch was completed before the live Bugzilla rescan; Harald Anlauf's
 upstream commit landed first and superseded local posting.
-
-## Verification
-
-- Reproducer `/tmp/pr124631.f90` now runs clean.
-- `make check-gfortran RUNTESTFLAGS='dg.exp=pr124631.f90'`
-- Full `check-gfortran`: `0` `FAIL` / `XPASS`, `# of expected passes 3425`

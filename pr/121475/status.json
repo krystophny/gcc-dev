@@ -39,7 +39,7 @@
   "bugzilla": {
     "id": 121475,
     "keywords": [],
-    "refreshed_at": "2026-03-29T11:23:27Z",
+    "refreshed_at": "2026-04-14T07:52:23Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "Missed finalization",
@@ -65,7 +65,7 @@
     "commit": "a30b5f23b58",
     "patch": "0001-fortran-Finalize-function-result-in-defined-assignme.patch"
   },
-  "updated_at": "2026-03-29T11:23:27Z",
+  "updated_at": "2026-04-14T07:52:23Z",
   "validation": {
     "baseline": {
       "contains_any": [

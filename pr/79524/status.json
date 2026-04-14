@@ -38,10 +38,15 @@
   },
   "bugzilla": {
     "id": 79524,
+    "keywords": [],
+    "refreshed_at": "2026-04-14T07:52:49Z",
+    "resolution": "",
+    "status": "NEW",
+    "summary": "[13/14/15 Regression] valgrind error for gcc/testsuite/gfortran.dg/fimplicit_none_2.f90",
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=79524"
   },
   "classification": {
-    "regression": false,
+    "regression": true,
     "severity": "other",
     "validity_class": "valid-code"
   },
@@ -60,7 +65,7 @@
     "commit": "7660e306748115857c7aee783e3ca2381f1a7cad",
     "patch": "0001-fortran-Clean-up-charlens-after-rejected-parameter-a.patch"
   },
-  "updated_at": "2026-04-11T12:02:31Z",
+  "updated_at": "2026-04-14T07:52:49Z",
   "validation": {
     "baseline": {
       "contains_any": [

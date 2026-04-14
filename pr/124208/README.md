@@ -2,7 +2,6 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124208
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/100
-- **Status:** MERGED upstream (`r16-7686-g97965bdc1ed36f`, commit `97965bdc1ed`)
 
 ## Notes
 

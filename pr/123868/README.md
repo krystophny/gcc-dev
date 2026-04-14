@@ -2,7 +2,6 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123868
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/47
-- **Status:** MERGED (gcc commit ca448bc5e435)
 
 ## Summary
 
@@ -157,18 +156,3 @@ else if (c->attr.allocatable && !c->attr.proc_pointer
 For allocatable arrays with nested allocatables, the code now falls through
 to line 11100, which adds `add_when_allocated` directly (which already contains
 the proper allocation code).
-
-## Test Results
-
-| Compiler | Memory Leak |
-|----------|-------------|
-| gfortran 15.2 | No |
-| gfortran 14.x | No |
-| ifort | No |
-| gfortran 16 (before fix) | **Yes - 8 bytes** |
-| gfortran 16 (after fix) | **No** |
-
-## Files Changed
-
-- `gcc/fortran/trans-array.cc`: Fix condition at line 11066-11071
-- `gcc/testsuite/gfortran.dg/pr123868.f90`: New test case

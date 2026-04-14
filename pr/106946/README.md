@@ -2,8 +2,6 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=106946
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/88
-- **Branch:** `pr106946-fix`
-- **Status:** MERGED (r16-8021-g0d0fbb0a01e4e)
 
 ## Summary
 
@@ -47,17 +45,3 @@ Change:
 - Expose `gfc_free_component` and `gfc_delete_symtree` for that rollback path.
 - Expand the regression coverage to include allocatable and pointer CLASS
   declarations, plus a valid component followed by a bad one.
-
-## Validation
-
-- Direct compile of the new testcase with `gcc-build/gcc/gfortran -B gcc-build/gcc`:
-  PASS (diagnostic only, no ICE).
-- Targeted DejaGnu test:
-  `make -C gcc-build/gcc check-gfortran RUNTESTFLAGS="dg.exp=pr106946.f90"`:
-  PASS.
-- Full `check-gfortran`:
-  PASS (`0` `FAIL`/`XPASS` lines in `gcc-build/gcc/testsuite/gfortran/gfortran.sum`).
-
-## Patch Artifact
-
-- `pr/106946/0001-fortran-Fix-ICE-on-invalid-CLASS-component-in-derive.patch`

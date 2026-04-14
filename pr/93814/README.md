@@ -1,7 +1,7 @@
 # Bug 93814: ICE in build_entry_thunks with CHARACTER bind(c) ENTRY
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=93814
-- **Status:** PENDING (patch on fork, branch pr93814-fix)
+- **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/64
 
 ## Summary
 
@@ -23,9 +23,3 @@ When the master returns by reference but the thunk does not (bind(c)
 CHARACTER), create local temporaries for the result buffer and character
 length in the thunk. Pass these to the master call, then load the
 character value from the buffer and return it by value.
-
-## Release Branch Applicability
-
-The bug was introduced by r9-5391-g264201216816c914 (GCC 9). The fix
-applies to all active release branches (gcc-15, gcc-14, gcc-13) since
-`build_entry_thunks` has not changed materially in this area.

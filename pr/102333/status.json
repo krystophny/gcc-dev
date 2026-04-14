@@ -41,7 +41,7 @@
     "keywords": [
       "accepts-invalid"
     ],
-    "refreshed_at": "2026-03-29T11:23:12Z",
+    "refreshed_at": "2026-04-14T07:52:05Z",
     "resolution": "",
     "status": "REOPENED",
     "summary": "Invalid PROCEDURE statement accepted.",
@@ -67,7 +67,7 @@
     "commit": "8a0a1a0c7b187415e34dcf7a5cbf5e314c9de78a",
     "patch": "0001-fortran-Reject-invalid-host-result-PROCEDURE-interfa.patch"
   },
-  "updated_at": "2026-03-29T11:23:12Z",
+  "updated_at": "2026-04-14T07:52:05Z",
   "validation": {
     "baseline": {
       "contains_any": [

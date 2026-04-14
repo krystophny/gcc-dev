@@ -41,10 +41,10 @@
     "keywords": [
       "rejects-valid"
     ],
-    "refreshed_at": "2026-03-29T11:23:53Z",
+    "refreshed_at": "2026-04-14T07:52:54Z",
     "resolution": "",
     "status": "NEW",
-    "summary": "[13/14/15/16 Regression] Incorrect error diagnosed for dummy argument used in specification expression to subprogram with ENTRY",
+    "summary": "[13/14/15 Regression] Incorrect error diagnosed for dummy argument used in specification expression to subprogram with ENTRY",
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=85352"
   },
   "classification": {
@@ -67,7 +67,7 @@
     "commit": "bd0134b02896878319cbfd0c4128df49f8790019",
     "patch": "0001-fortran-Accept-valid-ENTRY-specification-expressions.patch"
   },
-  "updated_at": "2026-04-11T12:02:31Z",
+  "updated_at": "2026-04-14T07:52:54Z",
   "validation": {
     "baseline": {
       "contains_any": [

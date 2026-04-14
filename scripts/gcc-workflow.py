@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parent.parent
 PR_ROOT = ROOT / "pr"
 GCC_DIR = ROOT / "gcc"
 WORKTREE_ROOT = ROOT / "gcc-worktrees"
+GH_REPO = "krystophny/gcc-dev"
 
 ACTIVE_BRANCHES: Dict[str, Dict[str, str]] = {
     "gcc-15": {
@@ -341,11 +342,6 @@ def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8") if path.exists() else ""
 
 
-def parse_status_line(readme: str) -> str:
-    match = re.search(r"^\s*[-*]\s+\*\*Status:\*\*\s+(.+)$", readme, re.M)
-    return match.group(1).strip() if match else ""
-
-
 def parse_first_match(pattern: str, text: str) -> Optional[str]:
     match = re.search(pattern, text, re.M)
     return match.group(1).strip() if match else None
@@ -408,39 +404,10 @@ def parse_patch_name(readme: str, patch_files: List[str], existing_patch: Option
     return patch_files[-1] if patch_files else None
 
 
-def parse_fix_status(status_line: str, pr_dir: Path) -> str:
-    upper = status_line.upper()
-    if "MERGED" in upper:
-        return "merged"
-    if "WORKSFORME" in upper or "CLOSED" in upper:
-        return "worksforme"
-    if "PATCH READY" in upper:
-        return "patch-ready"
-    if ("ON BUGZILLA" in upper or "ON MAILING LIST" in upper) and list(
-        pr_dir.glob("0001-*.patch")
-    ):
-        return "patch-ready"
-    if "PENDING" in upper and list(pr_dir.glob("0001-*.patch")):
-        return "patch-ready"
-    if status_line:
-        return "open"
-    if list(pr_dir.glob("0001-*.patch")):
-        return "patch-ready"
-    return "open"
-
-
-def parse_submission_status(status_line: str) -> Dict[str, bool]:
-    lower = status_line.lower()
-    return {
-        "on_bugzilla": "bugzilla" in lower and "awaiting" not in lower,
-        "on_mailing_list": "mailing-list" in lower or "mailing list" in lower,
-        "sent": False,
-    }
-
-
 def merge_submission_status(
-    inferred: Dict[str, bool], existing: Optional[Dict[str, Any]]
+    inferred: Optional[Dict[str, bool]], existing: Optional[Dict[str, Any]]
 ) -> Dict[str, bool]:
+    inferred = inferred or {}
     existing = existing or {}
     return {
         "on_bugzilla": bool(inferred.get("on_bugzilla") or existing.get("on_bugzilla")),
@@ -451,7 +418,7 @@ def merge_submission_status(
     }
 
 
-def infer_regression(pr: int, readme: str, status_line: str, bugzilla: Dict[str, Any]) -> bool:
+def infer_regression(pr: int, readme: str, bugzilla: Dict[str, Any]) -> bool:
     if pr in REGRESSION_OVERRIDES:
         return REGRESSION_OVERRIDES[pr]
     title = parse_first_match(r"^#\s+(.+)$", readme) or ""
@@ -461,7 +428,6 @@ def infer_regression(pr: int, readme: str, status_line: str, bugzilla: Dict[str,
         for x in [
             title,
             first_block,
-            status_line,
             bugzilla.get("summary", ""),
             " ".join(bugzilla.get("keywords", [])),
         ]
@@ -530,6 +496,170 @@ def default_validation(pr: int, pr_dir: Path) -> Dict[str, Any]:
     }
 
 
+def infer_fix_status(
+    existing: Optional[str],
+    bugzilla_info: Dict[str, Any],
+    patch_files: List[str],
+) -> str:
+    if bugzilla_info.get("status") == "RESOLVED":
+        if bugzilla_info.get("resolution") == "WORKSFORME":
+            return "worksforme"
+        if bugzilla_info.get("resolution") == "FIXED":
+            return "merged"
+    if existing in {"open", "patch-ready", "merged", "worksforme"}:
+        return existing
+    return "patch-ready" if patch_files else "open"
+
+
+def process_labels(meta: Dict[str, Any]) -> List[str]:
+    labels = []
+    if meta["fix_status"] == "patch-ready":
+        labels.append("patch-ready")
+    if meta["submission_status"].get("on_bugzilla"):
+        labels.append("on-bugzilla")
+    if meta["submission_status"].get("on_mailing_list"):
+        labels.append("on-mailing-list")
+    return labels
+
+
+def issue_status_summary(meta: Dict[str, Any]) -> str:
+    labels = []
+    if meta["bugzilla"].get("status"):
+        labels.append(meta["bugzilla"]["status"])
+    if meta["bugzilla"].get("resolution"):
+        labels.append(meta["bugzilla"]["resolution"])
+    bugzilla_state = " ".join(labels) or "unknown"
+    state_map = {
+        "open": "open investigation",
+        "patch-ready": "patch ready",
+        "merged": "merged upstream",
+        "worksforme": "resolved worksforme",
+    }
+    return f"{state_map.get(meta['fix_status'], meta['fix_status'])}; Bugzilla {bugzilla_state}"
+
+
+def readme_technical_body(readme: str) -> str:
+    lines = readme.splitlines()
+    while lines and not lines[0].strip():
+        lines.pop(0)
+    if lines and lines[0].startswith("# "):
+        lines = lines[1:]
+    while lines and (not lines[0].strip() or _is_readme_metadata_line(lines[0])):
+        lines = lines[1:]
+    return "\n".join(lines).strip()
+
+
+def _is_readme_metadata_line(line: str) -> bool:
+    stripped = line.strip()
+    if not stripped:
+        return True
+    metadata_prefixes = (
+        "- **Bugzilla:**",
+        "- **GitHub issue:**",
+        "- **Status:**",
+        "- **Branch:**",
+        "- **Commit:**",
+        "- **Patch:**",
+        "- **Upstream commit:**",
+        "- **Upstream revision:**",
+        "- **Bugzilla attachment:**",
+        "- **Origin:**",
+        "**Bugzilla:**",
+        "**GitHub issue:**",
+        "**Status:**",
+        "**Title:**",
+    )
+    return stripped.startswith(metadata_prefixes)
+
+
+def render_issue_body(meta: Dict[str, Any], readme: str) -> str:
+    lines = [
+        f"# PR{meta['pr']}: {meta['title']}",
+        "",
+        f"- **Bugzilla:** {meta['bugzilla']['url']}",
+        f"- **PR README:** https://github.com/{GH_REPO}/blob/main/pr/{meta['pr']}/README.md",
+        f"- **Current status:** {issue_status_summary(meta)}",
+        f"- **Regression:** {'yes' if meta['classification']['regression'] else 'no'}",
+        f"- **Trunk commit:** `{meta['trunk']['commit']}`" if meta["trunk"].get("commit") else "- **Trunk commit:** n/a",
+        f"- **Patch artifact:** `{meta['trunk']['patch']}`" if meta["trunk"].get("patch") else "- **Patch artifact:** n/a",
+    ]
+    if meta.get("notes"):
+        lines.extend(["", "## Notes", "", meta["notes"].strip()])
+    technical = readme_technical_body(readme)
+    if technical:
+        lines.extend(["", technical])
+    return "\n".join(lines).strip() + "\n"
+
+
+def sync_issue(meta: Dict[str, Any]) -> None:
+    issue_number = meta.get("github_issue")
+    if not issue_number:
+        print(f"skipped PR{meta['pr']} (no GitHub issue linked)")
+        return
+    issue_info = json.loads(
+        run(
+            [
+                "gh",
+                "issue",
+                "view",
+                str(issue_number),
+                "--repo",
+                GH_REPO,
+                "--json",
+                "state,labels",
+            ]
+        ).stdout
+    )
+    readme = read_text(PR_ROOT / str(meta["pr"]) / "README.md")
+    body = render_issue_body(meta, readme)
+    tmp = ROOT / ".tmp-issue-body.md"
+    tmp.write_text(body, encoding="utf-8")
+    try:
+        run(
+            [
+                "gh",
+                "issue",
+                "edit",
+                str(issue_number),
+                "--repo",
+                GH_REPO,
+                "--title",
+                f"PR{meta['pr']}: {meta['title']}",
+                "--body-file",
+                str(tmp),
+            ],
+            capture=False,
+        )
+        existing_labels = {item["name"] for item in issue_info.get("labels", [])}
+        desired_process = set(process_labels(meta))
+        current_process = existing_labels & {"patch-ready", "on-bugzilla", "on-mailing-list"}
+        add = sorted(desired_process - current_process)
+        remove = sorted(current_process - desired_process)
+        if add or remove:
+            cmd = ["gh", "issue", "edit", str(issue_number), "--repo", GH_REPO]
+            if add:
+                cmd.extend(["--add-label", ",".join(add)])
+            if remove:
+                cmd.extend(["--remove-label", ",".join(remove)])
+            run(cmd, capture=False)
+        desired_closed = meta["fix_status"] in {"merged", "worksforme"}
+        current_closed = issue_info.get("state") == "CLOSED"
+        if desired_closed and not current_closed:
+            run(["gh", "issue", "close", str(issue_number), "--repo", GH_REPO], capture=False)
+        elif not desired_closed and current_closed:
+            run(["gh", "issue", "reopen", str(issue_number), "--repo", GH_REPO], capture=False)
+    finally:
+        if tmp.exists():
+            tmp.unlink()
+
+
+def sync_issues(paths: List[Path]) -> None:
+    for pr_dir in paths:
+        meta = load_status(pr_dir)
+        sync_issue(meta)
+        print(f"synced GitHub issue for PR{meta['pr']}")
+
+
 def load_status(pr_dir: Path) -> Dict[str, Any]:
     path = pr_dir / "status.json"
     if not path.exists():
@@ -582,7 +712,6 @@ def build_status(pr_dir: Path, refresh_bugzilla: bool, existing: Optional[Dict[s
     existing = existing or {}
     pr = int(pr_dir.name)
     readme = read_text(pr_dir / "README.md")
-    status_line = parse_status_line(readme)
     bugzilla = parse_bugzilla(readme, pr)
     bugzilla_info = existing.get("bugzilla", {})
     if refresh_bugzilla:
@@ -596,16 +725,7 @@ def build_status(pr_dir: Path, refresh_bugzilla: bool, existing: Optional[Dict[s
     trunk_commit = parse_trunk_commit(readme) or existing_trunk.get("commit")
     trunk_branch = parse_branch_name(readme) or existing_trunk.get("branch")
     existing_patch = existing_trunk.get("patch")
-    fix_status = parse_fix_status(status_line, pr_dir)
-    if bugzilla_info.get("status") == "RESOLVED":
-        if bugzilla_info.get("resolution") == "WORKSFORME":
-            fix_status = "worksforme"
-        elif bugzilla_info.get("resolution") == "FIXED":
-            fix_status = "merged"
-    elif existing.get("fix_status") == "patch-ready" and fix_status == "open":
-        fix_status = "patch-ready"
-    elif existing.get("fix_status") == "merged" and fix_status == "open":
-        fix_status = "merged"
+    fix_status = infer_fix_status(existing.get("fix_status"), bugzilla_info, patch_files)
     severity = existing_classification.get("severity") or infer_severity(pr, readme)
     validation = existing.get("validation") or default_validation(pr, pr_dir)
     metadata = {
@@ -618,16 +738,14 @@ def build_status(pr_dir: Path, refresh_bugzilla: bool, existing: Optional[Dict[s
         },
         "github_issue": parse_github_issue(readme) or existing.get("github_issue"),
         "fix_status": fix_status,
-        "submission_status": merge_submission_status(
-            parse_submission_status(status_line), existing.get("submission_status")
-        ),
+        "submission_status": merge_submission_status(None, existing.get("submission_status")),
         "trunk": {
             "branch": trunk_branch,
             "commit": trunk_commit,
             "patch": parse_patch_name(readme, patch_files, existing_patch),
         },
         "classification": {
-            "regression": infer_regression(pr, readme, status_line, bugzilla_info),
+            "regression": infer_regression(pr, readme, bugzilla_info),
             "severity": severity,
             "validity_class": existing_classification.get("validity_class")
             or infer_validity_class(pr, severity),
@@ -1384,6 +1502,10 @@ def parse_args() -> argparse.Namespace:
     p_render.add_argument("--all", action="store_true", help="Render for all PR directories")
     p_render.add_argument("--regressions", action="store_true", help="Render only regression PRs")
 
+    p_issues = sub.add_parser("sync-issues", help="Publish current PR state to linked GitHub issues")
+    p_issues.add_argument("prs", nargs="*", help="Optional PR subset")
+    p_issues.add_argument("--all", action="store_true", help="Sync all PR directories with status.json")
+
     p_branch = sub.add_parser("branch-check", help="Run branch applicability checks for regression PRs")
     p_branch.add_argument("prs", nargs="*", help="Optional PR subset")
     p_branch.add_argument(
@@ -1422,6 +1544,10 @@ def main() -> int:
     if args.cmd == "render-packet":
         paths = status_pr_dirs(None if args.all or not args.prs else args.prs)
         render_packets(paths, regressions_only=args.regressions)
+        return 0
+    if args.cmd == "sync-issues":
+        paths = status_pr_dirs(None if args.all or not args.prs else args.prs)
+        sync_issues(paths)
         return 0
     if args.cmd == "branch-check":
         branches = [item.strip() for item in args.branches.split(",") if item.strip()]

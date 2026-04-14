@@ -39,7 +39,7 @@
   "bugzilla": {
     "id": 123868,
     "keywords": [],
-    "refreshed_at": "2026-03-29T11:23:36Z",
+    "refreshed_at": "2026-04-14T07:52:32Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "[16-regession] Memory leak on assignment",
@@ -62,10 +62,10 @@
   "title": "Memory leak on assignment with nested allocatable components",
   "trunk": {
     "branch": null,
-    "commit": "ca448bc5e435",
+    "commit": "9636d90e4326003e6da1ea86df7c730852629920",
     "patch": "0001-fortran-Fix-memory-leak-on-assignment-with-nested-al.patch"
   },
-  "updated_at": "2026-03-29T11:23:36Z",
+  "updated_at": "2026-04-14T07:52:32Z",
   "validation": {
     "kind": "special-env",
     "reason": "requires Valgrind or equivalent leak checking to validate the regression"

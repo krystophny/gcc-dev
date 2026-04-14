@@ -2,7 +2,6 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=90519
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/4
-- **Status:** MERGED (gcc commit 1eb696fc092, 2025-11-07)
 
 This directory tracks the reproducer, investigation notes, and fixes for
 GCC Bug 90519:
@@ -10,23 +9,6 @@ an internal compiler error when a derived type has
 
 1. a recursive allocatable component of the same type, and
 2. a FINAL procedure (either directly or via a non-allocatable component).
-
-## Test Results
-
-### Intel ifx 2025.2.1
-- Status: PASS
-- Compiles without errors
-
-### Dev gfortran (2025-11-13 validation)
-- Status: PASS
-- Command:
-  ```
-  ./gcc-build/gcc/gfortran -B ./gcc-build/gcc \
-    -L ./gcc-build/x86_64-pc-linux-gnu/libgfortran/.libs \
-    -Wl,-rpath,$PWD/gcc-build/x86_64-pc-linux-gnu/libgfortran/.libs \
-    -c pr/90519/finalizer_min.f90
-  ```
-- Output: (no diagnostics, object file produced)
 
 ## Reproducing
 

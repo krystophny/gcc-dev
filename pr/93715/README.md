@@ -2,7 +2,6 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=93715
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/63
-- **Status:** ON BUGZILLA
 
 ## Description
 
@@ -39,24 +38,3 @@ Add an explicit check for scalar coarrays (`sym->attr.codimension &&
 for variables that have coarray rank but zero array rank.
 
 Regression since GCC 10 (works in GCC 9).
-
-## Verification
-
-### Test fails on trunk
-```
-$ gfortran -fcoarray=single -c reproducer.f90
-reproducer.f90:2:18:
-
-    2 |    integer :: a, b[*]
-      |                  1~~~
-internal compiler error: in gfc_trans_auto_array_allocation, at fortran/trans-array.cc:7379
-```
-
-### Test passes after fix
-```
-$ gcc-build/gcc/gfortran -B gcc-build/gcc -fcoarray=single -c reproducer.f90
-(clean, no output)
-```
-
-- `make check-gfortran RUNTESTFLAGS="dg.exp=pr93715.f90"`: PASS
-- Full `check-gfortran`: 0 FAIL / XPASS

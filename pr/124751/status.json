@@ -37,38 +37,37 @@
     }
   },
   "bugzilla": {
-    "id": 102596,
+    "id": 124751,
     "keywords": [
-      "ice-on-valid-code",
-      "openmp"
+      "wrong-code"
     ],
-    "refreshed_at": "2026-04-14T07:52:08Z",
+    "refreshed_at": "2026-04-14T07:52:47Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
-    "summary": "[13/14/15/16 Regression] ICE in gfc_omp_clause_default_ctor, at fortran/trans-openmp.c:713 since r11-4883-ge929ef532ad52cde",
-    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102596"
+    "summary": "[16 Regression] Wrong-code after packing assumed-rank actuals for contiguous dummies",
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124751"
   },
   "classification": {
     "regression": true,
-    "severity": "ice-on-valid",
+    "severity": "wrong-code",
     "validity_class": "valid-code"
   },
   "fix_status": "merged",
-  "github_issue": 80,
+  "github_issue": 114,
   "notes": "",
-  "pr": 102596,
+  "pr": 124751,
   "submission_status": {
-    "on_bugzilla": false,
+    "on_bugzilla": true,
     "on_mailing_list": false,
     "sent": false
   },
-  "title": "ICE on OpenMP task reduction of allocatable scalar",
+  "title": "Wrong-code after packing assumed-rank actuals for contiguous dummies",
   "trunk": {
     "branch": null,
-    "commit": null,
-    "patch": "0001-fortran-Allow-task-reduction-allocatable-scalars-wit.patch"
+    "commit": "b8078514285",
+    "patch": "0001-fortran-Fix-assumed-rank-repacking-for-contiguous-du.patch"
   },
-  "updated_at": "2026-04-14T07:52:08Z",
+  "updated_at": "2026-04-14T07:52:47Z",
   "validation": {
     "baseline": {
       "contains_any": [
@@ -83,7 +82,7 @@
       "-B",
       "gcc-build/gcc",
       "-c",
-      "pr/102596/reproducer.f90",
+      "pr/124751/reproducer.f90",
       "-o",
       "/dev/null"
     ],

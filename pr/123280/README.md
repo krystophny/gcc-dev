@@ -1,11 +1,8 @@
 # Bug 96080 + 123280: OpenACC Fortran runtime routines vs assumed-shape/pointers
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96080
-- **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123280
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/12
-- **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/13
-- **Branch:** `pr123280-fix` (also on integration branch `openacc`)
-- **Status:** PENDING (patch on fork, awaiting upstream submission)
+
 - **Note:** Single patch fixes both PRs
 
 ## Summary
@@ -43,27 +40,3 @@ address rather than the original data:
 Remove `contiguous` from all 36 affected declarations (18 interface + 18
 implementation). These routines only pass the base address and `sizeof(a)`
 to the underlying C functions, so contiguous storage is not required.
-
-## Test Results
-
-| Compiler | Test 1 (direct) | Test 2 (assumed-shape) |
-|----------|-----------------|------------------------|
-| nvfortran 25.11 | PASS | PASS |
-| GCC 16.0.0 (before fix) | PASS | FAIL |
-| GCC 16.0.0 (after fix) | PASS | PASS |
-
-GPU runtime test with NVPTX offload: PASS
-
-## Build & Run
-
-```bash
-OFFLOAD=$PWD/gcc-offload-build/install
-
-# GCC (shows bug with unpatched libgomp)
-$OFFLOAD/bin/gfortran -fopenacc -foffload=nvptx-none -o reproducer reproducer.f90
-LD_LIBRARY_PATH=$OFFLOAD/lib64 ./reproducer
-
-# nvfortran (works correctly)
-nvfortran -acc -o reproducer_nv reproducer.f90
-./reproducer_nv
-```

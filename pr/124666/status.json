@@ -39,9 +39,9 @@
   "bugzilla": {
     "id": 124666,
     "keywords": [],
-    "refreshed_at": "2026-03-29T11:23:48Z",
-    "resolution": "",
-    "status": "NEW",
+    "refreshed_at": "2026-04-14T07:52:46Z",
+    "resolution": "FIXED",
+    "status": "RESOLVED",
     "summary": "[16 Regression] [UBSAN] io.cc:290:27: runtime error:",
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124666"
   },
@@ -50,7 +50,7 @@
     "severity": "runtime-crash",
     "validity_class": "valid-code"
   },
-  "fix_status": "patch-ready",
+  "fix_status": "merged",
   "github_issue": 113,
   "notes": "UBSAN reproducer now compiles clean. Targeted pr124666.f90 passes, and a full check-gfortran rerun on pr124666-fix finished with 0 FAIL / XPASS.",
   "pr": 124666,
@@ -65,7 +65,7 @@
     "commit": "b6951283208",
     "patch": "0001-fortran-Fix-signed-overflow-in-format_lex-digit-pars.patch"
   },
-  "updated_at": "2026-03-29T11:23:48Z",
+  "updated_at": "2026-04-14T07:52:46Z",
   "validation": {
     "baseline": {
       "contains_any": [

@@ -2,9 +2,6 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=109788
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/91
-- **Status:** MERGED (r16-8474-gebc8ed3246ff59)
-- **Upstream commit:** `ebc8ed3246ff59d1df42545ffb6f5ee15118a6bc`
-- **Branch:** `origin/pr109788-fix`
 
 ## Summary
 
@@ -14,12 +11,3 @@ scalar uses could see the wrong call signature.
 
 The fix copies the intrinsic descriptor before specializing the character
 formal argument type and adds `gfortran.dg/pr109788.f90`.
-
-## Validation
-
-- targeted `check-gfortran` for `pr109788.f90`
-- targeted `check-gfortran` for `spread_scalar_source.f90`
-- targeted `check-gfortran` for `intrinsic_spread_1.f90`
-- targeted `check-gfortran` for `intrinsic_spread_2.f90`
-- full `check-gfortran`
-- `check-target-libgomp-fortran`

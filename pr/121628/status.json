@@ -41,7 +41,7 @@
     "keywords": [
       "wrong-code"
     ],
-    "refreshed_at": "2026-03-29T11:23:28Z",
+    "refreshed_at": "2026-04-14T07:52:24Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "Use-after-free in compiler-generated assignment operators",
@@ -67,7 +67,7 @@
     "commit": null,
     "patch": "0001-c-version-replace-hash_set.patch"
   },
-  "updated_at": "2026-03-29T11:23:28Z",
+  "updated_at": "2026-04-14T07:52:24Z",
   "validation": {
     "baseline": {
       "contains_any": [

@@ -37,16 +37,16 @@
     }
   },
   "bugzilla": {
-    "id": 102596,
+    "id": 101760,
     "keywords": [
       "ice-on-valid-code",
       "openmp"
     ],
-    "refreshed_at": "2026-04-14T07:52:08Z",
-    "resolution": "FIXED",
-    "status": "RESOLVED",
-    "summary": "[13/14/15/16 Regression] ICE in gfc_omp_clause_default_ctor, at fortran/trans-openmp.c:713 since r11-4883-ge929ef532ad52cde",
-    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102596"
+    "refreshed_at": "2026-04-14T07:52:04Z",
+    "resolution": "",
+    "status": "NEW",
+    "summary": "[13/14/15/16 Regression] ICE in make_ssa_name_fn, at tree-ssanames.c:290 since r12-1319-gd4d38135b3137f1d",
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=101760"
   },
   "classification": {
     "regression": true,
@@ -54,21 +54,21 @@
     "validity_class": "valid-code"
   },
   "fix_status": "merged",
-  "github_issue": 80,
-  "notes": "",
-  "pr": 102596,
+  "github_issue": 76,
+  "notes": "Paul Thomas's regression table had this marked as patch-waiting on 2026-04-13. Actual upstream/master now contains the fix commit, so the workflow state should be treated as merged upstream even though Bugzilla is still NEW.",
+  "pr": 101760,
   "submission_status": {
     "on_bugzilla": false,
     "on_mailing_list": false,
     "sent": false
   },
-  "title": "ICE on OpenMP task reduction of allocatable scalar",
+  "title": "ICE in make_ssa_name_fn with deferred-length character in OMP target",
   "trunk": {
     "branch": null,
-    "commit": null,
-    "patch": "0001-fortran-Allow-task-reduction-allocatable-scalars-wit.patch"
+    "commit": "e41fd0a99ae",
+    "patch": "0001-fortran-Fix-ICE-in-remap_type-with-deferred-length-c.patch"
   },
-  "updated_at": "2026-04-14T07:52:08Z",
+  "updated_at": "2026-04-14T07:52:04Z",
   "validation": {
     "baseline": {
       "contains_any": [
@@ -83,7 +83,7 @@
       "-B",
       "gcc-build/gcc",
       "-c",
-      "pr/102596/reproducer.f90",
+      "pr/101760/reproducer.f90",
       "-o",
       "/dev/null"
     ],

@@ -1,16 +1,9 @@
 # Bug 101760: ICE in make_ssa_name_fn with deferred-length character in OMP target
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=101760
-- **Related:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102314
-- **Status:** PENDING (patch on fork)
+- **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/76
 
-## Affected Versions
-| Branch | Reproduces? | Notes |
-|--------|-------------|-------|
-| trunk (r16-9877) | yes | ICE in make_ssa_name_fn at -O1/-O2 |
-| releases/gcc-15 | likely | regression since r12-1319 |
-| releases/gcc-14 | likely | regression since r12-1319 |
-| releases/gcc-13 | likely | regression since r12-1319 |
+- **Related:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102314
 
 ## Root Cause
 

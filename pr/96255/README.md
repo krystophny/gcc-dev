@@ -2,7 +2,6 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96255
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/1
-- **Status:** MERGED (gcc commits 5e62a23cc3a, 0ef98bf3351, 1099ffffffe, a892a2dac6b)
 
 **Upstream Commits:**
 - 5e62a23cc3a - fortran: Implement optional type spec for DO CONCURRENT [PR96255]
@@ -118,45 +117,6 @@ DO CONCURRENT and FORALL have different semantics:
 - **DO CONCURRENT**: "Arbitrary order execution" (more permissive)
 
 All major compilers (Intel ifx, NVIDIA nvfortran, HPE cce) have always allowed reductions in DO CONCURRENT. Fortran 2023's REDUCE locality-spec formalizes this existing practice.
-
----
-
-## Test Results
-
-### Dev gfortran (2025-11-13 validation)
-- Status: PASS
-- Command:
-  ```
-  ./gcc-build/gcc/gfortran -B ./gcc-build/gcc \
-    -L ./gcc-build/x86_64-pc-linux-gnu/libgfortran/.libs \
-    -Wl,-rpath,$PWD/gcc-build/x86_64-pc-linux-gnu/libgfortran/.libs \
-    -c pr/96255/looper.f90
-  ```
-- Output: no diagnostics, compile succeeded
-
-### Full GCC Fortran Test Suite
-
-```
-# of expected passes            74,325
-# of expected failures             343
-# of unsupported tests              81
-# of unexpected failures             0
-```
-
-### DO CONCURRENT Tests
-
-All 21 `do_concurrent_*.f90` tests pass, including constraint checking, nested loops, and array operations.
-
-### Multi-Compiler Validation
-
-Tested with:
-- Custom gfortran (this build)
-- System gfortran (GCC 15.2.1)
-- LLVM Flang (21.1.5)
-- Intel ifx (2025.2.1)
-- NVIDIA nvfortran (25.9-0)
-
-All compilers accept DO CONCURRENT reductions consistently.
 
 ---
 

@@ -37,16 +37,15 @@
     }
   },
   "bugzilla": {
-    "id": 102596,
+    "id": 107425,
     "keywords": [
-      "ice-on-valid-code",
       "openmp"
     ],
-    "refreshed_at": "2026-04-14T07:52:08Z",
-    "resolution": "FIXED",
-    "status": "RESOLVED",
-    "summary": "[13/14/15/16 Regression] ICE in gfc_omp_clause_default_ctor, at fortran/trans-openmp.c:713 since r11-4883-ge929ef532ad52cde",
-    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102596"
+    "refreshed_at": "2026-04-14T07:52:14Z",
+    "resolution": "",
+    "status": "NEW",
+    "summary": "[13/14/15 Regression] ICE in gimplify_var_or_parm_decl, at gimplify.cc:3060 since r12-6780-gd2ad748eeef0dd26",
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=107425"
   },
   "classification": {
     "regression": true,
@@ -54,21 +53,21 @@
     "validity_class": "valid-code"
   },
   "fix_status": "merged",
-  "github_issue": 80,
-  "notes": "",
-  "pr": 102596,
+  "github_issue": 89,
+  "notes": "Paul Thomas's regression table recorded this as already pushed to the 16 branch with a short backport hold. Actual upstream/master now contains the fix commit, so GitHub should reflect it as merged upstream.",
+  "pr": 107425,
   "submission_status": {
-    "on_bugzilla": false,
+    "on_bugzilla": true,
     "on_mailing_list": false,
     "sent": false
   },
-  "title": "ICE on OpenMP task reduction of allocatable scalar",
+  "title": "ICE in gimplify_var_or_parm_decl with implicit var in iterator depend clause",
   "trunk": {
     "branch": null,
-    "commit": null,
-    "patch": "0001-fortran-Allow-task-reduction-allocatable-scalars-wit.patch"
+    "commit": "d26055fec8e",
+    "patch": "0001-fortran-Fix-ICE-with-implicit-variable-in-iterator-d.patch"
   },
-  "updated_at": "2026-04-14T07:52:08Z",
+  "updated_at": "2026-04-14T07:52:14Z",
   "validation": {
     "baseline": {
       "contains_any": [
@@ -83,7 +82,7 @@
       "-B",
       "gcc-build/gcc",
       "-c",
-      "pr/102596/reproducer.f90",
+      "pr/107425/reproducer.f90",
       "-o",
       "/dev/null"
     ],

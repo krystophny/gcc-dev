@@ -2,7 +2,6 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=84779
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/103
-- **Status:** INVESTIGATED (original ICE fixed upstream by middle-end commit `694613a7f9ad`; direct `f951` valgrind failures are generic sparse-set warnings on builds without valgrind annotations)
 
 ## Summary
 
@@ -15,57 +14,6 @@ The remaining question from the March 2026 Bugzilla discussion is the direct
 specific to PR84779 itself.  They all come from generic IRA/LRA sparse-set
 membership checks reading memory that GCC intentionally leaves uninitialized
 unless the compiler is built with valgrind annotations enabled.
-
-## Latest Bugzilla comments
-
-- **2026-03-18 01:10 UTC, comment #18 (Jerry DeLisle):** objected to closing
-  the bug because running `valgrind` reported `336 errors from 26 contexts`.
-- **2026-03-18 21:49 UTC, comment #19 (Christopher Albert):** asked for the
-  exact machine, compiler, valgrind version, and invocation.
-- **2026-03-19 00:19 UTC, comment #20 (Jerry DeLisle):** clarified that he is
-  running `valgrind /path/to/install/libexec/gcc/x86_64-pc-linux-gnu/16.0.1/f951 pr84779.f90`
-  directly on Fedora 43 / x86_64 with valgrind 3.26.0.
-
-## Current reproducer
-
-The local `reproducer.f90` now matches the mixed-result minimizer from
-comment #13:
-
-```fortran
-complex function f2 (a)
-  implicit none
-  integer :: a
-  logical :: e2
-  entry e2 (a)
-  if (a > 0) then
-    e2 = .true.
-  else
-    f2 = 45
-  endif
-end
-```
-
-Compile with: `gfortran -O1 -fdefault-integer-8 -c reproducer.f90`
-
-## Reproduction on current trunk
-
-Two local builds were used:
-
-- existing local build: `gcc-build/gcc/gfortran`, version `16.0.1 20260318`,
-  configured without valgrind annotations
-- clean trunk build: `gcc-trunk-build/gcc/gfortran`, source
-  `upstream/master` at `a0d6c3f23cc` (2026-03-19), configured with
-  `--enable-valgrind-annotations`
-
-Observed results:
-
-- `gfortran -O1 -fdefault-integer-8 entry_4.f90 && ./a.out`: passes, no ICE
-- `gfortran -O1 -fdefault-integer-8 -c reproducer.f90`: passes, no ICE
-- `gfortran -O1 -fdefault-integer-8 reproducer.f90` (older integer-only local
-  reducer used previously): also passes and runs
-- `valgrind gcc-trunk-build/gcc/f951 entry_4.f90`: `0 errors from 0 contexts`
-- `valgrind gcc-trunk-build/gcc/f951 reproducer.f90`: `0 errors from 0 contexts`
-- `valgrind gcc-trunk-build/gcc/f951 hello.f90`: `0 errors from 0 contexts`
 
 ## Direct `f951` valgrind results on the non-annotated build
 

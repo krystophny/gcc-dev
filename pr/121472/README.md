@@ -2,9 +2,6 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121472
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/2
-- **Status:** MERGED (gcc commit 5bb465a7896)
-
-**Title:** ICE in gimplify_expr with constructor interface and finalizer
 
 ## Two Fix Approaches
 

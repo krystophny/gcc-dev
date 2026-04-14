@@ -2,7 +2,6 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=93554
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/62
-- **Status:** PENDING (patch on fork + Bugzilla)
 
 ## Root Cause
 

@@ -2,8 +2,6 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124482
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/102
-- **Branch:** `pr124482-fix`
-- **Status:** MERGED upstream (`d8b00bf2e1514cd132a9febaa9849ab46cd316f5`, 2026-03-15)
 
 ## Summary
 
@@ -43,16 +41,3 @@ Also NULL `c->ts.u.derived` before calling `gfc_free_component` to avoid
 chasing into shared state.
 
 File changed: `gcc/fortran/decl.cc`
-
-## Validation
-
-- Valgrind: 0 errors (was 25 before fix)
-- DejaGnu `pr106946.f90`: 4/4 expected passes
-- Full `check-gfortran`: 0 FAIL, 0 XPASS
-
-## Patch Artifact
-
-- GCC commit: `d8b00bf2e1514cd132a9febaa9849ab46cd316f5` (merged upstream on 2026-03-15)
-- Fork branch commit: `d0863254583` (on `origin/pr124482-fix`)
-- Exported patch:
-  `pr/124482/0001-fortran-Fix-use-after-free-in-CLASS-component-error-.patch`

@@ -2,7 +2,6 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95879
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/69
-- **Status:** MERGED upstream (`ee931e5b7eab59916f4dd77a4ad20c1202153036`; backports pending)
 
 ## Summary
 
@@ -30,17 +29,3 @@ symtree before the old symbol is released and updates any statement function
 formal argument references from `old_sym` to the replacement symbol.  Formal
 argument lists are non-owning pointers so no reference count adjustment is
 needed.
-
-## Patch
-
-- Branch: `pr95879-fix`
-- Commit: `e2bb459d5d99d52b2b58656665fe0b9611b601be`
-- Patch: `0001-fortran-Fix-use-after-free-in-gfc_fixup_sibling_symb.patch`
-- Upstream commit: `ee931e5b7eab59916f4dd77a4ad20c1202153036`
-- Upstream revision: `r16-8320-gee931e5b7eab59916f4dd77a4ad20c1202153036`
-
-## Test Results
-
-- Original reproducer is fixed on the current patch branch.
-- Fresh full `check-gfortran` rerun on `pr95879-fix` finished clean with `0`
-  `FAIL` / `XPASS`.

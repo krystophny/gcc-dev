@@ -1,7 +1,6 @@
 # Bug 100194: ICE in gfc_trans_create_temp_array with assumed-rank + contiguous
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=100194
-- **Status:** PENDING (patch on fork)
 
 ## Description
 
@@ -23,14 +22,3 @@ Skip the `gfc_conv_subref_array_arg` path for assumed-rank expressions
 (`e->rank == -1`) and let them fall through to `gfc_conv_array_parameter`,
 which handles assumed-rank via the runtime pack/unpack functions
 (`_gfortran_internal_pack`/`_gfortran_internal_unpack`).
-
-## Affected Branches
-
-| Branch | Affected |
-|--------|----------|
-| trunk  | Yes      |
-| gcc-15 | Yes      |
-| gcc-14 | Yes      |
-| gcc-13 | Yes      |
-
-Bug was introduced by r9-5537-g8558af5023b91a65.

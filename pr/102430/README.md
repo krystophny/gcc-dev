@@ -2,10 +2,6 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102430
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/9
-- **Status:** MERGED (r16-8517-g4f40d3a5b0db10)
-- **Upstream commit:** `4f40d3a5b0db10406f73479895a0c3c46dbc9fbf`
-
-**Title:** OpenMP linear clause accepts arrays on worksharing loops
 
 ## Summary
 
@@ -35,18 +31,6 @@ Compile with OpenMP enabled:
 ```bash
 ./gcc-build/gcc/gfortran -B ./gcc-build/gcc -fopenmp -c pr/102430/reproducer.f90
 ```
-
-## Patch
-
-- GCC branch: `pr102430-linear-sorry`
-- Exported patch: `0001-fortran-Reject-array-allocatable-LINEAR-on-DO-PR1024.patch`
-
-## Status (2026-04-11)
-
-- **Priority:** P2 regression (GCC 13/14/15/16)
-- **Bugzilla status:** still `NEW`
-- **Merged on trunk:** `r16-8517-g4f40d3a5b0db10`
-- **Fork branch:** `pr102430-linear-sorry`
 
 ## Fix approach
 

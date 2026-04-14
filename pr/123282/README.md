@@ -2,8 +2,6 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123282
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/14
-- **Branch:** `pr123282-fix` (also on integration branch `openacc`)
-- **Status:** PENDING (patch on fork, awaiting upstream submission)
 
 ## Summary
 
@@ -130,32 +128,6 @@ program p
         deallocate(w1, w2, s%c)
     end do
 end program
-```
-
-## Compilers Tested
-
-| Compiler | Version | Backend | Result |
-|----------|---------|---------|--------|
-| gfortran | 16.0.0 20251223 | nvptx | **FAIL** on iter 2 |
-| gfortran | 16.0.0 20251223 | nvptx + fix | **PASS** |
-| gfortran | 16.0.0 20251223 | host | PASS |
-| nvfortran | 25.1 | nvidia | PASS |
-
-## Build Commands
-
-```bash
-OFFLOAD=$PWD/gcc-offload-build/install
-
-# gfortran with nvptx (crashes without fix)
-$OFFLOAD/bin/gfortran -O3 -fopenacc -foffload=nvptx-none mre.f90 -o mre
-LD_LIBRARY_PATH=$OFFLOAD/lib64 ./mre
-
-# nvfortran (passes - reference behavior)
-nvfortran -O3 -acc=gpu mre.f90 -o mre_nv
-./mre_nv
-
-# gfortran host fallback (passes)
-ACC_DEVICE_TYPE=host LD_LIBRARY_PATH=$OFFLOAD/lib64 ./mre
 ```
 
 ## Workarounds

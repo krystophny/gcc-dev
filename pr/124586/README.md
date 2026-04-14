@@ -2,7 +2,6 @@
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124586
 - **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/109
-- **Status:** PENDING (patch on Bugzilla)
 
 ## Summary
 
@@ -44,10 +43,6 @@ set:
 ```text
 host_extra_gcc_objs="driver-aarch64.o"
 ```
-
-## Patch
-
-- `0001-aarch64-Add-aarch64-netbsd-to-host_detect_local_cpu.patch`
 
 ## Notes
 

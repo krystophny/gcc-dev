@@ -22,29 +22,17 @@ LD_LIBRARY_PATH=/opt/gcc16/lib64 ./a.out
 | `pr/` | Bug reproducers and patches |
 | `scripts/` | Build scripts for /opt/gcc16 |
 
-## Current Work
+## Tracking Model
 
-**Pending patches (on fork):**
-- [PR103276](pr/103276/) - OpenACC ENTER DATA mapping
-- [PR123252](pr/123252/) - Derived type scalar fields
-- [PR123280](pr/123280/) - acc_is_present for assumed-shape / pointers
-- [PR123282](pr/123282/) - OpenACC refcount with allocatable descriptors
+Per-PR `README.md` files now keep only durable context:
+- Bugzilla link
+- GitHub issue link (when one exists)
+- technical notes such as root cause, reproducer shape, and fix strategy
 
-**Recently merged upstream:**
-[PR79524](pr/79524/), [PR82721](pr/82721/), [PR85352](pr/85352/),
-[PR93715](pr/93715/), [PR94978](pr/94978/), [PR95338](pr/95338/),
-[PR96986](pr/96986/), [PR102430](pr/102430/), [PR102459](pr/102459/),
-[PR102596](pr/102596/), [PR103367](pr/103367/), [PR106946](pr/106946/),
-[PR108382](pr/108382/), [PR109788](pr/109788/), [PR110877](pr/110877/),
-[PR120286](pr/120286/), [PR120723](pr/120723/),
-[PR122491](pr/122491/), [PR123868](pr/123868/), [PR123947](pr/123947/),
-[PR123949](pr/123949/), [PR124208](pr/124208/), [PR124235](pr/124235/),
-[PR124482](pr/124482/)
-
-**Earlier merged upstream:**
-[PR32365](pr/32365/), [PR90519](pr/90519/), [PR92613](pr/92613/),
-[PR96255](pr/96255/), [PR107721](pr/107721/), [PR121472](pr/121472/),
-[PR121475](pr/121475/), [PR121628](pr/121628/)
+Live workflow state lives in GitHub issues and structured metadata:
+- GitHub issues: current merge / patch / review status
+- `pr/<number>/status.json`: machine-readable local workflow state
+- `pr/backport-matrix.{md,json}`: generated branch/backport overview
 
 ## Documentation
 
@@ -62,6 +50,9 @@ branch-specific backport state lives under `pr/<number>/backports/`.
 ```bash
 # Seed or refresh structured metadata
 python3 scripts/gcc-workflow.py sync-metadata --all
+
+# Push current workflow state into linked GitHub issues
+python3 scripts/gcc-workflow.py sync-issues --all
 
 # Regenerate maintainer packets for regression PRs
 python3 scripts/gcc-workflow.py render-packet --all --regressions

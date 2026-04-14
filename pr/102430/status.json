@@ -42,10 +42,10 @@
       "ice-on-valid-code",
       "openmp"
     ],
-    "refreshed_at": "2026-03-29T11:23:13Z",
+    "refreshed_at": "2026-04-14T07:52:06Z",
     "resolution": "",
     "status": "NEW",
-    "summary": "[13/14/15/16 Regression] ICE in fold_convert_loc, at fold-const.c:2554 since r7-4447-gb4c3a85be9658537",
+    "summary": "[13/14/15 Regression] ICE in fold_convert_loc, at fold-const.c:2554 since r7-4447-gb4c3a85be9658537",
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102430"
   },
   "classification": {
@@ -68,7 +68,7 @@
     "commit": "4f40d3a5b0db10406f73479895a0c3c46dbc9fbf",
     "patch": "0001-fortran-Reject-array-allocatable-LINEAR-on-DO-PR1024.patch"
   },
-  "updated_at": "2026-04-11T12:02:31Z",
+  "updated_at": "2026-04-14T07:52:06Z",
   "validation": {
     "baseline": {
       "contains_any": [

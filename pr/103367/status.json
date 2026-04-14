@@ -37,38 +37,37 @@
     }
   },
   "bugzilla": {
-    "id": 102596,
+    "id": 103367,
     "keywords": [
-      "ice-on-valid-code",
-      "openmp"
+      "ice-on-invalid-code"
     ],
-    "refreshed_at": "2026-04-14T07:52:08Z",
-    "resolution": "FIXED",
-    "status": "RESOLVED",
-    "summary": "[13/14/15/16 Regression] ICE in gfc_omp_clause_default_ctor, at fortran/trans-openmp.c:713 since r11-4883-ge929ef532ad52cde",
-    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102596"
+    "refreshed_at": "2026-04-14T07:52:10Z",
+    "resolution": "",
+    "status": "NEW",
+    "summary": "[13/14/15 Regression] ICE in gfc_conv_array_initializer, at fortran/trans-array.c:6377 since r12-4278-g74ccca380cde5e79",
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=103367"
   },
   "classification": {
     "regression": true,
-    "severity": "ice-on-valid",
-    "validity_class": "valid-code"
+    "severity": "ice-on-invalid",
+    "validity_class": "invalid-code"
   },
   "fix_status": "merged",
-  "github_issue": 80,
+  "github_issue": 84,
   "notes": "",
-  "pr": 102596,
+  "pr": 103367,
   "submission_status": {
-    "on_bugzilla": false,
+    "on_bugzilla": true,
     "on_mailing_list": false,
     "sent": false
   },
-  "title": "ICE on OpenMP task reduction of allocatable scalar",
+  "title": "ICE in gfc_conv_array_initializer with invalid index",
   "trunk": {
     "branch": null,
-    "commit": null,
-    "patch": "0001-fortran-Allow-task-reduction-allocatable-scalars-wit.patch"
+    "commit": "326fe37d698",
+    "patch": "0001-fortran-Diagnose-invalid-array-initializer-after-par.patch"
   },
-  "updated_at": "2026-04-14T07:52:08Z",
+  "updated_at": "2026-04-14T07:52:10Z",
   "validation": {
     "baseline": {
       "contains_any": [
@@ -83,7 +82,7 @@
       "-B",
       "gcc-build/gcc",
       "-c",
-      "pr/102596/reproducer.f90",
+      "pr/103367/reproducer.f90",
       "-o",
       "/dev/null"
     ],
