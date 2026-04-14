@@ -1,0 +1,56 @@
+{
+  "generated_at": "2026-04-14T08:54:38Z",
+  "start": "2025-04-14",
+  "end": "2026-04-14",
+  "method": {
+    "bulk_search_endpoint": "GET /bugzilla/rest.cgi/bug",
+    "history_endpoint": "GET /bugzilla/rest.cgi/bug/<id>/history?new_since=YYYY-MM-DD",
+    "notes": [
+      "Current open counts come from one bulk open-bug search.",
+      "Created counts come from one bulk search filtered by creation_time.",
+      "Exact daily resolution dates are derived from cached history lookups for bugs closed/changed in-range.",
+      "Regression classification follows GCC convention used in this repo: summary contains 'regression'.",
+      "Enhancement requests are excluded from the bug-category totals."
+    ]
+  },
+  "summary": {
+    "all-bugs": {
+      "title": "All GCC bugs",
+      "current_open": 10000,
+      "opened_last_year": 5087,
+      "resolved_last_year": 4279,
+      "start_open": 9201,
+      "end_open": 10000
+    },
+    "regression-bugs": {
+      "title": "All GCC regressions",
+      "current_open": 288,
+      "opened_last_year": 1552,
+      "resolved_last_year": 1539,
+      "start_open": 272,
+      "end_open": 288
+    },
+    "fortran-bugs": {
+      "title": "All Fortran bugs",
+      "current_open": 639,
+      "opened_last_year": 242,
+      "resolved_last_year": 330,
+      "start_open": 730,
+      "end_open": 639
+    },
+    "fortran-regressions": {
+      "title": "Fortran regressions",
+      "current_open": 10,
+      "opened_last_year": 52,
+      "resolved_last_year": 80,
+      "start_open": 38,
+      "end_open": 10
+    }
+  },
+  "plots": {
+    "all-bugs.png": "https://litter.catbox.moe/p0srmu.png",
+    "regression-bugs.png": "https://litter.catbox.moe/ekb02w.png",
+    "fortran-bugs.png": "https://litter.catbox.moe/n8gvhg.png",
+    "fortran-regressions.png": "https://litter.catbox.moe/l8uab3.png"
+  }
+}

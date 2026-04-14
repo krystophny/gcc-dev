@@ -941,6 +941,10 @@ scripts/gcc-bugzilla.sh login
 # - all Fortran regressions
 python3 scripts/gcc-bugzilla-stats.py --start 2025-04-14
 
+# Saved snapshots live in:
+#   docs/bugzilla-stats/DATE-summary.json
+#   docs/bugzilla-stats/DATE-*.png
+
 # --- Write operations (REQUIRE explicit user permission) ---
 
 # Post a plain comment
