@@ -40,6 +40,8 @@ Live workflow state lives in GitHub issues and structured metadata:
 - [pr/README.md](pr/README.md) - PR tracking overview
 - [pr/regression-status.md](pr/regression-status.md) - Current Fortran regression summary
 - [pr/backport-matrix.md](pr/backport-matrix.md) - Regression backport status
+- [docs/gcc-trunk-contributor-stats-2026.md](docs/gcc-trunk-contributor-stats-2026.md) - 2026 GCC-wide trunk contribution report
+- [docs/bugzilla-stats/2026-04-14-summary.json](docs/bugzilla-stats/2026-04-14-summary.json) - 1-year GCC/Fortran bug and regression snapshot
 
 ## Backport Workflow
 
