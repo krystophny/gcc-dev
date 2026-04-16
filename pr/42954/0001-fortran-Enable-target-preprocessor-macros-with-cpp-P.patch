@@ -1,0 +1,348 @@
+From 7afa5f0db0b4006dfc8aea768b7470520fd184e7 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Thu, 16 Apr 2026 08:32:23 +0200
+Subject: [PATCH] fortran: Enable target preprocessor macros with -cpp
+ [PR42954]
+
+The Fortran preprocessor has never defined target-specific macros such as
+__linux__, __unix__, __ELF__, __x86_64__, or __amd64__ that the C
+preprocessor provides.  This was caused by the TARGET_OS_CPP_BUILTINS,
+TARGET_OBJFMT_CPP_BUILTINS, and TARGET_CPU_CPP_BUILTINS hooks being
+disabled since 2008 (marked as "Pandora's Box") because several target
+config headers use C-family-only functions.
+
+Fix by providing Fortran-compatible local helpers for
+builtin_define_std, builtin_define_with_value, and
+builtin_define_with_int_value (which in the C frontend live in
+c-family/c-cppbuiltin.cc and use the C-family-only globals parse_in
+and flag_iso), plus wrapper macros for c_dialect_cxx, flag_iso, and
+other C-family identifiers referenced by target config headers.  This
+allows TARGET_OS_CPP_BUILTINS and TARGET_OBJFMT_CPP_BUILTINS to
+execute in the Fortran frontend.
+
+Unlike the C frontend default (flag_iso=0, GNU extensions mode), the
+Fortran wrapper sets flag_iso=1 to suppress user-namespace macros like
+bare "unix" and "linux" that would conflict with Fortran identifiers.
+Only the reserved-namespace forms (__unix__, __linux__, etc.) are
+defined.  Fortran has no -std=cNN equivalent to control this, so the
+conservative choice avoids silent identifier replacement.
+
+For TARGET_CPU_CPP_BUILTINS, which on most architectures expands to a
+function in a C-family-only object file (e.g., ix86_target_macros in
+i386-c.cc), provide an x86 implementation directly in fortran/cpp.cc
+that covers architecture identification and float-size macros.
+ISA feature macros (__SSE__, __AVX__, etc.) are not included; if
+needed, they could be factored out of i386-c.cc into a shared object.
+
+Remove the dead __attribute__((target(...))) block from
+gfortran.dg/gomp/declare-variant-10.f90: it was guarded by
+#if defined(__x86_64__) which was previously always false because
+gfortran never defined these macros, and gfortran does not support
+C-style __attribute__ syntax.
+
+Co-authored-by: Kai Tietz <ktietz@gcc.gnu.org>
+
+	PR fortran/42954
+
+gcc/fortran/ChangeLog:
+
+	* cpp.cc (gfc_builtin_define_std): New helper mirroring
+	builtin_define_std from c-family/c-cppbuiltin.cc.
+	(gfc_builtin_define_with_value): New helper mirroring
+	builtin_define_with_value from c-family/c-cppbuiltin.cc.
+	(gfc_define_ix86_target_macros): New function providing x86 CPU
+	identification macros for the Fortran preprocessor.
+	(gfc_darwin_cpp_builtins): New function providing Darwin platform
+	macros.
+	(cpp_define_builtins): Remove Pandora's Box FIXME.  Add wrapper
+	macros for C-family functions and variables used in target config
+	headers.  Set flag_iso=1 to suppress bare-name macros.  Enable
+	TARGET_OS_CPP_BUILTINS and TARGET_OBJFMT_CPP_BUILTINS.  Call
+	gfc_define_ix86_target_macros on x86 targets.
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/gomp/declare-variant-10.f90: Remove dead
+	__attribute__((target)) block that is now exposed by newly
+	defined target macros.
+	* gfortran.dg/pr42954-linux.f90: New test.
+	* gfortran.dg/pr42954-x86.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/cpp.cc                            | 178 ++++++++++++++++--
+ .../gfortran.dg/gomp/declare-variant-10.f90   |   3 -
+ gcc/testsuite/gfortran.dg/pr42954-linux.f90   |  24 +++
+ gcc/testsuite/gfortran.dg/pr42954-x86.f90     |  10 +
+ 4 files changed, 194 insertions(+), 21 deletions(-)
+ create mode 100644 gcc/testsuite/gfortran.dg/pr42954-linux.f90
+ create mode 100644 gcc/testsuite/gfortran.dg/pr42954-x86.f90
+
+diff --git a/gcc/fortran/cpp.cc b/gcc/fortran/cpp.cc
+index 6b5f136e4f3..ada1bc1a211 100644
+--- a/gcc/fortran/cpp.cc
++++ b/gcc/fortran/cpp.cc
+@@ -157,6 +157,126 @@ void pp_dir_change (cpp_reader *, const char *);
+ static int dump_macro (cpp_reader *, cpp_hashnode *, void *);
+ static void dump_queued_macros (cpp_reader *);
+ 
++/* Fortran-local helpers that mirror builtin_define_std,
++   builtin_define_with_value, and builtin_define_with_int_value from
++   c-family/c-cppbuiltin.cc.  Those functions use the C-family-only
++   globals parse_in and flag_iso, so they cannot be called directly
++   from the Fortran frontend.  */
++
++/* Given "unix", define __unix, __unix__, and (if DEFINE_USER) unix.  */
++
++static void
++gfc_builtin_define_std (cpp_reader *pfile, const char *macro,
++			bool define_user)
++{
++  size_t len = strlen (macro);
++  char *buff = (char *) alloca (len + 5);
++  char *p = buff + 2;
++  char *q = p + len;
++
++  memcpy (p, macro, len + 1);
++  if (!(*p == '_' && (p[1] == '_' || ISUPPER (p[1]))))
++    {
++      if (*p != '_')
++	*--p = '_';
++      if (p[1] != '_')
++	*--p = '_';
++    }
++  cpp_define (pfile, p);
++
++  if (p != buff + 2)
++    {
++      if (q[-1] != '_')
++	*q++ = '_';
++      if (q[-2] != '_')
++	*q++ = '_';
++      *q = '\0';
++      cpp_define (pfile, p);
++      if (define_user)
++	cpp_define (pfile, macro);
++    }
++}
++
++/* Define MACRO to EXPANSION; if IS_STR, quote the expansion.  */
++
++static void
++gfc_builtin_define_with_value (cpp_reader *pfile, const char *macro,
++			       const char *expansion, int is_str)
++{
++  size_t mlen = strlen (macro);
++  size_t elen = strlen (expansion);
++  char *buf = (char *) alloca (mlen + elen + 4);
++  if (is_str)
++    sprintf (buf, "%s=\"%s\"", macro, expansion);
++  else
++    sprintf (buf, "%s=%s", macro, expansion);
++  cpp_define (pfile, buf);
++}
++
++/* Provide x86 CPU identification macros for the Fortran preprocessor.
++   TARGET_CPU_CPP_BUILTINS() cannot be called directly because it expands
++   to ix86_target_macros() in i386-c.cc, which is only linked into
++   C-family frontends.  This covers architecture identification and
++   float-size macros.  ISA feature macros (__SSE__, __AVX__, etc.) and
++   arch/tune macros (__znver4__, __skylake__, etc.) from
++   ix86_target_macros_internal() are not included; if needed, they could
++   be factored out of i386-c.cc into a shared object.  */
++
++#ifdef TARGET_80387
++static void
++gfc_define_ix86_target_macros (cpp_reader *pfile)
++{
++  if (TARGET_64BIT)
++    {
++      cpp_assert (pfile, "cpu=x86_64");
++      cpp_assert (pfile, "machine=x86_64");
++      cpp_define (pfile, "__amd64");
++      cpp_define (pfile, "__amd64__");
++      cpp_define (pfile, "__x86_64");
++      cpp_define (pfile, "__x86_64__");
++      if (TARGET_X32)
++	{
++	  cpp_define (pfile, "_ILP32");
++	  cpp_define (pfile, "__ILP32__");
++	}
++    }
++  else
++    {
++      cpp_assert (pfile, "cpu=i386");
++      cpp_assert (pfile, "machine=i386");
++      gfc_builtin_define_std (pfile, "i386", false);
++      cpp_define (pfile, "_ILP32");
++      cpp_define (pfile, "__ILP32__");
++    }
++
++  if (!TARGET_80387)
++    cpp_define (pfile, "_SOFT_FLOAT");
++
++  if (TARGET_LONG_DOUBLE_64)
++    cpp_define (pfile, "__LONG_DOUBLE_64__");
++
++  if (TARGET_LONG_DOUBLE_128)
++    cpp_define (pfile, "__LONG_DOUBLE_128__");
++
++  cpp_define_formatted (pfile, "__SIZEOF_FLOAT80__=%d",
++			GET_MODE_SIZE (XFmode));
++  cpp_define (pfile, "__SIZEOF_FLOAT128__=16");
++}
++#endif
++
++/* Provide essential Darwin platform macros for the Fortran preprocessor.
++   The full darwin_cpp_builtins() in darwin-c.cc also defines
++   __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ and
++   __CONSTANT_CFSTRINGS__, but those depend on functions only linked
++   into C-family frontends.  */
++
++static void ATTRIBUTE_UNUSED
++gfc_darwin_cpp_builtins (cpp_reader *pfile)
++{
++  cpp_define (pfile, "__MACH__");
++  cpp_define (pfile, "__APPLE__");
++  gfc_builtin_define_with_value (pfile, "__APPLE_CC__", "1", false);
++}
+ 
+ static void
+ cpp_define_builtins (cpp_reader *pfile)
+@@ -177,33 +297,55 @@ cpp_define_builtins (cpp_reader *pfile)
+   if (flag_openmp)
+     cpp_define (pfile, "_OPENMP=202111");
+ 
+-  /* The defines below are necessary for the TARGET_* macros.
+-
+-     FIXME:  Note that builtin_define_std() actually is a function
+-     in c-cppbuiltin.cc which uses flags undefined for Fortran.
+-     Let's skip this for now. If needed, one needs to look into it
+-     once more.  */
++  /* Wrapper macros for C-family identifiers used in target config
++     headers.  These allow TARGET_OS_CPP_BUILTINS and
++     TARGET_OBJFMT_CPP_BUILTINS to compile in the Fortran frontend.  */
+ 
+ # define builtin_define(TXT) cpp_define (pfile, TXT)
+-# define builtin_define_std(TXT)
++# define builtin_define_std(TXT) gfc_builtin_define_std (pfile, TXT, !flag_iso)
++# define builtin_define_with_value(MACRO, EXPANSION, IS_STR) \
++  gfc_builtin_define_with_value (pfile, MACRO, EXPANSION, IS_STR)
++# define builtin_define_with_int_value(MACRO, VALUE) \
++  cpp_define_formatted (pfile, "%s=" HOST_WIDE_INT_PRINT_DEC, \
++			MACRO, (HOST_WIDE_INT) (VALUE))
+ # define builtin_assert(TXT) cpp_assert (pfile, TXT)
++# define c_dialect_cxx() 0
++# define c_dialect_objc() 0
++# define preprocessing_asm_p() 0
++# define preprocessing_trad_p() 0
++  /* Fortran has no -std=cNN flag to control this.  Set to 1 (ISO mode)
++     so that builtin_define_std() only defines reserved-namespace macros
++     like __unix__ and __linux__, not bare "unix" or "linux" which are
++     valid Fortran identifiers and would cause silent replacement.  */
++# define flag_iso 1
++# define flag_isoc94 0
++# define flag_isoc99 0
++# define flag_isoc11 0
++# define flag_isoc23 0
++# define darwin_cpp_builtins(PFILE) gfc_darwin_cpp_builtins (PFILE)
+ 
+-  /* FIXME: Pandora's Box
+-    Using the macros below results in multiple breakages:
+-     - mingw will fail to compile this file as dependent macros
+-       assume to be used in c-cppbuiltin.cc only. Further, they use
+-       flags only valid/defined in C (same as noted above).
+-       [config/i386/mingw32.h, config/i386/cygming.h]
+-     - other platforms (not as popular) break similarly
+-       [grep for 'builtin_define_with_int_value' in gcc/config/]
+-
+-  TARGET_CPU_CPP_BUILTINS ();
+   TARGET_OS_CPP_BUILTINS ();
+-  TARGET_OBJFMT_CPP_BUILTINS (); */
++  TARGET_OBJFMT_CPP_BUILTINS ();
++
++#ifdef TARGET_80387
++  gfc_define_ix86_target_macros (pfile);
++#endif
+ 
+ #undef builtin_define
+ #undef builtin_define_std
++#undef builtin_define_with_value
++#undef builtin_define_with_int_value
+ #undef builtin_assert
++#undef c_dialect_cxx
++#undef c_dialect_objc
++#undef preprocessing_asm_p
++#undef preprocessing_trad_p
++#undef flag_iso
++#undef flag_isoc94
++#undef flag_isoc99
++#undef flag_isoc11
++#undef flag_isoc23
++#undef darwin_cpp_builtins
+ }
+ 
+ bool
+diff --git a/gcc/testsuite/gfortran.dg/gomp/declare-variant-10.f90 b/gcc/testsuite/gfortran.dg/gomp/declare-variant-10.f90
+index 0e0ab518010..115195e1194 100644
+--- a/gcc/testsuite/gfortran.dg/gomp/declare-variant-10.f90
++++ b/gcc/testsuite/gfortran.dg/gomp/declare-variant-10.f90
+@@ -64,9 +64,6 @@ contains
+     call f18 ()	  ! { dg-final { scan-tree-dump-times "f18 \\\(\\\);" 1 "gimple" } } */
+   end subroutine
+ 
+-#if defined(__i386__) || defined(__x86_64__)
+-  __attribute__((target ("avx512f,avx512bw")))
+-#endif
+   subroutine test2 ()
+     !$omp target
+       call f04 () ! { dg-final { scan-tree-dump-times "f03 \\\(\\\);" 1 "gimple" { target { { i?86-*-* x86_64-*-* } && { ! ilp32 } } } } }
+diff --git a/gcc/testsuite/gfortran.dg/pr42954-linux.f90 b/gcc/testsuite/gfortran.dg/pr42954-linux.f90
+new file mode 100644
+index 00000000000..bd5efe7a237
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr42954-linux.f90
+@@ -0,0 +1,24 @@
++! { dg-do preprocess { target *-*-linux* } }
++! { dg-options "-cpp" }
++!
++! PR fortran/42954 - target macros missing in gfortran -cpp
++
++#ifndef __linux__
++# error __linux__ not defined
++#endif
++
++#ifndef __linux
++# error __linux not defined
++#endif
++
++#ifndef __unix__
++# error __unix__ not defined
++#endif
++
++#ifndef __unix
++# error __unix not defined
++#endif
++
++#ifndef __ELF__
++# error __ELF__ not defined
++#endif
+diff --git a/gcc/testsuite/gfortran.dg/pr42954-x86.f90 b/gcc/testsuite/gfortran.dg/pr42954-x86.f90
+new file mode 100644
+index 00000000000..0a3b7eac8a2
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr42954-x86.f90
+@@ -0,0 +1,10 @@
++! { dg-do preprocess { target { i?86-*-* x86_64-*-* } } }
++! { dg-options "-cpp" }
++!
++! PR fortran/42954 - target macros missing in gfortran -cpp
++
++#if !defined(__i386__) && !defined(__i386) \
++    && !defined(__x86_64__) && !defined(__x86_64) \
++    && !defined(__amd64__) && !defined(__amd64)
++# error x86 target macros not defined
++#endif
+-- 
+2.53.0
+
