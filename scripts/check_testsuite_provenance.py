@@ -10,6 +10,8 @@ import os
 import re
 import subprocess
 import sys
+import urllib.error
+import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
@@ -166,6 +168,7 @@ class Finding:
     nearby_license_files: list[str] = field(default_factory=list)
     header_excerpt: str = ""
     manifest: list[dict[str, object]] = field(default_factory=list)
+    online_matches: list[dict[str, object]] = field(default_factory=list)
     suppressed: bool = False
     local_contribution: bool = False
 
@@ -191,6 +194,7 @@ class Finding:
             "reasons": self.reasons,
             "nearby_license_files": self.nearby_license_files,
             "manifest": self.manifest,
+            "online_matches": self.online_matches,
             "header_excerpt": self.header_excerpt,
             "suppressed": self.suppressed,
             "local_contribution": self.local_contribution,
@@ -227,6 +231,12 @@ def parse_args() -> argparse.Namespace:
         help="Optional TOML manifest with reviewed paths and risk adjustments.",
     )
     parser.add_argument(
+        "--path",
+        action="append",
+        default=[],
+        help="Explicit repo-relative path to scan. Can be passed multiple times.",
+    )
+    parser.add_argument(
         "--top",
         type=int,
         default=30,
@@ -251,6 +261,23 @@ def parse_args() -> argparse.Namespace:
         "--include-suppressed",
         action="store_true",
         help="Include reviewed false positives in the report output.",
+    )
+    parser.add_argument(
+        "--online-match",
+        action="store_true",
+        help="Search public online code indexes for exact snippet matches.",
+    )
+    parser.add_argument(
+        "--online-match-count",
+        type=int,
+        default=3,
+        help="Maximum number of online matches to retain per file.",
+    )
+    parser.add_argument(
+        "--online-snippets",
+        type=int,
+        default=3,
+        help="Number of extracted snippets to search per file in online mode.",
     )
     return parser.parse_args()
 
@@ -412,6 +439,147 @@ def append_manifest_record(finding: Finding, entry: ManifestEntry) -> None:
     )
 
 
+def snippet_quality(line: str) -> int:
+    if len(line) < 24 or len(line) > 180:
+        return -1
+    if sum(ch.isalpha() for ch in line) < 12:
+        return -1
+    stripped = line.strip()
+    if stripped.startswith(("/*", "*", "//", "#")):
+        return -1
+    lowered = stripped.lower()
+    license_phrases = (
+        "all rights reserved",
+        "redistribution and use in source and binary forms",
+        "this software is provided",
+        "notice, this list of conditions and the following disclaimer",
+        "permission is hereby granted",
+        "the above copyright notice",
+        "without specific prior written permission",
+    )
+    if any(phrase in lowered for phrase in license_phrases):
+        return -1
+    bad_prefixes = (
+        "! { dg-",
+        "// { dg-",
+        "/* { dg-",
+        "#include",
+        "#define",
+        "#if",
+        "#endif",
+        "#elif",
+        "#else",
+    )
+    if stripped.startswith(bad_prefixes):
+        return -1
+    if "free software foundation" in lowered:
+        return -1
+    return len(set(stripped)) + len(stripped)
+
+
+def extract_search_snippets(prefix: str, limit: int) -> list[str]:
+    raw_lines = [line.strip() for line in prefix.splitlines()]
+    candidates: list[tuple[int, str]] = []
+    for index, line in enumerate(raw_lines):
+        score = snippet_quality(line)
+        if score < 0:
+            continue
+        candidates.append((score, line))
+        if index + 1 < len(raw_lines):
+            joined = f"{line} {raw_lines[index + 1].strip()}".strip()
+            joined_score = snippet_quality(joined)
+            if joined_score >= 0:
+                candidates.append((joined_score + 15, joined))
+    seen: set[str] = set()
+    snippets: list[str] = []
+    for _, snippet in sorted(candidates, key=lambda item: item[0], reverse=True):
+        normalized = " ".join(snippet.split())
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        snippets.append(normalized)
+        if len(snippets) >= limit:
+            break
+    return snippets
+
+
+def sourcegraph_search(snippet: str, count: int) -> list[dict[str, object]]:
+    query = {
+        "query": (
+            "query Search($q:String!){ search(query:$q, version:V3) { results { "
+            "results { __typename ... on FileMatch { file { path url } repository { name } "
+            "lineMatches { preview lineNumber } } } } } }"
+        ),
+        "variables": {
+            "q": f'context:global "{snippet}" type:file count:{count}',
+        },
+    }
+    data = json.dumps(query).encode("utf-8")
+    request = urllib.request.Request(
+        "https://sourcegraph.com/.api/graphql",
+        data=data,
+        headers={
+            "content-type": "application/json",
+            "user-agent": "Mozilla/5.0",
+            "x-requested-with": "Sourcegraph",
+            "x-sourcegraph-client": "https://sourcegraph.com",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=20) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError):
+        return []
+    results = payload.get("data", {}).get("search", {}).get("results", {}).get("results", [])
+    matches: list[dict[str, object]] = []
+    for item in results:
+        if item.get("__typename") != "FileMatch":
+            continue
+        file_info = item.get("file") or {}
+        repo = (item.get("repository") or {}).get("name", "")
+        url = str(file_info.get("url", ""))
+        if url.startswith("/"):
+            url = f"https://sourcegraph.com{url}"
+        line_matches = item.get("lineMatches") or []
+        preview = ""
+        line_number = None
+        if line_matches:
+            preview = str(line_matches[0].get("preview", ""))
+            line_number = line_matches[0].get("lineNumber")
+        matches.append(
+            {
+                "repository": repo,
+                "path": str(file_info.get("path", "")),
+                "url": url,
+                "preview": preview,
+                "line_number": line_number,
+                "snippet": snippet,
+            }
+        )
+    return matches
+
+
+def add_online_matches(
+    finding: Finding, prefix: str, snippet_limit: int, match_count: int
+) -> None:
+    matches_by_key: dict[tuple[str, str], dict[str, object]] = {}
+    for snippet in extract_search_snippets(prefix, snippet_limit):
+        for match in sourcegraph_search(snippet, match_count):
+            key = (str(match.get("repository", "")), str(match.get("path", "")))
+            existing = matches_by_key.get(key)
+            if existing is None:
+                matches_by_key[key] = match
+    if not matches_by_key:
+        return
+    ordered = sorted(
+        matches_by_key.values(),
+        key=lambda item: (str(item.get("repository", "")), str(item.get("path", ""))),
+    )
+    finding.online_matches = ordered[:match_count]
+    finding.add(80, f"online code search found {len(finding.online_matches)} candidate source match(es)")
+
+
 def analyze_file(
     repo_root: Path,
     path: str,
@@ -499,10 +667,6 @@ def analyze_file(
     if finding.local_contribution and finding.score > 0:
         finding.add(20, "locally added or modified test needs review as our contribution")
 
-    if finding.suppressed:
-        return finding
-    if finding.score <= 0:
-        return None
     return finding
 
 
@@ -522,6 +686,10 @@ def render_text(findings: list[Finding], top: int, suppressed_count: int) -> str
         lines.append(f"    local_contribution: {'yes' if finding.local_contribution else 'no'}")
         lines.append(f"    reasons: {reasons}")
         lines.append(f"    nearby_licenses: {licenses}")
+        if finding.online_matches:
+            first = finding.online_matches[0]
+            lines.append(f"    online_match: {first.get('repository')} {first.get('path')}")
+            lines.append(f"    online_url: {first.get('url')}")
     return "\n".join(lines)
 
 
@@ -556,12 +724,21 @@ def main() -> int:
         candidate_paths = sorted(local_paths)
     else:
         candidate_paths = git_grep_candidates(repo_root, manifest_entries)
+    if args.path:
+        candidate_paths = args.path
 
     for path in candidate_paths:
         if not is_candidate(path):
             continue
         finding = analyze_file(repo_root, path, manifest_entries, local_paths)
-        if finding and (finding.suppressed or finding.score >= args.min_score):
+        if not finding:
+            continue
+        if args.online_match:
+            prefix = read_prefix(repo_root / path, lines=160)
+            add_online_matches(finding, prefix, args.online_snippets, args.online_match_count)
+        if finding.online_matches and finding.score < args.min_score:
+            finding.add(args.min_score - finding.score, "raised by online match result")
+        if finding.suppressed or finding.score >= args.min_score or finding.online_matches:
             findings.append(finding)
 
     suppressed_count = sum(1 for finding in findings if finding.suppressed)
