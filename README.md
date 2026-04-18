@@ -43,6 +43,20 @@ Live workflow state lives in GitHub issues and structured metadata:
 - [docs/gcc-trunk-contributor-stats-2026.md](docs/gcc-trunk-contributor-stats-2026.md) - 2026 GCC-wide trunk contribution report
 - [docs/bugzilla-stats/2026-04-14-summary.json](docs/bugzilla-stats/2026-04-14-summary.json) - 1-year GCC/Fortran bug and regression snapshot
 
+## Provenance Audit
+
+Use the meta-repo provenance checker to rank testsuite files that look copied,
+adapted, or externally licensed without enough local attribution:
+
+```bash
+make provenance-check
+python3 scripts/check_testsuite_provenance.py --top 100 --json /tmp/provenance.json
+```
+
+The checker scans `gcc/gcc/testsuite` and `gcc/libgomp/testsuite`, scores
+external-origin clues, nearby license files, SPDX/GNU metadata, and optional
+reviewed path rules from `.provenance/testsuites.toml`.
+
 ## Backport Workflow
 
 Structured PR metadata now lives in `pr/<number>/status.json`.

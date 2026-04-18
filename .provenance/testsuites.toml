@@ -1,0 +1,7 @@
+version = 1
+
+[[entry]]
+path = "gcc/gcc/testsuite/gcc.dg/vect/tsvc/**"
+reviewed = true
+notes = "TSVC subtree ships a local license.txt in the same directory."
+
