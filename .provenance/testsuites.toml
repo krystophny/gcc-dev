@@ -152,3 +152,212 @@ evidence = [
   "gcc/gcc/testsuite/go.test/test/run.go",
   "gcc/libstdc++-v3/doc/xml/manual/test.xml",
 ]
+
+[[entry]]
+path = "gcc/libiberty/bsearch.c"
+reviewed = true
+kind = "accepted_external"
+basis = "inline_license"
+reviewed_on = "2026-04-18"
+reviewed_by = "Codex"
+notes = "libiberty documents imported external utility code in libiberty.texi and the file retains the full Regents BSD notice inline."
+evidence = [
+  "gcc/libiberty/libiberty.texi",
+  "gcc/libiberty/bsearch.c",
+]
+
+[[entry]]
+path = "gcc/libiberty/bsearch_r.c"
+reviewed = true
+kind = "accepted_external"
+basis = "inline_license"
+reviewed_on = "2026-04-18"
+reviewed_by = "Codex"
+notes = "BSD-origin adaptation retains the full Regents BSD notice inline and falls under libiberty's documented imported-code model."
+evidence = [
+  "gcc/libiberty/libiberty.texi",
+  "gcc/libiberty/bsearch_r.c",
+]
+
+[[entry]]
+path = "gcc/libiberty/strtol.c"
+reviewed = true
+kind = "accepted_external"
+basis = "inline_license"
+reviewed_on = "2026-04-18"
+reviewed_by = "Codex"
+notes = "libiberty documents imported external utility code in libiberty.texi and the file retains the full Regents BSD notice inline."
+evidence = [
+  "gcc/libiberty/libiberty.texi",
+  "gcc/libiberty/strtol.c",
+]
+
+[[entry]]
+path = "gcc/libiberty/strtoll.c"
+reviewed = true
+kind = "accepted_external"
+basis = "inline_license"
+reviewed_on = "2026-04-18"
+reviewed_by = "Codex"
+notes = "libiberty documents imported external utility code in libiberty.texi and the file retains the full Regents BSD notice inline."
+evidence = [
+  "gcc/libiberty/libiberty.texi",
+  "gcc/libiberty/strtoll.c",
+]
+
+[[entry]]
+path = "gcc/libiberty/random.c"
+reviewed = true
+kind = "accepted_external"
+basis = "inline_license"
+reviewed_on = "2026-04-18"
+reviewed_by = "Codex"
+notes = "The file explicitly says it is derived from Berkeley source, notes the glibc rework, and retains the BSD notice inline."
+evidence = [
+  "gcc/libiberty/libiberty.texi",
+  "gcc/libiberty/random.c",
+]
+
+[[entry]]
+path = "gcc/libiberty/strcasecmp.c"
+reviewed = true
+kind = "accepted_external"
+basis = "inline_license"
+reviewed_on = "2026-04-18"
+reviewed_by = "Codex"
+notes = "The file retains the Berkeley-origin notice inline and fits libiberty's documented imported-code model."
+evidence = [
+  "gcc/libiberty/libiberty.texi",
+  "gcc/libiberty/strcasecmp.c",
+]
+
+[[entry]]
+path = "gcc/libiberty/getopt.c"
+reviewed = true
+kind = "accepted_external"
+basis = "inline_license"
+reviewed_on = "2026-04-18"
+reviewed_by = "Codex"
+notes = "GNU-origin import is explicitly documented in the file header and fits libiberty's documented imported-code model."
+evidence = [
+  "gcc/libiberty/libiberty.texi",
+  "gcc/libiberty/getopt.c",
+]
+
+[[entry]]
+path = "gcc/libiberty/regex.c"
+reviewed = true
+kind = "accepted_external"
+basis = "inline_license"
+reviewed_on = "2026-04-18"
+reviewed_by = "Codex"
+notes = "GNU-origin import is explicitly documented in the file header and fits libiberty's documented imported-code model."
+evidence = [
+  "gcc/libiberty/libiberty.texi",
+  "gcc/libiberty/regex.c",
+]
+
+[[entry]]
+path = "gcc/libiberty/obstack.c"
+reviewed = true
+kind = "accepted_external"
+basis = "inline_license"
+reviewed_on = "2026-04-18"
+reviewed_by = "Codex"
+notes = "GNU-origin import is explicitly documented in the file header and fits libiberty's documented imported-code model."
+evidence = [
+  "gcc/libiberty/libiberty.texi",
+  "gcc/libiberty/obstack.c",
+]
+
+[[entry]]
+path = "gcc/libgo/**"
+reviewed = true
+kind = "accepted_external"
+basis = "subtree_import_note"
+reviewed_on = "2026-04-18"
+reviewed_by = "Codex"
+notes = "libgo is a mirrored Go subtree with a local LICENSE and README.gcc describing the upstream gofrontend/libgo source."
+evidence = [
+  "gcc/libgo/LICENSE",
+  "gcc/libgo/README",
+  "gcc/libgo/README.gcc",
+]
+
+[[entry]]
+path = "gcc/gcc/go/gofrontend/**"
+reviewed = true
+kind = "accepted_external"
+basis = "subtree_import_note"
+reviewed_on = "2026-04-18"
+reviewed_by = "Codex"
+notes = "gofrontend is a documented imported Go frontend subtree with a local LICENSE and README pointing at the upstream project."
+evidence = [
+  "gcc/gcc/go/gofrontend/LICENSE",
+  "gcc/gcc/go/gofrontend/README",
+]
+
+[[entry]]
+path = "gcc/gcc/go/**"
+reviewed = true
+kind = "accepted_external"
+basis = "subtree_import_note"
+reviewed_on = "2026-04-18"
+reviewed_by = "Codex"
+notes = "The GCC Go frontend wrapper files are documented as mirrored from gofrontend and rely on the in-tree Go frontend license."
+evidence = [
+  "gcc/gcc/go/README.gcc",
+  "gcc/gcc/go/gofrontend/LICENSE",
+]
+
+[[entry]]
+path = "gcc/libffi/**"
+reviewed = true
+kind = "accepted_external"
+basis = "nearby_license"
+reviewed_on = "2026-04-18"
+reviewed_by = "Codex"
+notes = "libffi sources are mirrored from the upstream libffi project and ship with a local libffi LICENSE."
+evidence = [
+  "gcc/libffi/LICENSE",
+  "gcc/libffi/src/riscv/ffi.c",
+]
+
+[[entry]]
+path = "gcc/zlib/**"
+reviewed = true
+kind = "accepted_external"
+basis = "nearby_license"
+reviewed_on = "2026-04-18"
+reviewed_by = "Codex"
+notes = "zlib sources are mirrored from the upstream zlib project and ship with a local zlib LICENSE."
+evidence = [
+  "gcc/zlib/LICENSE",
+  "gcc/zlib/contrib/blast/blast.h",
+]
+
+[[entry]]
+path = "gcc/libgrust/**"
+reviewed = true
+kind = "accepted_external"
+basis = "manual_review"
+reviewed_on = "2026-04-18"
+reviewed_by = "Codex"
+notes = "libgrust contains mirrored Rust library and vendored crate sources; source-level corpus matches confirm the imported upstream lineage."
+evidence = [
+  "gcc/libgrust/rustc-lib/core/src/cell.rs",
+  "gcc/libgrust/libformat_parser/vendor/unicode-xid/src/tables.rs",
+]
+
+[[entry]]
+path = "gcc/gcc/rust/checks/errors/borrowck/ffi-polonius/vendor/**"
+reviewed = true
+kind = "accepted_external"
+basis = "manual_review"
+reviewed_on = "2026-04-18"
+reviewed_by = "Codex"
+notes = "Vendored Rust crates under ffi-polonius have direct source-level corpus matches to their upstream projects."
+evidence = [
+  "gcc/gcc/rust/checks/errors/borrowck/ffi-polonius/vendor/log/src/lib.rs",
+  "gcc/gcc/rust/checks/errors/borrowck/ffi-polonius/vendor/rustc-hash/src/lib.rs",
+]

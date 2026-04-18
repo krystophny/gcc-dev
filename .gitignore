@@ -7,6 +7,7 @@
 /gcc-build-gcc14/
 /gcc-build-gcc15/
 /third_party/
+/corpusbin/
 
 # Compiled artifacts
 *.o

@@ -1,0 +1,153 @@
+[[entry]]
+path = "gcc/libiberty/getopt.c"
+source_name = "glibc posix/getopt.c"
+url = "https://sourceware.org/git/?p=glibc.git;a=blob_plain;f=posix/getopt.c;hb=HEAD"
+origin_class = "gnu"
+notes = "libiberty getopt.c says it is derived from an old version taken from glibc."
+
+[[entry]]
+path = "gcc/libiberty/strtol.c"
+source_name = "FreeBSD libc strtol.c"
+url = "https://cgit.freebsd.org/src/plain/lib/libc/stdlib/strtol.c"
+origin_class = "non_gnu"
+notes = "libiberty strtol.c carries the classic Regents of the University of California BSD notice."
+
+[[entry]]
+path = "gcc/libiberty/strtoll.c"
+source_name = "FreeBSD libc strtoll.c"
+url = "https://cgit.freebsd.org/src/plain/lib/libc/stdlib/strtoll.c"
+origin_class = "non_gnu"
+notes = "libiberty strtoll.c carries the Regents of the University of California BSD notice."
+
+[[entry]]
+path = "gcc/libiberty/bsearch_r.c"
+source_name = "FreeBSD libc bsearch.c"
+url = "https://cgit.freebsd.org/src/plain/lib/libc/stdlib/bsearch.c"
+origin_class = "non_gnu"
+notes = "bsearch_r.c is an adapted BSD-origin implementation; compare against FreeBSD's bsearch.c."
+
+[[entry]]
+path = "gcc/libiberty/bsearch.c"
+source_name = "FreeBSD libc bsearch.c"
+url = "https://cgit.freebsd.org/src/plain/lib/libc/stdlib/bsearch.c"
+origin_class = "non_gnu"
+notes = "libiberty bsearch.c carries the classic Berkeley BSD notice."
+
+[[entry]]
+path = "gcc/libiberty/random.c"
+source_name = "FreeBSD libc random.c"
+url = "https://cgit.freebsd.org/src/plain/lib/libc/stdlib/random.c"
+origin_class = "non_gnu"
+notes = "libiberty random.c says it is derived from Berkeley source and reworked for glibc."
+
+[[entry]]
+path = "gcc/libiberty/strcasecmp.c"
+source_name = "FreeBSD libc strcasecmp.c"
+url = "https://cgit.freebsd.org/src/plain/lib/libc/string/strcasecmp.c"
+origin_class = "non_gnu"
+notes = "libiberty strcasecmp.c carries the Berkeley notice and ASCII-only mapping logic."
+
+[[entry]]
+path = "gcc/libiberty/regex.c"
+source_name = "glibc posix/regex.c"
+url = "https://sourceware.org/git/?p=glibc.git;a=blob_plain;f=posix/regex.c;hb=HEAD"
+origin_class = "gnu"
+notes = "libiberty regex.c says it is part of the GNU C Library and modified for libiberty."
+
+[[entry]]
+path = "gcc/libiberty/obstack.c"
+source_name = "glibc malloc/obstack.c"
+url = "https://sourceware.org/git/?p=glibc.git;a=blob_plain;f=malloc/obstack.c;hb=HEAD"
+origin_class = "gnu"
+notes = "libiberty obstack.c says it is part of the GNU C Library."
+
+[[entry]]
+path = "gcc/gcc/go/go-linemap.cc"
+source_name = "gofrontend go/go-linemap.cc"
+url = "https://raw.githubusercontent.com/golang/gofrontend/master/go/go-linemap.cc"
+origin_class = "non_gnu"
+notes = "GCC Go linemap implementation keeps the original Go Authors BSD-style header."
+
+[[entry]]
+path = "gcc/gcc/go/go-location.h"
+source_name = "gofrontend go/go-location.h"
+url = "https://raw.githubusercontent.com/golang/gofrontend/master/go/go-location.h"
+origin_class = "non_gnu"
+notes = "GCC Go location interface keeps the original Go Authors BSD-style header."
+
+[[entry]]
+path = "gcc/gcc/rust/metadata/rust-import-archive.cc"
+source_name = "gofrontend go/import-archive.cc"
+url = "https://raw.githubusercontent.com/golang/gofrontend/master/go/import-archive.cc"
+origin_class = "non_gnu"
+notes = "Rust metadata importer is derived from the Go frontend archive importer."
+
+[[entry]]
+path = "gcc/gcc/rust/metadata/rust-imports.h"
+source_name = "gofrontend go/import.h"
+url = "https://raw.githubusercontent.com/golang/gofrontend/master/go/import.h"
+origin_class = "non_gnu"
+notes = "Rust metadata import stream definitions are derived from the Go frontend importer."
+
+[[entry]]
+path = "gcc/gcc/algol68/a68-imports-archive.cc"
+source_name = "gofrontend go/import-archive.cc"
+url = "https://raw.githubusercontent.com/golang/gofrontend/master/go/import-archive.cc"
+origin_class = "non_gnu"
+notes = "Algol 68 archive import helpers are adapted from the Go frontend importer."
+
+[[entry]]
+path = "gcc/gcc/algol68/a68-imports.cc"
+source_name = "gofrontend go/import.cc"
+url = "https://raw.githubusercontent.com/golang/gofrontend/master/go/import.cc"
+origin_class = "non_gnu"
+notes = "Algol 68 import helpers are adapted from the Go frontend importer."
+
+[[tree]]
+path_prefix = "gcc/zlib/contrib/blast/"
+source_name = "zlib contrib/blast"
+url_prefix = "https://raw.githubusercontent.com/madler/zlib/master/contrib/blast"
+origin_class = "non_gnu"
+notes = "Mark Adler's blast sources are vendored in zlib contrib."
+
+[[tree]]
+path_prefix = "gcc/zlib/examples/"
+source_name = "zlib examples"
+url_prefix = "https://raw.githubusercontent.com/madler/zlib/master/examples"
+origin_class = "non_gnu"
+notes = "zlib example programs are vendored from the upstream zlib project."
+
+[[tree]]
+path_prefix = "gcc/libffi/src/"
+source_name = "libffi src"
+url_prefix = "https://raw.githubusercontent.com/libffi/libffi/master/src"
+origin_class = "non_gnu"
+notes = "libffi backend sources are mirrored from the upstream libffi project."
+
+[[tree]]
+path_prefix = "gcc/libgrust/rustc-lib/"
+source_name = "rust library"
+url_prefix = "https://raw.githubusercontent.com/rust-lang/rust/master/library"
+origin_class = "non_gnu"
+notes = "libgrust rustc-lib sources are mirrored from the upstream Rust library tree."
+
+[[tree]]
+path_prefix = "gcc/gcc/rust/checks/errors/borrowck/ffi-polonius/vendor/log/"
+source_name = "rust log crate"
+url_prefix = "https://raw.githubusercontent.com/rust-lang/log/master"
+origin_class = "non_gnu"
+notes = "Vendored log crate sources are mirrored from the upstream Rust log project."
+
+[[tree]]
+path_prefix = "gcc/gcc/rust/checks/errors/borrowck/ffi-polonius/vendor/rustc-hash/"
+source_name = "rustc-hash crate"
+url_prefix = "https://raw.githubusercontent.com/rust-lang/rustc-hash/master"
+origin_class = "non_gnu"
+notes = "Vendored rustc-hash sources are mirrored from the upstream project."
+
+[[tree]]
+path_prefix = "gcc/libgrust/libformat_parser/vendor/unicode-xid/"
+source_name = "unicode-xid crate"
+url_prefix = "https://raw.githubusercontent.com/unicode-rs/unicode-xid/master"
+origin_class = "non_gnu"
+notes = "Vendored unicode-xid sources are mirrored from the upstream crate."

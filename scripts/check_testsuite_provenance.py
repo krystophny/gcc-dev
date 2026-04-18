@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import fnmatch
+import hashlib
 import json
 import os
 import re
@@ -145,6 +146,13 @@ EXTERNAL_ORIGIN_MARKERS = {
     "specification": 25,
     "example document": 30,
 }
+INLINE_EXTERNAL_LICENSE_MARKERS = (
+    "redistribution and use in source and binary forms",
+    "permission to use, copy, modify, and distribute this",
+    "this software is provided 'as-is'",
+    'this software is provided "as is"',
+    "see copyright notice in",
+)
 
 
 @dataclass
@@ -161,13 +169,26 @@ class ManifestEntry:
 
 
 @dataclass
+class CorpusEntry:
+    path: str = ""
+    path_prefix: str = ""
+    source_name: str = ""
+    url: str = ""
+    url_prefix: str = ""
+    origin_class: str = ""
+    notes: str = ""
+
+
+@dataclass
 class Finding:
     path: str
     score: int = 0
     reasons: list[str] = field(default_factory=list)
     nearby_license_files: list[str] = field(default_factory=list)
+    source_tree_license_files: list[str] = field(default_factory=list)
     header_excerpt: str = ""
     manifest: list[dict[str, object]] = field(default_factory=list)
+    corpus_matches: list[dict[str, object]] = field(default_factory=list)
     online_matches: list[dict[str, object]] = field(default_factory=list)
     suppressed: bool = False
     local_contribution: bool = False
@@ -193,7 +214,9 @@ class Finding:
             "severity": self.severity,
             "reasons": self.reasons,
             "nearby_license_files": self.nearby_license_files,
+            "source_tree_license_files": self.source_tree_license_files,
             "manifest": self.manifest,
+            "corpus_matches": self.corpus_matches,
             "online_matches": self.online_matches,
             "header_excerpt": self.header_excerpt,
             "suppressed": self.suppressed,
@@ -231,6 +254,16 @@ def parse_args() -> argparse.Namespace:
         help="Optional TOML manifest with reviewed paths and risk adjustments.",
     )
     parser.add_argument(
+        "--corpus-config",
+        default=".provenance/corpus.toml",
+        help="Optional TOML config describing authoritative source corpus URLs.",
+    )
+    parser.add_argument(
+        "--corpus-root",
+        default="corpusbin/provenance",
+        help="Cache directory for downloaded corpus files.",
+    )
+    parser.add_argument(
         "--path",
         action="append",
         default=[],
@@ -261,6 +294,17 @@ def parse_args() -> argparse.Namespace:
         "--include-suppressed",
         action="store_true",
         help="Include reviewed false positives in the report output.",
+    )
+    parser.add_argument(
+        "--corpus-match",
+        action="store_true",
+        help="Match files against a cached local corpus of authoritative source URLs.",
+    )
+    parser.add_argument(
+        "--corpus-min-similarity",
+        type=float,
+        default=0.20,
+        help="Minimum token-shingle similarity for corpus matches.",
     )
     parser.add_argument(
         "--online-match",
@@ -382,6 +426,41 @@ def load_manifest(path: Path) -> list[ManifestEntry]:
     return entries
 
 
+def load_corpus(path: Path) -> list[CorpusEntry]:
+    if not path.exists():
+        return []
+    if tomllib is None:
+        raise SystemExit("tomllib is unavailable; cannot read corpus config")
+    with path.open("rb") as handle:
+        data = tomllib.load(handle)
+    entries: list[CorpusEntry] = []
+    for raw in data.get("entry", []):
+        if "path" not in raw or "url" not in raw:
+            continue
+        entries.append(
+            CorpusEntry(
+                path=str(raw["path"]),
+                source_name=str(raw.get("source_name", raw["url"])),
+                url=str(raw["url"]),
+                origin_class=str(raw.get("origin_class", "")),
+                notes=str(raw.get("notes", "")),
+            )
+        )
+    for raw in data.get("tree", []):
+        if "path_prefix" not in raw or "url_prefix" not in raw:
+            continue
+        entries.append(
+            CorpusEntry(
+                path_prefix=str(raw["path_prefix"]),
+                source_name=str(raw.get("source_name", raw["url_prefix"])),
+                url_prefix=str(raw["url_prefix"]),
+                origin_class=str(raw.get("origin_class", "")),
+                notes=str(raw.get("notes", "")),
+            )
+        )
+    return entries
+
+
 def is_candidate(path: str) -> bool:
     name = os.path.basename(path)
     if name in SKIP_NAMES or name.startswith("ChangeLog"):
@@ -420,6 +499,18 @@ def find_nearby_license_files(path: Path, repo_root: Path) -> list[str]:
     return found
 
 
+def find_source_tree_license_files(repo_root: Path) -> list[str]:
+    try:
+        result = run_git_gcc(repo_root, "ls-files")
+    except subprocess.CalledProcessError as exc:
+        raise SystemExit(f"failed to enumerate gcc source tree files: {exc}") from exc
+    found = []
+    for line in result.stdout.splitlines():
+        if os.path.basename(line) in LICENSE_FILE_NAMES:
+            found.append(f"gcc/{line}")
+    return found
+
+
 def manifest_matches(path: str, entries: Iterable[ManifestEntry]) -> list[ManifestEntry]:
     return [entry for entry in entries if fnmatch.fnmatch(path, entry.path)]
 
@@ -437,6 +528,61 @@ def append_manifest_record(finding: Finding, entry: ManifestEntry) -> None:
             "evidence": entry.evidence,
         }
     )
+
+
+TOKEN_PATTERN = re.compile(
+    r"[A-Za-z_][A-Za-z_0-9]*|\d+|==|!=|<=|>=|->|::|&&|\|\||[-+*/%<>&|^~!?=(){}\[\],.;:]"
+)
+
+
+def tokenize_for_similarity(text: str) -> list[str]:
+    return TOKEN_PATTERN.findall(text)
+
+
+def token_shingles(tokens: list[str], width: int = 5) -> set[tuple[str, ...]]:
+    if len(tokens) < width:
+        return {tuple(tokens)} if tokens else set()
+    return {tuple(tokens[index : index + width]) for index in range(len(tokens) - width + 1)}
+
+
+def shingle_similarity(lhs: str, rhs: str) -> float:
+    lhs_shingles = token_shingles(tokenize_for_similarity(lhs))
+    rhs_shingles = token_shingles(tokenize_for_similarity(rhs))
+    if not lhs_shingles or not rhs_shingles:
+        return 0.0
+    intersection = len(lhs_shingles & rhs_shingles)
+    union = len(lhs_shingles | rhs_shingles)
+    return intersection / union if union else 0.0
+
+
+def line_similarity(lhs: str, rhs: str) -> float:
+    lhs_lines = {line.strip() for line in lhs.splitlines() if line.strip()}
+    rhs_lines = {line.strip() for line in rhs.splitlines() if line.strip()}
+    if not lhs_lines or not rhs_lines:
+        return 0.0
+    intersection = len(lhs_lines & rhs_lines)
+    union = len(lhs_lines | rhs_lines)
+    return intersection / union if union else 0.0
+
+
+def cached_fetch(url: str, cache_root: Path) -> str | None:
+    cache_root.mkdir(parents=True, exist_ok=True)
+    digest = hashlib.sha256(url.encode("utf-8")).hexdigest()
+    target = cache_root / f"{digest}.txt"
+    if not target.exists():
+        request = urllib.request.Request(
+            url,
+            headers={"user-agent": "Mozilla/5.0"},
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:
+                target.write_bytes(response.read())
+        except (urllib.error.URLError, TimeoutError, OSError):
+            return None
+    try:
+        return target.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
 
 
 def snippet_quality(line: str) -> int:
@@ -580,11 +726,83 @@ def add_online_matches(
     finding.add(80, f"online code search found {len(finding.online_matches)} candidate source match(es)")
 
 
+def corpus_matches_for_path(path: str, entries: Iterable[CorpusEntry]) -> list[CorpusEntry]:
+    matches: list[CorpusEntry] = []
+    for entry in entries:
+        if entry.path and fnmatch.fnmatch(path, entry.path):
+            matches.append(entry)
+            continue
+        if entry.path_prefix and path.startswith(entry.path_prefix):
+            relative = path[len(entry.path_prefix) :].lstrip("/")
+            matches.append(
+                CorpusEntry(
+                    path=path,
+                    path_prefix=entry.path_prefix,
+                    source_name=f"{entry.source_name.rstrip('/')}/{relative}" if relative else entry.source_name,
+                    url=f"{entry.url_prefix.rstrip('/')}/{relative}" if relative else entry.url_prefix,
+                    url_prefix=entry.url_prefix,
+                    origin_class=entry.origin_class,
+                    notes=entry.notes,
+                )
+            )
+    return matches
+
+
+def add_corpus_matches(
+    finding: Finding,
+    full_text: str,
+    corpus_entries: list[CorpusEntry],
+    cache_root: Path,
+    min_similarity: float,
+) -> None:
+    matches: list[dict[str, object]] = []
+    for entry in corpus_matches_for_path(finding.path, corpus_entries):
+        corpus_text = cached_fetch(entry.url, cache_root)
+        if not corpus_text:
+            continue
+        similarity = shingle_similarity(full_text, corpus_text)
+        line_overlap = line_similarity(full_text, corpus_text)
+        if similarity <= 0.0 and line_overlap <= 0.0:
+            continue
+        if max(similarity, line_overlap) < min_similarity:
+            continue
+        matches.append(
+            {
+                "source_name": entry.source_name,
+                "url": entry.url,
+                "origin_class": entry.origin_class,
+                "similarity": round(similarity, 4),
+                "line_similarity": round(line_overlap, 4),
+                "notes": entry.notes,
+            }
+        )
+    if not matches:
+        return
+    matches.sort(
+        key=lambda item: (float(item["similarity"]), float(item.get("line_similarity", 0.0))),
+        reverse=True,
+    )
+    finding.corpus_matches = matches
+    best = max(float(matches[0]["similarity"]), float(matches[0].get("line_similarity", 0.0)))
+    origin_class = str(matches[0].get("origin_class", ""))
+    if best >= 0.85:
+        finding.add(110, f"corpus match similarity {best:.2f} to authoritative source")
+    elif best >= 0.65:
+        finding.add(80, f"corpus match similarity {best:.2f} to authoritative source")
+    else:
+        finding.add(45, f"corpus match similarity {best:.2f} to authoritative source")
+    if origin_class == "non_gnu":
+        finding.add(20, "corpus origin is a non-GNU upstream project")
+    elif origin_class == "gnu":
+        finding.add(-10, "corpus origin is a GNU upstream project")
+
+
 def analyze_file(
     repo_root: Path,
     path: str,
     manifest_entries: list[ManifestEntry],
     local_paths: set[str],
+    source_tree_license_files: list[str],
 ) -> Finding | None:
     full_path = repo_root / path
     prefix = read_prefix(full_path)
@@ -595,12 +813,24 @@ def analyze_file(
     finding.local_contribution = path in local_paths
     finding.header_excerpt = "\n".join(line.rstrip() for line in prefix.splitlines()[:8])
     finding.nearby_license_files = find_nearby_license_files(full_path, repo_root)
+    finding.source_tree_license_files = source_tree_license_files[:8]
 
     lower_prefix = prefix.lower()
     has_spdx = bool(SPDX_PATTERN.search(prefix))
     has_gnu_header = bool(GNU_PATTERN.search(prefix))
     has_origin_phrase = bool(ORIGIN_PATTERN.search(prefix))
     has_internal_origin = bool(INTERNAL_SOURCE_PATTERN.search(prefix))
+    has_source_tree_license = bool(source_tree_license_files)
+    has_explicit_license_trail = (
+        has_spdx
+        or has_gnu_header
+        or "license" in lower_prefix
+        or bool(finding.nearby_license_files)
+        or has_source_tree_license
+    )
+    has_inline_external_license = any(
+        marker in lower_prefix for marker in INLINE_EXTERNAL_LICENSE_MARKERS
+    )
 
     matches = manifest_matches(path, manifest_entries)
     for entry in matches:
@@ -611,6 +841,9 @@ def analyze_file(
             finding.suppressed = True
             finding.add(-1000, f"reviewed false positive: {entry.path}")
         elif entry.kind == "accepted_external":
+            if not finding.local_contribution:
+                finding.suppressed = True
+                finding.add(-1000, f"reviewed inherited external content with acceptable attribution trail: {entry.path}")
             finding.add(-60, f"reviewed external content with acceptable attribution trail: {entry.path}")
         elif entry.kind == "project_policy":
             finding.suppressed = True
@@ -626,6 +859,8 @@ def analyze_file(
         finding.add(-30, "GNU/FSF copyright or license header present")
     if finding.nearby_license_files:
         finding.add(-20, "nearby license file present")
+    elif has_source_tree_license:
+        finding.add(-15, "license file exists elsewhere in the gcc source tree")
 
     if has_origin_phrase:
         if has_internal_origin:
@@ -637,14 +872,23 @@ def analyze_file(
         if marker in lower_prefix:
             finding.add(score, f"external origin marker: {marker}")
 
-    if "license that can be found in the license file" in lower_prefix and not finding.nearby_license_files:
-        finding.add(35, "references a LICENSE file that is not present nearby")
+    if "license that can be found in the license file" in lower_prefix:
+        if has_source_tree_license:
+            finding.add(-35, "references a LICENSE file and the gcc source tree contains license files")
+        else:
+            finding.add(35, "references a LICENSE file that is not present in the gcc source tree")
 
     if "all rights reserved" in lower_prefix:
-        finding.add(20, "contains all-rights-reserved language")
+        if has_explicit_license_trail:
+            finding.add(-10, "all-rights-reserved notice accompanied by an in-tree license trail")
+        else:
+            finding.add(20, "contains all-rights-reserved language")
 
-    if "bsd-style" in lower_prefix and not finding.nearby_license_files:
-        finding.add(20, "mentions BSD-style licensing without nearby license text")
+    if "bsd-style" in lower_prefix:
+        if has_source_tree_license:
+            finding.add(-20, "mentions BSD-style licensing with an in-tree license trail")
+        else:
+            finding.add(20, "mentions BSD-style licensing without any in-tree license text")
 
     if path.startswith("gcc/gcc/testsuite/go.test/"):
         finding.add(15, "imported go.test subtree")
@@ -658,14 +902,33 @@ def analyze_file(
             continue
         if "gnu" in normalized and "org" in normalized:
             continue
-        finding.add(70, f"non-FSF copyright holder: {holder}")
+        score = 70
+        reason = f"non-FSF copyright holder: {holder}"
+        if has_explicit_license_trail:
+            score = 20
+            reason += " with in-tree license trail"
+        finding.add(score, reason)
         break
 
-    if not finding.nearby_license_files and any(marker.lower() in lower_prefix for marker in EXTERNAL_COPYRIGHT_MARKERS):
-        finding.add(15, "external provenance appears without local license companion")
+    if any(marker.lower() in lower_prefix for marker in EXTERNAL_COPYRIGHT_MARKERS):
+        if has_source_tree_license:
+            finding.add(-20, "external provenance has an in-tree license trail")
+        elif not finding.nearby_license_files:
+            finding.add(15, "external provenance appears without any in-tree license companion")
 
     if finding.local_contribution and finding.score > 0:
         finding.add(20, "locally added or modified test needs review as our contribution")
+
+    if (
+        not finding.local_contribution
+        and has_explicit_license_trail
+        and has_inline_external_license
+    ):
+        finding.suppressed = True
+        finding.add(
+            -1000,
+            "inherited source keeps an explicit in-tree external license trail",
+        )
 
     return finding
 
@@ -686,6 +949,13 @@ def render_text(findings: list[Finding], top: int, suppressed_count: int) -> str
         lines.append(f"    local_contribution: {'yes' if finding.local_contribution else 'no'}")
         lines.append(f"    reasons: {reasons}")
         lines.append(f"    nearby_licenses: {licenses}")
+        if finding.corpus_matches:
+            first = finding.corpus_matches[0]
+            lines.append(
+                f"    corpus_match: {first.get('source_name')} "
+                f"token_similarity={first.get('similarity')} line_similarity={first.get('line_similarity')}"
+            )
+            lines.append(f"    corpus_url: {first.get('url')}")
         if finding.online_matches:
             first = finding.online_matches[0]
             lines.append(f"    online_match: {first.get('repository')} {first.get('path')}")
@@ -697,6 +967,8 @@ def main() -> int:
     args = parse_args()
     repo_root = Path.cwd()
     manifest_entries = load_manifest(repo_root / args.manifest)
+    corpus_entries = load_corpus(repo_root / args.corpus_config)
+    source_tree_license_files = find_source_tree_license_files(repo_root)
     local_paths = git_changed_tests(repo_root)
 
     if not args.include_testsuites and args.scope == "all":
@@ -730,15 +1002,35 @@ def main() -> int:
     for path in candidate_paths:
         if not is_candidate(path):
             continue
-        finding = analyze_file(repo_root, path, manifest_entries, local_paths)
+        finding = analyze_file(
+            repo_root,
+            path,
+            manifest_entries,
+            local_paths,
+            source_tree_license_files,
+        )
         if not finding:
             continue
+        full_text = ""
+        if args.corpus_match:
+            try:
+                full_text = (repo_root / path).read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                full_text = ""
+            if full_text:
+                add_corpus_matches(
+                    finding,
+                    full_text,
+                    corpus_entries,
+                    repo_root / args.corpus_root,
+                    args.corpus_min_similarity,
+                )
         if args.online_match:
             prefix = read_prefix(repo_root / path, lines=160)
             add_online_matches(finding, prefix, args.online_snippets, args.online_match_count)
-        if finding.online_matches and finding.score < args.min_score:
+        if (finding.online_matches or finding.corpus_matches) and finding.score < args.min_score:
             finding.add(args.min_score - finding.score, "raised by online match result")
-        if finding.suppressed or finding.score >= args.min_score or finding.online_matches:
+        if finding.suppressed or finding.score >= args.min_score or finding.online_matches or finding.corpus_matches:
             findings.append(finding)
 
     suppressed_count = sum(1 for finding in findings if finding.suppressed)
