@@ -3,5 +3,152 @@ version = 1
 [[entry]]
 path = "gcc/gcc/testsuite/gcc.dg/vect/tsvc/**"
 reviewed = true
+kind = "accepted_external"
+basis = "nearby_license"
+reviewed_on = "2026-04-18"
+reviewed_by = "Codex"
 notes = "TSVC subtree ships a local license.txt in the same directory."
+evidence = [
+  "gcc/gcc/testsuite/gcc.dg/vect/tsvc/license.txt",
+]
 
+[[entry]]
+path = "gcc/gcc/testsuite/gcc.dg/analyzer/pr104434*"
+reviewed = true
+kind = "false_positive"
+basis = "inline_license"
+reviewed_on = "2026-04-18"
+reviewed_by = "Codex"
+notes = "OpenBLAS/LAPACK-derived analyzer reproducer keeps the upstream URL and the Intel/OpenBLAS redistribution terms inline."
+evidence = [
+  "gcc/gcc/testsuite/gcc.dg/analyzer/pr104434-const.c",
+  "gcc/gcc/testsuite/gcc.dg/analyzer/pr104434-nonconst.c",
+  "gcc/gcc/testsuite/gcc.dg/analyzer/pr104434.h",
+]
+
+[[entry]]
+path = "gcc/gcc/testsuite/c-c++-common/analyzer/*CWE*-example*.c"
+reviewed = true
+kind = "false_positive"
+basis = "inline_license"
+reviewed_on = "2026-04-18"
+reviewed_by = "Codex"
+notes = "MITRE CWE examples preserve the upstream source URL and terms-of-use/license block inline."
+evidence = [
+  "gcc/gcc/testsuite/c-c++-common/analyzer/malloc-CWE-401-example.c",
+]
+
+[[entry]]
+path = "gcc/gcc/testsuite/gcc.dg/analyzer/*CWE*.c"
+reviewed = true
+kind = "false_positive"
+basis = "inline_license"
+reviewed_on = "2026-04-18"
+reviewed_by = "Codex"
+notes = "MITRE CWE analyzer examples preserve the source URL and reproduced license terms inline."
+evidence = [
+  "gcc/gcc/testsuite/gcc.dg/analyzer/CWE-131-examples.c",
+  "gcc/gcc/testsuite/gcc.dg/analyzer/file-CWE-1341-example.c",
+  "gcc/gcc/testsuite/gcc.dg/analyzer/uninit-CWE-457-examples.c",
+]
+
+[[entry]]
+path = "gcc/gcc/testsuite/c-c++-common/analyzer/SARD-*"
+reviewed = true
+kind = "false_positive"
+basis = "inline_license"
+reviewed_on = "2026-04-18"
+reviewed_by = "Codex"
+notes = "SARD-derived examples keep the upstream URL and permissive M.I.T. license text inline."
+evidence = [
+  "gcc/gcc/testsuite/c-c++-common/analyzer/SARD-tc117-basic-00001-min.c",
+  "gcc/gcc/testsuite/c-c++-common/analyzer/SARD-tc249-basic-00034-min.c",
+]
+
+[[entry]]
+path = "gcc/gcc/testsuite/gcc.dg/analyzer/SARD-*"
+reviewed = true
+kind = "false_positive"
+basis = "inline_license"
+reviewed_on = "2026-04-18"
+reviewed_by = "Codex"
+notes = "SARD-derived analyzer examples keep the upstream URL and permissive M.I.T. license text inline."
+evidence = [
+  "gcc/gcc/testsuite/gcc.dg/analyzer/SARD-tc*.c",
+]
+
+[[entry]]
+path = "gcc/gcc/testsuite/lib/sarif-schema-2.1.0.json"
+reviewed = true
+kind = "false_positive"
+basis = "changelog_record"
+reviewed_on = "2026-04-18"
+reviewed_by = "Codex"
+notes = "Imported SARIF schema has a recorded OASIS permission trail in ChangeLog-2024."
+evidence = [
+  "gcc/gcc/testsuite/ChangeLog-2024:23238",
+]
+
+[[entry]]
+path = "gcc/gcc/testsuite/gcc.c-torture/execute/pr20527-1.c"
+reviewed = true
+kind = "false_positive"
+basis = "inline_license"
+reviewed_on = "2026-04-18"
+reviewed_by = "Codex"
+notes = "The testcase keeps the bzip2 origin note and full bzip2/libbzip2 redistribution disclaimer inline."
+evidence = [
+  "gcc/gcc/testsuite/gcc.c-torture/execute/pr20527-1.c",
+]
+
+[[entry]]
+path = "gcc/gcc/testsuite/gfortran.dg/intent_out_11.f90"
+reviewed = true
+kind = "false_positive"
+basis = "inline_license"
+reviewed_on = "2026-04-18"
+reviewed_by = "Codex"
+notes = "The imported Sourcery coarray test keeps the full BSD-style notice inline."
+evidence = [
+  "gcc/gcc/testsuite/gfortran.dg/intent_out_11.f90",
+]
+
+[[entry]]
+path = "gcc/gcc/testsuite/libgdiagnostics.dg/test-nested-logical-locations-json.c"
+reviewed = true
+kind = "false_positive"
+basis = "manual_review"
+reviewed_on = "2026-04-18"
+reviewed_by = "Codex"
+notes = "The test is inspired by a SARIF example structure but does not embed a verbatim external code or data block requiring retained external notice."
+evidence = [
+  "gcc/gcc/testsuite/libgdiagnostics.dg/test-nested-logical-locations-json.c",
+]
+
+[[entry]]
+path = "gcc/gcc/testsuite/gcc.dg/compat/generate-random.c"
+reviewed = true
+kind = "false_positive"
+basis = "inline_license"
+reviewed_on = "2026-04-18"
+reviewed_by = "Codex"
+notes = "The file keeps both the GNU C Library notice and the Berkeley redistribution terms inline."
+evidence = [
+  "gcc/gcc/testsuite/gcc.dg/compat/generate-random.c",
+]
+
+[[entry]]
+path = "gcc/gcc/testsuite/go.test/**"
+reviewed = true
+kind = "needs_local_license"
+basis = "repo_level_license"
+reviewed_on = "2026-04-18"
+reviewed_by = "Codex"
+risk_adjustment = -35
+notes = "Imported Go tests keep The Go Authors BSD-style notice but point to a LICENSE file that is not colocated under go.test; matching Go licenses exist elsewhere in-tree."
+evidence = [
+  "gcc/gcc/testsuite/go.test/test/alias2.go",
+  "gcc/gcc/testsuite/go.test/test/run.go",
+  "gcc/libgo/LICENSE",
+  "gcc/gcc/go/gofrontend/LICENSE",
+]

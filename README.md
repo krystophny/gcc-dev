@@ -57,6 +57,11 @@ The checker scans `gcc/gcc/testsuite` and `gcc/libgomp/testsuite`, scores
 external-origin clues, nearby license files, SPDX/GNU metadata, and optional
 reviewed path rules from `.provenance/testsuites.toml`.
 
+Manifest entries can mark reviewed files as:
+- `false_positive`: reviewed and suppressed from the default report
+- `accepted_external`: external content with an adequate attribution trail
+- `needs_local_license`: real external content that still needs cleaner local attribution or license placement
+
 ## Backport Workflow
 
 Structured PR metadata now lives in `pr/<number>/status.json`.

@@ -148,8 +148,13 @@ EXTERNAL_ORIGIN_MARKERS = {
 class ManifestEntry:
     path: str
     reviewed: bool = False
+    kind: str = ""
+    basis: str = ""
     risk_adjustment: int = 0
     notes: str = ""
+    reviewed_on: str = ""
+    reviewed_by: str = ""
+    evidence: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -159,7 +164,8 @@ class Finding:
     reasons: list[str] = field(default_factory=list)
     nearby_license_files: list[str] = field(default_factory=list)
     header_excerpt: str = ""
-    manifest: list[str] = field(default_factory=list)
+    manifest: list[dict[str, object]] = field(default_factory=list)
+    suppressed: bool = False
 
     @property
     def severity(self) -> str:
@@ -184,6 +190,7 @@ class Finding:
             "nearby_license_files": self.nearby_license_files,
             "manifest": self.manifest,
             "header_excerpt": self.header_excerpt,
+            "suppressed": self.suppressed,
         }
 
 
@@ -219,6 +226,11 @@ def parse_args() -> argparse.Namespace:
         "--no-fail-on-findings",
         action="store_true",
         help="Exit with status 0 even when candidates are found.",
+    )
+    parser.add_argument(
+        "--include-suppressed",
+        action="store_true",
+        help="Include reviewed false positives in the report output.",
     )
     return parser.parse_args()
 
@@ -275,8 +287,13 @@ def load_manifest(path: Path) -> list[ManifestEntry]:
             ManifestEntry(
                 path=raw["path"],
                 reviewed=bool(raw.get("reviewed", False)),
+                kind=str(raw.get("kind", "")),
+                basis=str(raw.get("basis", "")),
                 risk_adjustment=int(raw.get("risk_adjustment", 0)),
                 notes=str(raw.get("notes", "")),
+                reviewed_on=str(raw.get("reviewed_on", "")),
+                reviewed_by=str(raw.get("reviewed_by", "")),
+                evidence=[str(item) for item in raw.get("evidence", [])],
             )
         )
     return entries
@@ -324,6 +341,21 @@ def manifest_matches(path: str, entries: Iterable[ManifestEntry]) -> list[Manife
     return [entry for entry in entries if fnmatch.fnmatch(path, entry.path)]
 
 
+def append_manifest_record(finding: Finding, entry: ManifestEntry) -> None:
+    finding.manifest.append(
+        {
+            "path": entry.path,
+            "reviewed": entry.reviewed,
+            "kind": entry.kind,
+            "basis": entry.basis,
+            "notes": entry.notes,
+            "reviewed_on": entry.reviewed_on,
+            "reviewed_by": entry.reviewed_by,
+            "evidence": entry.evidence,
+        }
+    )
+
+
 def analyze_file(repo_root: Path, path: str, manifest_entries: list[ManifestEntry]) -> Finding | None:
     full_path = repo_root / path
     prefix = read_prefix(full_path)
@@ -342,12 +374,16 @@ def analyze_file(repo_root: Path, path: str, manifest_entries: list[ManifestEntr
 
     matches = manifest_matches(path, manifest_entries)
     for entry in matches:
-        note = entry.path
-        if entry.notes:
-            note = f"{entry.path}: {entry.notes}"
-        finding.manifest.append(note)
+        append_manifest_record(finding, entry)
         if entry.reviewed:
-            finding.add(-40, f"reviewed manifest entry matched: {entry.path}")
+            finding.add(-20, f"reviewed manifest entry matched: {entry.path}")
+        if entry.kind == "false_positive":
+            finding.suppressed = True
+            finding.add(-1000, f"reviewed false positive: {entry.path}")
+        elif entry.kind == "accepted_external":
+            finding.add(-60, f"reviewed external content with acceptable attribution trail: {entry.path}")
+        elif entry.kind == "needs_local_license":
+            finding.add(15, f"reviewed external content still needs clearer local license placement: {entry.path}")
         if entry.risk_adjustment:
             finding.add(entry.risk_adjustment, f"manifest risk adjustment {entry.risk_adjustment:+d}: {entry.path}")
 
@@ -395,14 +431,17 @@ def analyze_file(repo_root: Path, path: str, manifest_entries: list[ManifestEntr
     if not finding.nearby_license_files and any(marker.lower() in lower_prefix for marker in EXTERNAL_COPYRIGHT_MARKERS):
         finding.add(15, "external provenance appears without local license companion")
 
+    if finding.suppressed:
+        return finding
     if finding.score <= 0:
         return None
     return finding
 
 
-def render_text(findings: list[Finding], top: int) -> str:
+def render_text(findings: list[Finding], top: int, suppressed_count: int) -> str:
     lines = []
     lines.append(f"ranked_candidates={len(findings)}")
+    lines.append(f"suppressed_candidates={suppressed_count}")
     for index, finding in enumerate(findings[:top], start=1):
         reasons = "; ".join(finding.reasons[:4])
         if len(finding.reasons) > 4:
@@ -427,8 +466,12 @@ def main() -> int:
         if not is_candidate(path):
             continue
         finding = analyze_file(repo_root, path, manifest_entries)
-        if finding and finding.score >= args.min_score:
+        if finding and (finding.suppressed or finding.score >= args.min_score):
             findings.append(finding)
+
+    suppressed_count = sum(1 for finding in findings if finding.suppressed)
+    if not args.include_suppressed:
+        findings = [finding for finding in findings if not finding.suppressed]
 
     findings.sort(key=lambda item: (-item.score, item.path))
 
@@ -436,6 +479,7 @@ def main() -> int:
         "repo_root": str(repo_root),
         "manifest": args.manifest if manifest_entries else None,
         "candidate_count": len(findings),
+        "suppressed_count": suppressed_count,
         "top": [finding.to_json() for finding in findings[: args.top]],
         "findings": [finding.to_json() for finding in findings],
     }
@@ -444,7 +488,7 @@ def main() -> int:
         output_path = Path(args.json)
         output_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
 
-    print(render_text(findings, args.top))
+    print(render_text(findings, args.top, suppressed_count))
     if findings and not args.no_fail_on_findings:
         return 1
     return 0
