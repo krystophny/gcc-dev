@@ -564,8 +564,9 @@ x86_64 catches these even when the crash only manifests on other platforms.
   code, and copied helper code as provenance-sensitive by default.
 - Before generating, exporting, or posting any patch, run from the repo root:
   `python3 scripts/check_testsuite_provenance.py --top 100 --json /tmp/provenance.json --no-fail-on-findings`
-- Testsuite paths are excluded by default for now. Only pass
-  `--include-testsuites` for an intentional testsuite audit.
+- The default run must still review any tests that are part of the local patch.
+  Only the inherited historical testsuites are excluded by default. Pass
+  `--include-testsuites` for an intentional whole-testsuite audit.
 - After running the checker, manually review the findings relevant to the patch.
   This manual provenance review is required even if the checker output looks
   clean.

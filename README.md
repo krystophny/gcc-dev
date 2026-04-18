@@ -51,15 +51,14 @@ adapted, or externally licensed without enough local attribution:
 ```bash
 make provenance-check
 python3 scripts/check_testsuite_provenance.py --top 100 --json /tmp/provenance.json
-python3 scripts/check_testsuite_provenance.py --include-testsuites --scope local --top 100 --json /tmp/provenance-tests-local.json
 python3 scripts/check_testsuite_provenance.py --include-testsuites --scope all --top 100 --json /tmp/provenance-tests-all.json
 ```
 
-The checker excludes `gcc/gcc/testsuite` and `gcc/libgomp/testsuite` by
-default for now. Pass `--include-testsuites` to opt in to scanning them. When
-enabled, `--scope local` reports only tests that are locally added or modified
-relative to `upstream/master` plus uncommitted local test changes, while
-`--scope all` performs a whole-tree historical audit.
+By default the checker reviews tests that are part of the local patch, so new
+or modified tests contributed by us are still checked. Whole inherited
+testsuites remain excluded unless `--include-testsuites` is passed. With
+`--include-testsuites --scope all`, the checker performs a whole-tree
+historical audit.
 
 It scores external-origin clues, nearby license files, SPDX/GNU metadata, and
 optional reviewed path rules from `.provenance/testsuites.toml`.
