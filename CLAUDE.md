@@ -553,6 +553,30 @@ x86_64 catches these even when the crash only manifests on other platforms.
 7. **Skip runtime testing** - compile-time analysis misses refcount/state bugs
 8. **Trust asymmetric enter/exit** - if enter does X, exit should undo X
 
+## Provenance Review Rules
+
+- Provenance review is mandatory for every patch, testcase, reproducer, helper,
+  imported snippet, and externally-inspired code fragment.
+- During editing, keep asking where each non-trivial code fragment came from and
+  whether it is safe to keep verbatim, adapt, or rewrite from scratch.
+- Treat Bugzilla reproducers, mailing-list examples, upstream tests, standards
+  examples, blog posts, SARD/CWE examples, OpenMP/OpenACC examples, BLAS/LAPACK
+  code, and copied helper code as provenance-sensitive by default.
+- Before generating, exporting, or posting any patch, run from the repo root:
+  `python3 scripts/check_testsuite_provenance.py --top 100 --json /tmp/provenance.json --no-fail-on-findings`
+- After running the checker, manually review the findings relevant to the patch.
+  This manual provenance review is required even if the checker output looks
+  clean.
+- The manual review must reconsider the source of reproducers and tests, proper
+  attribution, whether verbatim copying is really necessary, and whether the
+  license trail is compatible and locally clear.
+- Do not add process-docs, audit markdown, or provenance bookkeeping noise to
+  the working tree just to satisfy this rule.  Keep the codebase clean and add
+  only the necessary license and attribution in source or adjacent license
+  metadata where external code actually remains.
+- Do not generate a patch until both the automatic checker and the manual
+  provenance review are complete.
+
 ## Bug Triage Workflow
 
 Before writing any fix, verify the bug and record its status across branches.
