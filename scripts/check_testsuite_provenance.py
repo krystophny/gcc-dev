@@ -205,6 +205,11 @@ def parse_args() -> argparse.Namespace:
         )
     )
     parser.add_argument(
+        "--include-testsuites",
+        action="store_true",
+        help="Opt in to scanning GCC testsuite paths. By default they are excluded.",
+    )
+    parser.add_argument(
         "--scope",
         choices=("local", "all"),
         default="local",
@@ -523,6 +528,26 @@ def main() -> int:
     manifest_entries = load_manifest(repo_root / args.manifest)
     local_paths = git_changed_tests(repo_root)
 
+    if not args.include_testsuites:
+        report = {
+            "repo_root": str(repo_root),
+            "manifest": args.manifest if manifest_entries else None,
+            "scope": args.scope,
+            "include_testsuites": False,
+            "local_candidate_count": 0,
+            "candidate_count": 0,
+            "suppressed_count": 0,
+            "top": [],
+            "findings": [],
+        }
+        if args.json:
+            output_path = Path(args.json)
+            output_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+        print("ranked_candidates=0")
+        print("suppressed_candidates=0")
+        print("testsuite_scan=disabled (pass --include-testsuites to opt in)")
+        return 0
+
     findings = []
     if args.scope == "local":
         candidate_paths = sorted(local_paths)
@@ -546,6 +571,7 @@ def main() -> int:
         "repo_root": str(repo_root),
         "manifest": args.manifest if manifest_entries else None,
         "scope": args.scope,
+        "include_testsuites": True,
         "local_candidate_count": len(local_paths),
         "candidate_count": len(findings),
         "suppressed_count": suppressed_count,

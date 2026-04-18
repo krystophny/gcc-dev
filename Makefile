@@ -5,7 +5,7 @@ provenance-check:
 	@python3 scripts/check_testsuite_provenance.py --top 50
 
 provenance-check-all:
-	@python3 scripts/check_testsuite_provenance.py --scope all --top 50
+	@python3 scripts/check_testsuite_provenance.py --include-testsuites --scope all --top 50
 
 .DEFAULT:
 	@$(MAKE) -C pr $@
