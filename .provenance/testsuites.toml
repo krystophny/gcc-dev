@@ -140,15 +140,15 @@ evidence = [
 [[entry]]
 path = "gcc/gcc/testsuite/go.test/**"
 reviewed = true
-kind = "needs_local_license"
-basis = "repo_level_license"
+kind = "project_policy"
+basis = "subtree_import_note"
 reviewed_on = "2026-04-18"
 reviewed_by = "Codex"
 risk_adjustment = -35
-notes = "Imported Go tests keep The Go Authors BSD-style notice but point to a LICENSE file that is not colocated under go.test; matching Go licenses exist elsewhere in-tree."
+notes = "Imported Go tests are a documented exact-copy subtree, and GCC maintainer guidance says testsuite provenance is not tracked per file in the usual way."
 evidence = [
+  "gcc/gcc/testsuite/go.test/test/README.gcc",
   "gcc/gcc/testsuite/go.test/test/alias2.go",
   "gcc/gcc/testsuite/go.test/test/run.go",
-  "gcc/libgo/LICENSE",
-  "gcc/gcc/go/gofrontend/LICENSE",
+  "gcc/libstdc++-v3/doc/xml/manual/test.xml",
 ]

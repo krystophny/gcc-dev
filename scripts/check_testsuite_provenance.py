@@ -25,6 +25,11 @@ TEST_ROOTS = (
     "gcc/libgomp/testsuite",
 )
 
+GCC_TEST_ROOTS = (
+    "gcc/testsuite",
+    "libgomp/testsuite",
+)
+
 CANDIDATE_GREP_PATTERNS = (
     "Copied from",
     "copied from",
@@ -123,8 +128,6 @@ COPYRIGHT_PATTERN = re.compile(
 )
 EXTERNAL_COPYRIGHT_MARKERS = (
     "The Go Authors",
-    "OpenMP",
-    "OpenACC",
     "LAPACK",
     "BLAS",
     "SARIF",
@@ -132,8 +135,6 @@ EXTERNAL_COPYRIGHT_MARKERS = (
 )
 EXTERNAL_ORIGIN_MARKERS = {
     "go authors": 85,
-    "openmp": 45,
-    "openacc": 35,
     "lapack": 55,
     "blas": 50,
     "sollve_vv": 45,
@@ -166,6 +167,7 @@ class Finding:
     header_excerpt: str = ""
     manifest: list[dict[str, object]] = field(default_factory=list)
     suppressed: bool = False
+    local_contribution: bool = False
 
     @property
     def severity(self) -> str:
@@ -191,6 +193,7 @@ class Finding:
             "manifest": self.manifest,
             "header_excerpt": self.header_excerpt,
             "suppressed": self.suppressed,
+            "local_contribution": self.local_contribution,
         }
 
 
@@ -200,6 +203,15 @@ def parse_args() -> argparse.Namespace:
             "Rank GCC testsuite files by provenance and license-risk heuristics. "
             "Higher scores mean more likely missing or incomplete attribution."
         )
+    )
+    parser.add_argument(
+        "--scope",
+        choices=("local", "all"),
+        default="local",
+        help=(
+            "Scan only tests changed relative to upstream/master plus local worktree "
+            "changes, or scan the whole inherited testsuite history."
+        ),
     )
     parser.add_argument(
         "--manifest",
@@ -235,14 +247,21 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def run_git_gcc(
+    repo_root: Path, *args: str, check: bool = True, ignore_errors: bool = False
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", "-C", str(repo_root / "gcc"), *args],
+        check=check,
+        capture_output=True,
+        text=True,
+        errors="replace",
+    )
+
+
 def git_ls_files(repo_root: Path) -> list[str]:
     try:
-        result = subprocess.run(
-            ["git", "-C", str(repo_root / "gcc"), "ls-files", "gcc/testsuite", "libgomp/testsuite"],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
+        result = run_git_gcc(repo_root, "ls-files", *GCC_TEST_ROOTS)
     except subprocess.CalledProcessError as exc:
         raise SystemExit(f"failed to enumerate gcc testsuite files: {exc}") from exc
     files = [f"gcc/{line}" for line in result.stdout.splitlines() if line]
@@ -252,7 +271,7 @@ def git_ls_files(repo_root: Path) -> list[str]:
 def git_grep_candidates(repo_root: Path, entries: Iterable[ManifestEntry]) -> list[str]:
     cmd = ["git", "-C", str(repo_root / "gcc"), "grep", "-I", "-l", "-E"]
     pattern = "|".join(re.escape(item) for item in CANDIDATE_GREP_PATTERNS)
-    cmd.extend([pattern, "--", "gcc/testsuite", "libgomp/testsuite"])
+    cmd.extend([pattern, "--", *GCC_TEST_ROOTS])
     try:
         result = subprocess.run(
             cmd,
@@ -270,6 +289,35 @@ def git_grep_candidates(repo_root: Path, entries: Iterable[ManifestEntry]) -> li
         else:
             files.add(entry.path)
     return sorted(files)
+
+
+def resolve_compare_ref(repo_root: Path) -> str | None:
+    for ref in ("upstream/master", "origin/master"):
+        result = run_git_gcc(repo_root, "rev-parse", "--verify", ref, check=False)
+        if result.returncode == 0:
+            return ref
+    return None
+
+
+def git_changed_tests(repo_root: Path) -> set[str]:
+    files: set[str] = set()
+    compare_ref = resolve_compare_ref(repo_root)
+    commands: list[list[str]] = []
+    if compare_ref:
+        commands.append(["diff", "--name-only", f"{compare_ref}...HEAD", "--", *GCC_TEST_ROOTS])
+    commands.extend(
+        [
+            ["diff", "--name-only", "--cached", "--", *GCC_TEST_ROOTS],
+            ["diff", "--name-only", "--", *GCC_TEST_ROOTS],
+            ["ls-files", "--others", "--exclude-standard", "--", *GCC_TEST_ROOTS],
+        ]
+    )
+    for command in commands:
+        result = run_git_gcc(repo_root, *command, check=False)
+        if result.returncode != 0:
+            continue
+        files.update(f"gcc/{line}" for line in result.stdout.splitlines() if line)
+    return files
 
 
 def load_manifest(path: Path) -> list[ManifestEntry]:
@@ -356,13 +404,19 @@ def append_manifest_record(finding: Finding, entry: ManifestEntry) -> None:
     )
 
 
-def analyze_file(repo_root: Path, path: str, manifest_entries: list[ManifestEntry]) -> Finding | None:
+def analyze_file(
+    repo_root: Path,
+    path: str,
+    manifest_entries: list[ManifestEntry],
+    local_paths: set[str],
+) -> Finding | None:
     full_path = repo_root / path
     prefix = read_prefix(full_path)
     if not prefix.strip():
         return None
 
     finding = Finding(path=path)
+    finding.local_contribution = path in local_paths
     finding.header_excerpt = "\n".join(line.rstrip() for line in prefix.splitlines()[:8])
     finding.nearby_license_files = find_nearby_license_files(full_path, repo_root)
 
@@ -382,6 +436,9 @@ def analyze_file(repo_root: Path, path: str, manifest_entries: list[ManifestEntr
             finding.add(-1000, f"reviewed false positive: {entry.path}")
         elif entry.kind == "accepted_external":
             finding.add(-60, f"reviewed external content with acceptable attribution trail: {entry.path}")
+        elif entry.kind == "project_policy":
+            finding.suppressed = True
+            finding.add(-1000, f"accepted by GCC testsuite project policy: {entry.path}")
         elif entry.kind == "needs_local_license":
             finding.add(15, f"reviewed external content still needs clearer local license placement: {entry.path}")
         if entry.risk_adjustment:
@@ -431,6 +488,9 @@ def analyze_file(repo_root: Path, path: str, manifest_entries: list[ManifestEntr
     if not finding.nearby_license_files and any(marker.lower() in lower_prefix for marker in EXTERNAL_COPYRIGHT_MARKERS):
         finding.add(15, "external provenance appears without local license companion")
 
+    if finding.local_contribution and finding.score > 0:
+        finding.add(20, "locally added or modified test needs review as our contribution")
+
     if finding.suppressed:
         return finding
     if finding.score <= 0:
@@ -451,6 +511,7 @@ def render_text(findings: list[Finding], top: int, suppressed_count: int) -> str
             f"{index:02d}. score={finding.score:3d} severity={finding.severity:8s} "
             f"path={finding.path}"
         )
+        lines.append(f"    local_contribution: {'yes' if finding.local_contribution else 'no'}")
         lines.append(f"    reasons: {reasons}")
         lines.append(f"    nearby_licenses: {licenses}")
     return "\n".join(lines)
@@ -460,12 +521,18 @@ def main() -> int:
     args = parse_args()
     repo_root = Path.cwd()
     manifest_entries = load_manifest(repo_root / args.manifest)
+    local_paths = git_changed_tests(repo_root)
 
     findings = []
-    for path in git_grep_candidates(repo_root, manifest_entries):
+    if args.scope == "local":
+        candidate_paths = sorted(local_paths)
+    else:
+        candidate_paths = git_grep_candidates(repo_root, manifest_entries)
+
+    for path in candidate_paths:
         if not is_candidate(path):
             continue
-        finding = analyze_file(repo_root, path, manifest_entries)
+        finding = analyze_file(repo_root, path, manifest_entries, local_paths)
         if finding and (finding.suppressed or finding.score >= args.min_score):
             findings.append(finding)
 
@@ -478,6 +545,8 @@ def main() -> int:
     report = {
         "repo_root": str(repo_root),
         "manifest": args.manifest if manifest_entries else None,
+        "scope": args.scope,
+        "local_candidate_count": len(local_paths),
         "candidate_count": len(findings),
         "suppressed_count": suppressed_count,
         "top": [finding.to_json() for finding in findings[: args.top]],

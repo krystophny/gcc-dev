@@ -563,7 +563,7 @@ x86_64 catches these even when the crash only manifests on other platforms.
   examples, blog posts, SARD/CWE examples, OpenMP/OpenACC examples, BLAS/LAPACK
   code, and copied helper code as provenance-sensitive by default.
 - Before generating, exporting, or posting any patch, run from the repo root:
-  `python3 scripts/check_testsuite_provenance.py --top 100 --json /tmp/provenance.json --no-fail-on-findings`
+  `python3 scripts/check_testsuite_provenance.py --scope local --top 100 --json /tmp/provenance.json --no-fail-on-findings`
 - After running the checker, manually review the findings relevant to the patch.
   This manual provenance review is required even if the checker output looks
   clean.

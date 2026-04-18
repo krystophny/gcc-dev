@@ -50,16 +50,23 @@ adapted, or externally licensed without enough local attribution:
 
 ```bash
 make provenance-check
-python3 scripts/check_testsuite_provenance.py --top 100 --json /tmp/provenance.json
+python3 scripts/check_testsuite_provenance.py --scope local --top 100 --json /tmp/provenance.json
+python3 scripts/check_testsuite_provenance.py --scope all --top 100 --json /tmp/provenance-all.json
 ```
 
-The checker scans `gcc/gcc/testsuite` and `gcc/libgomp/testsuite`, scores
-external-origin clues, nearby license files, SPDX/GNU metadata, and optional
-reviewed path rules from `.provenance/testsuites.toml`.
+The checker scans `gcc/gcc/testsuite` and `gcc/libgomp/testsuite`. By default
+it only reports tests that are locally added or modified relative to
+`upstream/master` plus uncommitted local test changes, so inherited GCC tests
+do not dominate the review. Use `--scope all` for a whole-tree historical
+audit.
+
+It scores external-origin clues, nearby license files, SPDX/GNU metadata, and
+optional reviewed path rules from `.provenance/testsuites.toml`.
 
 Manifest entries can mark reviewed files as:
 - `false_positive`: reviewed and suppressed from the default report
 - `accepted_external`: external content with an adequate attribution trail
+- `project_policy`: inherited tests accepted by GCC testsuite policy and suppressed by default
 - `needs_local_license`: real external content that still needs cleaner local attribution or license placement
 
 ## Backport Workflow
