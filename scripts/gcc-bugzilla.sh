@@ -8,9 +8,14 @@
 #   gcc-bugzilla.sh download <pr-number> [outdir]             # Download all patches
 #   gcc-bugzilla.sh search <term>                             # Search fortran bugs
 #   gcc-bugzilla.sh regressions                               # List open fortran regressions
+#   gcc-bugzilla.sh new <component> <summary> <comment-file> [version]
+#                                                             # Create a new GCC Bugzilla bug
 #   gcc-bugzilla.sh comment <pr-number> <text>                  # Post a comment
+#   gcc-bugzilla.sh comment-file <pr-number> <file>             # Post a draft comment from file
 #   gcc-bugzilla.sh reply <pr-number> <comment-number> <text>   # Quote-reply to a comment
-#   gcc-bugzilla.sh attach [--obsolete <id[,id...]>] <pr-number> <file> [desc] [comment]
+#   gcc-bugzilla.sh reply-file <pr-number> <comment-number> <file>
+#                                                             # Quote-reply using text from file
+#   gcc-bugzilla.sh attach [--obsolete <id[,id...]>] [--comment-file <file>] <pr-number> <file> [desc] [comment]
 #                                                             # Attach with optional comment and supersede older attachments
 #   gcc-bugzilla.sh login                                     # Login to GCC Bugzilla
 #   gcc-bugzilla.sh submit <pr-number> [branch] [--execute]   # Submit generated packet
@@ -23,6 +28,60 @@ BUGZILLA_URL="https://gcc.gnu.org/bugzilla/xmlrpc.cgi"
 BZ="bugzilla --bugzilla=$BUGZILLA_URL"
 AUTO_CC_DEFAULT="${GCC_BUGZILLA_AUTO_CC:-albert@tugraz.at,jvdelisle@gcc.gnu.org}"
 
+default_new_version() {
+    python3 - <<'PYEOF'
+import re, bugzilla
+bz = bugzilla.Bugzilla("https://gcc.gnu.org/bugzilla/xmlrpc.cgi")
+prod = bz._proxy.Product.get({"names": ["gcc"]})["products"][0]
+versions = []
+for item in prod["versions"]:
+    if not item.get("is_active"):
+        continue
+    name = item["name"]
+    if re.fullmatch(r"\d+\.0", name):
+        versions.append((int(name.split(".", 1)[0]), name))
+if versions:
+    print(max(versions)[1])
+else:
+    print("16.0")
+PYEOF
+}
+
+require_manual_bugzilla_write_auth() {
+    local action="$1"
+
+    if [[ "${GCC_BUGZILLA_MANUAL_CONFIRM:-}" != "1" ]]; then
+        echo "Refusing Bugzilla write operation: $action" >&2
+        echo "Set GCC_BUGZILLA_MANUAL_CONFIRM=1 only after manual review and explicit user confirmation." >&2
+        exit 2
+    fi
+}
+
+confirm_bugzilla_write() {
+    local action="$1"
+    local confirm="${GCC_BUGZILLA_ASSUME_YES:-}"
+
+    require_manual_bugzilla_write_auth "$action"
+
+    if [[ -z "$confirm" ]]; then
+        read -rp "Proceed with Bugzilla write '$action'? [y/N] " confirm
+    fi
+    if [[ "$confirm" != "1" && "$confirm" != "y" && "$confirm" != "Y" ]]; then
+        echo "Aborted."
+        exit 0
+    fi
+}
+
+read_text_file_or_die() {
+    local path="$1"
+
+    if [[ ! -f "$path" ]]; then
+        echo "Error: text file not found: $path" >&2
+        exit 1
+    fi
+    cat "$path"
+}
+
 usage() {
     echo "Usage: $0 <command> [args...]"
     echo ""
@@ -33,9 +92,13 @@ usage() {
     echo "  download <pr-number> [outdir]             Download all patch attachments"
     echo "  search <term>                             Search open fortran bugs by summary text"
     echo "  regressions                               List all open fortran regressions"
+    echo "  new <component> <summary> <comment-file> [version]"
+    echo "                                              Create a new GCC Bugzilla bug"
     echo "  comment <pr-number> <text>                  Post a comment on a bug"
+    echo "  comment-file <pr-number> <file>             Post a reviewed draft comment from file"
     echo "  reply <pr-number> <comment#> <text>         Quote-reply to a specific comment"
-    echo "  attach [--obsolete <id[,id...]>] <pr-number> <file> [desc] [comment]"
+    echo "  reply-file <pr-number> <comment#> <file>    Quote-reply using text from file"
+    echo "  attach [--obsolete <id[,id...]>] [--comment-file <file>] <pr-number> <file> [desc] [comment]"
     echo "                                              Attach a file (requires login)"
     echo "  ensure-cc <pr-number> [email[,email...]]   Add CC entries to a bug"
     echo "  login                                     Login to GCC Bugzilla (saves token)"
@@ -45,9 +108,12 @@ usage() {
     echo "  $0 info 124235"
     echo "  $0 search 'ICE in fold_convert'"
     echo "  $0 regressions"
+    echo "  $0 new testsuite 'testsuite: imported subtree lacks retained notice' /tmp/body.txt"
+    echo "  $0 comment-file 124512 pr/124512/submission/bugzilla-comment.txt"
+    echo "  $0 reply-file 124661 7 /tmp/reply.txt"
     echo "  $0 attach 123280 pr/123280/0001-fix.patch"
-    echo "  $0 attach 123280 pr/123280/0001-fix.patch 'Proposed patch' 'Fixes the ICE by...'"
-    echo "  $0 attach --obsolete 64064 102333 pr/102333/0002-fix.patch 'v2 patch'"
+    echo "  $0 attach --comment-file pr/123280/submission/bugzilla-comment.txt 123280 pr/123280/0001-fix.patch"
+    echo "  $0 attach --obsolete 64064 --comment-file /tmp/v2-note.txt 102333 pr/102333/0002-fix.patch 'v2 patch'"
     echo "  $0 comment 124512 'Reproduced on cfarm428...'"
     echo "  $0 reply 124661 7 'Your approach with find_tree is cleaner.'"
     echo "  $0 ensure-cc 108382"
@@ -61,6 +127,14 @@ usage() {
 cmd_submit() {
     local pr="$1"
     shift || true
+    local arg
+
+    for arg in "$@"; do
+        if [[ "$arg" == "--execute" ]]; then
+            require_manual_bugzilla_write_auth "submit Bugzilla packet for bug $pr"
+            break
+        fi
+    done
     exec python3 "$(dirname "$0")/gcc-workflow.py" submit-bugzilla "$pr" "$@"
 }
 
@@ -183,6 +257,36 @@ cmd_regressions() {
         --outputformat="%{bug_id} [%{bug_status}] %{short_desc}"
 }
 
+cmd_new() {
+    local component="$1"
+    local summary="$2"
+    local comment_file="$3"
+    local version="${4:-$(default_new_version)}"
+
+    if [[ ! -f "$comment_file" ]]; then
+        echo "Error: comment file not found: $comment_file" >&2
+        exit 1
+    fi
+
+    local comment
+    comment="$(cat "$comment_file")"
+
+    echo "Creating new GCC Bugzilla bug..."
+    echo ""
+    echo "  Product:   gcc"
+    echo "  Component: $component"
+    echo "  Version:   $version"
+    echo "  Summary:   $summary"
+    echo "  Comment:   $comment_file"
+    echo ""
+    confirm_bugzilla_write "create new bug '$summary'"
+
+    local bug_id
+    bug_id="$($BZ new -p gcc -v "$version" -c "$component" -t "$summary" -l "$comment" -i)"
+    echo "Created bug $bug_id"
+    echo "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=$bug_id"
+}
+
 cmd_comment() {
     local pr="$1"
     local text="$2"
@@ -196,14 +300,7 @@ cmd_comment() {
     echo "$text"
     echo "--- End ---"
     echo ""
-    local confirm="${GCC_BUGZILLA_ASSUME_YES:-}"
-    if [[ -z "$confirm" ]]; then
-        read -rp "Proceed? [y/N] " confirm
-    fi
-    if [[ "$confirm" != "1" && "$confirm" != "y" && "$confirm" != "Y" ]]; then
-        echo "Aborted."
-        exit 0
-    fi
+    confirm_bugzilla_write "post comment to bug $pr"
 
     python3 - "$pr" "$text" "$auto_cc" <<'PYEOF'
 import sys, bugzilla
@@ -215,6 +312,15 @@ print(f"Comment posted on bug {pr}")
 print(f"https://gcc.gnu.org/bugzilla/show_bug.cgi?id={pr}")
 PYEOF
     echo "Done."
+}
+
+cmd_comment_file() {
+    local pr="$1"
+    local path="$2"
+    local text
+
+    text="$(read_text_file_or_die "$path")"
+    cmd_comment "$pr" "$text"
 }
 
 cmd_reply() {
@@ -251,14 +357,7 @@ PYEOF
     echo "$full_text"
     echo "--- End ---"
     echo ""
-    local confirm="${GCC_BUGZILLA_ASSUME_YES:-}"
-    if [[ -z "$confirm" ]]; then
-        read -rp "Proceed? [y/N] " confirm
-    fi
-    if [[ "$confirm" != "1" && "$confirm" != "y" && "$confirm" != "Y" ]]; then
-        echo "Aborted."
-        exit 0
-    fi
+    confirm_bugzilla_write "post reply to bug $pr"
 
     python3 - "$pr" "$full_text" "$auto_cc" <<'PYEOF'
 import sys, bugzilla
@@ -271,13 +370,37 @@ PYEOF
     echo "Done."
 }
 
+cmd_reply_file() {
+    local pr="$1"
+    local comment_num="$2"
+    local path="$3"
+    local text
+
+    text="$(read_text_file_or_die "$path")"
+    cmd_reply "$pr" "$comment_num" "$text"
+}
+
 cmd_attach() {
     local obsolete_ids=""
+    local comment_file=""
 
-    if [[ "${1:-}" == "--obsolete" ]]; then
-        obsolete_ids="${2:-}"
-        shift 2
-    fi
+    while [[ $# -gt 0 ]]; do
+        case "${1:-}" in
+            --obsolete)
+                obsolete_ids="${2:-}"
+                shift 2
+                ;;
+            --comment-file)
+                comment_file="${2:-}"
+                shift 2
+                ;;
+            *)
+                break
+                ;;
+        esac
+    done
+
+    [[ $# -lt 2 ]] && { echo "Error: missing PR number or file"; usage; }
 
     local pr="$1"
     local file="$2"
@@ -285,9 +408,18 @@ cmd_attach() {
     local comment="${4:-}"
     local auto_cc="$AUTO_CC_DEFAULT"
 
+    if [[ -n "$comment_file" && -n "$comment" ]]; then
+        echo "Error: pass either inline comment text or --comment-file, not both." >&2
+        exit 1
+    fi
+
     if [[ ! -f "$file" ]]; then
         echo "Error: file not found: $file" >&2
         exit 1
+    fi
+
+    if [[ -n "$comment_file" ]]; then
+        comment="$(read_text_file_or_die "$comment_file")"
     fi
 
     file="$(realpath "$file")"
@@ -300,14 +432,7 @@ cmd_attach() {
     [[ -n "$comment" ]] && echo "  Comment: $comment"
     [[ -n "$obsolete_ids" ]] && echo "  Obsolete: $obsolete_ids"
     echo ""
-    local confirm="${GCC_BUGZILLA_ASSUME_YES:-}"
-    if [[ -z "$confirm" ]]; then
-        read -rp "Proceed? [y/N] " confirm
-    fi
-    if [[ "$confirm" != "1" && "$confirm" != "y" && "$confirm" != "Y" ]]; then
-        echo "Aborted."
-        exit 0
-    fi
+    confirm_bugzilla_write "attach file to bug $pr"
 
     python3 - "$pr" "$file" "$desc" "$comment" "$auto_cc" "$obsolete_ids" <<'PYEOF'
 import sys, bugzilla
@@ -339,14 +464,7 @@ cmd_ensure_cc() {
     echo "  Bug: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=$pr"
     echo "  CC:  $cc_list"
     echo ""
-    local confirm="${GCC_BUGZILLA_ASSUME_YES:-}"
-    if [[ -z "$confirm" ]]; then
-        read -rp "Proceed? [y/N] " confirm
-    fi
-    if [[ "$confirm" != "1" && "$confirm" != "y" && "$confirm" != "Y" ]]; then
-        echo "Aborted."
-        exit 0
-    fi
+    confirm_bugzilla_write "update CC on bug $pr"
 
     python3 - "$pr" "$cc_list" <<'PYEOF'
 import sys, bugzilla
@@ -391,22 +509,29 @@ case "$1" in
     regressions)
         cmd_regressions
         ;;
+    new)
+        [[ $# -lt 4 ]] && { echo "Error: missing component, summary, or comment file"; usage; }
+        cmd_new "$2" "$3" "$4" "${5:-}"
+        ;;
     comment)
         [[ $# -lt 3 ]] && { echo "Error: missing PR number or comment text"; usage; }
         cmd_comment "$2" "$3"
+        ;;
+    comment-file)
+        [[ $# -lt 3 ]] && { echo "Error: missing PR number or comment file"; usage; }
+        cmd_comment_file "$2" "$3"
         ;;
     reply)
         [[ $# -lt 4 ]] && { echo "Error: missing PR number, comment number, or reply text"; usage; }
         cmd_reply "$2" "$3" "$4"
         ;;
+    reply-file)
+        [[ $# -lt 4 ]] && { echo "Error: missing PR number, comment number, or reply file"; usage; }
+        cmd_reply_file "$2" "$3" "$4"
+        ;;
     attach)
-        if [[ "${2:-}" == "--obsolete" ]]; then
-            [[ $# -lt 5 ]] && { echo "Error: missing obsolete id, PR number, or file"; usage; }
-            cmd_attach "$2" "$3" "$4" "$5" "${6:-}" "${7:-}"
-        else
-            [[ $# -lt 3 ]] && { echo "Error: missing PR number or file"; usage; }
-            cmd_attach "$2" "$3" "${4:-}" "${5:-}"
-        fi
+        shift
+        cmd_attach "$@"
         ;;
     ensure-cc)
         [[ $# -lt 2 ]] && { echo "Error: missing PR number"; usage; }

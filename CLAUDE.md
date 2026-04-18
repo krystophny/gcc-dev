@@ -700,10 +700,14 @@ git -C gcc add gcc/fortran/changed-file.cc
 # 4. Commit using gcc-commit-mklog (MANDATORY - auto-generates ChangeLog)
 #    Write the commit message to a file first, then commit with -F.
 #    The prepare-commit-msg hook appends the ChangeLog automatically.
+#    Always include an Assisted-by: trailer naming the model used
+#    (e.g. "Assisted-by: Claude (Anthropic)" or "Assisted-by: GPT-5 (OpenAI)").
 cat > /tmp/gcc-commit-msg.txt <<'EOF'
 fortran: Short summary [PR<number>]
 
 Description of the fix.
+
+Assisted-by: Claude (Anthropic)
 EOF
 cd gcc && GCC_FORCE_MKLOG=1 GCC_MKLOG_ARGS='["-b", "fortran/<number>"]' \
   git commit -s -F /tmp/gcc-commit-msg.txt
@@ -711,19 +715,25 @@ cd gcc && GCC_FORCE_MKLOG=1 GCC_MKLOG_ARGS='["-b", "fortran/<number>"]' \
 # 5. Verify commit passes GCC checks (MANDATORY before push)
 git gcc-verify HEAD
 
-# 5b. gcc-verify does NOT check for Signed-off-by.  Check the final
-#     commit message explicitly, especially after editor/template-based
-#     commits or any hook-driven message rewrite.
-git log -1 --format=%B | grep -q '^Signed-off-by: ' \
+# 5b. gcc-verify does NOT check trailers.  Check the final commit message
+#     explicitly, especially after editor/template-based commits or any
+#     hook-driven message rewrite.  Both Signed-off-by and Assisted-by
+#     must be present.
+msg=$(git log -1 --format=%B)
+echo "$msg" | grep -q '^Signed-off-by: ' \
   || { echo "ERROR: missing Signed-off-by trailer in commit"; exit 1; }
+echo "$msg" | grep -q '^Assisted-by: ' \
+  || { echo "ERROR: missing Assisted-by trailer in commit"; exit 1; }
 
 # 6. Export patch
 git format-patch -1 HEAD -o ../pr/<number>/
 
-# 6b. Verify the exported patch still contains Signed-off-by.
+# 6b. Verify the exported patch still contains both trailers.
 patch=$(ls -t ../pr/<number>/0001-*.patch | head -n1)
 grep -q '^Signed-off-by: ' "$patch" \
   || { echo "ERROR: exported patch missing Signed-off-by trailer"; exit 1; }
+grep -q '^Assisted-by: ' "$patch" \
+  || { echo "ERROR: exported patch missing Assisted-by trailer"; exit 1; }
 
 # 7. Push to fork
 git push origin pr<number>-fix
@@ -741,9 +751,10 @@ git push origin main
   ChangeLog text before the commit is finalized.
 - Re-run `git gcc-verify HEAD` immediately.  Repeating `git commit -F ...`
   with a fully written ChangeLog can otherwise lead to duplicated hook output.
-- After any editor/template-based commit, explicitly re-check that the
-  `Signed-off-by:` trailer is still present.  A full-message replacement can
-  silently drop the `-s` trailer even when `git commit -s` was used.
+- After any editor/template-based commit, explicitly re-check that both the
+  `Signed-off-by:` and `Assisted-by:` trailers are still present.  A
+  full-message replacement can silently drop the `-s` trailer even when
+  `git commit -s` was used, and the hook can likewise drop `Assisted-by`.
 
 ### Commit rules (HARD RULES)
 
@@ -752,8 +763,16 @@ git push origin main
 - **Always run `git gcc-verify HEAD`** before pushing. It checks
   ChangeLog format, PR references, and other GCC conventions.
 - **Always use `-s`** (Signed-off-by) on commits.
-- **Always verify `Signed-off-by:` in both the final commit message and the
-  exported patch.** `git gcc-verify` does not check this.
+- **Always add an `Assisted-by:` trailer** naming the model used
+  (e.g. `Assisted-by: Claude (Anthropic)`, `Assisted-by: GPT-5 (OpenAI)`).
+  This is mandatory for every commit on every patch branch, with no
+  exceptions.  Disclosure is the rule, not a judgment call about how much
+  the model contributed.  The existing no-tool-tag rule applies to
+  subjects, branch names, PR titles, and issue titles only; trailers are
+  explicitly allowed and required.
+- **Always verify `Signed-off-by:` and `Assisted-by:` in both the final
+  commit message and the exported patch.** `git gcc-verify` does not check
+  either trailer.
 - **Branches go off `upstream/master`**, not off other fix branches.
 - **One fix per branch** (e.g., `pr123949-init-se-fix`), not stacked.
 
@@ -898,6 +917,8 @@ SSH agent forwarding (`-A`) is used throughout for GitHub fork access.
 **ABSOLUTELY FORBIDDEN without explicit user permission:**
 - `git send-email` to gcc-patches@gcc.gnu.org
 - Posting to any GCC mailing list
+- Creating or modifying GCC Bugzilla bugs/comments/attachments without explicit
+  user permission and manual confirmation
 
 **NEVER use git send-email or gcc-send-patch.sh without the user explicitly
 requesting it - this is a HARD RULE.**
@@ -908,8 +929,7 @@ Permitted without approval:
 - Create PRs in the fork
 - Export patches with `git format-patch`
 - All Bugzilla operations: `info`, `comments`, `attachments`, `download`,
-  `search`, `regressions`, `comment`, `reply`, `attach`, `ensure-cc`
-- Posting comments and attaching patches to Bugzilla
+  `search`, `regressions`
 
 ### Tooling
 
@@ -969,16 +989,19 @@ python3 scripts/gcc-bugzilla-stats.py --start 2025-04-14
 #   docs/bugzilla-stats/DATE-summary.json
 #   docs/bugzilla-stats/DATE-*.png
 
-# --- Write operations (REQUIRE explicit user permission) ---
+# --- Write operations (REQUIRE explicit user permission and manual confirmation) ---
 
 # Post a plain comment
 scripts/gcc-bugzilla.sh comment <pr-number> "<text>"
+scripts/gcc-bugzilla.sh comment-file <pr-number> <file>
 
 # Quote-reply to a specific comment (Bugzilla "> " quoting style)
 scripts/gcc-bugzilla.sh reply <pr-number> <comment-number> "<text>"
+scripts/gcc-bugzilla.sh reply-file <pr-number> <comment-number> <file>
 
 # Attach a patch (optionally obsolete previous attachments)
 scripts/gcc-bugzilla.sh attach <pr-number> <file> [description] [comment]
+scripts/gcc-bugzilla.sh attach --comment-file <file> <pr-number> <file> [description]
 scripts/gcc-bugzilla.sh attach --obsolete <att-id> <pr-number> <file> [description]
 
 # Add CC entries to a bug
@@ -998,8 +1021,15 @@ The stats script is intentionally light on Bugzilla:
 - it derives exact first-resolution dates locally from history instead of issuing
   hundreds of per-day count queries
 
-Write operations have an interactive `[y/N]` confirmation prompt.  Set
-`GCC_BUGZILLA_ASSUME_YES=y` to skip the prompt in scripted use.
+Write operations must be prepared in files first and then posted from those
+reviewed files. `scripts/gcc-bugzilla.sh new` already takes a draft file, and
+`comment-file`, `reply-file`, and `attach --comment-file` provide the same
+file-first flow for other Bugzilla writes.
+
+Write operations are blocked unless `GCC_BUGZILLA_MANUAL_CONFIRM=1` is set
+after manual review and explicit user confirmation. They still default to an
+interactive `[y/N]` prompt. Use `GCC_BUGZILLA_ASSUME_YES=y` only after that
+manual confirmation step; it must never be used to automate unreviewed posting.
 
 When replying to Bugzilla comments, always use `reply` instead of `comment`
 to produce proper quote-reply formatting.  This matches the convention used
