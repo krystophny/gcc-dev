@@ -1,0 +1,630 @@
+# Upstream source corpora for the non-testsuite provenance scanner.
+#
+# scripts/provenance/fetch_corpus.sh clones each entry into
+# corpusbin/src/<name>/ using `git clone --filter=blob:none --depth=1` and a
+# sparse-checkout restricted to the listed paths. The actual commit SHA used
+# for each fetch is recorded in corpusbin/src/<name>/.corpus-sha so every
+# index build is reproducible, even though we do not hard-pin SHAs here.
+#
+# `origin_class` is one of `gnu` (GCC/FSF sibling project, expected matches)
+# or `non_gnu` (BSD / MIT / Apache / rust / go / d / musl / LLVM and similar —
+# unattributed matches against these are the dangerous cases we are hunting).
+
+version = 1
+
+[[source]]
+name = "freebsd-libc"
+url = "git@github.com:freebsd/freebsd-src.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = [
+    "lib/libc/stdlib",
+    "lib/libc/string",
+    "lib/libc/stdio",
+    "lib/libc/locale",
+    "lib/libc/gen",
+    "lib/libc/regex",
+    "lib/libc/iconv",
+    "lib/libc/xdr",
+    "sys/libkern",
+]
+
+[[source]]
+name = "netbsd-libc"
+url = "git@github.com:NetBSD/src.git"
+branch = "trunk"
+origin_class = "non_gnu"
+sparse_paths = [
+    "lib/libc/stdlib",
+    "lib/libc/string",
+    "lib/libc/stdio",
+    "lib/libc/gen",
+    "lib/libc/regex",
+    "lib/libc/iconv",
+    "common/lib/libc",
+]
+
+[[source]]
+name = "openbsd-libc"
+url = "git@github.com:openbsd/src.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "lib/libc/stdlib",
+    "lib/libc/string",
+    "lib/libc/stdio",
+    "lib/libc/gen",
+    "lib/libc/regex",
+]
+
+[[source]]
+name = "musl"
+url = "https://git.musl-libc.org/git/musl"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "src/string",
+    "src/stdlib",
+    "src/stdio",
+    "src/ctype",
+    "src/locale",
+    "src/regex",
+    "src/malloc",
+    "src/math",
+]
+
+[[source]]
+name = "glibc"
+url = "https://sourceware.org/git/glibc.git"
+branch = "master"
+origin_class = "gnu"
+sparse_paths = [
+    "posix",
+    "string",
+    "stdlib",
+    "stdio-common",
+    "malloc",
+    "locale",
+    "misc",
+]
+
+[[source]]
+name = "llvm-project"
+url = "git@github.com:llvm/llvm-project.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = [
+    "compiler-rt/lib/sanitizer_common",
+    "compiler-rt/lib/asan",
+    "compiler-rt/lib/tsan",
+    "compiler-rt/lib/ubsan",
+    "compiler-rt/lib/msan",
+    "compiler-rt/lib/hwasan",
+    "compiler-rt/lib/interception",
+    "compiler-rt/lib/profile",
+    "compiler-rt/lib/builtins",
+    "libunwind/src",
+    "libunwind/include",
+    "libcxx/src",
+    "libcxx/include",
+    "libcxxabi/src",
+]
+
+[[source]]
+name = "gofrontend"
+url = "git@github.com:golang/gofrontend.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = ["go"]
+
+[[source]]
+name = "dmd-druntime"
+url = "git@github.com:dlang/dmd.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "druntime/src/core",
+    "druntime/src/rt",
+    "druntime/src/gc",
+    "druntime/src/object.d",
+]
+
+[[source]]
+name = "rustc"
+url = "git@github.com:rust-lang/rust.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = [
+    "compiler/rustc_ast",
+    "compiler/rustc_parse",
+    "compiler/rustc_hir",
+    "compiler/rustc_middle",
+    "compiler/rustc_span",
+    "library/core/src",
+    "library/alloc/src",
+]
+
+[[source]]
+name = "bzip2"
+url = "git@gitlab.com:bzip2/bzip2.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = ["*.c", "*.h"]
+
+[[source]]
+name = "zstd"
+url = "git@github.com:facebook/zstd.git"
+branch = "dev"
+origin_class = "non_gnu"
+sparse_paths = [
+    "lib/common",
+    "lib/compress",
+    "lib/decompress",
+]
+
+[[source]]
+name = "openblas"
+url = "git@github.com:OpenMathLib/OpenBLAS.git"
+branch = "develop"
+origin_class = "non_gnu"
+sparse_paths = [
+    "interface",
+    "kernel/generic",
+    "driver/level2",
+    "driver/level3",
+]
+
+[[source]]
+name = "boost-algorithm"
+url = "git@github.com:boostorg/algorithm.git"
+branch = "develop"
+origin_class = "non_gnu"
+sparse_paths = [
+    "include/boost/algorithm",
+]
+
+[[source]]
+name = "boost-container"
+url = "git@github.com:boostorg/container.git"
+branch = "develop"
+origin_class = "non_gnu"
+sparse_paths = [
+    "include/boost/container",
+    "src",
+]
+
+[[source]]
+name = "sollve_vv"
+url = "git@github.com:SOLLVE/sollve_vv.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = ["tests"]
+
+[[source]]
+name = "openmp-examples"
+url = "git@github.com:OpenMP/Examples.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = ["sources"]
+
+[[source]]
+name = "lapack"
+url = "git@github.com:Reference-LAPACK/lapack.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "SRC",
+    "BLAS/SRC",
+]
+
+# -----------------------------------------------------------------------------
+# Expanded non-GNU corpus (overnight audit 2026-04-19)
+#
+# Focus areas:
+#   - C runtime/libc variants beyond BSD/musl/bionic
+#   - Allocators, hash tables, Unicode/locale, compression, JSON/parse
+#   - Math/numerics libraries that commonly end up shadowed by GCC runtimes
+#   - Historically-ported floating-point + printf/strtod pathways
+#   - Widely-copied small utilities (PCG random, SipHash, xxHash, ...)
+#
+# Each entry is a blobless + sparse clone to keep on-disk cost bounded.
+# -----------------------------------------------------------------------------
+
+[[source]]
+name = "bionic"
+url = "git@github.com:aosp-mirror/platform_bionic.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = [
+    "libc/bionic",
+    "libc/stdio",
+    "libc/stdlib",
+    "libc/string",
+    "libc/upstream-freebsd",
+    "libc/upstream-netbsd",
+    "libc/upstream-openbsd",
+    "libc/include",
+    "libm/upstream-freebsd",
+]
+
+[[source]]
+name = "apple-libc"
+url = "git@github.com:apple-oss-distributions/Libc.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = [
+    "stdlib",
+    "stdio",
+    "string",
+    "gen",
+    "locale",
+    "regex",
+]
+
+[[source]]
+name = "apple-libplatform"
+url = "git@github.com:apple-oss-distributions/libplatform.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = [
+    "src",
+    "include",
+]
+
+[[source]]
+name = "illumos"
+url = "git@github.com:illumos/illumos-gate.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "usr/src/lib/libc/port/gen",
+    "usr/src/lib/libc/port/stdio",
+    "usr/src/lib/libc/port/stdlib",
+    "usr/src/lib/libc/port/string",
+    "usr/src/lib/libc/port/locale",
+    "usr/src/lib/libc/port/regex",
+]
+
+[[source]]
+name = "netlib-gdtoa"
+url = "git@github.com:jwiegley/gdtoa.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = ["*.c", "*.h"]
+
+[[source]]
+name = "linux-kernel-lib"
+url = "git@github.com:torvalds/linux.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "lib",
+    "include/linux/string.h",
+    "include/linux/ctype.h",
+    "arch/riscv/kernel/cpufeature.c",
+]
+
+[[source]]
+name = "golang-stdlib"
+url = "git@github.com:golang/go.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "src/strconv",
+    "src/math",
+    "src/math/big",
+    "src/sort",
+    "src/bytes",
+    "src/strings",
+    "src/unicode",
+]
+
+[[source]]
+name = "cpython"
+url = "git@github.com:python/cpython.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = [
+    "Modules/_decimal",
+    "Modules/_hashopenssl",
+    "Modules/_sha3",
+    "Modules/sre.h",
+    "Modules/_sre",
+    "Modules/_randommodule.c",
+    "Python/dtoa.c",
+    "Python/pystrtod.c",
+]
+
+[[source]]
+name = "abseil-cpp"
+url = "git@github.com:abseil/abseil-cpp.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "absl/container",
+    "absl/hash",
+    "absl/strings",
+    "absl/algorithm",
+    "absl/numeric",
+    "absl/random",
+    "absl/types",
+    "absl/base/internal",
+]
+
+[[source]]
+name = "folly"
+url = "git@github.com:facebook/folly.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = [
+    "folly/container",
+    "folly/hash",
+    "folly/Range.h",
+    "folly/FBString.h",
+    "folly/FBVector.h",
+]
+
+[[source]]
+name = "rapidjson"
+url = "git@github.com:Tencent/rapidjson.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = ["include"]
+
+[[source]]
+name = "simdjson"
+url = "git@github.com:simdjson/simdjson.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = ["include", "src"]
+
+[[source]]
+name = "protobuf"
+url = "git@github.com:protocolbuffers/protobuf.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = [
+    "src/google/protobuf",
+]
+
+[[source]]
+name = "openssl"
+url = "git@github.com:openssl/openssl.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "crypto/bn",
+    "crypto/modes",
+    "crypto/sha",
+    "crypto/md5",
+    "crypto/aes",
+    "crypto/rand",
+]
+
+[[source]]
+name = "nss"
+url = "git@github.com:nss-dev/nss.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "lib/freebl",
+    "lib/util",
+]
+
+[[source]]
+name = "libsodium"
+url = "git@github.com:jedisct1/libsodium.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = ["src/libsodium"]
+
+[[source]]
+name = "libxml2"
+url = "git@github.com:GNOME/libxml2.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "parser.c", "tree.c", "xmlstring.c", "xmlmemory.c", "hash.c",
+    "list.c", "encoding.c", "include/libxml",
+]
+
+[[source]]
+name = "libcurl"
+url = "git@github.com:curl/curl.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = ["lib", "include/curl"]
+
+[[source]]
+name = "libunistring"
+url = "git@github.com:gagern/gnulib.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "lib/unistring",
+    "lib/unicase",
+    "lib/uniconv",
+    "lib/unictype",
+    "lib/unilbrk",
+    "lib/uniname",
+    "lib/uninorm",
+    "lib/unistdio",
+    "lib/unistr",
+    "lib/uniwbrk",
+    "lib/uniwidth",
+]
+
+[[source]]
+name = "icu"
+url = "git@github.com:unicode-org/icu.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = [
+    "icu4c/source/common",
+    "icu4c/source/i18n",
+]
+
+[[source]]
+name = "pcre2"
+url = "git@github.com:PCRE2Project/pcre2.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = ["src"]
+
+[[source]]
+name = "jemalloc"
+url = "git@github.com:jemalloc/jemalloc.git"
+branch = "dev"
+origin_class = "non_gnu"
+sparse_paths = ["src", "include"]
+
+[[source]]
+name = "mimalloc"
+url = "git@github.com:microsoft/mimalloc.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = ["src", "include"]
+
+[[source]]
+name = "gperftools"
+url = "git@github.com:gperftools/gperftools.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = ["src"]
+
+[[source]]
+name = "xxhash"
+url = "git@github.com:Cyan4973/xxHash.git"
+branch = "dev"
+origin_class = "non_gnu"
+sparse_paths = ["*.c", "*.h"]
+
+[[source]]
+name = "lz4"
+url = "git@github.com:lz4/lz4.git"
+branch = "dev"
+origin_class = "non_gnu"
+sparse_paths = ["lib", "programs"]
+
+[[source]]
+name = "snappy"
+url = "git@github.com:google/snappy.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = ["*.cc", "*.h"]
+
+[[source]]
+name = "brotli"
+url = "git@github.com:google/brotli.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = ["c/common", "c/dec", "c/enc", "c/include"]
+
+[[source]]
+name = "zlib"
+url = "git@github.com:madler/zlib.git"
+branch = "develop"
+origin_class = "non_gnu"
+sparse_paths = ["*.c", "*.h"]
+
+[[source]]
+name = "zlib-ng"
+url = "git@github.com:zlib-ng/zlib-ng.git"
+branch = "develop"
+origin_class = "non_gnu"
+sparse_paths = ["*.c", "*.h", "arch"]
+
+[[source]]
+name = "pcg-c"
+url = "git@github.com:imneme/pcg-c.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = ["src", "include"]
+
+[[source]]
+name = "boost-math"
+url = "git@github.com:boostorg/math.git"
+branch = "develop"
+origin_class = "non_gnu"
+sparse_paths = ["include/boost/math"]
+
+[[source]]
+name = "boost-multiprecision"
+url = "git@github.com:boostorg/multiprecision.git"
+branch = "develop"
+origin_class = "non_gnu"
+sparse_paths = ["include/boost/multiprecision"]
+
+[[source]]
+name = "boost-unordered"
+url = "git@github.com:boostorg/unordered.git"
+branch = "develop"
+origin_class = "non_gnu"
+sparse_paths = ["include/boost/unordered"]
+
+[[source]]
+name = "eigen"
+url = "git@github.com:PX4/eigen.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = ["Eigen"]
+
+[[source]]
+name = "sleef"
+url = "git@github.com:shibatch/sleef.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = ["src/libm", "src/common"]
+
+[[source]]
+name = "postgresql"
+url = "git@github.com:postgres/postgres.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "src/backend/utils/adt",
+    "src/port",
+    "src/common",
+]
+
+[[source]]
+name = "sqlite"
+url = "git@github.com:sqlite/sqlite.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = ["src"]
+
+[[source]]
+name = "chromium-base"
+url = "git@github.com:chromium/chromium.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = [
+    "base/containers",
+    "base/hash",
+    "base/strings",
+    "base/numerics",
+    "base/third_party/double_conversion",
+]
+
+[[source]]
+name = "v8"
+url = "git@github.com:v8/v8.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = [
+    "src/base/platform",
+    "src/base/numerics",
+    "src/numbers",
+    "src/strings",
+]
+
+[[source]]
+name = "swift-corelibs-libc"
+url = "git@github.com:swiftlang/swift-corelibs-foundation.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = [
+    "Sources/CoreFoundation",
+    "Sources/Foundation",
+]

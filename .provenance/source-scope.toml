@@ -1,0 +1,157 @@
+# Scope configuration for scripts/provenance/scan_sources.py
+#
+# Only files under one of the listed `include` roots are scanned. Anything
+# under an `exclude` glob is skipped, with the stated reason shown in the
+# report so a reviewer can audit the skip list.
+#
+# The testsuite scanner (scripts/check_testsuite_provenance.py) handles
+# gcc/gcc/testsuite and gcc/libgomp/testsuite; this scanner deliberately
+# leaves those alone.
+
+version = 1
+
+[[include]]
+path_prefix = "gcc/gcc/"
+notes = "Core GCC compiler tree (frontends, middle-end, backend)."
+
+[[include]]
+path_prefix = "gcc/libcpp/"
+notes = "C preprocessor."
+
+[[include]]
+path_prefix = "gcc/libcody/"
+notes = "C++ modules communication library."
+
+[[include]]
+path_prefix = "gcc/libiberty/"
+notes = "Utility library mirrored across GNU projects."
+
+[[include]]
+path_prefix = "gcc/libbacktrace/"
+notes = "Backtrace support library."
+
+[[include]]
+path_prefix = "gcc/libatomic/"
+notes = "Atomic operations runtime."
+
+[[include]]
+path_prefix = "gcc/libitm/"
+notes = "Transactional memory runtime."
+
+[[include]]
+path_prefix = "gcc/libvtv/"
+notes = "Virtual table verification runtime."
+
+[[include]]
+path_prefix = "gcc/libssp/"
+notes = "Stack-smashing protection runtime."
+
+[[include]]
+path_prefix = "gcc/libobjc/"
+notes = "Objective-C runtime."
+
+[[include]]
+path_prefix = "gcc/libquadmath/"
+notes = "Quad-precision math library."
+
+[[include]]
+path_prefix = "gcc/libgcobol/"
+notes = "Cobol runtime library."
+
+[[include]]
+path_prefix = "gcc/libga68/"
+notes = "Algol 68 runtime library."
+
+[[include]]
+path_prefix = "gcc/libgm2/"
+notes = "Modula-2 runtime library."
+
+[[include]]
+path_prefix = "gcc/libgfortran/"
+notes = "Fortran runtime library."
+
+[[include]]
+path_prefix = "gcc/libgcc/"
+notes = "Compiler support library."
+
+[[include]]
+path_prefix = "gcc/libgomp/"
+notes = "GOMP runtime; testsuite subtree excluded below."
+
+[[include]]
+path_prefix = "gcc/libstdc++-v3/"
+notes = "C++ standard library; testsuite subtree excluded below."
+
+[[include]]
+path_prefix = "gcc/fixincludes/"
+notes = "Header fixup tool."
+
+[[include]]
+path_prefix = "gcc/include/"
+notes = "GCC-provided headers."
+
+[[include]]
+path_prefix = "gcc/c++tools/"
+notes = "C++ module-related helper tools."
+
+[[include]]
+path_prefix = "gcc/lto-plugin/"
+notes = "Link-time optimisation plugin."
+
+# --- excludes ---------------------------------------------------------------
+
+[[exclude]]
+path = "**/testsuite/**"
+reason = "Handled by scripts/check_testsuite_provenance.py."
+
+[[exclude]]
+path = "gcc/gcc/go/gofrontend/**"
+reason = "Go frontend subtree mirrored from golang/gofrontend (reviewed in testsuites.toml)."
+
+[[exclude]]
+path = "gcc/libgo/**"
+reason = "Go runtime mirrored from golang/gofrontend (reviewed in testsuites.toml)."
+
+[[exclude]]
+path = "gcc/libphobos/**"
+reason = "D druntime mirror (reviewed)."
+
+[[exclude]]
+path = "gcc/libffi/**"
+reason = "libffi upstream mirror."
+
+[[exclude]]
+path = "gcc/zlib/**"
+reason = "zlib upstream mirror."
+
+[[exclude]]
+path = "gcc/libgrust/**"
+reason = "Rust library/crate mirror."
+
+[[exclude]]
+path = "gcc/gcc/rust/checks/errors/borrowck/ffi-polonius/vendor/**"
+reason = "Vendored Rust crates under gccrs borrowck."
+
+[[exclude]]
+path = "gcc/libsanitizer/**"
+reason = "LLVM compiler-rt mirror with Apache-2.0 WITH LLVM-exception SPDX."
+
+[[exclude]]
+path = "gmp-*/**"
+reason = "Bundled GMP tarball."
+
+[[exclude]]
+path = "mpfr-*/**"
+reason = "Bundled MPFR tarball."
+
+[[exclude]]
+path = "mpc-*/**"
+reason = "Bundled MPC tarball."
+
+[[exclude]]
+path = "isl-*/**"
+reason = "Bundled ISL tarball."
+
+[[exclude]]
+path = "gettext-*/**"
+reason = "Bundled gettext tarball."

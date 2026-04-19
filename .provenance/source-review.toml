@@ -8,7 +8,8 @@
 # Each entry must cite:
 #   path         - gcc/<subtree>/<file>
 #   upstream     - <corpus-project>/<relpath>
-#   resolution   - "not_derived" | "trail_gap" | "license_conflict" | "wontfix"
+#   resolution   - "not_derived" | "trail_gap" | "attributed" |
+#                  "license_conflict" | "wontfix" | "open"
 #   rationale    - one-line summary; detail lives in the linked GitHub issue
 #   issue        - GitHub issue URL or number (krystophny/gcc-dev)
 #   reviewed_on  - YYYY-MM-DD
@@ -58,3 +59,93 @@ riscv-non-isa/riscv-c-api-doc PR #74 (merged 2024-09-25) defines
      664431+664633). Structural similarity is prescribed by the ABI
      spec, not a one-way import.
 """
+
+[[reviewed]]
+path = "gcc/gcc/rust/rust-backend.h"
+upstream = "gofrontend/go/backend.h"
+resolution = "open"
+rationale = "Ported from gccgo in 2022; strips Copyright The Go Authors / BSD-3-Clause header; notice-retention defect, not just a trail gap."
+issue = "https://github.com/krystophny/gcc-dev/issues/126"
+reviewed_on = "2026-04-19"
+reviewed_by = "krystophny"
+chain = """
+gofrontend/go/backend.h (Copyright 2011 The Go Authors, BSD-3-Clause)
+  -> GCC in-tree mirror at gcc/go/gofrontend/backend.h (header preserved
+     verbatim, correct convention)
+  -> gccrs adaptation at gcc/rust/rust-backend.h, introduced 2022-10-21
+     by Philip Herron in gcc-mirror 15f04af347e3 as part of 'the backend
+     abstraction ported over from gccgo'.  Dropped the Copyright/BSD
+     notice entirely.
+"""
+
+[[reviewed]]
+path = "gcc/gcc/rust/rust-diagnostics.cc"
+upstream = "gofrontend/go/go-diagnostics.cc"
+resolution = "open"
+rationale = "Ported from gccgo in 2022; author credit preserved ('Contributed by Than McIntosh, Google.') but Copyright/BSD license paragraph stripped."
+issue = "https://github.com/krystophny/gcc-dev/issues/126"
+reviewed_on = "2026-04-19"
+reviewed_by = "krystophny"
+chain = """
+gofrontend/go/go-diagnostics.cc (Copyright 2016 The Go Authors,
+BSD-3-Clause; author Than McIntosh, golang/gofrontend 57bf3f21005c)
+  -> GCC in-tree mirror at gcc/go/gofrontend/go-diagnostics.cc (header
+     preserved verbatim)
+  -> gccrs adaptation at gcc/rust/rust-diagnostics.cc, introduced
+     2022-08-24 by Philip Herron in gcc-mirror fe6264fa28a3 ('wrappers
+     ported from reusing gccgo').  Author credit preserved, Copyright
+     and BSD license paragraph dropped.
+"""
+
+[[reviewed]]
+path = "gcc/libstdc++-v3/src/c++17/ryu/d2fixed_full_table.h"
+upstream = "llvm-project/libcxx/src/include/ryu/d2fixed_full_table.h"
+resolution = "attributed"
+rationale = "Per-file Ulf Adams Apache-2.0/Boost dual license block preserved; MERGE pins ulfjack/ryu commit 150d0c8783; LOCAL_PATCHES tracks GCC-local deltas."
+issue = "https://github.com/krystophny/gcc-dev/issues/127"
+reviewed_on = "2026-04-19"
+reviewed_by = "krystophny"
+chain = """
+ulfjack/ryu 150d0c8783 (Ulf Adams, 2021-09-11, Apache-2.0 OR Boost-1.0)
+  -> libstdc++-v3/src/c++17/ryu/ - per-file Ulf Adams copyright + dual
+     license retained on every file; MERGE records the upstream SHA;
+     LOCAL_PATCHES lists GCC-local revisions (r11-6248, r11-7636, r12-725)
+  -> LLVM libcxx/src/include/ryu/ shares the same Ulf Adams upstream, so
+     the scanner match is cross-upstream triangulation, not a libcxx import.
+"""
+
+[[reviewed]]
+path = "gcc/libstdc++-v3/src/c++17/ryu/digit_table.h"
+upstream = "llvm-project/libcxx/include/__charconv/tables.h"
+resolution = "attributed"
+rationale = "Same as d2fixed_full_table.h: properly attributed Ulf Adams upstream with MERGE + LOCAL_PATCHES."
+issue = "https://github.com/krystophny/gcc-dev/issues/127"
+reviewed_on = "2026-04-19"
+reviewed_by = "krystophny"
+
+[[reviewed]]
+path = "gcc/gcc/rust/metadata/rust-import-archive.cc"
+upstream = "gofrontend/go/import-archive.cc"
+resolution = "attributed"
+rationale = "Copyright 2009 The Go Authors / BSD-style header preserved verbatim; proper BSD notice retention."
+issue = "https://github.com/krystophny/gcc-dev/issues/120"
+reviewed_on = "2026-04-19"
+reviewed_by = "krystophny"
+
+[[reviewed]]
+path = "gcc/gcc/rust/metadata/rust-imports.h"
+upstream = "gofrontend/go/import.h"
+resolution = "attributed"
+rationale = "Sibling of rust-import-archive.cc; Go Authors BSD header preserved."
+issue = "https://github.com/krystophny/gcc-dev/issues/120"
+reviewed_on = "2026-04-19"
+reviewed_by = "krystophny"
+
+[[reviewed]]
+path = "gcc/gcc/algol68/a68-imports-archive.cc"
+upstream = "gofrontend/go/import-archive.cc"
+resolution = "attributed"
+rationale = "Dual attribution: 'Copyright 2009 The Go Authors' + 'Copyright 2026 Jose E. Marchesi' with explicit 'adapted from the Go front-end' note. Exemplary convention."
+issue = "https://github.com/krystophny/gcc-dev/issues/120"
+reviewed_on = "2026-04-19"
+reviewed_by = "krystophny"
