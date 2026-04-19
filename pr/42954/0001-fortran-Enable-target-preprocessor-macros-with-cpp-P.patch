@@ -1,88 +1,2099 @@
-From 7afa5f0db0b4006dfc8aea768b7470520fd184e7 Mon Sep 17 00:00:00 2001
+From 359047f25c1a5889c49829529a47058fbb981749 Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
-Date: Thu, 16 Apr 2026 08:32:23 +0200
+Date: Sat, 18 Apr 2026 00:57:56 +0200
 Subject: [PATCH] fortran: Enable target preprocessor macros with -cpp
  [PR42954]
 
-The Fortran preprocessor has never defined target-specific macros such as
-__linux__, __unix__, __ELF__, __x86_64__, or __amd64__ that the C
+The Fortran preprocessor has never defined target-specific macros such
+as __linux__, __unix__, __ELF__, __x86_64__, or __amd64__ that the C
 preprocessor provides.  This was caused by the TARGET_OS_CPP_BUILTINS,
 TARGET_OBJFMT_CPP_BUILTINS, and TARGET_CPU_CPP_BUILTINS hooks being
 disabled since 2008 (marked as "Pandora's Box") because several target
 config headers use C-family-only functions.
 
-Fix by providing Fortran-compatible local helpers for
+Fix in two parts.
+
+Part 1: Fortran-local shims for TARGET_OS_CPP_BUILTINS and
+TARGET_OBJFMT_CPP_BUILTINS.  c-family/c-cppbuiltin.cc's
 builtin_define_std, builtin_define_with_value, and
-builtin_define_with_int_value (which in the C frontend live in
-c-family/c-cppbuiltin.cc and use the C-family-only globals parse_in
-and flag_iso), plus wrapper macros for c_dialect_cxx, flag_iso, and
-other C-family identifiers referenced by target config headers.  This
-allows TARGET_OS_CPP_BUILTINS and TARGET_OBJFMT_CPP_BUILTINS to
-execute in the Fortran frontend.
+builtin_define_with_int_value read the C-family-only globals parse_in
+and flag_iso, so they cannot be called from the Fortran frontend.
+Local helpers mirror them and take parse_in as a cpp_reader parameter
+and flag_iso as a define_user bool.  A small block of #defines in
+cpp_define_builtins() maps the C-family identifiers referenced by the
+Linux/Darwin/ELF target config headers onto the local helpers,
+allowing TARGET_OS_CPP_BUILTINS and TARGET_OBJFMT_CPP_BUILTINS to
+compile in the Fortran frontend.  Unlike the C default (flag_iso=0),
+the Fortran wrapper forces define_user=false so that only
+reserved-namespace forms like __unix__ and __linux__ are defined, not
+bare "unix" or "linux" which are valid Fortran identifiers.
 
-Unlike the C frontend default (flag_iso=0, GNU extensions mode), the
-Fortran wrapper sets flag_iso=1 to suppress user-namespace macros like
-bare "unix" and "linux" that would conflict with Fortran identifiers.
-Only the reserved-namespace forms (__unix__, __linux__, etc.) are
-defined.  Fortran has no -std=cNN equivalent to control this, so the
-conservative choice avoids silent identifier replacement.
+Part 2: TARGET_CPU_CPP_BUILTINS equivalent for Fortran, via a shared
+implementation.  The x86 CPU-macro code in gcc/config/i386/i386-c.cc
+used to reference parse_in directly and relied on c-family's
+builtin_define_std.  Move the pure macro-emission logic (architecture
+identity, arch/tune macros, code-model macros, and the full ISA
+feature block including __SSE__, __AVX__, __FMA__, etc.) into a new
+file gcc/config/i386/i386-cppbuiltin.cc that takes cpp_reader as an
+explicit parameter and a define_user bool instead of reading
+flag_iso.  The new file is linked into cc1, cc1plus, and f951 via
+c_target_objs, cxx_target_objs, and fortran_target_objs in
+gcc/config.gcc, following the existing darwin-f.o and vms-f.o
+precedent.  i386-c.cc keeps the #pragma GCC target handler, the
+C++20 STDCPP_FLOAT16 undef (which depends on cxx_dialect), and a
+thin ix86_target_macros() wrapper that delegates to the shared
+implementation so TARGET_CPU_CPP_BUILTINS and i386-protos.h are
+unchanged.  A new sibling hook TARGET_GENERIC_CPU_CPP_BUILTINS in
+gcc/config/i386/i386.h calls the shared function from any frontend
+that cannot link c-family.  gcc/fortran/cpp.cc is target-agnostic: it
+only invokes the hook via an #ifdef, with no x86-specific code.
+Other targets (aarch64, rs6000, ...) can opt in later by defining
+their own TARGET_GENERIC_CPU_CPP_BUILTINS; no further Fortran
+changes are required.
 
-For TARGET_CPU_CPP_BUILTINS, which on most architectures expands to a
-function in a C-family-only object file (e.g., ix86_target_macros in
-i386-c.cc), provide an x86 implementation directly in fortran/cpp.cc
-that covers architecture identification and float-size macros.
-ISA feature macros (__SSE__, __AVX__, etc.) are not included; if
-needed, they could be factored out of i386-c.cc into a shared object.
+The dead __attribute__((target(...))) block in
+gfortran.dg/gomp/declare-variant-10.f90 was guarded by
+#if defined(__x86_64__), which was previously always false because
+gfortran never defined that macro; it is now exposed and removed,
+since gfortran does not support C-style __attribute__ syntax.
 
-Remove the dead __attribute__((target(...))) block from
-gfortran.dg/gomp/declare-variant-10.f90: it was guarded by
-#if defined(__x86_64__) which was previously always false because
-gfortran never defined these macros, and gfortran does not support
-C-style __attribute__ syntax.
-
+Assisted-by: Claude (Anthropic)
 Co-authored-by: Kai Tietz <ktietz@gcc.gnu.org>
 
 	PR fortran/42954
 
+gcc/ChangeLog:
+
+	* config.gcc (i[34567]86-*-*, x86_64-*-*): Add i386-cppbuiltin.o
+	to c_target_objs, cxx_target_objs, and fortran_target_objs.
+	* config/i386/i386.h (struct cpp_reader): Forward declare.
+	(ix86_cpu_cpp_builtins): Declare.
+	(TARGET_GENERIC_CPU_CPP_BUILTINS): New hook macro, a
+	language-neutral counterpart to TARGET_CPU_CPP_BUILTINS.
+	* config/i386/i386-cppbuiltin.h: New file.
+	* config/i386/i386-cppbuiltin.cc: New file.  Holds the shared
+	pure macro-emission logic formerly in i386-c.cc.
+	(ix86_cpp_builtin_define_std): New parameterized helper mirroring
+	c-family/c-cppbuiltin.cc's builtin_define_std.
+	(ix86_cpu_cpp_builtins_internal): Move from i386-c.cc and take
+	cpp_reader as explicit first parameter.
+	(ix86_cpu_cpp_builtins): Move from i386-c.cc, take cpp_reader
+	and define_user parameters, omit the C++20 STDCPP_FLOAT16 undef
+	block (which stays in i386-c.cc).
+	* config/i386/i386-c.cc (ix86_target_macros_internal): Delete;
+	moved to i386-cppbuiltin.cc as ix86_cpu_cpp_builtins_internal.
+	(ix86_target_macros): Shrink to a thin wrapper calling
+	ix86_cpu_cpp_builtins, then applying the C++20 STDCPP_FLOAT16
+	undef when c_dialect_cxx () && cxx_dialect > cxx20.
+	(ix86_pragma_target_parse): Call ix86_cpu_cpp_builtins_internal
+	instead of the file-local static helper.
+	* config/i386/t-i386: Build i386-cppbuiltin.o.
+	* doc/tm.texi.in (TARGET_GENERIC_CPU_CPP_BUILTINS): Document.
+	* doc/tm.texi: Regenerate.
+
 gcc/fortran/ChangeLog:
 
-	* cpp.cc (gfc_builtin_define_std): New helper mirroring
-	builtin_define_std from c-family/c-cppbuiltin.cc.
-	(gfc_builtin_define_with_value): New helper mirroring
-	builtin_define_with_value from c-family/c-cppbuiltin.cc.
-	(gfc_define_ix86_target_macros): New function providing x86 CPU
-	identification macros for the Fortran preprocessor.
-	(gfc_darwin_cpp_builtins): New function providing Darwin platform
-	macros.
-	(cpp_define_builtins): Remove Pandora's Box FIXME.  Add wrapper
-	macros for C-family functions and variables used in target config
-	headers.  Set flag_iso=1 to suppress bare-name macros.  Enable
-	TARGET_OS_CPP_BUILTINS and TARGET_OBJFMT_CPP_BUILTINS.  Call
-	gfc_define_ix86_target_macros on x86 targets.
+	* cpp.cc (gfc_builtin_define_std): New Fortran-local helper
+	mirroring builtin_define_std from c-family/c-cppbuiltin.cc.
+	(gfc_builtin_define_with_value): New Fortran-local helper
+	mirroring builtin_define_with_value.
+	(gfc_darwin_cpp_builtins): New; minimal Darwin platform macros
+	that don't depend on c-family functions.
+	(cpp_define_builtins): Expose the c-family identifiers needed
+	by TARGET_OS_CPP_BUILTINS and TARGET_OBJFMT_CPP_BUILTINS via a
+	transient #define block, call those hooks, and invoke the new
+	TARGET_GENERIC_CPU_CPP_BUILTINS hook when defined.
 
 gcc/testsuite/ChangeLog:
 
 	* gfortran.dg/gomp/declare-variant-10.f90: Remove dead
-	__attribute__((target)) block that is now exposed by newly
+	__attribute__((target)) block that is exposed by newly
 	defined target macros.
 	* gfortran.dg/pr42954-linux.f90: New test.
 	* gfortran.dg/pr42954-x86.f90: New test.
+	* gfortran.dg/pr42954-avx.f90: New test.
+	* gfortran.dg/pr42954-arch.f90: New test.
+	* gfortran.dg/pr42954-fma4.f90: New test.
+	* gfortran.dg/pr42954-cet.f90: New test.
+	* gfortran.dg/pr42954-m32.f90: New test.
+	* gfortran.dg/pr42954-soft-float.f90: New test.
 
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
- gcc/fortran/cpp.cc                            | 178 ++++++++++++++++--
+ gcc/config.gcc                                |   5 +-
+ gcc/config/i386/i386-c.cc                     | 845 +----------------
+ gcc/config/i386/i386-cppbuiltin.cc            | 889 ++++++++++++++++++
+ gcc/config/i386/i386-cppbuiltin.h             |  48 +
+ gcc/config/i386/i386.h                        |   8 +
+ gcc/config/i386/t-i386                        |   4 +
+ gcc/doc/tm.texi                               |  12 +
+ gcc/doc/tm.texi.in                            |  12 +
+ gcc/fortran/cpp.cc                            | 132 ++-
  .../gfortran.dg/gomp/declare-variant-10.f90   |   3 -
- gcc/testsuite/gfortran.dg/pr42954-linux.f90   |  24 +++
+ gcc/testsuite/gfortran.dg/pr42954-arch.f90    |  28 +
+ gcc/testsuite/gfortran.dg/pr42954-avx.f90     |  20 +
+ gcc/testsuite/gfortran.dg/pr42954-cet.f90     |  12 +
+ gcc/testsuite/gfortran.dg/pr42954-fma4.f90    |  12 +
+ gcc/testsuite/gfortran.dg/pr42954-linux.f90   |  24 +
+ gcc/testsuite/gfortran.dg/pr42954-m32.f90     |  29 +
+ .../gfortran.dg/pr42954-soft-float.f90        |  13 +
  gcc/testsuite/gfortran.dg/pr42954-x86.f90     |  10 +
- 4 files changed, 194 insertions(+), 21 deletions(-)
+ 18 files changed, 1263 insertions(+), 843 deletions(-)
+ create mode 100644 gcc/config/i386/i386-cppbuiltin.cc
+ create mode 100644 gcc/config/i386/i386-cppbuiltin.h
+ create mode 100644 gcc/testsuite/gfortran.dg/pr42954-arch.f90
+ create mode 100644 gcc/testsuite/gfortran.dg/pr42954-avx.f90
+ create mode 100644 gcc/testsuite/gfortran.dg/pr42954-cet.f90
+ create mode 100644 gcc/testsuite/gfortran.dg/pr42954-fma4.f90
  create mode 100644 gcc/testsuite/gfortran.dg/pr42954-linux.f90
+ create mode 100644 gcc/testsuite/gfortran.dg/pr42954-m32.f90
+ create mode 100644 gcc/testsuite/gfortran.dg/pr42954-soft-float.f90
  create mode 100644 gcc/testsuite/gfortran.dg/pr42954-x86.f90
 
+diff --git a/gcc/config.gcc b/gcc/config.gcc
+index 34591bff970..fda6eda63de 100644
+--- a/gcc/config.gcc
++++ b/gcc/config.gcc
+@@ -432,8 +432,9 @@ fido-*-*)
+         ;;
+ i[34567]86-*-* | x86_64-*-*)
+ 	cpu_type=i386
+-	c_target_objs="i386-c.o"
+-	cxx_target_objs="i386-c.o"
++	c_target_objs="i386-c.o i386-cppbuiltin.o"
++	cxx_target_objs="i386-c.o i386-cppbuiltin.o"
++	fortran_target_objs="i386-cppbuiltin.o"
+ 	d_target_objs="i386-d.o"
+ 	jit_target_objs="i386-jit.o"
+ 	extra_objs="x86-tune-sched.o x86-tune-sched-bd.o x86-tune-sched-atom.o x86-tune-sched-core.o i386-options.o i386-builtins.o i386-expand.o i386-features.o"
+diff --git a/gcc/config/i386/i386-c.cc b/gcc/config/i386/i386-c.cc
+index 15e82956d0d..15e43b6638e 100644
+--- a/gcc/config/i386/i386-c.cc
++++ b/gcc/config/i386/i386-c.cc
+@@ -27,752 +27,10 @@ along with GCC; see the file COPYING3.  If not see
+ #include "memmodel.h"
+ #include "tm_p.h"
+ #include "c-family/c-pragma.h"
++#include "config/i386/i386-cppbuiltin.h"
+ 
+ static bool ix86_pragma_target_parse (tree, tree);
+-static void ix86_target_macros_internal
+-  (HOST_WIDE_INT, HOST_WIDE_INT, enum processor_type, enum processor_type, enum fpmath_unit,
+-   void (*def_or_undef) (cpp_reader *, const char *));
+ 
+-/* Internal function to either define or undef the appropriate system
+-   macros.  */
+-static void
+-ix86_target_macros_internal (HOST_WIDE_INT isa_flag,
+-			     HOST_WIDE_INT isa_flag2,
+-			     enum processor_type arch,
+-			     enum processor_type tune,
+-			     enum fpmath_unit fpmath,
+-			     void (*def_or_undef) (cpp_reader *,
+-						   const char *))
+-{
+-  /* For some of the k6/pentium varients there weren't separate ISA bits to
+-     identify which tune/arch flag was passed, so figure it out here.  */
+-  size_t arch_len = strlen (ix86_arch_string);
+-  size_t tune_len = strlen (ix86_tune_string);
+-  int last_arch_char = ix86_arch_string[arch_len - 1];
+-  int last_tune_char = ix86_tune_string[tune_len - 1];
+-
+-  /* Built-ins based on -march=.  */
+-  switch (arch)
+-    {
+-    case PROCESSOR_I386:
+-      break;
+-    case PROCESSOR_I486:
+-      def_or_undef (parse_in, "__i486");
+-      def_or_undef (parse_in, "__i486__");
+-      break;
+-    case PROCESSOR_LAKEMONT:
+-      /* Intel MCU is based on Intel Pentium CPU.  */
+-    case PROCESSOR_PENTIUM:
+-      def_or_undef (parse_in, "__i586");
+-      def_or_undef (parse_in, "__i586__");
+-      def_or_undef (parse_in, "__pentium");
+-      def_or_undef (parse_in, "__pentium__");
+-      if (isa_flag & OPTION_MASK_ISA_MMX)
+-	def_or_undef (parse_in, "__pentium_mmx__");
+-      break;
+-    case PROCESSOR_PENTIUMPRO:
+-      def_or_undef (parse_in, "__i686");
+-      def_or_undef (parse_in, "__i686__");
+-      def_or_undef (parse_in, "__pentiumpro");
+-      def_or_undef (parse_in, "__pentiumpro__");
+-      break;
+-    case PROCESSOR_GEODE:
+-      def_or_undef (parse_in, "__geode");
+-      def_or_undef (parse_in, "__geode__");
+-      break;
+-    case PROCESSOR_K6:
+-      def_or_undef (parse_in, "__k6");
+-      def_or_undef (parse_in, "__k6__");
+-      if (last_arch_char == '2')
+-	def_or_undef (parse_in, "__k6_2__");
+-      else if (last_arch_char == '3')
+-	def_or_undef (parse_in, "__k6_3__");
+-      else if (isa_flag & OPTION_MASK_ISA_3DNOW)
+-	def_or_undef (parse_in, "__k6_3__");
+-      break;
+-    case PROCESSOR_ATHLON:
+-      def_or_undef (parse_in, "__athlon");
+-      def_or_undef (parse_in, "__athlon__");
+-      if (isa_flag & OPTION_MASK_ISA_SSE)
+-	def_or_undef (parse_in, "__athlon_sse__");
+-      break;
+-    case PROCESSOR_K8:
+-      def_or_undef (parse_in, "__k8");
+-      def_or_undef (parse_in, "__k8__");
+-      break;
+-    case PROCESSOR_AMDFAM10:
+-      def_or_undef (parse_in, "__amdfam10");
+-      def_or_undef (parse_in, "__amdfam10__");
+-      break;
+-    case PROCESSOR_BDVER1:
+-      def_or_undef (parse_in, "__bdver1");
+-      def_or_undef (parse_in, "__bdver1__");
+-      break;
+-    case PROCESSOR_BDVER2:
+-      def_or_undef (parse_in, "__bdver2");
+-      def_or_undef (parse_in, "__bdver2__");
+-      break;
+-    case PROCESSOR_BDVER3:
+-      def_or_undef (parse_in, "__bdver3");
+-      def_or_undef (parse_in, "__bdver3__");
+-      break;
+-    case PROCESSOR_BDVER4:
+-      def_or_undef (parse_in, "__bdver4");
+-      def_or_undef (parse_in, "__bdver4__");
+-      break;
+-    case PROCESSOR_ZNVER1:
+-      def_or_undef (parse_in, "__znver1");
+-      def_or_undef (parse_in, "__znver1__");
+-      break;
+-    case PROCESSOR_ZNVER2:
+-      def_or_undef (parse_in, "__znver2");
+-      def_or_undef (parse_in, "__znver2__");
+-      break;
+-    case PROCESSOR_ZNVER3:
+-      def_or_undef (parse_in, "__znver3");
+-      def_or_undef (parse_in, "__znver3__");
+-      break;
+-    case PROCESSOR_ZNVER4:
+-      def_or_undef (parse_in, "__znver4");
+-      def_or_undef (parse_in, "__znver4__");
+-      break;
+-    case PROCESSOR_ZNVER5:
+-      def_or_undef (parse_in, "__znver5");
+-      def_or_undef (parse_in, "__znver5__");
+-      break;
+-    case PROCESSOR_ZNVER6:
+-      def_or_undef (parse_in, "__znver6");
+-      def_or_undef (parse_in, "__znver6__");
+-      break;
+-    case PROCESSOR_BTVER1:
+-      def_or_undef (parse_in, "__btver1");
+-      def_or_undef (parse_in, "__btver1__");
+-      break;
+-    case PROCESSOR_BTVER2:
+-      def_or_undef (parse_in, "__btver2");
+-      def_or_undef (parse_in, "__btver2__");
+-      break;
+-    case PROCESSOR_LUJIAZUI:
+-      def_or_undef (parse_in, "__lujiazui");
+-      def_or_undef (parse_in, "__lujiazui__");
+-      break;
+-    case PROCESSOR_YONGFENG:
+-      def_or_undef (parse_in, "__yongfeng");
+-      def_or_undef (parse_in, "__yongfeng__");
+-      break;
+-    case PROCESSOR_SHIJIDADAO:
+-      def_or_undef (parse_in, "__shijidadao");
+-      def_or_undef (parse_in, "__shijidadao__");
+-      break;
+-    case PROCESSOR_PENTIUM4:
+-      def_or_undef (parse_in, "__pentium4");
+-      def_or_undef (parse_in, "__pentium4__");
+-      break;
+-    case PROCESSOR_NOCONA:
+-      def_or_undef (parse_in, "__nocona");
+-      def_or_undef (parse_in, "__nocona__");
+-      break;
+-    case PROCESSOR_CORE2:
+-      def_or_undef (parse_in, "__core2");
+-      def_or_undef (parse_in, "__core2__");
+-      break;
+-    case PROCESSOR_NEHALEM:
+-      def_or_undef (parse_in, "__corei7");
+-      def_or_undef (parse_in, "__corei7__");
+-      def_or_undef (parse_in, "__nehalem");
+-      def_or_undef (parse_in, "__nehalem__");
+-      break;
+-    case PROCESSOR_SANDYBRIDGE:
+-      def_or_undef (parse_in, "__corei7_avx");
+-      def_or_undef (parse_in, "__corei7_avx__");
+-      def_or_undef (parse_in, "__sandybridge");
+-      def_or_undef (parse_in, "__sandybridge__");
+-      break;
+-    case PROCESSOR_HASWELL:
+-      def_or_undef (parse_in, "__core_avx2");
+-      def_or_undef (parse_in, "__core_avx2__");
+-      def_or_undef (parse_in, "__haswell");
+-      def_or_undef (parse_in, "__haswell__");
+-      break;
+-    case PROCESSOR_BONNELL:
+-      def_or_undef (parse_in, "__atom");
+-      def_or_undef (parse_in, "__atom__");
+-      def_or_undef (parse_in, "__bonnell");
+-      def_or_undef (parse_in, "__bonnell__");
+-      break;
+-    case PROCESSOR_SILVERMONT:
+-      def_or_undef (parse_in, "__slm");
+-      def_or_undef (parse_in, "__slm__");
+-      def_or_undef (parse_in, "__silvermont");
+-      def_or_undef (parse_in, "__silvermont__");
+-      break;
+-    case PROCESSOR_GOLDMONT:
+-      def_or_undef (parse_in, "__goldmont");
+-      def_or_undef (parse_in, "__goldmont__");
+-      break;
+-    case PROCESSOR_GOLDMONT_PLUS:
+-      def_or_undef (parse_in, "__goldmont_plus");
+-      def_or_undef (parse_in, "__goldmont_plus__");
+-      break;
+-    case PROCESSOR_TREMONT:
+-      def_or_undef (parse_in, "__tremont");
+-      def_or_undef (parse_in, "__tremont__");
+-      break;
+-    case PROCESSOR_SIERRAFOREST:
+-      def_or_undef (parse_in, "__sierraforest");
+-      def_or_undef (parse_in, "__sierraforest__");
+-      break;
+-    case PROCESSOR_GRANDRIDGE:
+-      def_or_undef (parse_in, "__grandridge");
+-      def_or_undef (parse_in, "__grandridge__");
+-      break;
+-    case PROCESSOR_CLEARWATERFOREST:
+-      def_or_undef (parse_in, "__clearwaterforest");
+-      def_or_undef (parse_in, "__clearwaterforest__");
+-      break;
+-      break;
+-    case PROCESSOR_SKYLAKE:
+-      def_or_undef (parse_in, "__skylake");
+-      def_or_undef (parse_in, "__skylake__");
+-      break;
+-    case PROCESSOR_SKYLAKE_AVX512:
+-      def_or_undef (parse_in, "__skylake_avx512");
+-      def_or_undef (parse_in, "__skylake_avx512__");
+-      break;
+-    case PROCESSOR_CANNONLAKE:
+-      def_or_undef (parse_in, "__cannonlake");
+-      def_or_undef (parse_in, "__cannonlake__");
+-      break;
+-    case PROCESSOR_ICELAKE_CLIENT:
+-      def_or_undef (parse_in, "__icelake_client");
+-      def_or_undef (parse_in, "__icelake_client__");
+-      break;
+-    case PROCESSOR_ICELAKE_SERVER:
+-      def_or_undef (parse_in, "__icelake_server");
+-      def_or_undef (parse_in, "__icelake_server__");
+-      break;
+-    case PROCESSOR_CASCADELAKE:
+-      def_or_undef (parse_in, "__cascadelake");
+-      def_or_undef (parse_in, "__cascadelake__");
+-      break;
+-    case PROCESSOR_TIGERLAKE:
+-      def_or_undef (parse_in, "__tigerlake");
+-      def_or_undef (parse_in, "__tigerlake__");
+-      break;
+-    case PROCESSOR_COOPERLAKE:
+-      def_or_undef (parse_in, "__cooperlake");
+-      def_or_undef (parse_in, "__cooperlake__");
+-      break;
+-    case PROCESSOR_SAPPHIRERAPIDS:
+-      def_or_undef (parse_in, "__sapphirerapids");
+-      def_or_undef (parse_in, "__sapphirerapids__");
+-      break;
+-    case PROCESSOR_GRANITERAPIDS:
+-      def_or_undef (parse_in, "__graniterapids");
+-      def_or_undef (parse_in, "__graniterapids__");
+-      break;
+-    case PROCESSOR_GRANITERAPIDS_D:
+-      def_or_undef (parse_in, "__graniterapids_d");
+-      def_or_undef (parse_in, "__graniterapids_d__");
+-      break;
+-    case PROCESSOR_ALDERLAKE:
+-      def_or_undef (parse_in, "__alderlake");
+-      def_or_undef (parse_in, "__alderlake__");
+-      break;
+-    case PROCESSOR_ROCKETLAKE:
+-      def_or_undef (parse_in, "__rocketlake");
+-      def_or_undef (parse_in, "__rocketlake__");
+-      break;
+-    case PROCESSOR_ARROWLAKE:
+-      def_or_undef (parse_in, "__arrowlake");
+-      def_or_undef (parse_in, "__arrowlake__");
+-      break;
+-    case PROCESSOR_ARROWLAKE_S:
+-      def_or_undef (parse_in, "__arrowlake_s");
+-      def_or_undef (parse_in, "__arrowlake_s__");
+-      break;
+-    case PROCESSOR_PANTHERLAKE:
+-      def_or_undef (parse_in, "__pantherlake");
+-      def_or_undef (parse_in, "__pantherlake__");
+-      break;
+-    case PROCESSOR_DIAMONDRAPIDS:
+-      def_or_undef (parse_in, "__diamondrapids");
+-      def_or_undef (parse_in, "__diamondrapids__");
+-      break;
+-    case PROCESSOR_NOVALAKE:
+-      def_or_undef (parse_in, "__novalake");
+-      def_or_undef (parse_in, "__novalake__");
+-      break;
+-
+-    /* use PROCESSOR_max to not set/unset the arch macro.  */
+-    case PROCESSOR_max:
+-      break;
+-    case PROCESSOR_INTEL:
+-    case PROCESSOR_GENERIC:
+-      gcc_unreachable ();
+-    }
+-
+-  /* Built-ins based on -mtune=.  */
+-  switch (tune)
+-    {
+-    case PROCESSOR_I386:
+-      def_or_undef (parse_in, "__tune_i386__");
+-      break;
+-    case PROCESSOR_I486:
+-      def_or_undef (parse_in, "__tune_i486__");
+-      break;
+-    case PROCESSOR_PENTIUM:
+-      def_or_undef (parse_in, "__tune_i586__");
+-      def_or_undef (parse_in, "__tune_pentium__");
+-      if (last_tune_char == 'x')
+-	def_or_undef (parse_in, "__tune_pentium_mmx__");
+-      break;
+-    case PROCESSOR_PENTIUMPRO:
+-      def_or_undef (parse_in, "__tune_i686__");
+-      def_or_undef (parse_in, "__tune_pentiumpro__");
+-      switch (last_tune_char)
+-	{
+-	case '3':
+-	  def_or_undef (parse_in, "__tune_pentium3__");
+-	  /* FALLTHRU */
+-	case '2':
+-	  def_or_undef (parse_in, "__tune_pentium2__");
+-	  break;
+-	}
+-      break;
+-    case PROCESSOR_GEODE:
+-      def_or_undef (parse_in, "__tune_geode__");
+-      break;
+-    case PROCESSOR_K6:
+-      def_or_undef (parse_in, "__tune_k6__");
+-      if (last_tune_char == '2')
+-	def_or_undef (parse_in, "__tune_k6_2__");
+-      else if (last_tune_char == '3')
+-	def_or_undef (parse_in, "__tune_k6_3__");
+-      else if (isa_flag & OPTION_MASK_ISA_3DNOW)
+-	def_or_undef (parse_in, "__tune_k6_3__");
+-      break;
+-    case PROCESSOR_ATHLON:
+-      def_or_undef (parse_in, "__tune_athlon__");
+-      if (isa_flag & OPTION_MASK_ISA_SSE)
+-	def_or_undef (parse_in, "__tune_athlon_sse__");
+-      break;
+-    case PROCESSOR_K8:
+-      def_or_undef (parse_in, "__tune_k8__");
+-      break;
+-    case PROCESSOR_AMDFAM10:
+-      def_or_undef (parse_in, "__tune_amdfam10__");
+-      break;
+-    case PROCESSOR_BDVER1:
+-      def_or_undef (parse_in, "__tune_bdver1__");
+-      break;
+-    case PROCESSOR_BDVER2:
+-      def_or_undef (parse_in, "__tune_bdver2__");
+-      break;
+-    case PROCESSOR_BDVER3:
+-      def_or_undef (parse_in, "__tune_bdver3__");
+-      break;
+-    case PROCESSOR_BDVER4:
+-      def_or_undef (parse_in, "__tune_bdver4__");
+-      break;
+-    case PROCESSOR_ZNVER1:
+-      def_or_undef (parse_in, "__tune_znver1__");
+-      break;
+-    case PROCESSOR_ZNVER2:
+-      def_or_undef (parse_in, "__tune_znver2__");
+-      break;
+-    case PROCESSOR_ZNVER3:
+-      def_or_undef (parse_in, "__tune_znver3__");
+-      break;
+-    case PROCESSOR_ZNVER4:
+-      def_or_undef (parse_in, "__tune_znver4__");
+-      break;
+-    case PROCESSOR_ZNVER5:
+-      def_or_undef (parse_in, "__tune_znver5__");
+-      break;
+-    case PROCESSOR_ZNVER6:
+-      def_or_undef (parse_in, "__tune_znver6__");
+-      break;
+-    case PROCESSOR_BTVER1:
+-      def_or_undef (parse_in, "__tune_btver1__");
+-      break;
+-    case PROCESSOR_BTVER2:
+-      def_or_undef (parse_in, "__tune_btver2__");
+-       break;
+-    case PROCESSOR_LUJIAZUI:
+-      def_or_undef (parse_in, "__tune_lujiazui__");
+-       break;
+-    case PROCESSOR_YONGFENG:
+-      def_or_undef (parse_in, "__tune_yongfeng__");
+-       break;
+-    case PROCESSOR_SHIJIDADAO:
+-      def_or_undef (parse_in, "__tune_shijidadao__");
+-       break;
+-    case PROCESSOR_PENTIUM4:
+-      def_or_undef (parse_in, "__tune_pentium4__");
+-      break;
+-    case PROCESSOR_NOCONA:
+-      def_or_undef (parse_in, "__tune_nocona__");
+-      break;
+-    case PROCESSOR_CORE2:
+-      def_or_undef (parse_in, "__tune_core2__");
+-      break;
+-    case PROCESSOR_NEHALEM:
+-      def_or_undef (parse_in, "__tune_corei7__");
+-      def_or_undef (parse_in, "__tune_nehalem__");
+-      break;
+-    case PROCESSOR_SANDYBRIDGE:
+-      def_or_undef (parse_in, "__tune_corei7_avx__");
+-      def_or_undef (parse_in, "__tune_sandybridge__");
+-      break;
+-    case PROCESSOR_HASWELL:
+-      def_or_undef (parse_in, "__tune_core_avx2__");
+-      def_or_undef (parse_in, "__tune_haswell__");
+-      break;
+-    case PROCESSOR_BONNELL:
+-      def_or_undef (parse_in, "__tune_atom__");
+-      def_or_undef (parse_in, "__tune_bonnell__");
+-      break;
+-    case PROCESSOR_SILVERMONT:
+-      def_or_undef (parse_in, "__tune_slm__");
+-      def_or_undef (parse_in, "__tune_silvermont__");
+-      break;
+-    case PROCESSOR_GOLDMONT:
+-      def_or_undef (parse_in, "__tune_goldmont__");
+-      break;
+-    case PROCESSOR_GOLDMONT_PLUS:
+-      def_or_undef (parse_in, "__tune_goldmont_plus__");
+-      break;
+-    case PROCESSOR_TREMONT:
+-      def_or_undef (parse_in, "__tune_tremont__");
+-      break;
+-    case PROCESSOR_SIERRAFOREST:
+-      def_or_undef (parse_in, "__tune_sierraforest__");
+-      break;
+-    case PROCESSOR_GRANDRIDGE:
+-      def_or_undef (parse_in, "__tune_grandridge__");
+-      break;
+-    case PROCESSOR_CLEARWATERFOREST:
+-      def_or_undef (parse_in, "__tune_clearwaterforest__");
+-      break;
+-    case PROCESSOR_SKYLAKE:
+-      def_or_undef (parse_in, "__tune_skylake__");
+-      break;
+-    case PROCESSOR_SKYLAKE_AVX512:
+-      def_or_undef (parse_in, "__tune_skylake_avx512__");
+-      break;
+-    case PROCESSOR_CANNONLAKE:
+-      def_or_undef (parse_in, "__tune_cannonlake__");
+-      break;
+-    case PROCESSOR_ICELAKE_CLIENT:
+-      def_or_undef (parse_in, "__tune_icelake_client__");
+-      break;
+-    case PROCESSOR_ICELAKE_SERVER:
+-      def_or_undef (parse_in, "__tune_icelake_server__");
+-      break;
+-    case PROCESSOR_LAKEMONT:
+-      def_or_undef (parse_in, "__tune_lakemont__");
+-      break;
+-    case PROCESSOR_CASCADELAKE:
+-      def_or_undef (parse_in, "__tune_cascadelake__");
+-      break;
+-    case PROCESSOR_TIGERLAKE:
+-      def_or_undef (parse_in, "__tune_tigerlake__");
+-      break;
+-    case PROCESSOR_COOPERLAKE:
+-      def_or_undef (parse_in, "__tune_cooperlake__");
+-      break;
+-    case PROCESSOR_SAPPHIRERAPIDS:
+-      def_or_undef (parse_in, "__tune_sapphirerapids__");
+-      break;
+-    case PROCESSOR_ALDERLAKE:
+-      def_or_undef (parse_in, "__tune_alderlake__");
+-      break;
+-    case PROCESSOR_ROCKETLAKE:
+-      def_or_undef (parse_in, "__tune_rocketlake__");
+-      break;
+-    case PROCESSOR_GRANITERAPIDS:
+-      def_or_undef (parse_in, "__tune_graniterapids__");
+-      break;
+-    case PROCESSOR_GRANITERAPIDS_D:
+-      def_or_undef (parse_in, "__tune_graniterapids_d__");
+-      break;
+-    case PROCESSOR_ARROWLAKE:
+-      def_or_undef (parse_in, "__tune_arrowlake__");
+-      break;
+-    case PROCESSOR_ARROWLAKE_S:
+-      def_or_undef (parse_in, "__tune_arrowlake_s__");
+-      break;
+-    case PROCESSOR_PANTHERLAKE:
+-      def_or_undef (parse_in, "__tune_pantherlake__");
+-      break;
+-    case PROCESSOR_DIAMONDRAPIDS:
+-      def_or_undef (parse_in, "__tune_diamondrapids__");
+-      break;
+-    case PROCESSOR_NOVALAKE:
+-      def_or_undef (parse_in, "__tune_novalake__");
+-      break;
+-    case PROCESSOR_INTEL:
+-    case PROCESSOR_GENERIC:
+-      break;
+-    /* use PROCESSOR_max to not set/unset the tune macro.  */
+-    case PROCESSOR_max:
+-      break;
+-    }
+-
+-  switch (ix86_cmodel)
+-    {
+-    case CM_SMALL:
+-    case CM_SMALL_PIC:
+-      def_or_undef (parse_in, "__code_model_small__");
+-      break;
+-    case CM_MEDIUM:
+-    case CM_MEDIUM_PIC:
+-      def_or_undef (parse_in, "__code_model_medium__");
+-      break;
+-    case CM_LARGE:
+-    case CM_LARGE_PIC:
+-      def_or_undef (parse_in, "__code_model_large__");
+-      break;
+-    case CM_32:
+-      def_or_undef (parse_in, "__code_model_32__");
+-      break;
+-    case CM_KERNEL:
+-      def_or_undef (parse_in, "__code_model_kernel__");
+-      break;
+-    default:
+-      ;
+-    }
+-
+-  if (isa_flag2 & OPTION_MASK_ISA2_WBNOINVD)
+-    def_or_undef (parse_in, "__WBNOINVD__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_AVX512VP2INTERSECT)
+-    def_or_undef (parse_in, "__AVX512VP2INTERSECT__");
+-  if (isa_flag & OPTION_MASK_ISA_MMX)
+-    def_or_undef (parse_in, "__MMX__");
+-  if (isa_flag & OPTION_MASK_ISA_3DNOW)
+-    def_or_undef (parse_in, "__3dNOW__");
+-  if (isa_flag & OPTION_MASK_ISA_3DNOW_A)
+-    def_or_undef (parse_in, "__3dNOW_A__");
+-  if (isa_flag & OPTION_MASK_ISA_SSE)
+-    def_or_undef (parse_in, "__SSE__");
+-  if (isa_flag & OPTION_MASK_ISA_SSE2)
+-    def_or_undef (parse_in, "__SSE2__");
+-  if (isa_flag & OPTION_MASK_ISA_SSE3)
+-    def_or_undef (parse_in, "__SSE3__");
+-  if (isa_flag & OPTION_MASK_ISA_SSSE3)
+-    def_or_undef (parse_in, "__SSSE3__");
+-  if (isa_flag & OPTION_MASK_ISA_SSE4_1)
+-    def_or_undef (parse_in, "__SSE4_1__");
+-  if (isa_flag & OPTION_MASK_ISA_SSE4_2)
+-    def_or_undef (parse_in, "__SSE4_2__");
+-  if (isa_flag & OPTION_MASK_ISA_AES)
+-    def_or_undef (parse_in, "__AES__");
+-  if (isa_flag & OPTION_MASK_ISA_SHA)
+-    def_or_undef (parse_in, "__SHA__");
+-  if (isa_flag & OPTION_MASK_ISA_PCLMUL)
+-    def_or_undef (parse_in, "__PCLMUL__");
+-  if (isa_flag & OPTION_MASK_ISA_AVX)
+-    def_or_undef (parse_in, "__AVX__");
+-  if (isa_flag & OPTION_MASK_ISA_AVX2)
+-    def_or_undef (parse_in, "__AVX2__");
+-  if (isa_flag & OPTION_MASK_ISA_AVX512F)
+-    def_or_undef (parse_in, "__AVX512F__");
+-  if (isa_flag & OPTION_MASK_ISA_AVX512CD)
+-    def_or_undef (parse_in, "__AVX512CD__");
+-  if (isa_flag & OPTION_MASK_ISA_AVX512DQ)
+-    def_or_undef (parse_in, "__AVX512DQ__");
+-  if (isa_flag & OPTION_MASK_ISA_AVX512BW)
+-    def_or_undef (parse_in, "__AVX512BW__");
+-  if (isa_flag & OPTION_MASK_ISA_AVX512VL)
+-    {
+-      def_or_undef (parse_in, "__AVX512VL__");
+-      def_or_undef (parse_in, "__EVEX256__");
+-    }
+-  if (isa_flag & OPTION_MASK_ISA_AVX512VBMI)
+-    def_or_undef (parse_in, "__AVX512VBMI__");
+-  if (isa_flag & OPTION_MASK_ISA_AVX512IFMA)
+-    def_or_undef (parse_in, "__AVX512IFMA__");
+-  if (isa_flag & OPTION_MASK_ISA_AVX512VBMI2)
+-    def_or_undef (parse_in, "__AVX512VBMI2__");
+-  if (isa_flag & OPTION_MASK_ISA_AVX512VNNI)
+-    def_or_undef (parse_in, "__AVX512VNNI__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_PCONFIG)
+-    def_or_undef (parse_in, "__PCONFIG__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_SGX)
+-    def_or_undef (parse_in, "__SGX__");
+-  if (isa_flag & OPTION_MASK_ISA_AVX512BITALG)
+-    def_or_undef (parse_in, "__AVX512BITALG__");
+-  if (isa_flag & OPTION_MASK_ISA_AVX512VPOPCNTDQ)
+-    def_or_undef (parse_in, "__AVX512VPOPCNTDQ__");
+-  if (isa_flag & OPTION_MASK_ISA_FMA)
+-    def_or_undef (parse_in, "__FMA__");
+-  if (isa_flag & OPTION_MASK_ISA_RTM)
+-    def_or_undef (parse_in, "__RTM__");
+-  if (isa_flag & OPTION_MASK_ISA_SSE4A)
+-    def_or_undef (parse_in, "__SSE4A__");
+-  if (isa_flag & OPTION_MASK_ISA_FMA4)
+-    def_or_undef (parse_in, "__FMA4__");
+-  if (isa_flag & OPTION_MASK_ISA_XOP)
+-    def_or_undef (parse_in, "__XOP__");
+-  if (isa_flag & OPTION_MASK_ISA_LWP)
+-    def_or_undef (parse_in, "__LWP__");
+-  if (isa_flag & OPTION_MASK_ISA_ABM)
+-    def_or_undef (parse_in, "__ABM__");
+-  if (isa_flag & OPTION_MASK_ISA_BMI)
+-    def_or_undef (parse_in, "__BMI__");
+-  if (isa_flag & OPTION_MASK_ISA_BMI2)
+-    def_or_undef (parse_in, "__BMI2__");
+-  if (isa_flag & OPTION_MASK_ISA_LZCNT)
+-    def_or_undef (parse_in, "__LZCNT__");
+-  if (isa_flag & OPTION_MASK_ISA_TBM)
+-    def_or_undef (parse_in, "__TBM__");
+-  if (isa_flag & OPTION_MASK_ISA_CRC32)
+-    def_or_undef (parse_in, "__CRC32__");
+-  if (isa_flag & OPTION_MASK_ISA_POPCNT)
+-    def_or_undef (parse_in, "__POPCNT__");
+-  if (isa_flag & OPTION_MASK_ISA_FSGSBASE)
+-    def_or_undef (parse_in, "__FSGSBASE__");
+-  if (isa_flag & OPTION_MASK_ISA_RDRND)
+-    def_or_undef (parse_in, "__RDRND__");
+-  if (isa_flag & OPTION_MASK_ISA_F16C)
+-    def_or_undef (parse_in, "__F16C__");
+-  if (isa_flag & OPTION_MASK_ISA_RDSEED)
+-    def_or_undef (parse_in, "__RDSEED__");
+-  if (isa_flag & OPTION_MASK_ISA_PRFCHW)
+-    def_or_undef (parse_in, "__PRFCHW__");
+-  if (isa_flag & OPTION_MASK_ISA_ADX)
+-    def_or_undef (parse_in, "__ADX__");
+-  if (isa_flag & OPTION_MASK_ISA_FXSR)
+-    def_or_undef (parse_in, "__FXSR__");
+-  if (isa_flag & OPTION_MASK_ISA_XSAVE)
+-    def_or_undef (parse_in, "__XSAVE__");
+-  if (isa_flag & OPTION_MASK_ISA_XSAVEOPT)
+-    def_or_undef (parse_in, "__XSAVEOPT__");
+-  if ((fpmath & FPMATH_SSE) && (isa_flag & OPTION_MASK_ISA_SSE))
+-    def_or_undef (parse_in, "__SSE_MATH__");
+-  if ((fpmath & FPMATH_SSE) && (isa_flag & OPTION_MASK_ISA_SSE2))
+-    def_or_undef (parse_in, "__SSE2_MATH__");
+-  if (isa_flag & OPTION_MASK_ISA_CLFLUSHOPT)
+-    def_or_undef (parse_in, "__CLFLUSHOPT__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_CLZERO)
+-    def_or_undef (parse_in, "__CLZERO__");
+-  if (isa_flag & OPTION_MASK_ISA_XSAVEC)
+-    def_or_undef (parse_in, "__XSAVEC__");
+-  if (isa_flag & OPTION_MASK_ISA_XSAVES)
+-    def_or_undef (parse_in, "__XSAVES__");
+-  if (isa_flag & OPTION_MASK_ISA_CLWB)
+-    def_or_undef (parse_in, "__CLWB__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_MWAITX)
+-    def_or_undef (parse_in, "__MWAITX__");
+-  if (isa_flag & OPTION_MASK_ISA_PKU)
+-    def_or_undef (parse_in, "__PKU__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_RDPID)
+-    def_or_undef (parse_in, "__RDPID__");
+-  if (isa_flag & OPTION_MASK_ISA_GFNI)
+-    def_or_undef (parse_in, "__GFNI__");
+-  if ((isa_flag & OPTION_MASK_ISA_SHSTK))
+-    def_or_undef (parse_in, "__SHSTK__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_VAES)
+-    def_or_undef (parse_in, "__VAES__");
+-  if (isa_flag & OPTION_MASK_ISA_VPCLMULQDQ)
+-    def_or_undef (parse_in, "__VPCLMULQDQ__");
+-  if (isa_flag & OPTION_MASK_ISA_MOVDIRI)
+-    def_or_undef (parse_in, "__MOVDIRI__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_MOVDIR64B)
+-    def_or_undef (parse_in, "__MOVDIR64B__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_WAITPKG)
+-    def_or_undef (parse_in, "__WAITPKG__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_CLDEMOTE)
+-    def_or_undef (parse_in, "__CLDEMOTE__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_SERIALIZE)
+-    def_or_undef (parse_in, "__SERIALIZE__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_PTWRITE)
+-    def_or_undef (parse_in, "__PTWRITE__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_AVX512BF16)
+-    def_or_undef (parse_in, "__AVX512BF16__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_AVX512FP16)
+-    def_or_undef (parse_in, "__AVX512FP16__");
+-  if (TARGET_MMX_WITH_SSE)
+-    def_or_undef (parse_in, "__MMX_WITH_SSE__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_ENQCMD)
+-    def_or_undef (parse_in, "__ENQCMD__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_TSXLDTRK)
+-    def_or_undef (parse_in, "__TSXLDTRK__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_AMX_TILE)
+-    def_or_undef (parse_in, "__AMX_TILE__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_AMX_INT8)
+-    def_or_undef (parse_in, "__AMX_INT8__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_AMX_BF16)
+-    def_or_undef (parse_in, "__AMX_BF16__");
+-  if (isa_flag & OPTION_MASK_ISA_SAHF)
+-    def_or_undef (parse_in, "__LAHF_SAHF__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_MOVBE)
+-    def_or_undef (parse_in, "__MOVBE__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_UINTR)
+-    def_or_undef (parse_in, "__UINTR__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_HRESET)
+-    def_or_undef (parse_in, "__HRESET__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_KL)
+-    def_or_undef (parse_in, "__KL__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_WIDEKL)
+-    def_or_undef (parse_in, "__WIDEKL__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_AVXVNNI)
+-    def_or_undef (parse_in, "__AVXVNNI__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_AVXIFMA)
+-    def_or_undef (parse_in, "__AVXIFMA__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_AVXVNNIINT8)
+-    def_or_undef (parse_in, "__AVXVNNIINT8__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_AVXNECONVERT)
+-    def_or_undef (parse_in, "__AVXNECONVERT__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_CMPCCXADD)
+-    def_or_undef (parse_in, "__CMPCCXADD__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_AMX_FP16)
+-    def_or_undef (parse_in, "__AMX_FP16__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_PREFETCHI)
+-    def_or_undef (parse_in, "__PREFETCHI__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_RAOINT)
+-    def_or_undef (parse_in, "__RAOINT__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_AMX_COMPLEX)
+-    def_or_undef (parse_in, "__AMX_COMPLEX__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_AVXVNNIINT16)
+-    def_or_undef (parse_in, "__AVXVNNIINT16__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_SM3)
+-    def_or_undef (parse_in, "__SM3__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_SHA512)
+-    def_or_undef (parse_in, "__SHA512__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_SM4)
+-    def_or_undef (parse_in, "__SM4__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_USER_MSR)
+-    def_or_undef (parse_in, "__USER_MSR__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_AVX10_1)
+-    def_or_undef (parse_in, "__AVX10_1__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_APX_F)
+-    def_or_undef (parse_in, "__APX_F__");
+-  if (ix86_apx_inline_asm_use_gpr32)
+-    def_or_undef (parse_in, "__APX_INLINE_ASM_USE_GPR32__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_AVX10_2)
+-    def_or_undef (parse_in, "__AVX10_2__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_AMX_AVX512)
+-    def_or_undef (parse_in, "__AMX_AVX512__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_AMX_TF32)
+-    def_or_undef (parse_in, "__AMX_TF32__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_AMX_FP8)
+-    def_or_undef (parse_in, "__AMX_FP8__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_MOVRS)
+-    def_or_undef (parse_in, "__MOVRS__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_AMX_MOVRS)
+-    def_or_undef (parse_in, "__AMX_MOVRS__");
+-  if (isa_flag2 & OPTION_MASK_ISA2_AVX512BMM)
+-    def_or_undef (parse_in, "__AVX512BMM__");
+-  if (TARGET_IAMCU)
+-    {
+-      def_or_undef (parse_in, "__iamcu");
+-      def_or_undef (parse_in, "__iamcu__");
+-    }
+-}
+-
+-
+ /* Hook to validate the current #pragma GCC target and set the state, and
+    update the macros based on what was changed.  If ARGS is NULL, then
+    POP_TARGET is used to reset the options.  */
+@@ -842,12 +100,13 @@ ix86_pragma_target_parse (tree args, tree pop_target)
+ 
+   /* Undef all of the macros for that are no longer current.  */
+   cpp_force_token_locations (parse_in, BUILTINS_LOCATION);
+-  ix86_target_macros_internal (prev_isa & diff_isa,
+-			       prev_isa2 & diff_isa2,
+-			       prev_arch,
+-			       prev_tune,
+-			       (enum fpmath_unit) prev_opt->x_ix86_fpmath,
+-			       cpp_undef);
++  ix86_cpu_cpp_builtins_internal (parse_in,
++				  prev_isa & diff_isa,
++				  prev_isa2 & diff_isa2,
++				  prev_arch,
++				  prev_tune,
++				  (enum fpmath_unit) prev_opt->x_ix86_fpmath,
++				  cpp_undef);
+   cpp_stop_forcing_token_locations (parse_in);
+ 
+   /* For the definitions, ensure all newly defined macros are considered
+@@ -859,51 +118,29 @@ ix86_pragma_target_parse (tree args, tree pop_target)
+ 
+   /* Define all of the macros for new options that were just turned on.  */
+   cpp_force_token_locations (parse_in, BUILTINS_LOCATION);
+-  ix86_target_macros_internal (cur_isa & diff_isa,
+-			       cur_isa2 & diff_isa2,
+-			       cur_arch,
+-			       cur_tune,
+-			       (enum fpmath_unit) cur_opt->x_ix86_fpmath,
+-			       cpp_define);
++  ix86_cpu_cpp_builtins_internal (parse_in,
++				  cur_isa & diff_isa,
++				  cur_isa2 & diff_isa2,
++				  cur_arch,
++				  cur_tune,
++				  (enum fpmath_unit) cur_opt->x_ix86_fpmath,
++				  cpp_define);
+   cpp_stop_forcing_token_locations (parse_in);
+ 
+   cpp_opts->warn_unused_macros = saved_warn_unused_macros;
+ 
+   return true;
+ }
+-
+-/* Function to tell the preprocessor about the defines for the current target.  */
++
++/* Function to tell the preprocessor about the defines for the current target.
++   Delegates to the shared implementation in i386-cppbuiltin.cc and adds the
++   C++-only handling of __STDCPP_FLOAT16_T__ / __STDCPP_BFLOAT16_T__ that
++   cannot live there (it depends on cxx_dialect).  */
+ 
+ void
+ ix86_target_macros (void)
+ {
+-  /* 32/64-bit won't change with target specific options, so do the assert and
+-     builtin_define_std calls here.  */
+-  if (TARGET_64BIT)
+-    {
+-      cpp_assert (parse_in, "cpu=x86_64");
+-      cpp_assert (parse_in, "machine=x86_64");
+-      cpp_define (parse_in, "__amd64");
+-      cpp_define (parse_in, "__amd64__");
+-      cpp_define (parse_in, "__x86_64");
+-      cpp_define (parse_in, "__x86_64__");
+-      if (TARGET_X32)
+-	{
+-	  cpp_define (parse_in, "_ILP32");
+-	  cpp_define (parse_in, "__ILP32__");
+-	}
+-    }
+-  else
+-    {
+-      cpp_assert (parse_in, "cpu=i386");
+-      cpp_assert (parse_in, "machine=i386");
+-      builtin_define_std ("i386");
+-      cpp_define (parse_in, "_ILP32");
+-      cpp_define (parse_in, "__ILP32__");
+-    }
+-
+-  if (!TARGET_80387)
+-    cpp_define (parse_in, "_SOFT_FLOAT");
++  ix86_cpu_cpp_builtins (parse_in, !flag_iso);
+ 
+   /* HFmode/BFmode is supported without depending any isa
+      in scalar_mode_supported_p and libgcc_floating_mode_supported_p,
+@@ -911,46 +148,14 @@ ix86_target_macros (void)
+      Since libstdc++ uses __STDCPP_FLOAT16_T__ and __STDCPP_BFLOAT16_T__
+      for backend support of the types, undef the macros to avoid
+      build failure, see PR109504.  */
+-  if (!TARGET_SSE2)
++  if (!TARGET_SSE2 && c_dialect_cxx () && cxx_dialect > cxx20)
+     {
+-      if (c_dialect_cxx () && cxx_dialect > cxx20)
+-	{
+-	  cpp_undef (parse_in, "__STDCPP_FLOAT16_T__");
+-	  cpp_undef (parse_in, "__STDCPP_BFLOAT16_T__");
+-	}
++      cpp_undef (parse_in, "__STDCPP_FLOAT16_T__");
++      cpp_undef (parse_in, "__STDCPP_BFLOAT16_T__");
+     }
+-
+-  if (TARGET_LONG_DOUBLE_64)
+-    cpp_define (parse_in, "__LONG_DOUBLE_64__");
+-
+-  if (TARGET_LONG_DOUBLE_128)
+-    cpp_define (parse_in, "__LONG_DOUBLE_128__");
+-
+-  cpp_define_formatted (parse_in, "__SIZEOF_FLOAT80__=%d",
+-			GET_MODE_SIZE (XFmode));
+-
+-  cpp_define (parse_in, "__SIZEOF_FLOAT128__=16");
+-
+-  cpp_define_formatted (parse_in, "__ATOMIC_HLE_ACQUIRE=%d", IX86_HLE_ACQUIRE);
+-  cpp_define_formatted (parse_in, "__ATOMIC_HLE_RELEASE=%d", IX86_HLE_RELEASE);
+-
+-  cpp_define (parse_in, "__GCC_ASM_FLAG_OUTPUTS__");
+-
+-  ix86_target_macros_internal (ix86_isa_flags,
+-			       ix86_isa_flags2,
+-			       ix86_arch,
+-			       ix86_tune,
+-			       ix86_fpmath,
+-			       cpp_define);
+-
+-  cpp_define (parse_in, "__SEG_FS");
+-  cpp_define (parse_in, "__SEG_GS");
+-
+-  if (flag_cf_protection != CF_NONE)
+-    cpp_define_formatted (parse_in, "__CET__=%d", flag_cf_protection & ~CF_SET);
+ }
+ 
+-
++
+ /* Register target pragmas.  We need to add the hook for parsing #pragma GCC
+    option here rather than in i386.cc since it will pull in various preprocessor
+    functions, and those are not present in languages like fortran without a
+diff --git a/gcc/config/i386/i386-cppbuiltin.cc b/gcc/config/i386/i386-cppbuiltin.cc
+new file mode 100644
+index 00000000000..067b11a57c5
+--- /dev/null
++++ b/gcc/config/i386/i386-cppbuiltin.cc
+@@ -0,0 +1,889 @@
++/* Shared x86 preprocessor builtins for the C-family and Fortran frontends.
++   Copyright (C) 2026 Free Software Foundation, Inc.
++
++This file is part of GCC.
++
++GCC is free software; you can redistribute it and/or modify
++it under the terms of the GNU General Public License as published by
++the Free Software Foundation; either version 3, or (at your option)
++any later version.
++
++GCC is distributed in the hope that it will be useful,
++but WITHOUT ANY WARRANTY; without even the implied warranty of
++MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++GNU General Public License for more details.
++
++You should have received a copy of the GNU General Public License
++along with GCC; see the file COPYING3.  If not see
++<http://www.gnu.org/licenses/>.  */
++
++/* Shared between i386-c.cc (C/C++ frontend entry) and fortran/cpp.cc (via
++   TARGET_GENERIC_CPU_CPP_BUILTINS).  Pragma handling and the C++20
++   STDCPP_FLOAT16 undef remain in i386-c.cc because they use c-family
++   globals.  */
++
++#define IN_TARGET_CODE 1
++
++#include "config.h"
++#include "system.h"
++#include "coretypes.h"
++#include "tm.h"
++#include "memmodel.h"
++#include "tm_p.h"
++#include "target.h"
++#include "cpplib.h"
++#include "config/i386/i386-cppbuiltin.h"
++
++/* Parameterized copy of builtin_define_std from c-family/c-cppbuiltin.cc
++   that takes PFILE and DEFINE_USER_NAMESPACE instead of reading parse_in
++   and flag_iso directly.  Given "unix", defines __unix, __unix__, and (if
++   DEFINE_USER_NAMESPACE) unix.  */
++
++static void
++ix86_cpp_builtin_define_std (cpp_reader *pfile, const char *macro,
++			     bool define_user_namespace)
++{
++  size_t len = strlen (macro);
++  char *buff = (char *) alloca (len + 5);
++  char *p = buff + 2;
++  char *q = p + len;
++
++  /* prepend __ (or maybe just _) if in user's namespace.  */
++  memcpy (p, macro, len + 1);
++  if (!(*p == '_' && (p[1] == '_' || ISUPPER (p[1]))))
++    {
++      if (*p != '_')
++	*--p = '_';
++      if (p[1] != '_')
++	*--p = '_';
++    }
++  cpp_define (pfile, p);
++
++  /* If it was in user's namespace...  */
++  if (p != buff + 2)
++    {
++      /* Define the macro with leading and following __.  */
++      if (q[-1] != '_')
++	*q++ = '_';
++      if (q[-2] != '_')
++	*q++ = '_';
++      *q = '\0';
++      cpp_define (pfile, p);
++
++      /* Finally, define the original macro if permitted.  */
++      if (define_user_namespace)
++	cpp_define (pfile, macro);
++    }
++}
++
++/* Emit the pragma-switchable x86 preprocessor macros: arch and tune
++   identification, code model, and ISA feature flags.  Called with
++   cpp_define at startup and twice per `#pragma GCC target' transition
++   (first with cpp_undef to clear stale macros, then with cpp_define).  */
++
++void
++ix86_cpu_cpp_builtins_internal (cpp_reader *pfile,
++				HOST_WIDE_INT isa_flag,
++				HOST_WIDE_INT isa_flag2,
++				enum processor_type arch,
++				enum processor_type tune,
++				enum fpmath_unit fpmath,
++				void (*def_or_undef) (cpp_reader *,
++						      const char *))
++{
++  /* For some of the k6/pentium varients there weren't separate ISA bits to
++     identify which tune/arch flag was passed, so figure it out here.  */
++  size_t arch_len = strlen (ix86_arch_string);
++  size_t tune_len = strlen (ix86_tune_string);
++  int last_arch_char = ix86_arch_string[arch_len - 1];
++  int last_tune_char = ix86_tune_string[tune_len - 1];
++
++  /* Built-ins based on -march=.  */
++  switch (arch)
++    {
++    case PROCESSOR_I386:
++      break;
++    case PROCESSOR_I486:
++      def_or_undef (pfile, "__i486");
++      def_or_undef (pfile, "__i486__");
++      break;
++    case PROCESSOR_LAKEMONT:
++      /* Intel MCU is based on Intel Pentium CPU.  */
++    case PROCESSOR_PENTIUM:
++      def_or_undef (pfile, "__i586");
++      def_or_undef (pfile, "__i586__");
++      def_or_undef (pfile, "__pentium");
++      def_or_undef (pfile, "__pentium__");
++      if (isa_flag & OPTION_MASK_ISA_MMX)
++	def_or_undef (pfile, "__pentium_mmx__");
++      break;
++    case PROCESSOR_PENTIUMPRO:
++      def_or_undef (pfile, "__i686");
++      def_or_undef (pfile, "__i686__");
++      def_or_undef (pfile, "__pentiumpro");
++      def_or_undef (pfile, "__pentiumpro__");
++      break;
++    case PROCESSOR_GEODE:
++      def_or_undef (pfile, "__geode");
++      def_or_undef (pfile, "__geode__");
++      break;
++    case PROCESSOR_K6:
++      def_or_undef (pfile, "__k6");
++      def_or_undef (pfile, "__k6__");
++      if (last_arch_char == '2')
++	def_or_undef (pfile, "__k6_2__");
++      else if (last_arch_char == '3')
++	def_or_undef (pfile, "__k6_3__");
++      else if (isa_flag & OPTION_MASK_ISA_3DNOW)
++	def_or_undef (pfile, "__k6_3__");
++      break;
++    case PROCESSOR_ATHLON:
++      def_or_undef (pfile, "__athlon");
++      def_or_undef (pfile, "__athlon__");
++      if (isa_flag & OPTION_MASK_ISA_SSE)
++	def_or_undef (pfile, "__athlon_sse__");
++      break;
++    case PROCESSOR_K8:
++      def_or_undef (pfile, "__k8");
++      def_or_undef (pfile, "__k8__");
++      break;
++    case PROCESSOR_AMDFAM10:
++      def_or_undef (pfile, "__amdfam10");
++      def_or_undef (pfile, "__amdfam10__");
++      break;
++    case PROCESSOR_BDVER1:
++      def_or_undef (pfile, "__bdver1");
++      def_or_undef (pfile, "__bdver1__");
++      break;
++    case PROCESSOR_BDVER2:
++      def_or_undef (pfile, "__bdver2");
++      def_or_undef (pfile, "__bdver2__");
++      break;
++    case PROCESSOR_BDVER3:
++      def_or_undef (pfile, "__bdver3");
++      def_or_undef (pfile, "__bdver3__");
++      break;
++    case PROCESSOR_BDVER4:
++      def_or_undef (pfile, "__bdver4");
++      def_or_undef (pfile, "__bdver4__");
++      break;
++    case PROCESSOR_ZNVER1:
++      def_or_undef (pfile, "__znver1");
++      def_or_undef (pfile, "__znver1__");
++      break;
++    case PROCESSOR_ZNVER2:
++      def_or_undef (pfile, "__znver2");
++      def_or_undef (pfile, "__znver2__");
++      break;
++    case PROCESSOR_ZNVER3:
++      def_or_undef (pfile, "__znver3");
++      def_or_undef (pfile, "__znver3__");
++      break;
++    case PROCESSOR_ZNVER4:
++      def_or_undef (pfile, "__znver4");
++      def_or_undef (pfile, "__znver4__");
++      break;
++    case PROCESSOR_ZNVER5:
++      def_or_undef (pfile, "__znver5");
++      def_or_undef (pfile, "__znver5__");
++      break;
++    case PROCESSOR_ZNVER6:
++      def_or_undef (pfile, "__znver6");
++      def_or_undef (pfile, "__znver6__");
++      break;
++    case PROCESSOR_BTVER1:
++      def_or_undef (pfile, "__btver1");
++      def_or_undef (pfile, "__btver1__");
++      break;
++    case PROCESSOR_BTVER2:
++      def_or_undef (pfile, "__btver2");
++      def_or_undef (pfile, "__btver2__");
++      break;
++    case PROCESSOR_LUJIAZUI:
++      def_or_undef (pfile, "__lujiazui");
++      def_or_undef (pfile, "__lujiazui__");
++      break;
++    case PROCESSOR_YONGFENG:
++      def_or_undef (pfile, "__yongfeng");
++      def_or_undef (pfile, "__yongfeng__");
++      break;
++    case PROCESSOR_SHIJIDADAO:
++      def_or_undef (pfile, "__shijidadao");
++      def_or_undef (pfile, "__shijidadao__");
++      break;
++    case PROCESSOR_PENTIUM4:
++      def_or_undef (pfile, "__pentium4");
++      def_or_undef (pfile, "__pentium4__");
++      break;
++    case PROCESSOR_NOCONA:
++      def_or_undef (pfile, "__nocona");
++      def_or_undef (pfile, "__nocona__");
++      break;
++    case PROCESSOR_CORE2:
++      def_or_undef (pfile, "__core2");
++      def_or_undef (pfile, "__core2__");
++      break;
++    case PROCESSOR_NEHALEM:
++      def_or_undef (pfile, "__corei7");
++      def_or_undef (pfile, "__corei7__");
++      def_or_undef (pfile, "__nehalem");
++      def_or_undef (pfile, "__nehalem__");
++      break;
++    case PROCESSOR_SANDYBRIDGE:
++      def_or_undef (pfile, "__corei7_avx");
++      def_or_undef (pfile, "__corei7_avx__");
++      def_or_undef (pfile, "__sandybridge");
++      def_or_undef (pfile, "__sandybridge__");
++      break;
++    case PROCESSOR_HASWELL:
++      def_or_undef (pfile, "__core_avx2");
++      def_or_undef (pfile, "__core_avx2__");
++      def_or_undef (pfile, "__haswell");
++      def_or_undef (pfile, "__haswell__");
++      break;
++    case PROCESSOR_BONNELL:
++      def_or_undef (pfile, "__atom");
++      def_or_undef (pfile, "__atom__");
++      def_or_undef (pfile, "__bonnell");
++      def_or_undef (pfile, "__bonnell__");
++      break;
++    case PROCESSOR_SILVERMONT:
++      def_or_undef (pfile, "__slm");
++      def_or_undef (pfile, "__slm__");
++      def_or_undef (pfile, "__silvermont");
++      def_or_undef (pfile, "__silvermont__");
++      break;
++    case PROCESSOR_GOLDMONT:
++      def_or_undef (pfile, "__goldmont");
++      def_or_undef (pfile, "__goldmont__");
++      break;
++    case PROCESSOR_GOLDMONT_PLUS:
++      def_or_undef (pfile, "__goldmont_plus");
++      def_or_undef (pfile, "__goldmont_plus__");
++      break;
++    case PROCESSOR_TREMONT:
++      def_or_undef (pfile, "__tremont");
++      def_or_undef (pfile, "__tremont__");
++      break;
++    case PROCESSOR_SIERRAFOREST:
++      def_or_undef (pfile, "__sierraforest");
++      def_or_undef (pfile, "__sierraforest__");
++      break;
++    case PROCESSOR_GRANDRIDGE:
++      def_or_undef (pfile, "__grandridge");
++      def_or_undef (pfile, "__grandridge__");
++      break;
++    case PROCESSOR_CLEARWATERFOREST:
++      def_or_undef (pfile, "__clearwaterforest");
++      def_or_undef (pfile, "__clearwaterforest__");
++      break;
++    case PROCESSOR_SKYLAKE:
++      def_or_undef (pfile, "__skylake");
++      def_or_undef (pfile, "__skylake__");
++      break;
++    case PROCESSOR_SKYLAKE_AVX512:
++      def_or_undef (pfile, "__skylake_avx512");
++      def_or_undef (pfile, "__skylake_avx512__");
++      break;
++    case PROCESSOR_CANNONLAKE:
++      def_or_undef (pfile, "__cannonlake");
++      def_or_undef (pfile, "__cannonlake__");
++      break;
++    case PROCESSOR_ICELAKE_CLIENT:
++      def_or_undef (pfile, "__icelake_client");
++      def_or_undef (pfile, "__icelake_client__");
++      break;
++    case PROCESSOR_ICELAKE_SERVER:
++      def_or_undef (pfile, "__icelake_server");
++      def_or_undef (pfile, "__icelake_server__");
++      break;
++    case PROCESSOR_CASCADELAKE:
++      def_or_undef (pfile, "__cascadelake");
++      def_or_undef (pfile, "__cascadelake__");
++      break;
++    case PROCESSOR_TIGERLAKE:
++      def_or_undef (pfile, "__tigerlake");
++      def_or_undef (pfile, "__tigerlake__");
++      break;
++    case PROCESSOR_COOPERLAKE:
++      def_or_undef (pfile, "__cooperlake");
++      def_or_undef (pfile, "__cooperlake__");
++      break;
++    case PROCESSOR_SAPPHIRERAPIDS:
++      def_or_undef (pfile, "__sapphirerapids");
++      def_or_undef (pfile, "__sapphirerapids__");
++      break;
++    case PROCESSOR_GRANITERAPIDS:
++      def_or_undef (pfile, "__graniterapids");
++      def_or_undef (pfile, "__graniterapids__");
++      break;
++    case PROCESSOR_GRANITERAPIDS_D:
++      def_or_undef (pfile, "__graniterapids_d");
++      def_or_undef (pfile, "__graniterapids_d__");
++      break;
++    case PROCESSOR_ALDERLAKE:
++      def_or_undef (pfile, "__alderlake");
++      def_or_undef (pfile, "__alderlake__");
++      break;
++    case PROCESSOR_ROCKETLAKE:
++      def_or_undef (pfile, "__rocketlake");
++      def_or_undef (pfile, "__rocketlake__");
++      break;
++    case PROCESSOR_ARROWLAKE:
++      def_or_undef (pfile, "__arrowlake");
++      def_or_undef (pfile, "__arrowlake__");
++      break;
++    case PROCESSOR_ARROWLAKE_S:
++      def_or_undef (pfile, "__arrowlake_s");
++      def_or_undef (pfile, "__arrowlake_s__");
++      break;
++    case PROCESSOR_PANTHERLAKE:
++      def_or_undef (pfile, "__pantherlake");
++      def_or_undef (pfile, "__pantherlake__");
++      break;
++    case PROCESSOR_DIAMONDRAPIDS:
++      def_or_undef (pfile, "__diamondrapids");
++      def_or_undef (pfile, "__diamondrapids__");
++      break;
++    case PROCESSOR_NOVALAKE:
++      def_or_undef (pfile, "__novalake");
++      def_or_undef (pfile, "__novalake__");
++      break;
++
++    /* use PROCESSOR_max to not set/unset the arch macro.  */
++    case PROCESSOR_max:
++      break;
++    case PROCESSOR_INTEL:
++    case PROCESSOR_GENERIC:
++      gcc_unreachable ();
++    }
++
++  /* Built-ins based on -mtune=.  */
++  switch (tune)
++    {
++    case PROCESSOR_I386:
++      def_or_undef (pfile, "__tune_i386__");
++      break;
++    case PROCESSOR_I486:
++      def_or_undef (pfile, "__tune_i486__");
++      break;
++    case PROCESSOR_PENTIUM:
++      def_or_undef (pfile, "__tune_i586__");
++      def_or_undef (pfile, "__tune_pentium__");
++      if (last_tune_char == 'x')
++	def_or_undef (pfile, "__tune_pentium_mmx__");
++      break;
++    case PROCESSOR_PENTIUMPRO:
++      def_or_undef (pfile, "__tune_i686__");
++      def_or_undef (pfile, "__tune_pentiumpro__");
++      switch (last_tune_char)
++	{
++	case '3':
++	  def_or_undef (pfile, "__tune_pentium3__");
++	  /* FALLTHRU */
++	case '2':
++	  def_or_undef (pfile, "__tune_pentium2__");
++	  break;
++	}
++      break;
++    case PROCESSOR_GEODE:
++      def_or_undef (pfile, "__tune_geode__");
++      break;
++    case PROCESSOR_K6:
++      def_or_undef (pfile, "__tune_k6__");
++      if (last_tune_char == '2')
++	def_or_undef (pfile, "__tune_k6_2__");
++      else if (last_tune_char == '3')
++	def_or_undef (pfile, "__tune_k6_3__");
++      else if (isa_flag & OPTION_MASK_ISA_3DNOW)
++	def_or_undef (pfile, "__tune_k6_3__");
++      break;
++    case PROCESSOR_ATHLON:
++      def_or_undef (pfile, "__tune_athlon__");
++      if (isa_flag & OPTION_MASK_ISA_SSE)
++	def_or_undef (pfile, "__tune_athlon_sse__");
++      break;
++    case PROCESSOR_K8:
++      def_or_undef (pfile, "__tune_k8__");
++      break;
++    case PROCESSOR_AMDFAM10:
++      def_or_undef (pfile, "__tune_amdfam10__");
++      break;
++    case PROCESSOR_BDVER1:
++      def_or_undef (pfile, "__tune_bdver1__");
++      break;
++    case PROCESSOR_BDVER2:
++      def_or_undef (pfile, "__tune_bdver2__");
++      break;
++    case PROCESSOR_BDVER3:
++      def_or_undef (pfile, "__tune_bdver3__");
++      break;
++    case PROCESSOR_BDVER4:
++      def_or_undef (pfile, "__tune_bdver4__");
++      break;
++    case PROCESSOR_ZNVER1:
++      def_or_undef (pfile, "__tune_znver1__");
++      break;
++    case PROCESSOR_ZNVER2:
++      def_or_undef (pfile, "__tune_znver2__");
++      break;
++    case PROCESSOR_ZNVER3:
++      def_or_undef (pfile, "__tune_znver3__");
++      break;
++    case PROCESSOR_ZNVER4:
++      def_or_undef (pfile, "__tune_znver4__");
++      break;
++    case PROCESSOR_ZNVER5:
++      def_or_undef (pfile, "__tune_znver5__");
++      break;
++    case PROCESSOR_ZNVER6:
++      def_or_undef (pfile, "__tune_znver6__");
++      break;
++    case PROCESSOR_BTVER1:
++      def_or_undef (pfile, "__tune_btver1__");
++      break;
++    case PROCESSOR_BTVER2:
++      def_or_undef (pfile, "__tune_btver2__");
++       break;
++    case PROCESSOR_LUJIAZUI:
++      def_or_undef (pfile, "__tune_lujiazui__");
++       break;
++    case PROCESSOR_YONGFENG:
++      def_or_undef (pfile, "__tune_yongfeng__");
++       break;
++    case PROCESSOR_SHIJIDADAO:
++      def_or_undef (pfile, "__tune_shijidadao__");
++       break;
++    case PROCESSOR_PENTIUM4:
++      def_or_undef (pfile, "__tune_pentium4__");
++      break;
++    case PROCESSOR_NOCONA:
++      def_or_undef (pfile, "__tune_nocona__");
++      break;
++    case PROCESSOR_CORE2:
++      def_or_undef (pfile, "__tune_core2__");
++      break;
++    case PROCESSOR_NEHALEM:
++      def_or_undef (pfile, "__tune_corei7__");
++      def_or_undef (pfile, "__tune_nehalem__");
++      break;
++    case PROCESSOR_SANDYBRIDGE:
++      def_or_undef (pfile, "__tune_corei7_avx__");
++      def_or_undef (pfile, "__tune_sandybridge__");
++      break;
++    case PROCESSOR_HASWELL:
++      def_or_undef (pfile, "__tune_core_avx2__");
++      def_or_undef (pfile, "__tune_haswell__");
++      break;
++    case PROCESSOR_BONNELL:
++      def_or_undef (pfile, "__tune_atom__");
++      def_or_undef (pfile, "__tune_bonnell__");
++      break;
++    case PROCESSOR_SILVERMONT:
++      def_or_undef (pfile, "__tune_slm__");
++      def_or_undef (pfile, "__tune_silvermont__");
++      break;
++    case PROCESSOR_GOLDMONT:
++      def_or_undef (pfile, "__tune_goldmont__");
++      break;
++    case PROCESSOR_GOLDMONT_PLUS:
++      def_or_undef (pfile, "__tune_goldmont_plus__");
++      break;
++    case PROCESSOR_TREMONT:
++      def_or_undef (pfile, "__tune_tremont__");
++      break;
++    case PROCESSOR_SIERRAFOREST:
++      def_or_undef (pfile, "__tune_sierraforest__");
++      break;
++    case PROCESSOR_GRANDRIDGE:
++      def_or_undef (pfile, "__tune_grandridge__");
++      break;
++    case PROCESSOR_CLEARWATERFOREST:
++      def_or_undef (pfile, "__tune_clearwaterforest__");
++      break;
++    case PROCESSOR_SKYLAKE:
++      def_or_undef (pfile, "__tune_skylake__");
++      break;
++    case PROCESSOR_SKYLAKE_AVX512:
++      def_or_undef (pfile, "__tune_skylake_avx512__");
++      break;
++    case PROCESSOR_CANNONLAKE:
++      def_or_undef (pfile, "__tune_cannonlake__");
++      break;
++    case PROCESSOR_ICELAKE_CLIENT:
++      def_or_undef (pfile, "__tune_icelake_client__");
++      break;
++    case PROCESSOR_ICELAKE_SERVER:
++      def_or_undef (pfile, "__tune_icelake_server__");
++      break;
++    case PROCESSOR_LAKEMONT:
++      def_or_undef (pfile, "__tune_lakemont__");
++      break;
++    case PROCESSOR_CASCADELAKE:
++      def_or_undef (pfile, "__tune_cascadelake__");
++      break;
++    case PROCESSOR_TIGERLAKE:
++      def_or_undef (pfile, "__tune_tigerlake__");
++      break;
++    case PROCESSOR_COOPERLAKE:
++      def_or_undef (pfile, "__tune_cooperlake__");
++      break;
++    case PROCESSOR_SAPPHIRERAPIDS:
++      def_or_undef (pfile, "__tune_sapphirerapids__");
++      break;
++    case PROCESSOR_ALDERLAKE:
++      def_or_undef (pfile, "__tune_alderlake__");
++      break;
++    case PROCESSOR_ROCKETLAKE:
++      def_or_undef (pfile, "__tune_rocketlake__");
++      break;
++    case PROCESSOR_GRANITERAPIDS:
++      def_or_undef (pfile, "__tune_graniterapids__");
++      break;
++    case PROCESSOR_GRANITERAPIDS_D:
++      def_or_undef (pfile, "__tune_graniterapids_d__");
++      break;
++    case PROCESSOR_ARROWLAKE:
++      def_or_undef (pfile, "__tune_arrowlake__");
++      break;
++    case PROCESSOR_ARROWLAKE_S:
++      def_or_undef (pfile, "__tune_arrowlake_s__");
++      break;
++    case PROCESSOR_PANTHERLAKE:
++      def_or_undef (pfile, "__tune_pantherlake__");
++      break;
++    case PROCESSOR_DIAMONDRAPIDS:
++      def_or_undef (pfile, "__tune_diamondrapids__");
++      break;
++    case PROCESSOR_NOVALAKE:
++      def_or_undef (pfile, "__tune_novalake__");
++      break;
++    case PROCESSOR_INTEL:
++    case PROCESSOR_GENERIC:
++      break;
++    /* use PROCESSOR_max to not set/unset the tune macro.  */
++    case PROCESSOR_max:
++      break;
++    }
++
++  switch (ix86_cmodel)
++    {
++    case CM_SMALL:
++    case CM_SMALL_PIC:
++      def_or_undef (pfile, "__code_model_small__");
++      break;
++    case CM_MEDIUM:
++    case CM_MEDIUM_PIC:
++      def_or_undef (pfile, "__code_model_medium__");
++      break;
++    case CM_LARGE:
++    case CM_LARGE_PIC:
++      def_or_undef (pfile, "__code_model_large__");
++      break;
++    case CM_32:
++      def_or_undef (pfile, "__code_model_32__");
++      break;
++    case CM_KERNEL:
++      def_or_undef (pfile, "__code_model_kernel__");
++      break;
++    default:
++      ;
++    }
++
++  if (isa_flag2 & OPTION_MASK_ISA2_WBNOINVD)
++    def_or_undef (pfile, "__WBNOINVD__");
++  if (isa_flag2 & OPTION_MASK_ISA2_AVX512VP2INTERSECT)
++    def_or_undef (pfile, "__AVX512VP2INTERSECT__");
++  if (isa_flag & OPTION_MASK_ISA_MMX)
++    def_or_undef (pfile, "__MMX__");
++  if (isa_flag & OPTION_MASK_ISA_3DNOW)
++    def_or_undef (pfile, "__3dNOW__");
++  if (isa_flag & OPTION_MASK_ISA_3DNOW_A)
++    def_or_undef (pfile, "__3dNOW_A__");
++  if (isa_flag & OPTION_MASK_ISA_SSE)
++    def_or_undef (pfile, "__SSE__");
++  if (isa_flag & OPTION_MASK_ISA_SSE2)
++    def_or_undef (pfile, "__SSE2__");
++  if (isa_flag & OPTION_MASK_ISA_SSE3)
++    def_or_undef (pfile, "__SSE3__");
++  if (isa_flag & OPTION_MASK_ISA_SSSE3)
++    def_or_undef (pfile, "__SSSE3__");
++  if (isa_flag & OPTION_MASK_ISA_SSE4_1)
++    def_or_undef (pfile, "__SSE4_1__");
++  if (isa_flag & OPTION_MASK_ISA_SSE4_2)
++    def_or_undef (pfile, "__SSE4_2__");
++  if (isa_flag & OPTION_MASK_ISA_AES)
++    def_or_undef (pfile, "__AES__");
++  if (isa_flag & OPTION_MASK_ISA_SHA)
++    def_or_undef (pfile, "__SHA__");
++  if (isa_flag & OPTION_MASK_ISA_PCLMUL)
++    def_or_undef (pfile, "__PCLMUL__");
++  if (isa_flag & OPTION_MASK_ISA_AVX)
++    def_or_undef (pfile, "__AVX__");
++  if (isa_flag & OPTION_MASK_ISA_AVX2)
++    def_or_undef (pfile, "__AVX2__");
++  if (isa_flag & OPTION_MASK_ISA_AVX512F)
++    def_or_undef (pfile, "__AVX512F__");
++  if (isa_flag & OPTION_MASK_ISA_AVX512CD)
++    def_or_undef (pfile, "__AVX512CD__");
++  if (isa_flag & OPTION_MASK_ISA_AVX512DQ)
++    def_or_undef (pfile, "__AVX512DQ__");
++  if (isa_flag & OPTION_MASK_ISA_AVX512BW)
++    def_or_undef (pfile, "__AVX512BW__");
++  if (isa_flag & OPTION_MASK_ISA_AVX512VL)
++    {
++      def_or_undef (pfile, "__AVX512VL__");
++      def_or_undef (pfile, "__EVEX256__");
++    }
++  if (isa_flag & OPTION_MASK_ISA_AVX512VBMI)
++    def_or_undef (pfile, "__AVX512VBMI__");
++  if (isa_flag & OPTION_MASK_ISA_AVX512IFMA)
++    def_or_undef (pfile, "__AVX512IFMA__");
++  if (isa_flag & OPTION_MASK_ISA_AVX512VBMI2)
++    def_or_undef (pfile, "__AVX512VBMI2__");
++  if (isa_flag & OPTION_MASK_ISA_AVX512VNNI)
++    def_or_undef (pfile, "__AVX512VNNI__");
++  if (isa_flag2 & OPTION_MASK_ISA2_PCONFIG)
++    def_or_undef (pfile, "__PCONFIG__");
++  if (isa_flag2 & OPTION_MASK_ISA2_SGX)
++    def_or_undef (pfile, "__SGX__");
++  if (isa_flag & OPTION_MASK_ISA_AVX512BITALG)
++    def_or_undef (pfile, "__AVX512BITALG__");
++  if (isa_flag & OPTION_MASK_ISA_AVX512VPOPCNTDQ)
++    def_or_undef (pfile, "__AVX512VPOPCNTDQ__");
++  if (isa_flag & OPTION_MASK_ISA_FMA)
++    def_or_undef (pfile, "__FMA__");
++  if (isa_flag & OPTION_MASK_ISA_RTM)
++    def_or_undef (pfile, "__RTM__");
++  if (isa_flag & OPTION_MASK_ISA_SSE4A)
++    def_or_undef (pfile, "__SSE4A__");
++  if (isa_flag & OPTION_MASK_ISA_FMA4)
++    def_or_undef (pfile, "__FMA4__");
++  if (isa_flag & OPTION_MASK_ISA_XOP)
++    def_or_undef (pfile, "__XOP__");
++  if (isa_flag & OPTION_MASK_ISA_LWP)
++    def_or_undef (pfile, "__LWP__");
++  if (isa_flag & OPTION_MASK_ISA_ABM)
++    def_or_undef (pfile, "__ABM__");
++  if (isa_flag & OPTION_MASK_ISA_BMI)
++    def_or_undef (pfile, "__BMI__");
++  if (isa_flag & OPTION_MASK_ISA_BMI2)
++    def_or_undef (pfile, "__BMI2__");
++  if (isa_flag & OPTION_MASK_ISA_LZCNT)
++    def_or_undef (pfile, "__LZCNT__");
++  if (isa_flag & OPTION_MASK_ISA_TBM)
++    def_or_undef (pfile, "__TBM__");
++  if (isa_flag & OPTION_MASK_ISA_CRC32)
++    def_or_undef (pfile, "__CRC32__");
++  if (isa_flag & OPTION_MASK_ISA_POPCNT)
++    def_or_undef (pfile, "__POPCNT__");
++  if (isa_flag & OPTION_MASK_ISA_FSGSBASE)
++    def_or_undef (pfile, "__FSGSBASE__");
++  if (isa_flag & OPTION_MASK_ISA_RDRND)
++    def_or_undef (pfile, "__RDRND__");
++  if (isa_flag & OPTION_MASK_ISA_F16C)
++    def_or_undef (pfile, "__F16C__");
++  if (isa_flag & OPTION_MASK_ISA_RDSEED)
++    def_or_undef (pfile, "__RDSEED__");
++  if (isa_flag & OPTION_MASK_ISA_PRFCHW)
++    def_or_undef (pfile, "__PRFCHW__");
++  if (isa_flag & OPTION_MASK_ISA_ADX)
++    def_or_undef (pfile, "__ADX__");
++  if (isa_flag & OPTION_MASK_ISA_FXSR)
++    def_or_undef (pfile, "__FXSR__");
++  if (isa_flag & OPTION_MASK_ISA_XSAVE)
++    def_or_undef (pfile, "__XSAVE__");
++  if (isa_flag & OPTION_MASK_ISA_XSAVEOPT)
++    def_or_undef (pfile, "__XSAVEOPT__");
++  if ((fpmath & FPMATH_SSE) && (isa_flag & OPTION_MASK_ISA_SSE))
++    def_or_undef (pfile, "__SSE_MATH__");
++  if ((fpmath & FPMATH_SSE) && (isa_flag & OPTION_MASK_ISA_SSE2))
++    def_or_undef (pfile, "__SSE2_MATH__");
++  if (isa_flag & OPTION_MASK_ISA_CLFLUSHOPT)
++    def_or_undef (pfile, "__CLFLUSHOPT__");
++  if (isa_flag2 & OPTION_MASK_ISA2_CLZERO)
++    def_or_undef (pfile, "__CLZERO__");
++  if (isa_flag & OPTION_MASK_ISA_XSAVEC)
++    def_or_undef (pfile, "__XSAVEC__");
++  if (isa_flag & OPTION_MASK_ISA_XSAVES)
++    def_or_undef (pfile, "__XSAVES__");
++  if (isa_flag & OPTION_MASK_ISA_CLWB)
++    def_or_undef (pfile, "__CLWB__");
++  if (isa_flag2 & OPTION_MASK_ISA2_MWAITX)
++    def_or_undef (pfile, "__MWAITX__");
++  if (isa_flag & OPTION_MASK_ISA_PKU)
++    def_or_undef (pfile, "__PKU__");
++  if (isa_flag2 & OPTION_MASK_ISA2_RDPID)
++    def_or_undef (pfile, "__RDPID__");
++  if (isa_flag & OPTION_MASK_ISA_GFNI)
++    def_or_undef (pfile, "__GFNI__");
++  if ((isa_flag & OPTION_MASK_ISA_SHSTK))
++    def_or_undef (pfile, "__SHSTK__");
++  if (isa_flag2 & OPTION_MASK_ISA2_VAES)
++    def_or_undef (pfile, "__VAES__");
++  if (isa_flag & OPTION_MASK_ISA_VPCLMULQDQ)
++    def_or_undef (pfile, "__VPCLMULQDQ__");
++  if (isa_flag & OPTION_MASK_ISA_MOVDIRI)
++    def_or_undef (pfile, "__MOVDIRI__");
++  if (isa_flag2 & OPTION_MASK_ISA2_MOVDIR64B)
++    def_or_undef (pfile, "__MOVDIR64B__");
++  if (isa_flag2 & OPTION_MASK_ISA2_WAITPKG)
++    def_or_undef (pfile, "__WAITPKG__");
++  if (isa_flag2 & OPTION_MASK_ISA2_CLDEMOTE)
++    def_or_undef (pfile, "__CLDEMOTE__");
++  if (isa_flag2 & OPTION_MASK_ISA2_SERIALIZE)
++    def_or_undef (pfile, "__SERIALIZE__");
++  if (isa_flag2 & OPTION_MASK_ISA2_PTWRITE)
++    def_or_undef (pfile, "__PTWRITE__");
++  if (isa_flag2 & OPTION_MASK_ISA2_AVX512BF16)
++    def_or_undef (pfile, "__AVX512BF16__");
++  if (isa_flag2 & OPTION_MASK_ISA2_AVX512FP16)
++    def_or_undef (pfile, "__AVX512FP16__");
++  if (TARGET_MMX_WITH_SSE)
++    def_or_undef (pfile, "__MMX_WITH_SSE__");
++  if (isa_flag2 & OPTION_MASK_ISA2_ENQCMD)
++    def_or_undef (pfile, "__ENQCMD__");
++  if (isa_flag2 & OPTION_MASK_ISA2_TSXLDTRK)
++    def_or_undef (pfile, "__TSXLDTRK__");
++  if (isa_flag2 & OPTION_MASK_ISA2_AMX_TILE)
++    def_or_undef (pfile, "__AMX_TILE__");
++  if (isa_flag2 & OPTION_MASK_ISA2_AMX_INT8)
++    def_or_undef (pfile, "__AMX_INT8__");
++  if (isa_flag2 & OPTION_MASK_ISA2_AMX_BF16)
++    def_or_undef (pfile, "__AMX_BF16__");
++  if (isa_flag & OPTION_MASK_ISA_SAHF)
++    def_or_undef (pfile, "__LAHF_SAHF__");
++  if (isa_flag2 & OPTION_MASK_ISA2_MOVBE)
++    def_or_undef (pfile, "__MOVBE__");
++  if (isa_flag2 & OPTION_MASK_ISA2_UINTR)
++    def_or_undef (pfile, "__UINTR__");
++  if (isa_flag2 & OPTION_MASK_ISA2_HRESET)
++    def_or_undef (pfile, "__HRESET__");
++  if (isa_flag2 & OPTION_MASK_ISA2_KL)
++    def_or_undef (pfile, "__KL__");
++  if (isa_flag2 & OPTION_MASK_ISA2_WIDEKL)
++    def_or_undef (pfile, "__WIDEKL__");
++  if (isa_flag2 & OPTION_MASK_ISA2_AVXVNNI)
++    def_or_undef (pfile, "__AVXVNNI__");
++  if (isa_flag2 & OPTION_MASK_ISA2_AVXIFMA)
++    def_or_undef (pfile, "__AVXIFMA__");
++  if (isa_flag2 & OPTION_MASK_ISA2_AVXVNNIINT8)
++    def_or_undef (pfile, "__AVXVNNIINT8__");
++  if (isa_flag2 & OPTION_MASK_ISA2_AVXNECONVERT)
++    def_or_undef (pfile, "__AVXNECONVERT__");
++  if (isa_flag2 & OPTION_MASK_ISA2_CMPCCXADD)
++    def_or_undef (pfile, "__CMPCCXADD__");
++  if (isa_flag2 & OPTION_MASK_ISA2_AMX_FP16)
++    def_or_undef (pfile, "__AMX_FP16__");
++  if (isa_flag2 & OPTION_MASK_ISA2_PREFETCHI)
++    def_or_undef (pfile, "__PREFETCHI__");
++  if (isa_flag2 & OPTION_MASK_ISA2_RAOINT)
++    def_or_undef (pfile, "__RAOINT__");
++  if (isa_flag2 & OPTION_MASK_ISA2_AMX_COMPLEX)
++    def_or_undef (pfile, "__AMX_COMPLEX__");
++  if (isa_flag2 & OPTION_MASK_ISA2_AVXVNNIINT16)
++    def_or_undef (pfile, "__AVXVNNIINT16__");
++  if (isa_flag2 & OPTION_MASK_ISA2_SM3)
++    def_or_undef (pfile, "__SM3__");
++  if (isa_flag2 & OPTION_MASK_ISA2_SHA512)
++    def_or_undef (pfile, "__SHA512__");
++  if (isa_flag2 & OPTION_MASK_ISA2_SM4)
++    def_or_undef (pfile, "__SM4__");
++  if (isa_flag2 & OPTION_MASK_ISA2_USER_MSR)
++    def_or_undef (pfile, "__USER_MSR__");
++  if (isa_flag2 & OPTION_MASK_ISA2_AVX10_1)
++    def_or_undef (pfile, "__AVX10_1__");
++  if (isa_flag2 & OPTION_MASK_ISA2_APX_F)
++    def_or_undef (pfile, "__APX_F__");
++  if (ix86_apx_inline_asm_use_gpr32)
++    def_or_undef (pfile, "__APX_INLINE_ASM_USE_GPR32__");
++  if (isa_flag2 & OPTION_MASK_ISA2_AVX10_2)
++    def_or_undef (pfile, "__AVX10_2__");
++  if (isa_flag2 & OPTION_MASK_ISA2_AMX_AVX512)
++    def_or_undef (pfile, "__AMX_AVX512__");
++  if (isa_flag2 & OPTION_MASK_ISA2_AMX_TF32)
++    def_or_undef (pfile, "__AMX_TF32__");
++  if (isa_flag2 & OPTION_MASK_ISA2_AMX_FP8)
++    def_or_undef (pfile, "__AMX_FP8__");
++  if (isa_flag2 & OPTION_MASK_ISA2_MOVRS)
++    def_or_undef (pfile, "__MOVRS__");
++  if (isa_flag2 & OPTION_MASK_ISA2_AMX_MOVRS)
++    def_or_undef (pfile, "__AMX_MOVRS__");
++  if (isa_flag2 & OPTION_MASK_ISA2_AVX512BMM)
++    def_or_undef (pfile, "__AVX512BMM__");
++  if (TARGET_IAMCU)
++    {
++      def_or_undef (pfile, "__iamcu");
++      def_or_undef (pfile, "__iamcu__");
++    }
++}
++
++/* Emit the full set of x86 preprocessor macros: architecture identity,
++   float-size/soft-float tags, HLE/CET/segment macros,
++   __GCC_ASM_FLAG_OUTPUTS__, and (via ix86_cpu_cpp_builtins_internal) the
++   arch/tune/code-model/ISA-feature macros.
++
++   DEFINE_USER_NAMESPACE enables unqualified aliases like bare "i386"
++   alongside "__i386__".  C/C++ pass !flag_iso; Fortran passes false.  */
++
++void
++ix86_cpu_cpp_builtins (cpp_reader *pfile, bool define_user_namespace)
++{
++  /* 32/64-bit won't change with target specific options, so do the assert
++     and builtin_define_std calls here.  */
++  if (TARGET_64BIT)
++    {
++      cpp_assert (pfile, "cpu=x86_64");
++      cpp_assert (pfile, "machine=x86_64");
++      cpp_define (pfile, "__amd64");
++      cpp_define (pfile, "__amd64__");
++      cpp_define (pfile, "__x86_64");
++      cpp_define (pfile, "__x86_64__");
++      if (TARGET_X32)
++	{
++	  cpp_define (pfile, "_ILP32");
++	  cpp_define (pfile, "__ILP32__");
++	}
++    }
++  else
++    {
++      cpp_assert (pfile, "cpu=i386");
++      cpp_assert (pfile, "machine=i386");
++      ix86_cpp_builtin_define_std (pfile, "i386", define_user_namespace);
++      cpp_define (pfile, "_ILP32");
++      cpp_define (pfile, "__ILP32__");
++    }
++
++  if (!TARGET_80387)
++    cpp_define (pfile, "_SOFT_FLOAT");
++
++  if (TARGET_LONG_DOUBLE_64)
++    cpp_define (pfile, "__LONG_DOUBLE_64__");
++
++  if (TARGET_LONG_DOUBLE_128)
++    cpp_define (pfile, "__LONG_DOUBLE_128__");
++
++  cpp_define_formatted (pfile, "__SIZEOF_FLOAT80__=%d",
++			GET_MODE_SIZE (XFmode));
++
++  cpp_define (pfile, "__SIZEOF_FLOAT128__=16");
++
++  cpp_define_formatted (pfile, "__ATOMIC_HLE_ACQUIRE=%d", IX86_HLE_ACQUIRE);
++  cpp_define_formatted (pfile, "__ATOMIC_HLE_RELEASE=%d", IX86_HLE_RELEASE);
++
++  cpp_define (pfile, "__GCC_ASM_FLAG_OUTPUTS__");
++
++  ix86_cpu_cpp_builtins_internal (pfile,
++				  ix86_isa_flags,
++				  ix86_isa_flags2,
++				  ix86_arch,
++				  ix86_tune,
++				  ix86_fpmath,
++				  cpp_define);
++
++  cpp_define (pfile, "__SEG_FS");
++  cpp_define (pfile, "__SEG_GS");
++
++  if (flag_cf_protection != CF_NONE)
++    cpp_define_formatted (pfile, "__CET__=%d", flag_cf_protection & ~CF_SET);
++}
+diff --git a/gcc/config/i386/i386-cppbuiltin.h b/gcc/config/i386/i386-cppbuiltin.h
+new file mode 100644
+index 00000000000..e1b057abd40
+--- /dev/null
++++ b/gcc/config/i386/i386-cppbuiltin.h
+@@ -0,0 +1,48 @@
++/* Shared x86 preprocessor builtins for the C-family and Fortran frontends.
++   Copyright (C) 2026 Free Software Foundation, Inc.
++
++This file is part of GCC.
++
++GCC is free software; you can redistribute it and/or modify
++it under the terms of the GNU General Public License as published by
++the Free Software Foundation; either version 3, or (at your option)
++any later version.
++
++GCC is distributed in the hope that it will be useful,
++but WITHOUT ANY WARRANTY; without even the implied warranty of
++MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++GNU General Public License for more details.
++
++You should have received a copy of the GNU General Public License
++along with GCC; see the file COPYING3.  If not see
++<http://www.gnu.org/licenses/>.  */
++
++#ifndef GCC_I386_CPPBUILTIN_H
++#define GCC_I386_CPPBUILTIN_H
++
++struct cpp_reader;
++
++/* Emit all x86 target preprocessor macros that don't depend on the source
++   language: architecture identification (__x86_64__, __i386__, ...), CPU
++   arch/tune macros (__haswell__, __tune_haswell__, ...), code-model macros,
++   HLE/CET/segment macros, and the full ISA feature block (__SSE__, __AVX__,
++   __FMA__, ...).  DEFINE_USER_NAMESPACE selects whether user-namespace
++   aliases are emitted alongside the reserved-namespace forms: the C frontend
++   passes !flag_iso; the Fortran frontend passes false.  */
++extern void ix86_cpu_cpp_builtins (cpp_reader *pfile,
++				   bool define_user_namespace);
++
++/* Pragma-switchable subset of the above (arch, tune, code-model, ISA).  Used
++   at startup and during `#pragma GCC target` transitions: called once with
++   cpp_undef to clear macros for disabled options, and once with cpp_define
++   to set macros for newly enabled options.  */
++extern void ix86_cpu_cpp_builtins_internal
++  (cpp_reader *pfile,
++   HOST_WIDE_INT isa_flag,
++   HOST_WIDE_INT isa_flag2,
++   enum processor_type arch,
++   enum processor_type tune,
++   enum fpmath_unit fpmath,
++   void (*def_or_undef) (cpp_reader *, const char *));
++
++#endif /* GCC_I386_CPPBUILTIN_H */
+diff --git a/gcc/config/i386/i386.h b/gcc/config/i386/i386.h
+index 888edfed88f..30168f53e83 100644
+--- a/gcc/config/i386/i386.h
++++ b/gcc/config/i386/i386.h
+@@ -688,6 +688,14 @@ extern const char *host_detect_local_cpu (int argc, const char **argv);
+ /* Target CPU builtins.  */
+ #define TARGET_CPU_CPP_BUILTINS() ix86_target_macros ()
+ 
++/* Language-neutral variant used by frontends that do not link the C-family
++   support code.  Shares the implementation of TARGET_CPU_CPP_BUILTINS minus
++   the C++-dialect-specific parts.  See config/i386/i386-cppbuiltin.{cc,h}.  */
++struct cpp_reader;
++extern void ix86_cpu_cpp_builtins (struct cpp_reader *, bool);
++#define TARGET_GENERIC_CPU_CPP_BUILTINS(PFILE) \
++  ix86_cpu_cpp_builtins ((PFILE), false)
++
+ /* Target Pragmas.  */
+ #define REGISTER_TARGET_PRAGMAS() ix86_register_pragmas ()
+ 
+diff --git a/gcc/config/i386/t-i386 b/gcc/config/i386/t-i386
+index ae0fb8ed474..9a0adf7cfe7 100644
+--- a/gcc/config/i386/t-i386
++++ b/gcc/config/i386/t-i386
+@@ -26,6 +26,10 @@ i386-c.o: $(srcdir)/config/i386/i386-c.cc
+ 	  $(COMPILE) $<
+ 	  $(POSTCOMPILE)
+ 
++i386-cppbuiltin.o: $(srcdir)/config/i386/i386-cppbuiltin.cc
++	  $(COMPILE) $<
++	  $(POSTCOMPILE)
++
+ x86-tune-sched.o: $(srcdir)/config/i386/x86-tune-sched.cc
+ 	  $(COMPILE) $<
+ 	  $(POSTCOMPILE)
+diff --git a/gcc/doc/tm.texi b/gcc/doc/tm.texi
+index 394a46fdbaa..c48b1df53f7 100644
+--- a/gcc/doc/tm.texi
++++ b/gcc/doc/tm.texi
+@@ -700,6 +700,18 @@ macro to define @code{__ELF__}, so you probably do not need to define
+ it yourself.
+ @end defmac
+ 
++@defmac TARGET_GENERIC_CPU_CPP_BUILTINS (@var{pfile})
++Optional language-neutral variant of @code{TARGET_CPU_CPP_BUILTINS} for
++frontends (such as Fortran) that cannot link the C-family support code.
++Takes a @code{cpp_reader *} argument and must not depend on
++@code{parse_in}, @code{flag_iso}, @code{c_dialect_cxx}, or any other
++C-family machinery.  On targets that define it, the same preprocessor
++macros are available under @option{-cpp} in Fortran as under the C
++preprocessor, modulo language-specific macros such as
++@code{__STDCPP_FLOAT16_T__}.  See @file{config/i386/i386-cppbuiltin.cc}
++for the x86 implementation.
++@end defmac
++
+ @deftypevar {extern int} target_flags
+ This variable is declared in @file{options.h}, which is included before
+ any target-specific headers.
+diff --git a/gcc/doc/tm.texi.in b/gcc/doc/tm.texi.in
+index 274bb899d0c..27defbd71ac 100644
+--- a/gcc/doc/tm.texi.in
++++ b/gcc/doc/tm.texi.in
+@@ -695,6 +695,18 @@ macro to define @code{__ELF__}, so you probably do not need to define
+ it yourself.
+ @end defmac
+ 
++@defmac TARGET_GENERIC_CPU_CPP_BUILTINS (@var{pfile})
++Optional language-neutral variant of @code{TARGET_CPU_CPP_BUILTINS} for
++frontends (such as Fortran) that cannot link the C-family support code.
++Takes a @code{cpp_reader *} argument and must not depend on
++@code{parse_in}, @code{flag_iso}, @code{c_dialect_cxx}, or any other
++C-family machinery.  On targets that define it, the same preprocessor
++macros are available under @option{-cpp} in Fortran as under the C
++preprocessor, modulo language-specific macros such as
++@code{__STDCPP_FLOAT16_T__}.  See @file{config/i386/i386-cppbuiltin.cc}
++for the x86 implementation.
++@end defmac
++
+ @deftypevar {extern int} target_flags
+ This variable is declared in @file{options.h}, which is included before
+ any target-specific headers.
 diff --git a/gcc/fortran/cpp.cc b/gcc/fortran/cpp.cc
-index 6b5f136e4f3..ada1bc1a211 100644
+index 6b5f136e4f3..37611f6d3c2 100644
 --- a/gcc/fortran/cpp.cc
 +++ b/gcc/fortran/cpp.cc
-@@ -157,6 +157,126 @@ void pp_dir_change (cpp_reader *, const char *);
+@@ -157,6 +157,76 @@ void pp_dir_change (cpp_reader *, const char *);
  static int dump_macro (cpp_reader *, cpp_hashnode *, void *);
  static void dump_queued_macros (cpp_reader *);
  
@@ -142,56 +2153,6 @@ index 6b5f136e4f3..ada1bc1a211 100644
 +  cpp_define (pfile, buf);
 +}
 +
-+/* Provide x86 CPU identification macros for the Fortran preprocessor.
-+   TARGET_CPU_CPP_BUILTINS() cannot be called directly because it expands
-+   to ix86_target_macros() in i386-c.cc, which is only linked into
-+   C-family frontends.  This covers architecture identification and
-+   float-size macros.  ISA feature macros (__SSE__, __AVX__, etc.) and
-+   arch/tune macros (__znver4__, __skylake__, etc.) from
-+   ix86_target_macros_internal() are not included; if needed, they could
-+   be factored out of i386-c.cc into a shared object.  */
-+
-+#ifdef TARGET_80387
-+static void
-+gfc_define_ix86_target_macros (cpp_reader *pfile)
-+{
-+  if (TARGET_64BIT)
-+    {
-+      cpp_assert (pfile, "cpu=x86_64");
-+      cpp_assert (pfile, "machine=x86_64");
-+      cpp_define (pfile, "__amd64");
-+      cpp_define (pfile, "__amd64__");
-+      cpp_define (pfile, "__x86_64");
-+      cpp_define (pfile, "__x86_64__");
-+      if (TARGET_X32)
-+	{
-+	  cpp_define (pfile, "_ILP32");
-+	  cpp_define (pfile, "__ILP32__");
-+	}
-+    }
-+  else
-+    {
-+      cpp_assert (pfile, "cpu=i386");
-+      cpp_assert (pfile, "machine=i386");
-+      gfc_builtin_define_std (pfile, "i386", false);
-+      cpp_define (pfile, "_ILP32");
-+      cpp_define (pfile, "__ILP32__");
-+    }
-+
-+  if (!TARGET_80387)
-+    cpp_define (pfile, "_SOFT_FLOAT");
-+
-+  if (TARGET_LONG_DOUBLE_64)
-+    cpp_define (pfile, "__LONG_DOUBLE_64__");
-+
-+  if (TARGET_LONG_DOUBLE_128)
-+    cpp_define (pfile, "__LONG_DOUBLE_128__");
-+
-+  cpp_define_formatted (pfile, "__SIZEOF_FLOAT80__=%d",
-+			GET_MODE_SIZE (XFmode));
-+  cpp_define (pfile, "__SIZEOF_FLOAT128__=16");
-+}
-+#endif
 +
 +/* Provide essential Darwin platform macros for the Fortran preprocessor.
 +   The full darwin_cpp_builtins() in darwin-c.cc also defines
@@ -209,7 +2170,7 @@ index 6b5f136e4f3..ada1bc1a211 100644
  
  static void
  cpp_define_builtins (cpp_reader *pfile)
-@@ -177,33 +297,55 @@ cpp_define_builtins (cpp_reader *pfile)
+@@ -177,33 +247,59 @@ cpp_define_builtins (cpp_reader *pfile)
    if (flag_openmp)
      cpp_define (pfile, "_OPENMP=202111");
  
@@ -261,8 +2222,12 @@ index 6b5f136e4f3..ada1bc1a211 100644
 -  TARGET_OBJFMT_CPP_BUILTINS (); */
 +  TARGET_OBJFMT_CPP_BUILTINS ();
 +
-+#ifdef TARGET_80387
-+  gfc_define_ix86_target_macros (pfile);
++  /* Language-neutral target CPU builtins.  A target that wants to expose
++     preprocessor macros to frontends other than C/C++ defines this macro in
++     its tm.h to call its CPU-builtin implementation with PFILE.  The x86
++     implementation lives in gcc/config/i386/i386-cppbuiltin.cc.  */
++#ifdef TARGET_GENERIC_CPU_CPP_BUILTINS
++  TARGET_GENERIC_CPU_CPP_BUILTINS (pfile);
 +#endif
  
  #undef builtin_define
@@ -297,6 +2262,102 @@ index 0e0ab518010..115195e1194 100644
    subroutine test2 ()
      !$omp target
        call f04 () ! { dg-final { scan-tree-dump-times "f03 \\\(\\\);" 1 "gimple" { target { { i?86-*-* x86_64-*-* } && { ! ilp32 } } } } }
+diff --git a/gcc/testsuite/gfortran.dg/pr42954-arch.f90 b/gcc/testsuite/gfortran.dg/pr42954-arch.f90
+new file mode 100644
+index 00000000000..f80018d397f
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr42954-arch.f90
+@@ -0,0 +1,28 @@
++! { dg-do preprocess { target { i?86-*-* x86_64-*-* } } }
++! { dg-options "-cpp -march=haswell -mtune=haswell" }
++!
++! PR fortran/42954 - arch/tune macros exercised from Fortran
++
++#ifndef __haswell
++# error __haswell not defined
++#endif
++
++#ifndef __haswell__
++# error __haswell__ not defined
++#endif
++
++#ifndef __core_avx2
++# error __core_avx2 not defined
++#endif
++
++#ifndef __core_avx2__
++# error __core_avx2__ not defined
++#endif
++
++#ifndef __tune_haswell__
++# error __tune_haswell__ not defined
++#endif
++
++#ifndef __tune_core_avx2__
++# error __tune_core_avx2__ not defined
++#endif
+diff --git a/gcc/testsuite/gfortran.dg/pr42954-avx.f90 b/gcc/testsuite/gfortran.dg/pr42954-avx.f90
+new file mode 100644
+index 00000000000..7d7ffdf0141
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr42954-avx.f90
+@@ -0,0 +1,20 @@
++! { dg-do preprocess { target { i?86-*-* x86_64-*-* } } }
++! { dg-options "-cpp -mavx -mavx2 -mfma" }
++!
++! PR fortran/42954 - AVX/AVX2/FMA feature macros from Fortran
++
++#ifndef __SSE__
++# error __SSE__ not defined
++#endif
++
++#ifndef __AVX__
++# error __AVX__ not defined
++#endif
++
++#ifndef __AVX2__
++# error __AVX2__ not defined
++#endif
++
++#ifndef __FMA__
++# error __FMA__ not defined
++#endif
+diff --git a/gcc/testsuite/gfortran.dg/pr42954-cet.f90 b/gcc/testsuite/gfortran.dg/pr42954-cet.f90
+new file mode 100644
+index 00000000000..eaed0e6b912
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr42954-cet.f90
+@@ -0,0 +1,12 @@
++! { dg-do preprocess { target { i?86-*-* x86_64-*-* } } }
++! { dg-options "-cpp -fcf-protection=full" }
++!
++! PR fortran/42954 - Control-flow protection macro from Fortran
++
++#ifndef __CET__
++# error __CET__ not defined
++#endif
++
++#if __CET__ != 3
++# error __CET__ has wrong value (expected 3 for branch+return)
++#endif
+diff --git a/gcc/testsuite/gfortran.dg/pr42954-fma4.f90 b/gcc/testsuite/gfortran.dg/pr42954-fma4.f90
+new file mode 100644
+index 00000000000..672be90ecee
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr42954-fma4.f90
+@@ -0,0 +1,12 @@
++! { dg-do preprocess { target { i?86-*-* x86_64-*-* } } }
++! { dg-options "-cpp -mfma4 -mno-fma" }
++!
++! PR fortran/42954 - FMA4 feature macro from Fortran
++
++#ifndef __FMA4__
++# error __FMA4__ not defined
++#endif
++
++#ifdef __FMA__
++# error __FMA__ unexpectedly defined with -mno-fma
++#endif
 diff --git a/gcc/testsuite/gfortran.dg/pr42954-linux.f90 b/gcc/testsuite/gfortran.dg/pr42954-linux.f90
 new file mode 100644
 index 00000000000..bd5efe7a237
@@ -326,6 +2387,60 @@ index 00000000000..bd5efe7a237
 +
 +#ifndef __ELF__
 +# error __ELF__ not defined
++#endif
+diff --git a/gcc/testsuite/gfortran.dg/pr42954-m32.f90 b/gcc/testsuite/gfortran.dg/pr42954-m32.f90
+new file mode 100644
+index 00000000000..ae1eecaf1ca
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr42954-m32.f90
+@@ -0,0 +1,29 @@
++! { dg-do preprocess { target { i?86-*-* x86_64-*-* } } }
++! { dg-require-effective-target ia32 }
++! { dg-options "-cpp -m32" }
++!
++! PR fortran/42954 - 32-bit x86 target macros from Fortran
++
++#ifndef __i386__
++# error __i386__ not defined with -m32
++#endif
++
++#ifndef __i386
++# error __i386 not defined with -m32
++#endif
++
++#ifndef _ILP32
++# error _ILP32 not defined with -m32
++#endif
++
++#ifndef __ILP32__
++# error __ILP32__ not defined with -m32
++#endif
++
++#ifdef __x86_64__
++# error __x86_64__ unexpectedly defined with -m32
++#endif
++
++#ifdef __amd64__
++# error __amd64__ unexpectedly defined with -m32
++#endif
+diff --git a/gcc/testsuite/gfortran.dg/pr42954-soft-float.f90 b/gcc/testsuite/gfortran.dg/pr42954-soft-float.f90
+new file mode 100644
+index 00000000000..9eba2350099
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr42954-soft-float.f90
+@@ -0,0 +1,13 @@
++! { dg-do preprocess { target { i?86-*-* x86_64-*-* } } }
++! { dg-require-effective-target ia32 }
++! { dg-options "-cpp -m32 -mno-80387 -mno-mmx -mno-sse" }
++!
++! PR fortran/42954 - _SOFT_FLOAT target macro from Fortran
++
++#ifndef _SOFT_FLOAT
++# error _SOFT_FLOAT not defined with -mno-80387
++#endif
++
++#ifdef __SSE__
++# error __SSE__ unexpectedly defined with -mno-sse
 +#endif
 diff --git a/gcc/testsuite/gfortran.dg/pr42954-x86.f90 b/gcc/testsuite/gfortran.dg/pr42954-x86.f90
 new file mode 100644
