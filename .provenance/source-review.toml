@@ -149,3 +149,61 @@ rationale = "Dual attribution: 'Copyright 2009 The Go Authors' + 'Copyright 2026
 issue = "https://github.com/krystophny/gcc-dev/issues/120"
 reviewed_on = "2026-04-19"
 reviewed_by = "krystophny"
+
+# --- Already-filed trail gaps that are not research-complete but should
+#     not fire as "new" by scripts/provenance/file_findings.py. Same-license
+#     glibc-to-GCC sibling imports.  Full research TBD.
+
+[[reviewed]]
+path = "gcc/include/fnmatch.h"
+upstream = "glibc/posix/fnmatch.h"
+resolution = "open"
+rationale = "Same-license trail gap; tracked in #123."
+issue = "https://github.com/krystophny/gcc-dev/issues/123"
+reviewed_on = "2026-04-19"
+reviewed_by = "krystophny"
+
+[[reviewed]]
+path = "gcc/include/md5.h"
+upstream = "glibc/locale/programs/md5.h"
+resolution = "open"
+rationale = "Same-license trail gap; tracked in #123."
+issue = "https://github.com/krystophny/gcc-dev/issues/123"
+reviewed_on = "2026-04-19"
+reviewed_by = "krystophny"
+
+[[reviewed]]
+path = "gcc/include/sha1.h"
+upstream = "glibc/locale/programs/md5.h"
+resolution = "open"
+rationale = "Same-license trail gap; tracked in #123."
+issue = "https://github.com/krystophny/gcc-dev/issues/123"
+reviewed_on = "2026-04-19"
+reviewed_by = "krystophny"
+
+[[reviewed]]
+path = "gcc/include/getopt.h"
+upstream = "glibc/posix/bits/getopt_ext.h"
+resolution = "open"
+rationale = "Same-license trail gap; tracked in #123."
+issue = "https://github.com/krystophny/gcc-dev/issues/123"
+reviewed_on = "2026-04-19"
+reviewed_by = "krystophny"
+
+[[reviewed]]
+path = "gcc/libiberty/strverscmp.c"
+upstream = "glibc/string/strverscmp.c"
+resolution = "open"
+rationale = "Same-license trail gap; tracked in #124."
+issue = "https://github.com/krystophny/gcc-dev/issues/124"
+reviewed_on = "2026-04-19"
+reviewed_by = "krystophny"
+
+[[reviewed]]
+path = "gcc/libgm2/libm2pim/cgetopt.cc"
+upstream = "glibc/posix/getopt.c"
+resolution = "open"
+rationale = "Same-license trail gap; tracked in #125."
+issue = "https://github.com/krystophny/gcc-dev/issues/125"
+reviewed_on = "2026-04-19"
+reviewed_by = "krystophny"
