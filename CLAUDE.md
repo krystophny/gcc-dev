@@ -9,6 +9,9 @@ Details live in `docs/`:
   backport-aware workflow
 - `docs/bug-patterns.md` — catalogue of 14 recurring root-cause patterns
   with symptom/cause/fix/evidence
+- `docs/provenance-research.md` — how to research a provenance finding end
+  to end: scanner hit -> GCC and upstream introduction commits -> mailing
+  list -> chain of custody -> correct fix that matches the subtree convention
 
 ## Repository Structure
 
