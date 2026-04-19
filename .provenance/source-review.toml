@@ -1,0 +1,60 @@
+# Reviewed source-level provenance findings.
+#
+# Entries here are findings from scripts/provenance/scan_sources.py that a
+# human has investigated and resolved.  The scanner (in a follow-up commit)
+# will consume this file and suppress matching candidates on future runs so
+# that the noisy "already reviewed" tail does not re-fire.
+#
+# Each entry must cite:
+#   path         - gcc/<subtree>/<file>
+#   upstream     - <corpus-project>/<relpath>
+#   resolution   - "not_derived" | "trail_gap" | "license_conflict" | "wontfix"
+#   rationale    - one-line summary; detail lives in the linked GitHub issue
+#   issue        - GitHub issue URL or number (krystophny/gcc-dev)
+#   reviewed_on  - YYYY-MM-DD
+#   reviewed_by  - author of the review decision
+#   chain        - optional multi-line literal string with the import chain
+#
+# See docs/provenance-research.md for the full research workflow.
+
+version = 1
+
+[[reviewed]]
+path = "gcc/libquadmath/strtod/tens_in_limb.c"
+upstream = "glibc/stdlib/tens_in_limb.c"
+resolution = "trail_gap"
+rationale = "glibc-originated import (SVN r170254, 2011); same-license LGPL-2.1+; upstream glibc itself ships the file header-less."
+issue = "https://github.com/krystophny/gcc-dev/issues/121"
+reviewed_on = "2026-04-19"
+reviewed_by = "krystophny"
+chain = """
+GMP constants (mp_limb_t, BITS_PER_MP_LIMB; no tens_in_limb table)
+  -> glibc pre-2008 inline in stdlib/strtod_l.c (LGPL-2.1+)
+  -> glibc 2008-03-08, Drepper, split to stdlib/tens_in_limb.c, no header
+     (bminor/glibc 72f1012788c0)
+  -> GCC 2011-02-17, Jakub Jelinek, imports glibc strtod machinery into
+     libquadmath (SVN r170254; gcc-mirror a855debfb46e; ML thread
+     gcc-patches/2011-02/msg00885)
+"""
+
+[[reviewed]]
+path = "gcc/libgcc/config/riscv/feature_bits.c"
+upstream = "llvm-project/compiler-rt/lib/builtins/cpu_model/riscv.c"
+resolution = "not_derived"
+rationale = "Coordinated cross-compiler ABI from riscv-c-api-doc PR #74; same author (Kito Cheng, SiFive) wrote both sides."
+issue = "https://github.com/krystophny/gcc-dev/issues/122"
+reviewed_on = "2026-04-19"
+reviewed_by = "krystophny"
+chain = """
+riscv-non-isa/riscv-c-api-doc PR #74 (merged 2024-09-25) defines
+  __riscv_feature_bits, __riscv_cpu_model, __init_riscv_feature_bits,
+  GROUPID/BITMASK scheme
+  -> LLVM 2024-07-21, Piyou Chen + Kito Cheng, compiler-rt runtime
+     (llvm/llvm-project#85790; commit a41a4ac78294; later renamed under
+     compiler-rt/lib/builtins/cpu_model/)
+  -> GCC 2024-10-14, Kito Cheng + Yangyu Chen, libgcc implementation
+     targeted at LLVM-19 ABI compatibility with GCC 14.2
+     (gcc-mirror ca44eb7f6a33; ML thread gcc-patches/2024-October
+     664431+664633). Structural similarity is prescribed by the ABI
+     spec, not a one-way import.
+"""
