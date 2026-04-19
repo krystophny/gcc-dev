@@ -207,3 +207,32 @@ rationale = "Same-license trail gap; tracked in #125."
 issue = "https://github.com/krystophny/gcc-dev/issues/125"
 reviewed_on = "2026-04-19"
 reviewed_by = "krystophny"
+
+# --- Overnight audit 2026-04-19 (expanded non-GNU corpus) ---
+
+[[reviewed]]
+path = "gcc/libgcc/config/alpha/qrnnd.S"
+upstream = "linux-kernel-lib/arch/alpha/lib/udiv-qrnnd.S"
+resolution = "open"
+rationale = "Legacy libgcc GMP port on alpha; header carries the GMP LGPL text but labels the file 'part of GCC' rather than 'part of the GNU MP Library'. Needs convention decision; tracked in #129."
+issue = "https://github.com/krystophny/gcc-dev/issues/129"
+reviewed_on = "2026-04-19"
+reviewed_by = "krystophny"
+
+[[reviewed]]
+path = "gcc/libstdc++-v3/python/libstdcxx/v6/__init__.py"
+upstream = "libunistring/lib/unilbrk/lbrkprop1.h"
+resolution = "not_derived"
+rationale = "Scanner noise: line_jaccard=0.00; winnow k-gram collision with a Unicode property table. No real content overlap. Tracked in #130."
+issue = "https://github.com/krystophny/gcc-dev/issues/130"
+reviewed_on = "2026-04-19"
+reviewed_by = "krystophny"
+
+[[reviewed]]
+path = "gcc/gcc/config/openbsd-libpthread.h"
+upstream = "libunistring/lib/unilbrk/lbrkprop1.h"
+resolution = "not_derived"
+rationale = "Scanner noise: line_jaccard=0.024; 20-line spec file vs multi-KB Unicode property table. Same k-gram collision pattern as #130. Tracked in #131."
+issue = "https://github.com/krystophny/gcc-dev/issues/131"
+reviewed_on = "2026-04-19"
+reviewed_by = "krystophny"

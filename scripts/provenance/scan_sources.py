@@ -131,7 +131,17 @@ def classify(header_silent: bool, best: Match | None) -> tuple[str, float]:
     density = best.winnow_density
     shingle = best.shingle_jaccard
     run = best.longest_run
+    line = best.line_jaccard
     score = 100.0 * density + 60.0 * shingle + 0.25 * run
+    # A silent high-severity finding must have at least *some* verbatim
+    # line overlap. Without it, the hit is a winnow k-gram collision
+    # against a large data-table upstream (Unicode property tables etc.),
+    # not an actual adaptation. Cap such cases at medium.
+    LINE_FLOOR_HIGH = 0.06
+    if header_silent and line < LINE_FLOOR_HIGH:
+        if density >= 0.25 and shingle >= 0.20:
+            return ("medium", score * 0.6)
+        return ("low", score * 0.3)
     if not header_silent:
         # Marked file: high match just means we should double-check the trail,
         # not that it's an unattributed import.
@@ -140,7 +150,7 @@ def classify(header_silent: bool, best: Match | None) -> tuple[str, float]:
         if density >= 0.60 or shingle >= 0.70:
             return ("review", score * 0.8)
         return ("low", score * 0.5)
-    # silent header
+    # silent header with non-trivial line overlap
     # Require both token Jaccard and winnow density to be meaningful so that
     # a single-metric outlier (e.g. Python vs .awk sharing common k-grams)
     # does not trigger a false positive.
