@@ -376,3 +376,133 @@ c. 2000 for GNU textutils (later merged into GNU coreutils 2002)
 File keeps the 'Written by Paul Eggert.' credit but does not name
 gnulib (or textutils/coreutils) as the donor.
 """
+
+# -----------------------------------------------------------------------------
+# libstdc++ std::experimental::simd — same-author FSF-assigned contribution.
+#
+# VcDevel/std-simd is Matthias Kretz's Parallelism TS 2 reference implementation
+# (© 2015-2020 GSI Helmholtzzentrum fuer Schwerionenforschung GmbH + Matthias
+# Kretz, BSD-3-Clause).  It was imported verbatim into libstdc++ by Kretz
+# himself in commit 2bcceb6fc59 (2021-01-21, Matthias Kretz <kretz@kde.org>,
+# "libstdc++: Add std::experimental::simd from the Parallelism TS 2").
+#
+# The GCC copy drops the BSD-3-Clause header and the GSI + Kretz copyright
+# line and carries only "Copyright (C) 2020-2026 Free Software Foundation,
+# Inc." under GPL-3+ with the GCC Runtime Library Exception.  That relicense
+# is legitimate under FSF copyright assignment, which GCC still required in
+# 2021.  Kretz continues to maintain the BSD mirror at VcDevel/std-simd.
+#
+# Classifier sees the upstream BSD header as "silent" (no FSF attribution) and
+# the GCC header as "marked" only weakly via the generic "This file is part of
+# the GNU ISO C++ Library" phrase.  The scanner therefore surfaces 10 critical
+# reverse-direction matches (winnow density 0.81-1.00, shingle Jaccard 0.50-
+# 0.92).  All ten are the same same-author import.
+#
+# Resolution: attributed via author identity + FSF assignment.  No legal
+# provenance gap.  A NOTE-style pointer to VcDevel/std-simd would be a
+# nice-to-have consistent with the libstdc++-v3/src/c++17/ryu/ and
+# libiberty/sha1.c conventions, but is not required because FSF holds
+# copyright in the GCC copy.
+# -----------------------------------------------------------------------------
+
+[[reviewed]]
+path = "gcc/libstdc++-v3/include/experimental/bits/simd.h"
+upstream = "std-simd/experimental/bits/simd.h"
+resolution = "attributed"
+rationale = "Same-author FSF-assigned contribution by Matthias Kretz (commit 2bcceb6fc59, 2021-01-21). Upstream VcDevel/std-simd is the author's BSD-3-Clause mirror; GCC copy is under GPL-3+ RLE via FSF copyright assignment. No legal gap."
+issue = "none"
+reviewed_on = "2026-04-20"
+reviewed_by = "krystophny"
+chain = """
+Matthias Kretz develops the Vc library and its std-simd successor at
+GSI Helmholtzzentrum from 2015-2020 (© GSI + Kretz, BSD-3-Clause)
+  -> VcDevel/std-simd (GitHub mirror, BSD-3-Clause, continues to be
+     maintained by Kretz after the GCC import).
+  -> GCC 2021-01-21, Matthias Kretz, commit 2bcceb6fc59
+     "libstdc++: Add std::experimental::simd from the Parallelism TS 2".
+     Lands all 12 experimental/bits/simd*.h files under FSF copyright
+     and GPL-3+ with GCC Runtime Library Exception.  Relicense is
+     permitted by the FSF copyright assignment that GCC required for
+     contributions until 2021.
+"""
+
+[[reviewed]]
+path = "gcc/libstdc++-v3/include/experimental/bits/simd_builtin.h"
+upstream = "std-simd/experimental/bits/simd_builtin.h"
+resolution = "attributed"
+rationale = "Part of the 2021-01-21 same-author FSF-assigned std::experimental::simd import by Matthias Kretz.  See gcc/libstdc++-v3/include/experimental/bits/simd.h entry above for full chain."
+issue = "none"
+reviewed_on = "2026-04-20"
+reviewed_by = "krystophny"
+
+[[reviewed]]
+path = "gcc/libstdc++-v3/include/experimental/bits/simd_converter.h"
+upstream = "std-simd/experimental/bits/simd_converter.h"
+resolution = "attributed"
+rationale = "Part of the 2021-01-21 same-author FSF-assigned std::experimental::simd import by Matthias Kretz.  See gcc/libstdc++-v3/include/experimental/bits/simd.h entry above for full chain."
+issue = "none"
+reviewed_on = "2026-04-20"
+reviewed_by = "krystophny"
+
+[[reviewed]]
+path = "gcc/libstdc++-v3/include/experimental/bits/simd_detail.h"
+upstream = "std-simd/experimental/bits/simd_detail.h"
+resolution = "attributed"
+rationale = "Part of the 2021-01-21 same-author FSF-assigned std::experimental::simd import by Matthias Kretz.  See gcc/libstdc++-v3/include/experimental/bits/simd.h entry above for full chain."
+issue = "none"
+reviewed_on = "2026-04-20"
+reviewed_by = "krystophny"
+
+[[reviewed]]
+path = "gcc/libstdc++-v3/include/experimental/bits/simd_fixed_size.h"
+upstream = "std-simd/experimental/bits/simd_fixed_size.h"
+resolution = "attributed"
+rationale = "Part of the 2021-01-21 same-author FSF-assigned std::experimental::simd import by Matthias Kretz.  See gcc/libstdc++-v3/include/experimental/bits/simd.h entry above for full chain."
+issue = "none"
+reviewed_on = "2026-04-20"
+reviewed_by = "krystophny"
+
+[[reviewed]]
+path = "gcc/libstdc++-v3/include/experimental/bits/simd_math.h"
+upstream = "std-simd/experimental/bits/simd_math.h"
+resolution = "attributed"
+rationale = "Part of the 2021-01-21 same-author FSF-assigned std::experimental::simd import by Matthias Kretz.  See gcc/libstdc++-v3/include/experimental/bits/simd.h entry above for full chain."
+issue = "none"
+reviewed_on = "2026-04-20"
+reviewed_by = "krystophny"
+
+[[reviewed]]
+path = "gcc/libstdc++-v3/include/experimental/bits/simd_neon.h"
+upstream = "std-simd/experimental/bits/simd_neon.h"
+resolution = "attributed"
+rationale = "Part of the 2021-01-21 same-author FSF-assigned std::experimental::simd import by Matthias Kretz.  See gcc/libstdc++-v3/include/experimental/bits/simd.h entry above for full chain."
+issue = "none"
+reviewed_on = "2026-04-20"
+reviewed_by = "krystophny"
+
+[[reviewed]]
+path = "gcc/libstdc++-v3/include/experimental/bits/simd_scalar.h"
+upstream = "std-simd/experimental/bits/simd_scalar.h"
+resolution = "attributed"
+rationale = "Part of the 2021-01-21 same-author FSF-assigned std::experimental::simd import by Matthias Kretz.  See gcc/libstdc++-v3/include/experimental/bits/simd.h entry above for full chain."
+issue = "none"
+reviewed_on = "2026-04-20"
+reviewed_by = "krystophny"
+
+[[reviewed]]
+path = "gcc/libstdc++-v3/include/experimental/bits/simd_x86.h"
+upstream = "std-simd/experimental/bits/simd_x86.h"
+resolution = "attributed"
+rationale = "Part of the 2021-01-21 same-author FSF-assigned std::experimental::simd import by Matthias Kretz.  See gcc/libstdc++-v3/include/experimental/bits/simd.h entry above for full chain."
+issue = "none"
+reviewed_on = "2026-04-20"
+reviewed_by = "krystophny"
+
+[[reviewed]]
+path = "gcc/libstdc++-v3/include/experimental/bits/simd_x86_conversions.h"
+upstream = "std-simd/experimental/bits/simd_x86_conversions.h"
+resolution = "attributed"
+rationale = "Part of the 2021-01-21 same-author FSF-assigned std::experimental::simd import by Matthias Kretz.  See gcc/libstdc++-v3/include/experimental/bits/simd.h entry above for full chain."
+issue = "none"
+reviewed_on = "2026-04-20"
+reviewed_by = "krystophny"

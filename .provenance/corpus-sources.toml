@@ -881,3 +881,162 @@ sparse_paths = [
     "include/boost/charconv",
     "src",
 ]
+
+# -----------------------------------------------------------------------------
+# Recent non-GNU additions targeted at modern libstdc++ features
+# (simd, ranges, mdspan, expected, stacktrace, coroutines), libgcc soft-float,
+# and alternative C++ ABI / backtrace implementations.
+# -----------------------------------------------------------------------------
+
+# VcDevel/std-simd is the Matthias Kretz reference implementation that became
+# std::experimental::simd (P1928).  libstdc++-v3/include/experimental/bits/simd*
+# was merged into GCC directly from this tree in 2020 (BSD-3-Clause).  Strongest
+# known critical-finding candidate.
+[[source]]
+name = "std-simd"
+url = "git@github.com:VcDevel/std-simd.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "experimental",
+    "tests",
+]
+
+# Eric Niebler's range-v3 is the progenitor of std::ranges.  Parts of
+# libstdc++-v3/include/bits/ranges_* and std/ranges likely carry concepts and
+# algorithms first published here (Boost Software License).
+[[source]]
+name = "range-v3"
+url = "git@github.com:ericniebler/range-v3.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "include",
+]
+
+# Kokkos reference implementation of std::mdspan (C++23, P0009).  Candidate
+# upstream for libstdc++-v3/include/std/mdspan and include/bits/mdspan.h
+# (Apache-2.0 WITH LLVM-exception).
+[[source]]
+name = "kokkos-mdspan"
+url = "git@github.com:kokkos/mdspan.git"
+branch = "stable"
+origin_class = "non_gnu"
+sparse_paths = [
+    "include",
+]
+
+# Sy Brand's tl::expected is the reference implementation of std::expected
+# (P0323).  Candidate upstream for libstdc++-v3/include/std/expected
+# (CC0-1.0).
+[[source]]
+name = "tl-expected"
+url = "git@github.com:TartanLlama/expected.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "include",
+]
+
+# John Hauser's Berkeley SoftFloat is the classical ancestor of soft-float
+# code found across compilers; libgcc soft-float kernels (ieee754-sf.S style
+# logic) may carry unattributed porting traces (BSD-3-Clause).
+[[source]]
+name = "berkeley-softfloat-3"
+url = "git@github.com:ucb-bar/berkeley-softfloat-3.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "source",
+]
+
+# PathScale / FreeBSD libcxxrt is the alternative Itanium C++ ABI runtime
+# paired with libc++.  Cross-check against libstdc++-v3/libsupc++
+# (BSD-2-Clause).
+[[source]]
+name = "libcxxrt"
+url = "git@github.com:libcxxrt/libcxxrt.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "src",
+]
+
+# Boost.Stacktrace is a likely candidate upstream for libstdc++-v3/libstdc++
+# std::stacktrace (C++23, P0881) and shares techniques with libbacktrace
+# (Boost Software License).
+[[source]]
+name = "boost-stacktrace"
+url = "git@github.com:boostorg/stacktrace.git"
+branch = "develop"
+origin_class = "non_gnu"
+sparse_paths = [
+    "include",
+    "src",
+]
+
+# Lewis Baker's cppcoro pre-standardised generator/awaitable types that
+# inform libstdc++'s coroutine support (MIT).
+[[source]]
+name = "cppcoro"
+url = "git@github.com:lewissbaker/cppcoro.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "include",
+    "lib",
+]
+
+# bombela/backward-cpp is a widely-reused MIT stacktrace helper; worth
+# checking against libbacktrace and libstdc++ stacktrace (MIT).
+[[source]]
+name = "backward-cpp"
+url = "git@github.com:bombela/backward-cpp.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "backward.hpp",
+    "backward.cpp",
+]
+
+# jeremy-rifkin/cpptrace is a modern C++ stacktrace library; cross-check
+# against libbacktrace and libstdc++ std::stacktrace (MIT).
+[[source]]
+name = "cpptrace"
+url = "git@github.com:jeremy-rifkin/cpptrace.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = [
+    "include",
+    "src",
+]
+
+# LibreSSL portable is the OpenBSD fork of OpenSSL.  Shared low-level crypto
+# helpers (compat code, big-number routines) may overlap with libiberty
+# utility code and with the unpatched openssl corpus (ISC/BSD).
+[[source]]
+name = "libressl-portable"
+url = "git@github.com:libressl/portable.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "crypto",
+    "ssl",
+    "tls",
+    "include",
+]
+
+# Official LibreSSL crypto/ssl/tls source tree (imported from OpenBSD's
+# libssl/libcrypto/libtls).  Pair with libressl-portable: portable carries
+# BSD compat shims for libiberty comparison; this carries the real big-number
+# and TLS crypto kernels (BSD-3-Clause / ISC).
+[[source]]
+name = "libressl-openbsd"
+url = "git@github.com:libressl/openbsd.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "src/lib/libcrypto",
+    "src/lib/libssl",
+    "src/lib/libtls",
+]
