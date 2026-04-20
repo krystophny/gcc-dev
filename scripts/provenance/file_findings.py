@@ -180,13 +180,18 @@ def title_for(finding: dict) -> str:
 def gh_create(finding: dict, repo: str, labels: list[str], dry_run: bool) -> str | None:
     title = title_for(finding)
     body = render_body(finding)
+    sev = finding.get("severity", "low")
+    sev_label = f"severity:{sev}" if sev in ("critical", "high", "medium", "low") else None
+    applied = list(labels)
+    if sev_label and sev_label not in applied:
+        applied.append(sev_label)
     if dry_run:
-        print(f"--- {title}")
+        print(f"--- {title}  labels={applied}")
         print(body)
         print()
         return None
     cmd = ["gh", "issue", "create", "--repo", repo, "--title", title, "--body", body]
-    for lab in labels:
+    for lab in applied:
         cmd += ["--label", lab]
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)

@@ -127,6 +127,11 @@ sparse_paths = [
     "libcxx/src",
     "libcxx/include",
     "libcxxabi/src",
+    "openmp/runtime/src",
+    "libc/src",
+    "libc/include",
+    "flang/runtime",
+    "flang/include/flang/Runtime",
 ]
 
 [[source]]
@@ -740,3 +745,139 @@ url = "git@github.com:OCamlPro/gnucobol.git"
 branch = "master"
 origin_class = "non_gnu"
 sparse_paths = ["libcob", "cobc"]
+
+# -----------------------------------------------------------------------------
+# Recent non-GNU expansion 2026-04-20: modern BSD/Apache/MIT upstreams that
+# commonly feed GCC runtime subtrees.
+#
+# Focus areas (recent-first, historical-light):
+#   - ARM/Linaro optimised routines -> libgcc/config/{arm,aarch64}, libgfortran
+#   - Modern BSD libc/libm variants -> libgcc, libgfortran intrinsics
+#   - Modern C++ STL implementations -> libstdc++-v3/include, libsupc++
+#   - Fast float parse/format libraries -> libstdc++-v3 <charconv>/<format>
+#   - Task/parallel runtimes -> libgomp, libitm
+#   - Non-LLVM libunwind -> libgcc/unwind-*.c
+# -----------------------------------------------------------------------------
+
+[[source]]
+name = "arm-optimized-routines"
+url = "git@github.com:ARM-software/optimized-routines.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "math",
+    "string",
+    "networking",
+    "pl/math",
+]
+
+[[source]]
+name = "openlibm"
+url = "git@github.com:JuliaMath/openlibm.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "src",
+    "include",
+    "amd64",
+    "arm",
+    "aarch64",
+    "powerpc",
+    "i387",
+    "ld80",
+    "ld128",
+]
+
+[[source]]
+name = "picolibc"
+url = "git@github.com:picolibc/picolibc.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = [
+    "libc",
+    "libm",
+    "picocrt",
+]
+
+[[source]]
+name = "microsoft-stl"
+url = "git@github.com:microsoft/STL.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = [
+    "stl/inc",
+    "stl/src",
+]
+
+[[source]]
+name = "fast-float"
+url = "git@github.com:fastfloat/fast_float.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = ["include"]
+
+[[source]]
+name = "double-conversion"
+url = "git@github.com:google/double-conversion.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = ["double-conversion"]
+
+[[source]]
+name = "dragonbox"
+url = "git@github.com:jk-jeon/dragonbox.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "include",
+    "source",
+]
+
+[[source]]
+name = "highway"
+url = "git@github.com:google/highway.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = ["hwy"]
+
+[[source]]
+name = "onetbb"
+url = "git@github.com:oneapi-src/oneTBB.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "src/tbb",
+    "src/tbbmalloc",
+    "include/oneapi/tbb",
+]
+
+[[source]]
+name = "libunwind-nongnu"
+url = "git@github.com:libunwind/libunwind.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "src",
+    "include",
+]
+
+[[source]]
+name = "libdispatch"
+url = "git@github.com:apple/swift-corelibs-libdispatch.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = [
+    "src",
+    "dispatch",
+    "os",
+]
+
+[[source]]
+name = "boost-charconv"
+url = "git@github.com:boostorg/charconv.git"
+branch = "develop"
+origin_class = "non_gnu"
+sparse_paths = [
+    "include/boost/charconv",
+    "src",
+]

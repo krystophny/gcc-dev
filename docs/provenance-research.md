@@ -191,6 +191,66 @@ that it carries:
 Do not file *new* GitHub issues for research findings — fold the research
 into the existing provenance issue.
 
+## 9a. Re-label and close based on the research outcome
+
+Research almost always moves an issue off the severity it was filed at.
+The scanner can only see byte-level similarity, so `[CRITICAL]` at filing
+time regularly collapses to "same-license trail gap" or "not a defect at
+all" once the chain is explicit. The labels and open/closed state have
+to move with the finding, because downstream filters (sprint planning,
+upstream queues, triage reports) read them — not the title, and not the
+TOML registry.
+
+Label vocabulary in `krystophny/gcc-dev`:
+
+- `severity:critical`, `severity:high`, `severity:medium`, `severity:low`
+  — post-research severity. Always applied, exactly one per issue.
+- `provenance` — always applied; set by the filer.
+- `bug` — applied when the finding is a real defect (trail gap, stripped
+  notice, license conflict). Omitted for false positives.
+- `invalid` — applied when the research outcome is `not_derived` or any
+  other "scanner fired but this is not a defect" class.
+
+Rules to apply after writing up §9:
+
+1. **Set a severity label.** Remove any stale `severity:*` label and add
+   the one matching the post-research severity.  Same-license trail gaps
+   with preserved author credit are `severity:low` (cosmetic NOTE fix).
+   Stripped copyright/license paragraphs are `severity:high`.  Genuine
+   license conflicts are `severity:critical`.
+2. **If the finding is not a defect, close the issue.**  Use
+   `gh issue close <n> --reason 'not planned'` and add the `invalid`
+   label.  Drop `bug` if it was applied by the filer.  Registry
+   resolutions that trigger close: `not_derived`, `attributed`, and
+   `wontfix` when the subtree does not use per-file notices.
+3. **Leave `bug` only on real defects.**  `attributed` entries with a
+   canonical-source note already present in the file are not bugs.
+4. **Update `.provenance/source-review.toml` before touching the issue.**
+   The label change is a consequence of the registry decision; do not
+   reverse the order.
+
+Example (research concluded `not_derived`):
+
+```bash
+gh issue comment <n> --body "Research outcome: not_derived. ..."
+gh issue edit <n> --add-label invalid --remove-label bug
+gh issue edit <n> --remove-label 'severity:critical'
+gh issue close <n> --reason 'not planned'
+```
+
+Example (research concluded same-license trail gap downgrading from
+`[HIGH]` to low-risk):
+
+```bash
+gh issue edit <n> --add-label 'severity:low' \
+                  --remove-label 'severity:high'
+```
+
+The filer (`scripts/provenance/file_findings.py`) stamps the
+scanner-reported severity label on creation.  The researcher's job is to
+replace it with the **post-research** severity and, when appropriate,
+close the issue.
+
 ## 10. Do NOT
 
 - Do not act on the scanner verdict alone. It only proves text similarity.
@@ -201,6 +261,55 @@ into the existing provenance issue.
 - Do not spawn sprawling markdown artefacts per-issue. One updated GitHub
   issue body is the record; only expand this doc if the workflow itself
   needs a new step.
+- Do not leave a researched issue with its filing-time severity label or
+  open state when the research has changed the picture. §9a is not
+  optional — filters depend on the labels being current.
+- Do not edit the issue title to encode the new severity. The title
+  carries the scanner-reported severity at filing time for historical
+  traceability; post-research severity lives in `severity:*` labels.
+
+## 11. Reverse provenance (GCC code shipped by upstreams without credit)
+
+The inbound direction above catches *GCC importing without credit*. The
+outbound direction — external projects that took GCC code and dropped the
+notice — is tracked under the `provenance:downstream` label. Tooling:
+
+```
+python3 scripts/provenance/scan_downstream.py \
+    /tmp/source-provenance-all-cpd.json \
+    --require-gcc-fsf --json /tmp/downstream-findings.json
+```
+
+The scanner consumes a `scan_sources.py` JSON report, inspects the upstream
+header of every (gcc, upstream) pair with strong content similarity, and
+flags those whose upstream header carries no GCC/FSF/Runtime Library
+Exception mention. Severity is conservative: the scanner refuses to claim
+*gcc_first* directionality when the corpus clone is shallow, so the human
+reviewer confirms direction from git history before filing. `--require-gcc-fsf`
+discards pairs whose GCC-side header has no FSF copyright, which almost
+always indicates a third-party common origin rather than GCC-as-donor.
+
+For every candidate still suspected of being a real downstream gap:
+
+1. Deepen the upstream clone locally (`git -C corpusbin/src/<project>
+   fetch --depth=50000 origin`) and rerun to confirm direction from dates.
+2. If GCC genuinely predates the upstream copy AND the upstream file still
+   carries no GCC/FSF attribution, file an issue in `krystophny/gcc-dev`
+   with labels `provenance provenance:downstream severity:<post-research>`
+   plus the upstream tracker URL (see `scripts/provenance/scan_downstream.py`
+   `TRACKERS` map).
+3. The gcc-dev issue is the tracking handle; the *corrective action* is
+   filed on the upstream tracker. Do not attempt the upstream fix from this
+   meta-repo; document the plan in the gcc-dev issue body and follow up.
+
+Common false positives to reject up front:
+
+- `libstdc++-v3/src/c++17/ryu/*.h` vs `llvm-project/libcxx/.../ryu/*.h` —
+  both import from `ulfjack/ryu`; cross-upstream triangulation, not theft.
+- `gcc/rust/*` vs `gofrontend/go/*` — gccrs ports *from* gofrontend; GCC is
+  downstream, not the other way round.
+- libiberty shared with binutils-gdb, gdb, gcc, gnulib — these are sibling
+  GNU projects sharing a maintained library by design.
 
 ## Worked example: issue #121
 

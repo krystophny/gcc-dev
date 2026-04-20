@@ -274,44 +274,101 @@ reviewed_by = "krystophny"
 [[reviewed]]
 path = "gcc/libgcc/config/visium/memcpy.c"
 upstream = "newlib-cygwin/newlib/libc/machine/visium/memcpy.c"
-resolution = "open"
-rationale = "Near-verbatim newlib visium memcpy (winnow 0.93, line 0.72); silent header. Needs research and attribution; tracked in #132."
+resolution = "not_derived"
+rationale = "GCC is the canonical source in this sibling pair: Eric Botcazou introduced libgcc/config/visium/memcpy.c on 2015-01-06 (SVN r219219, commit 0969ec7d5df); the newlib copy landed 15 days later (2015-01-21, commit bf8f43ae8) by the same author and points back with 'This file must be kept in sync with libgcc/config/visium/memcpy.c'. Newlib retains the original Rolls-Royce Controls and Data Services BSD-3-Clause notice (COPYING.NEWLIB lists entry 42 for visium-* targets); the GCC copy is FSF-assigned GPL-3+RLE per AdaCore's standard port convention. Tracked in #132."
 issue = "https://github.com/krystophny/gcc-dev/issues/132"
 reviewed_on = "2026-04-20"
 reviewed_by = "krystophny"
+chain = """
+Rolls-Royce Controls and Data Services Limited develops memcpy for the
+Visium processor (pre-publication, c. 2012-2014; FSF copyright range
+in GCC starts 2012)
+  -> GCC 2015-01-06, Eric Botcazou (AdaCore), libgcc/config/visium/memcpy.c
+     at SVN r219219 (commit 0969ec7d5df, 'configure.ac: Add Visium
+     support.'); FSF copyright, GPL-3+ with Runtime Library Exception.
+  -> newlib-cygwin 2015-01-21, Eric Botcazou, newlib/libc/machine/visium/
+     memcpy.c (commit bf8f43ae8); retains 'Copyright (c) 2015 Rolls-Royce
+     Controls and Data Services Limited' BSD-3-Clause notice plus the
+     explicit 'This file must be kept in sync with libgcc/config/visium/
+     memcpy.c' pointer; COPYING.NEWLIB entry 42 registers Rolls-Royce CDS
+     as the visium-target copyright holder.
+Scanner hit is sibling triangulation, not a one-way import.
+"""
 
 [[reviewed]]
 path = "gcc/libgcc/config/visium/memset.c"
 upstream = "newlib-cygwin/newlib/libc/machine/visium/memset.c"
-resolution = "open"
-rationale = "Near-verbatim newlib visium memset (winnow 0.91, line 0.67); silent header. Same pattern as #132; tracked in #133."
+resolution = "not_derived"
+rationale = "Same pattern as #132: GCC is the canonical source. libgcc/config/visium/memset.c was introduced 2015-01-06 by Eric Botcazou (SVN r219219, commit 0969ec7d5df); the newlib sibling newlib/libc/machine/visium/memset.c landed 2015-01-21 (commit bf8f43ae8) with the Rolls-Royce Controls and Data Services BSD-3-Clause notice and the explicit 'This file must be kept in sync with libgcc/config/visium/memset.c' pointer. Tracked in #133."
 issue = "https://github.com/krystophny/gcc-dev/issues/133"
 reviewed_on = "2026-04-20"
 reviewed_by = "krystophny"
+chain = """
+Rolls-Royce Controls and Data Services Limited develops memset for the
+Visium processor (pre-publication, c. 2012-2014)
+  -> GCC 2015-01-06, Eric Botcazou, libgcc/config/visium/memset.c
+     (SVN r219219, commit 0969ec7d5df); FSF copyright, GPL-3+RLE.
+  -> newlib-cygwin 2015-01-21, Eric Botcazou, newlib/libc/machine/visium/
+     memset.c (commit bf8f43ae8); Rolls-Royce CDS BSD-3-Clause notice
+     plus 'kept in sync with libgcc/config/visium/memset.c' pointer.
+"""
 
 [[reviewed]]
 path = "gcc/libgcc/config/rl78/vregs.h"
 upstream = "newlib-cygwin/libgloss/rl78/vregs.h"
-resolution = "open"
-rationale = "newlib libgloss rl78 virtual-register header; silent. Tracked in #134."
+resolution = "not_derived"
+rationale = "GCC is the canonical source: DJ Delorie (Red Hat) introduced libgcc/config/rl78/vregs.h on 2013-09-14 (SVN r202588, commit ceb2fc49ce5, 'mulsi3.S: Remove a few unneeded moves and branches.' co-authored with Nick Clifton). The identical-content newlib libgloss/rl78/vregs.h followed 16 months later (2015-01-20, commit a098aad30, same author). Both copies are header-less saddr/ffef symbol-definition files - no copyright notice in either. Not a derivative import; scanner matched on near-identical content with a 16-month lead for GCC. Tracked in #134."
 issue = "https://github.com/krystophny/gcc-dev/issues/134"
 reviewed_on = "2026-04-20"
 reviewed_by = "krystophny"
+chain = """
+GCC 2013-09-14, DJ Delorie (Red Hat), Co-Authored-By Nick Clifton,
+libgcc/config/rl78/vregs.h at SVN r202588 (commit ceb2fc49ce5); bare
+saddr/ffef symbol-definition header, no copyright block.
+  -> newlib-cygwin 2015-01-20, DJ Delorie, libgloss/rl78/vregs.h
+     (commit a098aad30, 'rl78/vregs.h: New.'); near-identical content
+     with the G10 #ifdef block, also header-less.
+Scanner hit is cross-project sibling, not a one-way import into GCC.
+"""
 
 [[reviewed]]
 path = "gcc/libiberty/sha1.c"
 upstream = "gnulib/lib/sha1.c"
 resolution = "open"
-rationale = "Sibling of the #123 sha1.h trail gap; imported 2008 from gnulib with Scott G. Miller credit but no gnulib origin phrase. Tracked in #135."
+rationale = "Same-license-family trail gap, sibling of include/sha1.h (#123). Imported 2008-03-25 by Ian Lance Taylor (Google), SVN r133503 (commit 598848e4d62, 'sha1.c: New file, from gnulib.'). Original author Scott G. Miller credited in-file; gnulib canonical source at lib/sha1.c is LGPL-2.1+, GCC copy relicensed to GPL-2+ (standard libiberty practice). Commit message carries the 'from gnulib' phrase but the file itself carries no origin pointer. Needs 'NOTE: This source is derived from gnulib (lib/sha1.c).' per the plan in #123. Tracked in #135."
 issue = "https://github.com/krystophny/gcc-dev/issues/135"
 reviewed_on = "2026-04-20"
 reviewed_by = "krystophny"
+chain = """
+Scott G. Miller sha1 implementation (with expansion-function fix from
+Robert Klep), authored c. 2000 for gnulib
+  -> gnulib lib/sha1.c (FSF, LGPL-2.1+; Copyright 2000-2001, 2003-...)
+  -> GCC 2008-03-25, Ian Lance Taylor, libiberty/sha1.c and include/
+     sha1.h at SVN r133503 (commit 598848e4d627, 'sha1.h: New file,
+     from gnulib.'); ChangeLog body adds 'sha1.c: New file, from
+     gnulib.' for the libiberty side. FSF relicense to GPL-2+ on
+     import; later bumped to GPL-3+ pool via 2010-04-20 relicense by
+     Nick Clifton. Author credit 'Written by Scott G. Miller' kept.
+File carries no in-source gnulib origin phrase; commit log is the
+only provenance record.
+"""
 
 [[reviewed]]
 path = "gcc/libiberty/physmem.c"
 upstream = "gnulib/lib/physmem.c"
 resolution = "open"
-rationale = "gnulib physmem() carried into libiberty; silent header. Tracked in #136."
+rationale = "Same-license-family trail gap. Imported 2003-02-21 by Kaveh R. Ghazi (Rutgers), SVN r63198 (commit a354191ebf0, 'physmem.c: New file, copied from textutils.'). Author credit 'Written by Paul Eggert.' preserved in-file; Paul Eggert's physmem is shared verbatim between GNU coreutils (née textutils) and gnulib lib/physmem.c. GPL-2+ in libiberty; LGPL-2.1+ in gnulib (which postdates textutils). Scanner matches against gnulib because that is the current canonical non-GCC copy. Needs 'NOTE: This source is derived from gnulib (lib/physmem.c).' origin-phrase per #123 convention. Tracked in #136."
 issue = "https://github.com/krystophny/gcc-dev/issues/136"
 reviewed_on = "2026-04-20"
 reviewed_by = "krystophny"
+chain = """
+Paul Eggert physmem_total/physmem_available implementation, authored
+c. 2000 for GNU textutils (later merged into GNU coreutils 2002)
+  -> gnulib lib/physmem.c (FSF, LGPL-2.1+; shared upstream since the
+     textutils/gnulib sync era)
+  -> GCC 2003-02-21, Kaveh R. Ghazi (Rutgers), libiberty/physmem.c at
+     SVN r63198 (commit a354191ebf0, ChangeLog entry 'physmem.c: New
+     file, copied from textutils.'). FSF copyright; GPL-2+.
+File keeps the 'Written by Paul Eggert.' credit but does not name
+gnulib (or textutils/coreutils) as the donor.
+"""
