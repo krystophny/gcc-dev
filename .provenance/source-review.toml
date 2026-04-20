@@ -64,27 +64,31 @@ riscv-non-isa/riscv-c-api-doc PR #74 (merged 2024-09-25) defines
 path = "gcc/gcc/rust/rust-backend.h"
 upstream = "gofrontend/go/backend.h"
 resolution = "open"
-rationale = "Ported from gccgo in 2022; strips Copyright The Go Authors / BSD-3-Clause header; notice-retention defect, not just a trail gap."
+rationale = "Ported from gccgo in 2022; strips Copyright Go Authors + BSD-3-Clause header. Mitigated by gcc/gcc/go/gofrontend/LICENSE and gcc/libgo/LICENSE carrying the full BSD-3-Clause text at the subtree level, so the repo redistribution as a whole covers the Go Authors' license. Fix is still warranted to match the gcc/algol68/a68-imports-archive.cc convention (#120): restore the Copyright Go Authors line + 'adapted from the Go front-end' note. Severity downgraded from high to medium 2026-04-20 on that basis."
 issue = "https://github.com/krystophny/gcc-dev/issues/126"
-reviewed_on = "2026-04-19"
+reviewed_on = "2026-04-20"
 reviewed_by = "krystophny"
 chain = """
 gofrontend/go/backend.h (Copyright 2011 The Go Authors, BSD-3-Clause)
   -> GCC in-tree mirror at gcc/go/gofrontend/backend.h (header preserved
-     verbatim, correct convention)
+     verbatim, correct convention); accompanied by
+     gcc/gcc/go/gofrontend/LICENSE + gcc/libgo/LICENSE carrying the full
+     BSD-3-Clause text.
   -> gccrs adaptation at gcc/rust/rust-backend.h, introduced 2022-10-21
      by Philip Herron in gcc-mirror 15f04af347e3 as part of 'the backend
      abstraction ported over from gccgo'.  Dropped the Copyright/BSD
-     notice entirely.
+     notice entirely; neither the Go Authors copyright line nor the
+     author credit retained. Fix = a68g-style dual-copyright + adaptation
+     note.
 """
 
 [[reviewed]]
 path = "gcc/gcc/rust/rust-diagnostics.cc"
 upstream = "gofrontend/go/go-diagnostics.cc"
 resolution = "open"
-rationale = "Ported from gccgo in 2022; author credit preserved ('Contributed by Than McIntosh, Google.') but Copyright/BSD license paragraph stripped."
+rationale = "Ported from gccgo in 2022; author credit preserved ('Contributed by Than McIntosh, Google.') but Copyright/BSD license paragraph stripped. Same mitigation as #126 rust-backend.h: the Go Authors' BSD-3-Clause text is already shipped in gcc/gcc/go/gofrontend/LICENSE + gcc/libgo/LICENSE. Severity downgraded from high to medium 2026-04-20. Fix = restore Copyright Go Authors line alongside the existing McIntosh author credit (a68g-style)."
 issue = "https://github.com/krystophny/gcc-dev/issues/126"
-reviewed_on = "2026-04-19"
+reviewed_on = "2026-04-20"
 reviewed_by = "krystophny"
 chain = """
 gofrontend/go/go-diagnostics.cc (Copyright 2016 The Go Authors,
