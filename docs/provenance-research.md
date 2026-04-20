@@ -272,7 +272,14 @@ close the issue.
 
 The inbound direction above catches *GCC importing without credit*. The
 outbound direction — external projects that took GCC code and dropped the
-notice — is tracked under the `provenance:downstream` label. Tooling:
+notice — is tracked under the `provenance:downstream` label. Two scanners
+cover it:
+
+**Quick post-filter.** `scripts/provenance/scan_downstream.py` consumes an
+existing `scan_sources.py` JSON report and, for every `(gcc, upstream)`
+pair, inspects the upstream header for GCC/FSF/RLE attribution. Cheap but
+limited to pairs that scan_sources.py already surfaced (i.e., GCC files
+that looked like potential imports).
 
 ```
 python3 scripts/provenance/scan_downstream.py \
@@ -280,14 +287,41 @@ python3 scripts/provenance/scan_downstream.py \
     --require-gcc-fsf --json /tmp/downstream-findings.json
 ```
 
-The scanner consumes a `scan_sources.py` JSON report, inspects the upstream
-header of every (gcc, upstream) pair with strong content similarity, and
-flags those whose upstream header carries no GCC/FSF/Runtime Library
-Exception mention. Severity is conservative: the scanner refuses to claim
-*gcc_first* directionality when the corpus clone is shallow, so the human
-reviewer confirms direction from git history before filing. `--require-gcc-fsf`
-discards pairs whose GCC-side header has no FSF copyright, which almost
-always indicates a third-party common origin rather than GCC-as-donor.
+**Proper GCC-indexed probe.** `scripts/provenance/index_gcc.py` builds a
+fingerprint index over GCC's widely-copied subtrees (libiberty, libgcc,
+libstdc++-v3/{src,include,libsupc++}, libquadmath, libgfortran, libgomp,
+libitm, libatomic, libbacktrace, libssp, libvtv, libobjc, libcpp, libcody,
+libdecnumber, include, fixincludes). Then `scan_corpus.py` walks every
+corpus file under `corpusbin/src/<project>/`, classifies its header for
+GCC attribution, and probes the GCC LSH. Silent upstream + strong GCC
+match is flagged.
+
+```
+python3 scripts/provenance/index_gcc.py --rebuild
+python3 scripts/provenance/scan_corpus.py --require-silent \
+    --min-severity medium --json /tmp/corpus-vs-gcc.json
+python3 scripts/provenance/file_downstream.py \
+    /tmp/corpus-vs-gcc.json --dry-run --min-severity high
+```
+
+`file_downstream.py` wraps the filing workflow with documented
+`FALSE_POSITIVE_RULES` — patterns where the scanner match is explained by
+a common non-GCC upstream or an acknowledged port. Every rule is a pair
+of regexes `(upstream_pattern, gcc_pattern)`; pairs that match are
+dropped before any issue is filed. Extend this map as new sibling
+patterns are documented.
+
+Directionality is DELIBERATELY not inferred from the corpus clones: the
+`corpusbin/src/*` trees are all `--depth=1`, so `git log --reverse` returns
+the clone date, not the real introduction date. `scan_downstream._git_has_history`
+refuses to return a date when `.git/shallow` exists. Severity tops out at
+`high` from the scanner alone; `critical` requires human review plus a
+deep git history check.
+
+`--require-gcc-fsf` drops pairs where the GCC-side file lacks an FSF
+copyright. Without FSF, both GCC and upstream usually import from a
+common third party (ulfjack/ryu, FreeBSD msun via openlibm, IBM
+decNumber) and the scanner match is cross-upstream triangulation.
 
 For every candidate still suspected of being a real downstream gap:
 
@@ -296,20 +330,41 @@ For every candidate still suspected of being a real downstream gap:
 2. If GCC genuinely predates the upstream copy AND the upstream file still
    carries no GCC/FSF attribution, file an issue in `krystophny/gcc-dev`
    with labels `provenance provenance:downstream severity:<post-research>`
-   plus the upstream tracker URL (see `scripts/provenance/scan_downstream.py`
-   `TRACKERS` map).
+   plus the upstream tracker URL (see the `TRACKERS` map in
+   `scripts/provenance/scan_downstream.py` and `file_downstream.py`).
 3. The gcc-dev issue is the tracking handle; the *corrective action* is
-   filed on the upstream tracker. Do not attempt the upstream fix from this
-   meta-repo; document the plan in the gcc-dev issue body and follow up.
+   filed on the upstream tracker. Do not attempt the upstream fix from
+   this meta-repo; document the plan in the gcc-dev issue body and
+   follow up.
 
-Common false positives to reject up front:
+Documented false-positive families (all in
+`file_downstream.FALSE_POSITIVE_RULES`):
 
-- `libstdc++-v3/src/c++17/ryu/*.h` vs `llvm-project/libcxx/.../ryu/*.h` —
-  both import from `ulfjack/ryu`; cross-upstream triangulation, not theft.
-- `gcc/rust/*` vs `gofrontend/go/*` — gccrs ports *from* gofrontend; GCC is
-  downstream, not the other way round.
-- libiberty shared with binutils-gdb, gdb, gcc, gnulib — these are sibling
-  GNU projects sharing a maintained library by design.
+- `libstdc++-v3/src/c++17/ryu/*` vs ulfjack-ryu, libcxx ryu, llvm-libc
+  ryu, picolibc libc/stdio/ryu, postgresql src/common/ryu tables,
+  microsoft-stl xcharconv_ryu_tables, boost-charconv, dragonbox — all
+  import from Ulf Adams' Apache-2.0/Boost upstream.
+- `libquadmath/math/*q.c` vs openlibm {src,ld80,ld128}/, newlib libm,
+  picolibc libm, bionic upstream-freebsd/msun, apple-libc math,
+  musl src/math/ — Sun/FreeBSD msun shared source; Moshier relicensed
+  his 2001 LGPL reworks.
+- `libdecnumber/*` vs icu4c decNumber / decContext — IBM General Decimal
+  Arithmetic library (Mike Cowlishaw); both GCC and ICU import it.
+- `libiberty/{bsearch,strtol,strtoul,strncasecmp,strchr,memcpy,...}` vs
+  freebsd-libc, netbsd-libc, openbsd-libc, apple-libc, postgresql
+  src/port, illumos libc, newlib-cygwin libc/stdlib, bionic — all share
+  the original UC Berkeley BSD origin.
+- `gcc/rust/*` or `gcc/algol68/*` vs `gofrontend/go/*` — gccrs and gccra68
+  port FROM gofrontend; GCC is downstream (issues #120, #126).
+- `libgcc/config/visium/memcpy,memset` vs newlib/picolibc sibling sync
+  (issues #132, #133).
+- `libgcc/config/rl78/vregs.h` vs newlib libgloss sibling (issue #134).
+- `libgcc/config/riscv/feature_bits.c` vs llvm-project compiler-rt
+  riscv.c — coordinated riscv-c-api-doc ABI (issue #122).
+
+As of 2026-04-20: scanning 44k corpus files against a 3k-file GCC index
+yields ~355 raw findings, all reducible to one of the patterns above.
+No genuine downstream-provenance defects detected.
 
 ## Worked example: issue #121
 
