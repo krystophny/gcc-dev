@@ -128,6 +128,7 @@ sparse_paths = [
     "libcxx/include",
     "libcxxabi/src",
     "openmp/runtime/src",
+    "pstl/include/pstl",
     "libc/src",
     "libc/include",
     "flang/runtime",
@@ -1070,6 +1071,24 @@ origin_class = "non_gnu"
 sparse_paths = [
     "runtime",
     "include",
+]
+
+# GNUstep libobjc2 is the current non-GNU Objective-C runtime used by
+# GNUstep. It is the missing modern comparator for gcc/libobjc after objc4.
+[[source]]
+name = "libobjc2"
+url = "git@github.com:gnustep/libobjc2.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "*.c",
+    "*.h",
+    "*.hh",
+    "*.cc",
+    "*.m",
+    "*.mm",
+    "*.S",
+    "objc",
 ]
 
 # Ziglang standard library is an active MIT-licensed C/system code base with
