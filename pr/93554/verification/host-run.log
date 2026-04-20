@@ -1,0 +1,39 @@
+PASS: libgomp.oacc-fortran/pr107227-private-whole-allocatable.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O0  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr107227-private-whole-allocatable.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O0  execution test
+PASS: libgomp.oacc-fortran/pr107227-private-whole-allocatable.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O1  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr107227-private-whole-allocatable.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O1  execution test
+PASS: libgomp.oacc-fortran/pr107227-private-whole-allocatable.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O2  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr107227-private-whole-allocatable.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O2  execution test
+PASS: libgomp.oacc-fortran/pr107227-private-whole-allocatable.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O3 -fomit-frame-pointer -funroll-loops -fpeel-loops -ftracer -finline-functions  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr107227-private-whole-allocatable.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O3 -fomit-frame-pointer -funroll-loops -fpeel-loops -ftracer -finline-functions  execution test
+PASS: libgomp.oacc-fortran/pr107227-private-whole-allocatable.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O3 -g  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr107227-private-whole-allocatable.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O3 -g  execution test
+PASS: libgomp.oacc-fortran/pr107227-private-whole-allocatable.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -Os  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr107227-private-whole-allocatable.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -Os  execution test
+PASS: libgomp.oacc-fortran/pr93554-private-derived-alloc-component.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O0  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr93554-private-derived-alloc-component.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O0  execution test
+PASS: libgomp.oacc-fortran/pr93554-private-derived-alloc-component.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O1  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr93554-private-derived-alloc-component.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O1  execution test
+PASS: libgomp.oacc-fortran/pr93554-private-derived-alloc-component.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O2  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr93554-private-derived-alloc-component.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O2  execution test
+PASS: libgomp.oacc-fortran/pr93554-private-derived-alloc-component.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O3 -fomit-frame-pointer -funroll-loops -fpeel-loops -ftracer -finline-functions  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr93554-private-derived-alloc-component.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O3 -fomit-frame-pointer -funroll-loops -fpeel-loops -ftracer -finline-functions  execution test
+PASS: libgomp.oacc-fortran/pr93554-private-derived-alloc-component.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O3 -g  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr93554-private-derived-alloc-component.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O3 -g  execution test
+PASS: libgomp.oacc-fortran/pr93554-private-derived-alloc-component.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -Os  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr93554-private-derived-alloc-component.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -Os  execution test
+PASS: libgomp.oacc-fortran/pr95550-parallel-create-private.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O0  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr95550-parallel-create-private.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O0  execution test
+PASS: libgomp.oacc-fortran/pr95550-parallel-create-private.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O1  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr95550-parallel-create-private.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O1  execution test
+PASS: libgomp.oacc-fortran/pr95550-parallel-create-private.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O2  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr95550-parallel-create-private.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O2  execution test
+PASS: libgomp.oacc-fortran/pr95550-parallel-create-private.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O3 -fomit-frame-pointer -funroll-loops -fpeel-loops -ftracer -finline-functions  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr95550-parallel-create-private.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O3 -fomit-frame-pointer -funroll-loops -fpeel-loops -ftracer -finline-functions  execution test
+PASS: libgomp.oacc-fortran/pr95550-parallel-create-private.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O3 -g  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr95550-parallel-create-private.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O3 -g  execution test
+PASS: libgomp.oacc-fortran/pr95550-parallel-create-private.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -Os  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr95550-parallel-create-private.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -Os  execution test
+# of expected passes		6374
+# of expected failures		214
+# of unsupported tests		188

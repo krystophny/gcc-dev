@@ -1,0 +1,205 @@
+
+;; Function p (MAIN__, funcdef_no=0, decl_uid=4696, cgraph_uid=1, symbol_order=0)
+
+__attribute__((fn spec (". ")))
+void p ()
+{
+  integer(kind=4) .bound.9;
+  integer(kind=4) .offset.8;
+  integer(kind=4) .chunk_no.7;
+  integer(kind=4) .chunk_max.6;
+  integer(kind=4) .step.5;
+  void * restrict D.4741;
+  integer(kind=8) D.4740;
+  integer(kind=8) D.4739;
+  integer(kind=4) i;
+  struct t x;
+  void * D.4759;
+  void * D.4756;
+  unsigned long D.4754;
+  unsigned long D.4753;
+  integer(kind=8) D.4752;
+  integer(kind=8) D.4751;
+  integer(kind=8) D.4750;
+  struct t * D.4749;
+  integer(kind=8) D.4748;
+  struct t * D.4747;
+  void * D.4744;
+  struct t * D.4743;
+  struct t * D.4742;
+  static struct t x = {};
+  integer(kind=4) i;
+  struct .omp_data_t.1 .omp_data_arr.2;
+  static unsigned long .omp_data_sizes.3[1] = {72};
+  static unsigned short .omp_data_kinds.4[1] = {771};
+
+  <bb 2> :
+  x.b.data = 0B;
+  .omp_data_arr.2.x = &x;
+  __builtin_GOACC_parallel_keyed (-1, MAIN__._omp_fn.0, 1, &.omp_data_arr.2, &.omp_data_sizes.3, &.omp_data_kinds.4, 0);
+  .omp_data_arr.2 ={v} {CLOBBER};
+  return;
+
+}
+
+
+
+;; Function main (main, funcdef_no=1, decl_uid=4725, cgraph_uid=2, symbol_order=1)
+
+__attribute__((externally_visible))
+integer(kind=4) main (integer(kind=4) argc, character(kind=1) * * argv)
+{
+  static integer(kind=4) options.0[7] = {10308, 16383, 0, 1, 1, 0, 31};
+  integer(kind=4) D.4793;
+  integer(kind=4) _7;
+
+  <bb 2> :
+  _gfortran_set_args (argc_2(D), argv_3(D));
+  _gfortran_set_options (7, &options.0[0]);
+  p ();
+  _7 = 0;
+
+  <bb 3> :
+<L0>:
+  return _7;
+
+}
+
+
+
+;; Function MAIN__._omp_fn.0 (MAIN__._omp_fn.0, funcdef_no=2, decl_uid=4731, cgraph_uid=3, symbol_order=2)
+
+__attribute__((oacc function (1, 1, 1), oacc kernels, omp target entrypoint, noclone))
+void MAIN__._omp_fn.0 (const struct .omp_data_t.1 & restrict .omp_data_i)
+{
+  struct t x [value-expr: *.omp_data_i->x];
+  void * restrict D.4791;
+  unsigned long D.4790;
+  unsigned long D.4789;
+  integer(kind=8) D.4788;
+  integer(kind=8) D.4787;
+  integer(kind=8) D.4786;
+  integer(kind=8) D.4785;
+  integer(kind=8) D.4784;
+  struct t * D.4783;
+  integer(kind=8) D.4782;
+  struct t * D.4781;
+  void * D.4780;
+  void * D.4779;
+  integer(kind=4) i;
+  integer(kind=4) .bound.9;
+  integer(kind=4) .offset.8;
+  integer(kind=4) .step.5;
+  integer(kind=4) .chunk_max.6;
+  integer(kind=4) .chunk_no.7;
+  void * D.4772;
+  struct t * D.4771;
+  struct t x;
+  struct t * D.4769;
+  integer(kind=4) .chunk_no.7_1;
+  integer(kind=4) .offset.8_2;
+  struct t * _10;
+  struct t * _12;
+  void * _13;
+  struct t * _15;
+  integer(kind=8) _16;
+  struct t * _17;
+  integer(kind=8) _18;
+  integer(kind=8) _19;
+  integer(kind=8) _20;
+  integer(kind=8) _21;
+  integer(kind=8) _22;
+  unsigned long _23;
+  unsigned long _24;
+  void * restrict _26;
+  integer(kind=4) .chunk_no.7_28;
+  integer(kind=4) .chunk_max.6_29;
+  integer(kind=4) .step.5_30;
+  integer(kind=4) .offset.8_31;
+  integer(kind=4) .bound.9_32;
+  integer(kind=4) .offset.8_35;
+  void * _36;
+  void * _37;
+  integer(kind=4) .chunk_no.7_40;
+
+  <bb 2> :
+  _10 = .omp_data_i_9(D)->x;
+  x.b = _10->b;
+  _12 = .omp_data_i_9(D)->x;
+  _13 = _12->b.data;
+  if (_13 != 0B)
+    goto <bb 11>; [INV]
+  else
+    goto <bb 10>; [INV]
+
+  <bb 3> :
+  .chunk_no.7_28 = 0;
+  .chunk_max.6_29 = 1;
+  .step.5_30 = 1;
+
+  <bb 4> :
+  # .chunk_no.7_1 = PHI <.chunk_no.7_28(3), .chunk_no.7_40(7)>
+  .offset.8_31 = 0;
+  .bound.9_32 = 32;
+  if (.offset.8_31 < .bound.9_32)
+    goto <bb 5>; [INV]
+  else
+    goto <bb 6>; [INV]
+
+  <bb 5> :
+  # .offset.8_2 = PHI <.offset.8_31(4), .offset.8_35(5)>
+  i_33 = 0 + .offset.8_2;
+  x.a = 1;
+  .offset.8_35 = .offset.8_2 + .step.5_30;
+  if (.offset.8_35 < .bound.9_32)
+    goto <bb 5>; [INV]
+  else
+    goto <bb 6>; [INV]
+
+  <bb 6> :
+  _36 = x.b.data;
+  if (_36 != 0B)
+    goto <bb 9>; [INV]
+  else
+    goto <bb 7>; [INV]
+
+  <bb 7> :
+  GIMPLE_NOP
+  .chunk_no.7_40 = .chunk_no.7_1 + 1;
+  if (.chunk_no.7_40 < .chunk_max.6_29)
+    goto <bb 4>; [80.00%]
+  else
+    goto <bb 8>; [20.00%]
+
+  <bb 8> :
+  i_41 = 0 + 32;
+  return;
+
+  <bb 9> :
+  _37 = x.b.data;
+  __builtin_free (_37);
+  x.b.data = 0B;
+  goto <bb 7>; [INV]
+
+  <bb 10> :
+  x.b.data = 0B;
+  goto <bb 3>; [INV]
+
+  <bb 11> :
+  _15 = .omp_data_i_9(D)->x;
+  _16 = _15->b.dim[0].ubound;
+  _17 = .omp_data_i_9(D)->x;
+  _18 = _17->b.dim[0].lbound;
+  _19 = _16 - _18;
+  _20 = _19 + 1;
+  _21 = _20;
+  _22 = _21 * 4;
+  _23 = (unsigned long) _22;
+  _24 = MAX_EXPR <_23, 1>;
+  _26 = __builtin_malloc (_24);
+  x.b.data = _26;
+  goto <bb 3>; [INV]
+
+}
+
+

@@ -1,0 +1,26 @@
+during GIMPLE pass: ompexp
+pr95550-loop.f90:13:36:
+
+   13 |   !$ACC PARALLEL LOOP PRIVATE(GWORK)
+      |                                    ^
+internal compiler error: in expand_oacc_for, at omp-expand.cc:7722
+0x3a9169e internal_error(char const*, ...)
+	/tmp/gcc-pr93554-baseline/gcc/diagnostic-global-context.cc:787
+0x3aa2396 fancy_abort(char const*, int, char const*)
+	/tmp/gcc-pr93554-baseline/gcc/diagnostics/context.cc:1813
+0x38439a0 expand_oacc_for
+	/tmp/gcc-pr93554-baseline/gcc/omp-expand.cc:7722
+0x38469e5 expand_omp_for
+	/tmp/gcc-pr93554-baseline/gcc/omp-expand.cc:8269
+0x3851360 expand_omp
+	/tmp/gcc-pr93554-baseline/gcc/omp-expand.cc:10703
+0x385121e expand_omp
+	/tmp/gcc-pr93554-baseline/gcc/omp-expand.cc:10689
+0x3851a29 execute_expand_omp
+	/tmp/gcc-pr93554-baseline/gcc/omp-expand.cc:10947
+0x3851ae3 execute
+	/tmp/gcc-pr93554-baseline/gcc/omp-expand.cc:10991
+/tmp/gcc-pr93554-baseline-build/gcc/f951 pr95550-loop.f90 -quiet -dumpbase pr95550-loop.f90 -dumpbase-ext .f90 -mtune=generic -march=x86-64 -fopenacc -fintrinsic-modules-path finclude -fpre-include=/usr/include/finclude/math-vector-fortran.h -o /tmp/ccRt405y.s
+Please submit a full bug report, with preprocessed source (by using -freport-bug).
+Please include the complete backtrace with any bug report.
+See <https://gcc.gnu.org/bugs/> for instructions.

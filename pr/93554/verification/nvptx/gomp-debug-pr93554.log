@@ -1,0 +1,922 @@
+GOACC_parallel_keyed: mapnum=3, hostaddrs=0x7ffc77640790, size=0x408100, kinds=0x4080f8
+GOMP_NVPTX_NATIVE_GPU_THREAD_STACK_SIZE: <Not defined>
+GOMP_NVPTX_LOWLAT_POOL: <Not defined>
+GOMP_NVPTX_JIT: <Not defined>
+Loading:
+---
+// BEGIN PREAMBLE
+.version 7.8
+.target sm_89
+.address_size 64
+// END PREAMBLE
+.file 1 "<dummy>"
+// BEGIN FUNCTION DECL: gang_parallel$4$_omp_fn$0
+.entry gang_parallel$4$_omp_fn$0 (.param .u64 %in_ar0);
+.file 2 "/home/ert/code/gcc-dev/pr/93554/tests/pr93554-private-derived-alloc-component.f90"
+// BEGIN FUNCTION DECL: worker_parallel$3$_omp_fn$0
+.entry worker_parallel$3$_omp_fn$0 (.param .u64 %in_ar0);
+// BEGIN FUNCTION DECL: vector_parallel$2$_omp_fn$0
+.entry vector_parallel$2$_omp_fn$0 (.param .u64 %in_ar0);
+// BEGIN FUNCTION DECL: seq_parallel$1$_omp_fn$0
+.entry seq_parallel$1$_omp_fn$0 (.param .u64 %in_ar0);
+// BEGIN FUNCTION DECL: gang_kernels$0$_omp_fn$0
+.entry gang_kernels$0$_omp_fn$0 (.param .u64 %in_ar0);
+// BEGIN GLOBAL FUNCTION DECL: __nvptx_free
+.extern .func __nvptx_free (.param .u64 %in_ar0);
+// BEGIN GLOBAL FUNCTION DECL: __nvptx_malloc
+.extern .func (.param .u64 %value_out) __nvptx_malloc (.param .u64 %in_ar0);
+// BEGIN VAR DEF: __oacc_bcast
+.shared .align 8 .u8 __oacc_bcast[24];
+// BEGIN FUNCTION DEF: gang_parallel$4$_omp_fn$0
+.entry gang_parallel$4$_omp_fn$0 (.param .u64 %in_ar0)
+{
+.reg .u64 %ar0;
+ld.param.u64 %ar0,[%in_ar0];
+.reg .u32 %r22;
+.reg .u64 %r23;
+.reg .u64 %r31;
+.reg .u32 %r35;
+.reg .u32 %r41;
+.reg .u32 %r43;
+.reg .u64 %r45;
+.reg .u32 %r46;
+.reg .u32 %r47;
+.reg .u32 %r49;
+.reg .u32 %r50;
+.reg .u64 %r52;
+.reg .u32 %r54;
+.reg .pred %r55;
+.reg .u64 %r56;
+.reg .u64 %r57;
+.reg .u64 %r58;
+.reg .u32 %r59;
+.reg .pred %r60;
+.reg .u64 %r64;
+.reg .u64 %r65;
+.reg .u64 %r66;
+.reg .u64 %r67;
+.reg .u64 %r68;
+.reg .u64 %r69;
+.reg .u32 %r71;
+.reg .pred %r72;
+.reg .pred %r73;
+.reg .u32 %r74;
+.reg .u32 %r75;
+.reg .u32 %r76;
+.reg .pred %r77;
+.reg .pred %r78;
+.reg .pred %r79;
+.reg .pred %r80;
+.reg .pred %r81;
+.reg .pred %r82;
+.reg .pred %r83;
+.reg .pred %r86;
+.reg .pred %r87;
+.reg .u32 %r88;
+.reg .pred %r89;
+.reg .u32 %r90;
+.reg .pred %r91;
+.reg .u32 %r92;
+.reg .pred %r93;
+.reg .u32 %r94;
+.reg .pred %r95;
+.reg .u32 %r96;
+.reg .pred %r97;
+.reg .u32 %r98;
+.reg .pred %r99;
+.reg .u32 %r100;
+.reg .pred %r101;
+.reg .u32 %r102;
+{
+.reg .u32 %x;
+mov.u32 %x,%tid.x;
+setp.ne.u32 %r86,%x,0;
+}
+setp.eq.u32 %r101,1,0;
+@%r86 bra $L56;
+mov.u64 %r52,%ar0;
+ld.u64 %r23,[%r52+16];
+ld.u64 %r31,[%r23+8];
+setp.ne.u64 %r73,%r31,0;
+mov.pred %r101,%r73;
+$L56:
+bar.warp.sync 0xffffffff;
+mov.pred %r73,%r101;
+selp.u32 %r102,1,0,%r73;
+shfl.sync.idx.b32 %r102,%r102,0,31,0xffffffff;
+setp.ne.u32 %r73,%r102,0;
+@%r73 bra.uni $L2;
+setp.eq.u32 %r87,1,0;
+@%r86 bra $L46;
+mov.u32 %r46,%nctaid.x;
+mov.u32 %r41,%ctaid.x;
+add.u32 %r54,%r46,31;
+div.s32 %r47,%r54,%r46;
+mul.lo.u32 %r22,%r41,%r47;
+add.u32 %r35,%r22,%r47;
+min.s32 %r35,%r35,32;
+setp.le.s32 %r55,%r35,%r22;
+mov.pred %r87,%r55;
+$L46:
+bar.warp.sync 0xffffffff;
+mov.pred %r55,%r87;
+selp.u32 %r88,1,0,%r55;
+shfl.sync.idx.b32 %r88,%r88,0,31,0xffffffff;
+setp.ne.u32 %r55,%r88,0;
+@%r55 bra.uni $L1;
+$L6:
+setp.eq.u32 %r97,1,0;
+@%r86 bra $L53;
+cvt.u64.u32 %r56,%r22;
+shl.b64 %r57,%r56,2;
+ld.u64 %r58,[%r52+8];
+add.u64 %r45,%r58,%r57;
+not.b32 %r75,%r22;
+add.u32 %r74,%r75,%r35;
+and.b32 %r76,%r74,7;
+.loc 2 54 19
+add.u32 %r59,%r22,11;
+.loc 2 55 19
+st.u32 [%r45],%r59;
+add.u32 %r22,%r22,1;
+add.u64 %r45,%r45,4;
+setp.lt.s32 %r60,%r22,%r35;
+mov.pred %r97,%r60;
+$L53:
+bar.warp.sync 0xffffffff;
+mov.pred %r60,%r97;
+selp.u32 %r98,1,0,%r60;
+shfl.sync.idx.b32 %r98,%r98,0,31,0xffffffff;
+setp.ne.u32 %r60,%r98,0;
+@%r60 bra.uni $L32;
+bra $L7;
+$L4:
+.loc 2 54 19
+setp.eq.u32 %r91,1,0;
+@%r86 bra $L50;
+add.u32 %r59,%r22,11;
+.loc 2 55 19
+st.u32 [%r45],%r59;
+.loc 2 54 19
+add.u32 %r59,%r22,12;
+.loc 2 55 19
+st.u32 [%r45+4],%r59;
+.loc 2 54 19
+add.u32 %r59,%r22,13;
+.loc 2 55 19
+st.u32 [%r45+8],%r59;
+.loc 2 54 19
+add.u32 %r59,%r22,14;
+.loc 2 55 19
+st.u32 [%r45+12],%r59;
+.loc 2 54 19
+add.u32 %r59,%r22,15;
+.loc 2 55 19
+st.u32 [%r45+16],%r59;
+.loc 2 54 19
+add.u32 %r59,%r22,16;
+.loc 2 55 19
+st.u32 [%r45+20],%r59;
+.loc 2 54 19
+add.u32 %r59,%r22,17;
+.loc 2 55 19
+st.u32 [%r45+24],%r59;
+.loc 2 54 19
+add.u32 %r59,%r22,18;
+.loc 2 55 19
+st.u32 [%r45+28],%r59;
+add.u32 %r22,%r22,8;
+add.u64 %r45,%r45,32;
+setp.lt.s32 %r60,%r22,%r35;
+mov.pred %r91,%r60;
+$L50:
+bar.warp.sync 0xffffffff;
+mov.pred %r60,%r91;
+selp.u32 %r92,1,0,%r60;
+shfl.sync.idx.b32 %r92,%r92,0,31,0xffffffff;
+setp.ne.u32 %r60,%r92,0;
+@%r60 bra.uni $L4;
+$L7:
+.loc 2 52 49
+setp.eq.u32 %r89,1,0;
+@%r86 bra $L49;
+mov.pred %r89,%r73;
+$L49:
+bar.warp.sync 0xffffffff;
+mov.pred %r73,%r89;
+selp.u32 %r90,1,0,%r73;
+shfl.sync.idx.b32 %r90,%r90,0,31,0xffffffff;
+setp.ne.u32 %r73,%r90,0;
+@!%r73 bra.uni $L1;
+@%r86 bra $L48;
+{
+.param .u64 %out_arg1;
+st.param.u64 [%out_arg1],%r31;
+call __nvptx_free,(%out_arg1);
+}
+$L48:
+bar.warp.sync 0xffffffff;
+bra $L1;
+$L2:
+setp.eq.u32 %r99,1,0;
+@%r86 bra $L55;
+ld.u64 %r66,[%r23+64];
+ld.u64 %r67,[%r23+56];
+sub.u64 %r65,%r66,%r67;
+add.u64 %r68,%r65,1;
+shl.b64 %r64,%r68,2;
+max.u64 %r64,%r64,1;
+{
+.param .u64 %value_in;
+.param .u64 %out_arg1;
+st.param.u64 [%out_arg1],%r64;
+call (%value_in),__nvptx_malloc,(%out_arg1);
+ld.param.u64 %r69,[%value_in];
+}
+mov.u64 %r31,%r69;
+mov.u32 %r49,%nctaid.x;
+mov.u32 %r50,%ctaid.x;
+add.u32 %r71,%r49,31;
+div.s32 %r43,%r71,%r49;
+mul.lo.u32 %r22,%r43,%r50;
+add.u32 %r35,%r22,%r43;
+min.s32 %r35,%r35,32;
+setp.lt.s32 %r72,%r22,%r35;
+mov.pred %r99,%r72;
+$L55:
+bar.warp.sync 0xffffffff;
+mov.pred %r72,%r99;
+selp.u32 %r100,1,0,%r72;
+shfl.sync.idx.b32 %r100,%r100,0,31,0xffffffff;
+setp.ne.u32 %r72,%r100,0;
+@%r72 bra.uni $L8;
+@%r86 bra $L47;
+setp.ne.u64 %r73,%r31,0;
+$L47:
+bar.warp.sync 0xffffffff;
+bra $L7;
+$L8:
+@%r86 bra $L54;
+setp.ne.u64 %r73,%r31,0;
+$L54:
+bar.warp.sync 0xffffffff;
+bra $L6;
+$L1:
+ret;
+$L32:
+setp.eq.u32 %r95,1,0;
+@%r86 bra $L52;
+setp.eq.u32 %r83,%r76,0;
+mov.pred %r95,%r83;
+$L52:
+bar.warp.sync 0xffffffff;
+mov.pred %r83,%r95;
+selp.u32 %r96,1,0,%r83;
+shfl.sync.idx.b32 %r96,%r96,0,31,0xffffffff;
+setp.ne.u32 %r83,%r96,0;
+@%r83 bra.uni $L4;
+setp.eq.u32 %r93,1,0;
+@%r86 bra $L51;
+setp.eq.u32 %r82,%r76,1;
+@%r82 bra $L33;
+setp.eq.u32 %r81,%r76,2;
+@%r81 bra $L34;
+setp.eq.u32 %r80,%r76,3;
+@%r80 bra $L35;
+setp.eq.u32 %r79,%r76,4;
+@%r79 bra $L36;
+setp.eq.u32 %r78,%r76,5;
+@%r78 bra $L37;
+setp.eq.u32 %r77,%r76,6;
+@%r77 bra $L38;
+.loc 2 54 19
+add.u32 %r59,%r22,11;
+.loc 2 55 19
+st.u32 [%r45],%r59;
+add.u32 %r22,%r22,1;
+add.u64 %r45,%r45,4;
+$L38:
+.loc 2 54 19
+add.u32 %r59,%r22,11;
+.loc 2 55 19
+st.u32 [%r45],%r59;
+add.u32 %r22,%r22,1;
+add.u64 %r45,%r45,4;
+$L37:
+.loc 2 54 19
+add.u32 %r59,%r22,11;
+.loc 2 55 19
+st.u32 [%r45],%r59;
+add.u32 %r22,%r22,1;
+add.u64 %r45,%r45,4;
+$L36:
+.loc 2 54 19
+add.u32 %r59,%r22,11;
+.loc 2 55 19
+st.u32 [%r45],%r59;
+add.u32 %r22,%r22,1;
+add.u64 %r45,%r45,4;
+$L35:
+.loc 2 54 19
+add.u32 %r59,%r22,11;
+.loc 2 55 19
+st.u32 [%r45],%r59;
+add.u32 %r22,%r22,1;
+add.u64 %r45,%r45,4;
+$L34:
+.loc 2 54 19
+add.u32 %r59,%r22,11;
+.loc 2 55 19
+st.u32 [%r45],%r59;
+add.u32 %r22,%r22,1;
+add.u64 %r45,%r45,4;
+$L33:
+.loc 2 54 19
+add.u32 %r59,%r22,11;
+.loc 2 55 19
+st.u32 [%r45],%r59;
+add.u32 %r22,%r22,1;
+add.u64 %r45,%r45,4;
+setp.lt.s32 %r60,%r22,%r35;
+mov.pred %r93,%r60;
+$L51:
+bar.warp.sync 0xffffffff;
+mov.pred %r60,%r93;
+selp.u32 %r94,1,0,%r60;
+shfl.sync.idx.b32 %r94,%r94,0,31,0xffffffff;
+setp.ne.u32 %r60,%r94,0;
+@%r60 bra.uni $L4;
+bra $L7;
+}
+// BEGIN FUNCTION DEF: worker_parallel$3$_omp_fn$0
+.entry worker_parallel$3$_omp_fn$0 (.param .u64 %in_ar0)
+{
+.reg .u64 %ar0;
+ld.param.u64 %ar0,[%in_ar0];
+.reg .u64 %r23;
+.reg .u64 %r24;
+.reg .u64 %r32;
+.reg .u32 %r39;
+.reg .u64 %r45;
+.reg .u64 %r47;
+.reg .u64 %r48;
+.reg .u64 %r49;
+.reg .u32 %r50;
+.reg .u32 %r51;
+.reg .u32 %r52;
+.reg .u32 %r53;
+.reg .u32 %r54;
+.reg .u32 %r55;
+.reg .u32 %r56;
+.reg .u32 %r57;
+.reg .u64 %r61;
+.reg .u64 %r62;
+.reg .u64 %r63;
+.reg .u64 %r64;
+.reg .u64 %r65;
+.reg .u64 %r66;
+.reg .pred %r68;
+.reg .u64 %r69;
+.reg .u32 %r70;
+.reg .u64 %r71;
+.reg .u32 %r72;
+.reg .pred %r73;
+.reg .pred %r74;
+{
+.reg .u32 %y;
+mov.u32 %y,%tid.y;
+setp.ne.u32 %r74,%y,0;
+}
+{
+.reg .u32 %x;
+mov.u32 %x,%tid.x;
+setp.ne.u32 %r73,%x,0;
+}
+@%r74 bra.uni $L64;
+@%r73 bra $L65;
+mov.u64 %r45,%ar0;
+.loc 2 70 32
+ld.u64 %r23,[%r45+16];
+ld.u64 %r24,[%r23+8];
+setp.ne.u64 %r68,%r24,0;
+@%r68 bra $L58;
+$L61:
+// fork 2;
+cvta.shared.u64 %r71,__oacc_bcast;
+st.u64 [%r71],%r24;
+st.u64 [%r71+8],%r45;
+selp.u32 %r72,1,0,%r68;
+st.u32 [%r71+16],%r72;
+$L65:
+bar.warp.sync 0xffffffff;
+$L64:
+barrier.sync.aligned 0;
+// forked 2;
+@%r73 bra $L63;
+cvta.shared.u64 %r69,__oacc_bcast;
+ld.u64 %r24,[%r69];
+ld.u64 %r45,[%r69+8];
+ld.u32 %r70,[%r69+16];
+setp.ne.u32 %r68,%r70,0;
+mov.u32 %r39,%tid.y;
+cvt.u64.u32 %r47,%r39;
+shl.b64 %r48,%r47,2;
+ld.u64 %r49,[%r45+8];
+add.u64 %r32,%r49,%r48;
+.loc 2 72 19
+add.u32 %r50,%r39,11;
+.loc 2 73 19
+st.u32 [%r32],%r50;
+.loc 2 72 19
+add.u32 %r51,%r39,15;
+.loc 2 73 19
+st.u32 [%r32+16],%r51;
+.loc 2 72 19
+add.u32 %r52,%r39,19;
+.loc 2 73 19
+st.u32 [%r32+32],%r52;
+.loc 2 72 19
+add.u32 %r53,%r39,23;
+.loc 2 73 19
+st.u32 [%r32+48],%r53;
+.loc 2 72 19
+add.u32 %r54,%r39,27;
+.loc 2 73 19
+st.u32 [%r32+64],%r54;
+.loc 2 72 19
+add.u32 %r55,%r39,31;
+.loc 2 73 19
+st.u32 [%r32+80],%r55;
+.loc 2 72 19
+add.u32 %r56,%r39,35;
+.loc 2 73 19
+st.u32 [%r32+96],%r56;
+.loc 2 72 19
+add.u32 %r57,%r39,39;
+.loc 2 73 19
+st.u32 [%r32+112],%r57;
+.loc 2 70 32
+@%r68 bra $L59;
+$L60:
+// joining 2;
+$L63:
+bar.warp.sync 0xffffffff;
+barrier.sync.aligned 0;
+// join 2;
+bra $L62;
+$L59:
+{
+.param .u64 %out_arg1;
+st.param.u64 [%out_arg1],%r24;
+call __nvptx_free,(%out_arg1);
+}
+bra $L60;
+$L58:
+ld.u64 %r63,[%r23+64];
+ld.u64 %r64,[%r23+56];
+sub.u64 %r62,%r63,%r64;
+add.u64 %r65,%r62,1;
+shl.b64 %r61,%r65,2;
+max.u64 %r61,%r61,1;
+{
+.param .u64 %value_in;
+.param .u64 %out_arg1;
+st.param.u64 [%out_arg1],%r61;
+call (%value_in),__nvptx_malloc,(%out_arg1);
+ld.param.u64 %r66,[%value_in];
+}
+mov.u64 %r24,%r66;
+setp.ne.u64 %r68,%r24,0;
+bra $L61;
+$L62:
+.loc 2 69 73
+ret;
+}
+// BEGIN FUNCTION DEF: vector_parallel$2$_omp_fn$0
+.entry vector_parallel$2$_omp_fn$0 (.param .u64 %in_ar0)
+{
+.reg .u64 %ar0;
+ld.param.u64 %ar0,[%in_ar0];
+.reg .u64 %r22;
+.reg .u64 %r23;
+.reg .u32 %r35;
+.reg .u64 %r36;
+.reg .u64 %r38;
+.reg .u64 %r40;
+.reg .u64 %r41;
+.reg .u64 %r42;
+.reg .u32 %r43;
+.reg .u64 %r47;
+.reg .u64 %r48;
+.reg .u64 %r49;
+.reg .u64 %r50;
+.reg .u64 %r51;
+.reg .u64 %r52;
+.reg .pred %r54;
+.reg .u32 %r55;
+.reg .u32 %r56;
+.reg .u32 %r57;
+.reg .u32 %r58;
+.reg .u32 %r59;
+.reg .pred %r60;
+{
+.reg .u32 %x;
+mov.u32 %x,%tid.x;
+setp.ne.u32 %r60,%x,0;
+}
+@%r60 bra $L72;
+mov.u64 %r36,%ar0;
+.loc 2 88 32
+ld.u64 %r22,[%r36+16];
+ld.u64 %r23,[%r22+8];
+setp.ne.u64 %r54,%r23,0;
+@%r54 bra $L67;
+$L70:
+// fork 4;
+$L72:
+bar.warp.sync 0xffffffff;
+// forked 4;
+mov.b64 {%r55,%r56},%r23;
+shfl.sync.idx.b32 %r55,%r55,0,31,0xffffffff;
+shfl.sync.idx.b32 %r56,%r56,0,31,0xffffffff;
+mov.b64 %r23,{%r55,%r56};
+mov.b64 {%r57,%r58},%r36;
+shfl.sync.idx.b32 %r57,%r57,0,31,0xffffffff;
+shfl.sync.idx.b32 %r58,%r58,0,31,0xffffffff;
+mov.b64 %r36,{%r57,%r58};
+selp.u32 %r59,1,0,%r54;
+shfl.sync.idx.b32 %r59,%r59,0,31,0xffffffff;
+setp.ne.u32 %r54,%r59,0;
+mov.u32 %r35,%tid.x;
+.loc 2 91 19
+ld.u64 %r38,[%r36+8];
+cvt.s64.s32 %r40,%r35;
+shl.b64 %r41,%r40,2;
+add.u64 %r42,%r38,%r41;
+.loc 2 90 19
+add.u32 %r43,%r35,11;
+.loc 2 91 19
+st.u32 [%r42],%r43;
+.loc 2 88 32
+@%r54 bra $L68;
+$L69:
+// joining 4;
+// join 4;
+bra $L71;
+$L68:
+{
+.param .u64 %out_arg1;
+st.param.u64 [%out_arg1],%r23;
+call __nvptx_free,(%out_arg1);
+}
+bra $L69;
+$L67:
+ld.u64 %r49,[%r22+64];
+ld.u64 %r50,[%r22+56];
+sub.u64 %r48,%r49,%r50;
+add.u64 %r51,%r48,1;
+shl.b64 %r47,%r51,2;
+max.u64 %r47,%r47,1;
+{
+.param .u64 %value_in;
+.param .u64 %out_arg1;
+st.param.u64 [%out_arg1],%r47;
+call (%value_in),__nvptx_malloc,(%out_arg1);
+ld.param.u64 %r52,[%value_in];
+}
+mov.u64 %r23,%r52;
+setp.ne.u64 %r54,%r23,0;
+bra $L70;
+$L71:
+.loc 2 87 74
+ret;
+}
+// BEGIN FUNCTION DEF: seq_parallel$1$_omp_fn$0
+.entry seq_parallel$1$_omp_fn$0 (.param .u64 %in_ar0)
+{
+.reg .u64 %ar0;
+ld.param.u64 %ar0,[%in_ar0];
+.reg .u64 %r23;
+.reg .u64 %r24;
+.reg .u32 %r32;
+.reg .u64 %r33;
+.reg .u64 %r36;
+.reg .pred %r38;
+.reg .u64 %r42;
+.reg .u64 %r43;
+.reg .u64 %r44;
+.reg .u64 %r45;
+.reg .u64 %r46;
+.reg .u64 %r47;
+.reg .pred %r49;
+.reg .u32 %r50;
+.reg .pred %r52;
+.reg .pred %r53;
+.reg .u32 %r54;
+{
+.reg .u32 %x;
+mov.u32 %x,%tid.x;
+setp.ne.u32 %r52,%x,0;
+}
+setp.eq.u32 %r53,1,0;
+@%r52 bra $L88;
+mov.u64 %r36,%ar0;
+.loc 2 106 29
+ld.u64 %r23,[%r36+16];
+ld.u64 %r24,[%r23+8];
+setp.ne.u64 %r49,%r24,0;
+@%r49 bra $L74;
+$L78:
+ld.u64 %r33,[%r36+8];
+.loc 2 109 19
+mov.u32 %r32,11;
+$L75:
+st.u32 [%r33],%r32;
+add.u32 %r50,%r32,1;
+st.u32 [%r33+4],%r50;
+add.u32 %r32,%r32,2;
+st.u32 [%r33+8],%r32;
+add.u32 %r32,%r50,2;
+st.u32 [%r33+12],%r32;
+add.u32 %r32,%r50,3;
+st.u32 [%r33+16],%r32;
+add.u32 %r32,%r50,4;
+st.u32 [%r33+20],%r32;
+add.u32 %r32,%r50,5;
+st.u32 [%r33+24],%r32;
+add.u32 %r32,%r50,6;
+st.u32 [%r33+28],%r32;
+add.u32 %r32,%r50,7;
+add.u64 %r33,%r33,32;
+setp.ne.u32 %r38,%r50,36;
+@%r38 bra $L75;
+mov.pred %r53,%r49;
+$L88:
+bar.warp.sync 0xffffffff;
+.loc 2 106 29
+mov.pred %r49,%r53;
+selp.u32 %r54,1,0,%r49;
+shfl.sync.idx.b32 %r54,%r54,0,31,0xffffffff;
+setp.ne.u32 %r49,%r54,0;
+@!%r49 bra.uni $L73;
+@%r52 bra $L87;
+{
+.param .u64 %out_arg1;
+st.param.u64 [%out_arg1],%r24;
+call __nvptx_free,(%out_arg1);
+}
+$L87:
+bar.warp.sync 0xffffffff;
+bra $L73;
+$L74:
+ld.u64 %r44,[%r23+64];
+ld.u64 %r45,[%r23+56];
+sub.u64 %r43,%r44,%r45;
+add.u64 %r46,%r43,1;
+shl.b64 %r42,%r46,2;
+max.u64 %r42,%r42,1;
+{
+.param .u64 %value_in;
+.param .u64 %out_arg1;
+st.param.u64 [%out_arg1],%r42;
+call (%value_in),__nvptx_malloc,(%out_arg1);
+ld.param.u64 %r47,[%value_in];
+}
+mov.u64 %r24,%r47;
+setp.ne.u64 %r49,%r24,0;
+bra $L78;
+$L73:
+.loc 2 105 73
+ret;
+}
+// BEGIN FUNCTION DEF: gang_kernels$0$_omp_fn$0
+.entry gang_kernels$0$_omp_fn$0 (.param .u64 %in_ar0)
+{
+.reg .u64 %ar0;
+ld.param.u64 %ar0,[%in_ar0];
+.reg .u32 %r22;
+.reg .u64 %r23;
+.reg .u64 %r24;
+.reg .u64 %r33;
+.reg .u64 %r36;
+.reg .pred %r38;
+.reg .u64 %r42;
+.reg .u64 %r43;
+.reg .u64 %r44;
+.reg .u64 %r45;
+.reg .u64 %r46;
+.reg .u64 %r47;
+.reg .pred %r49;
+.reg .u32 %r50;
+.reg .pred %r52;
+.reg .pred %r53;
+.reg .u32 %r54;
+{
+.reg .u32 %x;
+mov.u32 %x,%tid.x;
+setp.ne.u32 %r52,%x,0;
+}
+setp.eq.u32 %r53,1,0;
+@%r52 bra $L104;
+mov.u64 %r36,%ar0;
+.loc 2 124 25
+ld.u64 %r23,[%r36+16];
+ld.u64 %r24,[%r23+8];
+setp.ne.u64 %r49,%r24,0;
+@%r49 bra $L90;
+$L94:
+ld.u64 %r33,[%r36+8];
+.loc 2 127 19
+mov.u32 %r22,11;
+$L91:
+st.u32 [%r33],%r22;
+add.u32 %r50,%r22,1;
+st.u32 [%r33+4],%r50;
+add.u32 %r22,%r22,2;
+st.u32 [%r33+8],%r22;
+add.u32 %r22,%r50,2;
+st.u32 [%r33+12],%r22;
+add.u32 %r22,%r50,3;
+st.u32 [%r33+16],%r22;
+add.u32 %r22,%r50,4;
+st.u32 [%r33+20],%r22;
+add.u32 %r22,%r50,5;
+st.u32 [%r33+24],%r22;
+add.u32 %r22,%r50,6;
+st.u32 [%r33+28],%r22;
+add.u32 %r22,%r50,7;
+add.u64 %r33,%r33,32;
+setp.ne.u32 %r38,%r50,36;
+@%r38 bra $L91;
+mov.pred %r53,%r49;
+$L104:
+bar.warp.sync 0xffffffff;
+.loc 2 124 25
+mov.pred %r49,%r53;
+selp.u32 %r54,1,0,%r49;
+shfl.sync.idx.b32 %r54,%r54,0,31,0xffffffff;
+setp.ne.u32 %r49,%r54,0;
+@!%r49 bra.uni $L89;
+@%r52 bra $L103;
+{
+.param .u64 %out_arg1;
+st.param.u64 [%out_arg1],%r24;
+call __nvptx_free,(%out_arg1);
+}
+$L103:
+bar.warp.sync 0xffffffff;
+bra $L89;
+$L90:
+ld.u64 %r44,[%r23+64];
+ld.u64 %r45,[%r23+56];
+sub.u64 %r43,%r44,%r45;
+add.u64 %r46,%r43,1;
+shl.b64 %r42,%r46,2;
+max.u64 %r42,%r42,1;
+{
+.param .u64 %value_in;
+.param .u64 %out_arg1;
+st.param.u64 [%out_arg1],%r42;
+call (%value_in),__nvptx_malloc,(%out_arg1);
+ld.param.u64 %r47,[%value_in];
+}
+mov.u64 %r24,%r47;
+setp.ne.u64 %r49,%r24,0;
+bra $L94;
+$L89:
+.loc 2 123 27
+ret;
+}
+
+---
+Loading:
+---
+// BEGIN PREAMBLE
+.version 7.8
+.target sm_89
+.address_size 64
+// END PREAMBLE
+.file 1 "<dummy>"
+// BEGIN GLOBAL FUNCTION DECL: __nvptx_free
+.visible .func __nvptx_free (.param .u64 %in_ar0);
+.file 2 "../../../../gcc/newlib/libc/machine/nvptx/free.c"
+// BEGIN GLOBAL FUNCTION DECL: free
+.extern .func free (.param .u64 %in_ar0);
+// BEGIN GLOBAL FUNCTION DEF: __nvptx_free
+.visible .func __nvptx_free (.param .u64 %in_ar0)
+{
+.reg .u64 %ar0;
+ld.param.u64 %ar0,[%in_ar0];
+.reg .u64 %r23;
+.reg .pred %r24;
+.reg .u64 %r26;
+mov.u64 %r23,%ar0;
+.loc 2 24 6
+setp.eq.u64 %r24,%r23,0;
+@%r24 bra $L1;
+.loc 2 25 5
+add.u64 %r26,%r23,-8;
+{
+.param .u64 %out_arg1;
+st.param.u64 [%out_arg1],%r26;
+call free,(%out_arg1);
+}
+$L1:
+.loc 2 26 1
+ret;
+}
+
+---
+Loading:
+---
+// BEGIN PREAMBLE
+.version 7.8
+.target sm_89
+.address_size 64
+// END PREAMBLE
+.file 1 "<dummy>"
+// BEGIN GLOBAL FUNCTION DECL: __nvptx_malloc
+.visible .func (.param .u64 %value_out) __nvptx_malloc (.param .u64 %in_ar0);
+.file 2 "../../../../gcc/newlib/libc/machine/nvptx/malloc.c"
+// BEGIN GLOBAL FUNCTION DECL: malloc
+.extern .func (.param .u64 %value_out) malloc (.param .u64 %in_ar0);
+// BEGIN GLOBAL FUNCTION DEF: __nvptx_malloc
+.visible .func (.param .u64 %value_out) __nvptx_malloc (.param .u64 %in_ar0)
+{
+.reg .u64 %value;
+.reg .u64 %ar0;
+ld.param.u64 %ar0,[%in_ar0];
+.reg .u64 %r24;
+.reg .u64 %r25;
+.reg .u64 %r27;
+.reg .u64 %r28;
+.reg .pred %r29;
+mov.u64 %r25,%ar0;
+.loc 2 24 37
+add.u64 %r27,%r25,8;
+.loc 2 24 20
+{
+.param .u64 %value_in;
+.param .u64 %out_arg1;
+st.param.u64 [%out_arg1],%r27;
+call (%value_in),malloc,(%out_arg1);
+ld.param.u64 %r28,[%value_in];
+}
+.loc 2 25 6
+setp.eq.u64 %r29,%r28,0;
+@%r29 bra $L3;
+.loc 2 26 6
+add.u64 %r24,%r28,8;
+.loc 2 26 22
+st.u64 [%r28],%r25;
+bra $L1;
+$L3:
+.loc 2 24 20
+mov.u64 %r24,%r28;
+$L1:
+.loc 2 29 1
+mov.u64 %value,%r24;
+st.param.u64 [%value_out],%value;
+ret;
+}
+
+---
+Linking
+Link complete: 0.000000ms
+Link log info    : 0 bytes gmem
+info    : Function properties for 'gang_parallel$4$_omp_fn$0':
+info    : used 38 registers, used 1 barriers, 0 stack, 0 bytes smem, 904 bytes cmem[0], 0 bytes lmem
+info    : Function properties for 'worker_parallel$3$_omp_fn$0':
+info    : used 38 registers, used 1 barriers, 0 stack, 1048 bytes smem, 904 bytes cmem[0], 0 bytes lmem
+info    : Function properties for 'vector_parallel$2$_omp_fn$0':
+info    : used 38 registers, used 1 barriers, 0 stack, 0 bytes smem, 904 bytes cmem[0], 0 bytes lmem
+info    : Function properties for 'seq_parallel$1$_omp_fn$0':
+info    : used 38 registers, used 1 barriers, 0 stack, 0 bytes smem, 904 bytes cmem[0], 0 bytes lmem
+info    : Function properties for 'gang_kernels$0$_omp_fn$0':
+info    : used 38 registers, used 1 barriers, 0 stack, 0 bytes smem, 904 bytes cmem[0], 0 bytes lmem
+cuModuleGetFunction (__do_global_ctors__entry): named symbol not found
+cuModuleGetFunction (__do_global_ctors__entry__mgomp): named symbol not found
+nvptx GOMP_OFFLOAD_openacc_exec
+ warp_size=32, block_size=1024, dev_size=36, cpu_size=1536
+ default dimensions [36,32,32]
+cuOccupancyMaxPotentialBlockSize: grid = 864, block = 32
+  nvptx_exec: kernel gang_parallel$4$_omp_fn$0: launch gangs=1728, workers=1, vectors=32
+  nvptx_exec: kernel gang_parallel$4$_omp_fn$0: finished
+GOACC_parallel_keyed: mapnum=3, hostaddrs=0x7ffc77640790, size=0x4080e0, kinds=0x4080d8
+nvptx GOMP_OFFLOAD_openacc_exec
+  nvptx_exec: kernel worker_parallel$3$_omp_fn$0: launch gangs=4, workers=4, vectors=32
+  nvptx_exec: kernel worker_parallel$3$_omp_fn$0: finished
+GOACC_parallel_keyed: mapnum=3, hostaddrs=0x7ffc77640790, size=0x4080c0, kinds=0x4080b8
+nvptx GOMP_OFFLOAD_openacc_exec
+  nvptx_exec: kernel vector_parallel$2$_omp_fn$0: launch gangs=1, workers=1, vectors=32
+  nvptx_exec: kernel vector_parallel$2$_omp_fn$0: finished
+GOACC_parallel_keyed: mapnum=3, hostaddrs=0x7ffc77640790, size=0x4080a0, kinds=0x408098
+nvptx GOMP_OFFLOAD_openacc_exec
+  nvptx_exec: kernel seq_parallel$1$_omp_fn$0: launch gangs=1, workers=1, vectors=32
+  nvptx_exec: kernel seq_parallel$1$_omp_fn$0: finished
+GOACC_parallel_keyed: mapnum=3, hostaddrs=0x7ffc77640790, size=0x408080, kinds=0x408070
+nvptx GOMP_OFFLOAD_openacc_exec
+  nvptx_exec: kernel gang_kernels$0$_omp_fn$0: launch gangs=1, workers=1, vectors=32
+  nvptx_exec: kernel gang_kernels$0$_omp_fn$0: finished
+cuModuleGetFunction (__do_global_dtors__entry): named symbol not found
+cuModuleGetFunction (__do_global_dtors__entry__mgomp): named symbol not found

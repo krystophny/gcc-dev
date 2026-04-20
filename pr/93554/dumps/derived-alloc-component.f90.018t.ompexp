@@ -1,0 +1,199 @@
+
+;; Function p (MAIN__, funcdef_no=0, decl_uid=4696, cgraph_uid=1, symbol_order=0)
+
+
+OMP region tree
+
+bb 2: gimple_omp_target
+    bb 6: gimple_omp_for
+    bb 7: GIMPLE_OMP_CONTINUE
+    bb 10: GIMPLE_OMP_RETURN
+bb 11: GIMPLE_OMP_RETURN
+
+Added new low gimple function MAIN__._omp_fn.0 to callgraph
+Introduced new external node (__builtin_free/5).
+Introduced new external node (__builtin_malloc/6).
+
+;; Function MAIN__._omp_fn.0 (MAIN__._omp_fn.0, funcdef_no=2, decl_uid=4731, cgraph_uid=3, symbol_order=2)
+
+__attribute__((oacc kernels, omp target entrypoint, noclone))
+void MAIN__._omp_fn.0 (const struct .omp_data_t.1 & restrict .omp_data_i)
+{
+  struct t x [value-expr: *.omp_data_i->x];
+  void * restrict D.4791;
+  unsigned long D.4790;
+  unsigned long D.4789;
+  integer(kind=8) D.4788;
+  integer(kind=8) D.4787;
+  integer(kind=8) D.4786;
+  integer(kind=8) D.4785;
+  integer(kind=8) D.4784;
+  struct t * D.4783;
+  integer(kind=8) D.4782;
+  struct t * D.4781;
+  void * D.4780;
+  void * D.4779;
+  integer(kind=4) i;
+  integer(kind=4) .bound.9;
+  integer(kind=4) .offset.8;
+  integer(kind=4) .step.5;
+  integer(kind=4) .chunk_max.6;
+  integer(kind=4) .chunk_no.7;
+  void * D.4772;
+  struct t * D.4771;
+  struct t x;
+  struct t * D.4769;
+
+  <bb 15> :
+
+  <bb 3> :
+  D.4769 = .omp_data_i->x;
+  x.b = D.4769->b;
+  D.4771 = .omp_data_i->x;
+  D.4772 = D.4771->b.data;
+  if (D.4772 != 0B)
+    goto <bb 4>; [INV]
+  else
+    goto <bb 5>; [INV]
+
+  <bb 6> :
+  .chunk_no.7 = 0;
+  .chunk_max.6 = .GOACC_LOOP (CHUNKS, 1, 32, 1, -1, 0);
+  .step.5 = .GOACC_LOOP (STEP, 1, 32, 1, -1, 0);
+
+  <bb 13> :
+  .offset.8 = .GOACC_LOOP (OFFSET, 1, 32, 1, -1, 0, .chunk_no.7);
+  .bound.9 = .GOACC_LOOP (BOUND, 1, 32, 1, -1, 0, .offset.8);
+  if (.offset.8 < .bound.9)
+    goto <bb 7>; [INV]
+  else
+    goto <bb 8>; [INV]
+
+  <bb 7> :
+  i = 0 + .offset.8;
+  x.a = 1;
+  .offset.8 = .offset.8 + .step.5;
+  if (.offset.8 < .bound.9)
+    goto <bb 7>; [INV]
+  else
+    goto <bb 8>; [INV]
+
+  <bb 8> :
+  D.4779 = x.b.data;
+  if (D.4779 != 0B)
+    goto <bb 9>; [INV]
+  else
+    goto <bb 10>; [INV]
+
+  <bb 10> :
+  GIMPLE_NOP
+  .chunk_no.7 = .chunk_no.7 + 1;
+  if (.chunk_no.7 < .chunk_max.6)
+    goto <bb 13>; [80.00%]
+  else
+    goto <bb 14>; [20.00%]
+
+  <bb 14> :
+  i = 0 + 32;
+
+  <bb 11> :
+  return;
+
+  <bb 9> :
+  D.4780 = x.b.data;
+  __builtin_free (D.4780);
+  x.b.data = 0B;
+  goto <bb 10>; [INV]
+
+  <bb 5> :
+  x.b.data = 0B;
+  goto <bb 6>; [INV]
+
+  <bb 4> :
+  D.4781 = .omp_data_i->x;
+  D.4782 = D.4781->b.dim[0].ubound;
+  D.4783 = .omp_data_i->x;
+  D.4784 = D.4783->b.dim[0].lbound;
+  D.4785 = D.4782 - D.4784;
+  D.4786 = D.4785 + 1;
+  D.4787 = D.4786;
+  D.4788 = D.4787 * 4;
+  D.4789 = (unsigned long) D.4788;
+  D.4790 = MAX_EXPR <D.4789, 1>;
+  D.4791 = __builtin_malloc (D.4790);
+  x.b.data = D.4791;
+  goto <bb 6>; [INV]
+
+}
+
+
+
+;; Function p (MAIN__, funcdef_no=0, decl_uid=4696, cgraph_uid=1, symbol_order=0)
+
+Merging blocks 2 and 16
+Merging blocks 2 and 12
+fix_loop_structure: fixing up loops for function
+__attribute__((fn spec (". ")))
+void p ()
+{
+  integer(kind=4) .bound.9;
+  integer(kind=4) .offset.8;
+  integer(kind=4) .chunk_no.7;
+  integer(kind=4) .chunk_max.6;
+  integer(kind=4) .step.5;
+  void * restrict D.4741;
+  integer(kind=8) D.4740;
+  integer(kind=8) D.4739;
+  integer(kind=4) i;
+  struct t x;
+  void * D.4759;
+  void * D.4756;
+  unsigned long D.4754;
+  unsigned long D.4753;
+  integer(kind=8) D.4752;
+  integer(kind=8) D.4751;
+  integer(kind=8) D.4750;
+  struct t * D.4749;
+  integer(kind=8) D.4748;
+  struct t * D.4747;
+  void * D.4744;
+  struct t * D.4743;
+  struct t * D.4742;
+  static struct t x = {};
+  integer(kind=4) i;
+  struct .omp_data_t.1 .omp_data_arr.2;
+  static unsigned long .omp_data_sizes.3[1] = {72};
+  static unsigned short .omp_data_kinds.4[1] = {771};
+
+  <bb 2> :
+  x.b.data = 0B;
+  .omp_data_arr.2.x = &x;
+  __builtin_GOACC_parallel_keyed (-1, MAIN__._omp_fn.0, 1, &.omp_data_arr.2, &.omp_data_sizes.3, &.omp_data_kinds.4, 0);
+  .omp_data_arr.2 = {CLOBBER};
+  return;
+
+}
+
+
+
+;; Function main (main, funcdef_no=1, decl_uid=4725, cgraph_uid=2, symbol_order=1)
+
+__attribute__((externally_visible))
+integer(kind=4) main (integer(kind=4) argc, character(kind=1) * * argv)
+{
+  static integer(kind=4) options.0[7] = {10308, 16383, 0, 1, 1, 0, 31};
+  integer(kind=4) D.4793;
+
+  <bb 2> :
+  _gfortran_set_args (argc, argv);
+  _gfortran_set_options (7, &options.0[0]);
+  p ();
+  D.4793 = 0;
+
+  <bb 3> :
+<L0>:
+  return D.4793;
+
+}
+
+

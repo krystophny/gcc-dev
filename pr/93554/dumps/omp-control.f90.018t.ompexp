@@ -1,0 +1,401 @@
+
+;; Function p (MAIN__, funcdef_no=0, decl_uid=4684, cgraph_uid=1, symbol_order=0)
+
+
+OMP region tree
+
+bb 11: gimple_omp_target
+    bb 12: gimple_omp_parallel
+        bb 16: gimple_omp_for
+        bb 17: GIMPLE_OMP_CONTINUE
+        bb 18: GIMPLE_OMP_RETURN
+    bb 21: GIMPLE_OMP_RETURN
+bb 22: GIMPLE_OMP_RETURN
+
+Added new low gimple function MAIN__._omp_fn.1 to callgraph
+Introduced new external node (__builtin_omp_get_num_threads/6).
+Introduced new external node (__builtin_omp_get_thread_num/7).
+Introduced new external node (__builtin_free/8).
+Introduced new external node (__builtin_malloc/9).
+
+;; Function MAIN__._omp_fn.1 (MAIN__._omp_fn.1, funcdef_no=3, decl_uid=4726, cgraph_uid=5, symbol_order=4)
+
+__attribute__((omp declare target))
+void MAIN__._omp_fn.1 (struct .omp_data_s.2 & restrict .omp_data_i)
+{
+  void * restrict D.4848;
+  unsigned long D.4847;
+  unsigned long D.4846;
+  integer(kind=8) D.4845;
+  integer(kind=8) D.4844;
+  integer(kind=8) D.4843;
+  integer(kind=8) D.4842;
+  integer(kind=8) D.4841;
+  struct t * D.4840;
+  integer(kind=8) D.4839;
+  struct t * D.4838;
+  void * D.4837;
+  void * D.4836;
+  integer(kind=4) i;
+  integer(kind=4) D.4834;
+  integer(kind=4) D.4833;
+  integer(kind=4) D.4832;
+  integer(kind=4) tt.31;
+  integer(kind=4) q.30;
+  integer(kind=4) D.4829;
+  integer(kind=4) D.4828;
+  void * D.4827;
+  struct t * D.4826;
+  struct t x;
+  struct t * D.4824;
+
+  <bb 27> :
+
+  <bb 13> :
+  D.4824 = .omp_data_i->x;
+  x.b = D.4824->b;
+  D.4826 = .omp_data_i->x;
+  D.4827 = D.4826->b.data;
+  if (D.4827 != 0B)
+    goto <bb 14>; [INV]
+  else
+    goto <bb 15>; [INV]
+
+  <bb 16> :
+  D.4828 = __builtin_omp_get_num_threads ();
+  D.4829 = __builtin_omp_get_thread_num ();
+  q.30 = 32 / D.4828;
+  tt.31 = 32 % D.4828;
+  if (D.4829 < tt.31)
+    goto <bb 25>; [25.00%]
+  else
+    goto <bb 26>; [75.00%]
+
+  <bb 26> :
+  D.4832 = q.30 * D.4829;
+  D.4833 = D.4832 + tt.31;
+  D.4834 = D.4833 + q.30;
+  if (D.4833 >= D.4834)
+    goto <bb 18>; [INV]
+  else
+    goto <bb 24>; [INV]
+
+  <bb 24> :
+  i = D.4833;
+
+  <bb 17> :
+  x.a = 1;
+  i = i + 1;
+  if (i < D.4834)
+    goto <bb 17>; [INV]
+  else
+    goto <bb 18>; [INV]
+
+  <bb 18> :
+
+  <bb 19> :
+  D.4836 = x.b.data;
+  if (D.4836 != 0B)
+    goto <bb 20>; [INV]
+  else
+    goto <bb 21>; [INV]
+
+  <bb 21> :
+  return;
+
+  <bb 20> :
+  D.4837 = x.b.data;
+  __builtin_free (D.4837);
+  x.b.data = 0B;
+  goto <bb 21>; [INV]
+
+  <bb 25> :
+  tt.31 = 0;
+  q.30 = q.30 + 1;
+  goto <bb 26>; [100.00%]
+
+  <bb 15> :
+  x.b.data = 0B;
+  goto <bb 16>; [INV]
+
+  <bb 14> :
+  D.4838 = .omp_data_i->x;
+  D.4839 = D.4838->b.dim[0].ubound;
+  D.4840 = .omp_data_i->x;
+  D.4841 = D.4840->b.dim[0].lbound;
+  D.4842 = D.4839 - D.4841;
+  D.4843 = D.4842 + 1;
+  D.4844 = D.4843;
+  D.4845 = D.4844 * 4;
+  D.4846 = (unsigned long) D.4845;
+  D.4847 = MAX_EXPR <D.4846, 1>;
+  D.4848 = __builtin_malloc (D.4847);
+  x.b.data = D.4848;
+  goto <bb 16>; [INV]
+
+}
+
+
+
+;; Function p (MAIN__, funcdef_no=0, decl_uid=4684, cgraph_uid=1, symbol_order=0)
+
+Added new low gimple function MAIN__._omp_fn.0 to callgraph
+Introduced new external node (__builtin_GOMP_parallel/10).
+
+;; Function MAIN__._omp_fn.0 (MAIN__._omp_fn.0, funcdef_no=2, decl_uid=4719, cgraph_uid=4, symbol_order=3)
+
+__attribute__((omp target entrypoint, noclone))
+void MAIN__._omp_fn.0 (const struct .omp_data_t.1 * restrict .omp_data_i)
+{
+  struct t x [value-expr: *.omp_data_i->x];
+  struct .omp_data_s.2 .omp_data_o.4;
+  struct t * D.4849;
+
+  <bb 29> :
+
+  <bb 12> :
+  D.4849 = .omp_data_i->x;
+  .omp_data_o.4.x = D.4849;
+
+  <bb 28> :
+  __builtin_GOMP_parallel (MAIN__._omp_fn.1, &.omp_data_o.4, 0, 0);
+
+  <bb 22> :
+  .omp_data_o.4 = {CLOBBER};
+  return;
+
+}
+
+
+
+;; Function p (MAIN__, funcdef_no=0, decl_uid=4684, cgraph_uid=1, symbol_order=0)
+
+Merging blocks 11 and 30
+Merging blocks 11 and 23
+fix_loop_structure: fixing up loops for function
+__attribute__((fn spec (". ")))
+void p ()
+{
+  void * .omp_target_args.34[3];
+  unsigned short * .omp_data_kinds.33;
+  struct .omp_data_t.1 * .omp_data_arr.32;
+  integer(kind=4) D.4823;
+  integer(kind=4) D.4821;
+  integer(kind=4) D.4822;
+  integer(kind=4) tt.31;
+  integer(kind=4) q.30;
+  integer(kind=4) D.4818;
+  integer(kind=4) D.4817;
+  integer(kind=4) i;
+  void * restrict D.4739;
+  integer(kind=8) D.4738;
+  integer(kind=8) D.4737;
+  static struct t x = {};
+  integer(kind=4) i;
+  unsigned long n_deepmap.3;
+  unsigned long nn_map.5;
+  struct .omp_data_t.1 * .omp_data_arr.6;
+  unsigned long * .omp_data_sizes.7;
+  unsigned short * .omp_data_kinds.8;
+  unsigned long D.4765;
+  unsigned long D.4766;
+  unsigned long D.4767;
+  void * D.4768;
+  unsigned long D.4769;
+  void * D.4770;
+  unsigned long D.4771;
+  void * D.4772;
+  unsigned long map_offset_data.9;
+  unsigned long map_offset.10;
+  integer(kind=8) D.4784;
+  integer(kind=8) D.4785;
+  integer(kind=8) D.4786;
+  unsigned long extent.14;
+  struct .omp_data_t.1 * .omp_data_arr.15;
+  void * D.4792;
+  struct .omp_data_t.1 * .omp_data_arr.16;
+  unsigned long D.4797;
+  unsigned long D.4798;
+  struct .omp_data_t.1 * .omp_data_arr.21;
+  static unsigned long .omp_data_sizes0.22[1] = {72};
+  unsigned long * .omp_data_sizes.23;
+  unsigned long * .omp_data_sizes.24;
+  static unsigned short .omp_data_kinds0.25[1] = {867};
+  unsigned short * .omp_data_kinds.26;
+  unsigned short * .omp_data_kinds.27;
+  struct .omp_data_t.1 * .omp_data_arr.28;
+  unsigned long * .omp_data_sizes.29;
+  unsigned short * .omp_data_kinds.20;
+  unsigned long D.4806;
+  unsigned short * D.4807;
+  unsigned long * .omp_data_sizes.19;
+  unsigned long D.4803;
+  unsigned long * D.4804;
+  unsigned short * .omp_data_kinds.18;
+  unsigned long D.4800;
+  unsigned short * D.4801;
+  unsigned long * .omp_data_sizes.17;
+  unsigned long D.4795;
+  unsigned long * D.4796;
+  void * D.4777;
+  struct t * D.4740;
+  struct t * D.4741;
+  void * D.4742;
+  struct t * D.4745;
+  integer(kind=8) D.4746;
+  struct t * D.4747;
+  integer(kind=8) D.4748;
+  integer(kind=8) D.4749;
+  integer(kind=8) D.4750;
+  unsigned long D.4751;
+  unsigned long D.4752;
+  void * D.4754;
+  void * D.4757;
+  struct .omp_data_s.2 .omp_data_o.4;
+  struct t * D.4760;
+  void * D.4736;
+
+  <bb 2> :
+  x.b.data = 0B;
+  n_deepmap.3 = 0;
+  D.4736 = x.b.data;
+  if (D.4736 != 0B)
+    goto <bb 3>; [INV]
+  else
+    goto <bb 4>; [INV]
+
+  <bb 3> :
+  n_deepmap.3 = n_deepmap.3 + 1;
+
+  <bb 4> :
+  n_deepmap.3 = n_deepmap.3 * 2;
+  nn_map.5 = n_deepmap.3;
+  D.4765 = nn_map.5 + 1;
+  D.4766 = nn_map.5 + 1;
+  D.4767 = D.4766 * 8;
+  D.4768 = __builtin_malloc (D.4767);
+  .omp_data_arr.6 = D.4768;
+  D.4769 = D.4765 * 8;
+  D.4770 = __builtin_malloc (D.4769);
+  .omp_data_sizes.7 = D.4770;
+  D.4771 = D.4765 * 2;
+  D.4772 = __builtin_malloc (D.4771);
+  .omp_data_kinds.8 = D.4772;
+  map_offset_data.9 = 0;
+  map_offset.10 = 1;
+  D.4777 = x.b.data;
+  if (D.4777 != 0B)
+    goto <bb 5>; [INV]
+  else
+    goto <bb 11>; [INV]
+
+  <bb 5> :
+  size.11 = 1;
+  idx.13 = 0;
+  goto <bb 9>; [INV]
+
+  <bb 6> :
+  D.4784 = x.b.dim[idx.13].ubound;
+  D.4785 = x.b.dim[idx.13].lbound;
+  D.4786 = D.4784 - D.4785;
+  extent.12 = D.4786 + 1;
+  if (extent.12 < 0)
+    goto <bb 7>; [INV]
+  else
+    goto <bb 8>; [INV]
+
+  <bb 7> :
+  extent.12 = 0;
+
+  <bb 8> :
+  extent.14 = (unsigned long) extent.12;
+  size.11 = size.11 * extent.14;
+  idx.13 = idx.13 + 1;
+
+  <bb 9> :
+  if (idx.13 <= 0)
+    goto <bb 6>; [INV]
+  else
+    goto <bb 10>; [INV]
+
+  <bb 10> :
+  .omp_data_arr.15 = .omp_data_arr.6;
+  D.4792 = x.b.data;
+  .omp_data_arr.15->D.4724[map_offset_data.9] = D.4792;
+  map_offset_data.9 = map_offset_data.9 + 1;
+  .omp_data_arr.16 = .omp_data_arr.6;
+  .omp_data_arr.16->D.4724[map_offset_data.9] = &x.b.data;
+  map_offset_data.9 = map_offset_data.9 + 1;
+  .omp_data_sizes.17 = .omp_data_sizes.7;
+  D.4795 = map_offset.10 * 8;
+  D.4796 = .omp_data_sizes.17 + D.4795;
+  D.4797 = x.b.dtype.elem_len;
+  D.4798 = D.4797 * size.11;
+  *D.4796 = D.4798;
+  .omp_data_kinds.18 = .omp_data_kinds.8;
+  D.4800 = map_offset.10 * 2;
+  D.4801 = .omp_data_kinds.18 + D.4800;
+  *D.4801 = 99;
+  map_offset.10 = map_offset.10 + 1;
+  .omp_data_sizes.19 = .omp_data_sizes.7;
+  D.4803 = map_offset.10 * 8;
+  D.4804 = .omp_data_sizes.19 + D.4803;
+  *D.4804 = 0;
+  .omp_data_kinds.20 = .omp_data_kinds.8;
+  D.4806 = map_offset.10 * 2;
+  D.4807 = .omp_data_kinds.20 + D.4806;
+  *D.4807 = 80;
+  map_offset.10 = map_offset.10 + 1;
+
+  <bb 11> :
+  .omp_data_arr.21 = .omp_data_arr.6;
+  .omp_data_arr.21->x = &x;
+  .omp_data_sizes.23 = .omp_data_sizes.7;
+  _1 = MEM <unsigned long> [(c_char * {ref-all})&.omp_data_sizes0.22];
+  MEM <unsigned long> [(c_char * {ref-all}).omp_data_sizes.23] = _1;
+  .omp_data_kinds.26 = .omp_data_kinds.8;
+  _2 = MEM <unsigned short> [(c_char * {ref-all})&.omp_data_kinds0.25];
+  MEM <unsigned short> [(c_char * {ref-all}).omp_data_kinds.26] = _2;
+  .omp_data_sizes.29 = .omp_data_sizes.7;
+  .omp_data_arr.32 = .omp_data_arr.6;
+  .omp_data_kinds.33 = .omp_data_kinds.8;
+  .omp_target_args.34[0] = -130816B;
+  .omp_target_args.34[1] = 512B;
+  .omp_target_args.34[2] = 0B;
+  __builtin_GOMP_target_ext (-1, MAIN__._omp_fn.0, D.4765, .omp_data_arr.32, .omp_data_sizes.29, .omp_data_kinds.33, 0, 0B, &.omp_target_args.34);
+  .omp_data_sizes.24 = .omp_data_sizes.7;
+  __builtin_free (.omp_data_sizes.24);
+  .omp_data_sizes.7 = {CLOBBER};
+  .omp_data_kinds.27 = .omp_data_kinds.8;
+  __builtin_free (.omp_data_kinds.27);
+  .omp_data_kinds.8 = {CLOBBER};
+  .omp_data_arr.28 = .omp_data_arr.6;
+  __builtin_free (.omp_data_arr.28);
+  .omp_data_arr.6 = {CLOBBER};
+  return;
+
+}
+
+
+
+;; Function main (main, funcdef_no=1, decl_uid=4713, cgraph_uid=2, symbol_order=1)
+
+__attribute__((externally_visible))
+integer(kind=4) main (integer(kind=4) argc, character(kind=1) * * argv)
+{
+  static integer(kind=4) options.0[7] = {10308, 16383, 0, 1, 1, 0, 31};
+  integer(kind=4) D.4855;
+
+  <bb 2> :
+  _gfortran_set_args (argc, argv);
+  _gfortran_set_options (7, &options.0[0]);
+  p ();
+  D.4855 = 0;
+
+  <bb 3> :
+<L0>:
+  return D.4855;
+
+}
+
+

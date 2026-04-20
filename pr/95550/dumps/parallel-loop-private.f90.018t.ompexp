@@ -1,0 +1,314 @@
+
+;; Function foo (foo_, funcdef_no=0, decl_uid=4696, cgraph_uid=1, symbol_order=0)
+
+
+OMP region tree
+
+bb 11: gimple_omp_target
+    bb 22: gimple_omp_for
+    bb 23: GIMPLE_OMP_CONTINUE
+    bb 26: GIMPLE_OMP_RETURN
+bb 32: GIMPLE_OMP_RETURN
+
+Added new low gimple function foo_._omp_fn.0 to callgraph
+Introduced new external node (__builtin_free/3).
+Introduced new external node (__builtin_malloc/4).
+Introduced new external node (_gfortran_os_error_at/5).
+
+;; Function foo_._omp_fn.0 (foo_._omp_fn.0, funcdef_no=1, decl_uid=4744, cgraph_uid=2, symbol_order=1)
+
+__attribute__((oacc parallel, omp target entrypoint, noclone))
+void foo_._omp_fn.0 (const struct .omp_data_t.2 & restrict .omp_data_i)
+{
+  struct array01_complex(kind=8) gwork [value-expr: *.omp_data_i->gwork];
+  void * D.4810;
+  unsigned long D.4809;
+  unsigned long D.4808;
+  integer(kind=8) D.4807;
+  integer(kind=8) D.4806;
+  integer(kind=8) D.4805;
+  integer(kind=8) D.4804;
+  integer(kind=8) D.4803;
+  struct array01_complex(kind=8) * D.4802;
+  void * D.4801;
+  void * D.4800;
+  integer(kind=8) D.4799;
+  integer(kind=8) D.4798;
+  integer(kind=8) D.4797;
+  void * D.4796;
+  struct array01_complex(kind=8) gwork;
+  integer(kind=4) i;
+  integer(kind=4) .bound.11;
+  integer(kind=4) .offset.10;
+  integer(kind=4) .step.7;
+  integer(kind=4) .chunk_max.8;
+  integer(kind=4) .chunk_no.9;
+  integer(kind=4) .data_dep.3;
+  void * D.4787;
+  struct array01_complex(kind=8) * D.4786;
+
+  <bb 38> :
+
+  <bb 12> :
+  D.4786 = .omp_data_i->gwork;
+  D.4787 = D.4786->data;
+  if (D.4787 != 0B)
+    goto <bb 13>; [INV]
+  else
+    goto <bb 16>; [INV]
+
+  <bb 17> :
+  .data_dep.3 = 0;
+  .data_dep.3 = .UNIQUE (OACC_HEAD_MARK, .data_dep.3, 2, 4);
+
+  <bb 18> :
+  .data_dep.3 = .UNIQUE (OACC_FORK, .data_dep.3, -1);
+
+  <bb 19> :
+  .data_dep.3 = .UNIQUE (OACC_HEAD_MARK, .data_dep.3, 1);
+
+  <bb 20> :
+  .data_dep.3 = .UNIQUE (OACC_FORK, .data_dep.3, -1);
+
+  <bb 21> :
+  .data_dep.3 = .UNIQUE (OACC_HEAD_MARK, .data_dep.3);
+
+  <bb 22> :
+  .chunk_no.9 = 0;
+  .chunk_max.8 = .GOACC_LOOP (CHUNKS, 1, 512, 1, -1, 0);
+  .step.7 = .GOACC_LOOP (STEP, 1, 512, 1, -1, 0);
+
+  <bb 36> :
+  .offset.10 = .GOACC_LOOP (OFFSET, 1, 512, 1, -1, 0, .chunk_no.9);
+  .bound.11 = .GOACC_LOOP (BOUND, 1, 512, 1, -1, 0, .offset.10);
+  if (.offset.10 < .bound.11)
+    goto <bb 23>; [INV]
+  else
+    goto <bb 24>; [INV]
+
+  <bb 23> :
+  i = 1 + .offset.10;
+  D.4796 = gwork.data;
+  D.4797 = gwork.offset;
+  D.4798 = (integer(kind=8)) i;
+  D.4799 = D.4797 + D.4798;
+  MEM <complex(kind=8)[0:]> [(complex(kind=8)[0:] *)D.4796][D.4799] = __complex__ (0.0, 0.0);
+  .offset.10 = .offset.10 + .step.7;
+  if (.offset.10 < .bound.11)
+    goto <bb 23>; [INV]
+  else
+    goto <bb 24>; [INV]
+
+  <bb 24> :
+  D.4800 = gwork.data;
+  if (D.4800 != 0B)
+    goto <bb 25>; [INV]
+  else
+    goto <bb 26>; [INV]
+
+  <bb 26> :
+  GIMPLE_NOP
+  .chunk_no.9 = .chunk_no.9 + 1;
+  if (.chunk_no.9 < .chunk_max.8)
+    goto <bb 36>; [80.00%]
+  else
+    goto <bb 37>; [20.00%]
+
+  <bb 37> :
+  i = 1 + 512;
+
+  <bb 27> :
+  .data_dep.3 = .UNIQUE (OACC_TAIL_MARK, .data_dep.3, 2);
+
+  <bb 28> :
+  .data_dep.3 = .UNIQUE (OACC_JOIN, .data_dep.3, -1);
+
+  <bb 29> :
+  .data_dep.3 = .UNIQUE (OACC_TAIL_MARK, .data_dep.3, 1);
+
+  <bb 30> :
+  .data_dep.3 = .UNIQUE (OACC_JOIN, .data_dep.3, -1);
+
+  <bb 31> :
+  .data_dep.3 = .UNIQUE (OACC_TAIL_MARK, .data_dep.3);
+
+  <bb 32> :
+  return;
+
+  <bb 25> :
+  D.4801 = gwork.data;
+  __builtin_free (D.4801);
+  gwork.data = 0B;
+  goto <bb 26>; [INV]
+
+  <bb 16> :
+  gwork.data = 0B;
+  goto <bb 17>; [INV]
+
+  <bb 13> :
+  D.4802 = .omp_data_i->gwork;
+  gwork = *D.4802;
+  D.4803 = gwork.dim[0].ubound;
+  D.4804 = gwork.dim[0].lbound;
+  D.4805 = D.4803 - D.4804;
+  D.4806 = D.4805 + 1;
+  D.4807 = D.4806 * 16;
+  D.4808 = (unsigned long) D.4807;
+  D.4809 = MAX_EXPR <D.4808, 1>;
+  D.4810 = __builtin_malloc (D.4809);
+  if (D.4810 == 0B)
+    goto <bb 14>; [INV]
+  else
+    goto <bb 15>; [INV]
+
+  <bb 15> :
+  gwork.data = D.4810;
+  goto <bb 17>; [INV]
+
+  <bb 14> :
+  _gfortran_os_error_at (&"In file \'parallel-loop-private.f90\', around line 13"[1]{lb: 1 sz: 1}, &"Error allocating %lu bytes"[1]{lb: 1 sz: 1}, D.4808);
+
+}
+
+
+
+;; Function foo (foo_, funcdef_no=0, decl_uid=4696, cgraph_uid=1, symbol_order=0)
+
+Merging blocks 11 and 39
+Merging blocks 11 and 33
+fix_loop_structure: fixing up loops for function
+__attribute__((fn spec (". ")))
+void foo ()
+{
+  integer(kind=4) .bound.11;
+  integer(kind=4) .offset.10;
+  integer(kind=4) .chunk_no.9;
+  integer(kind=4) .chunk_max.8;
+  integer(kind=4) .step.7;
+  void * D.4755;
+  unsigned long D.4754;
+  integer(kind=4) i;
+  struct array01_complex(kind=8) gwork;
+  integer(kind=4) .data_dep.3;
+  void * D.4773;
+  void * D.4770;
+  unsigned long D.4766;
+  integer(kind=8) D.4765;
+  integer(kind=8) D.4764;
+  integer(kind=8) D.4763;
+  integer(kind=8) D.4762;
+  integer(kind=8) D.4761;
+  struct array01_complex(kind=8) * D.4760;
+  void * D.4757;
+  struct array01_complex(kind=8) * D.4756;
+  integer(kind=8) D.4736;
+  integer(kind=8) D.4735;
+  logical(kind=4) not_prev_allocated.1;
+  integer(kind=4) overflow.0;
+  integer(kind=4) i;
+  struct array01_complex(kind=8) gwork;
+  integer(kind=8) D.4734;
+  struct .omp_data_t.2 .omp_data_arr.4;
+  unsigned long .omp_data_sizes.5[3];
+  static unsigned short .omp_data_kinds.6[3] = {771, 773, 772};
+  void * D.4779;
+  unsigned long D.4780;
+
+  <bb 2> :
+  gwork.data = 0B;
+  gwork.dtype = {};
+  gwork.dtype.elem_len = 16;
+  gwork.dtype.rank = 1;
+  gwork.dtype.type = 4;
+  gwork.dtype = {};
+  gwork.dtype.elem_len = 16;
+  gwork.dtype.rank = 1;
+  gwork.dtype.type = 4;
+  overflow.0 = 0;
+  _1 = gwork.data;
+  not_prev_allocated.1 = _1 == 0B;
+  if (overflow.0 != 0)
+    goto <bb 3>; [INV]
+  else
+    goto <bb 4>; [INV]
+
+  <bb 3> :
+  _gfortran_runtime_error (&"Integer overflow when calculating the amount of memory to allocate"[1]{lb: 1 sz: 1});
+
+  <bb 4> :
+  _2 = gwork.data;
+  if (_2 != 0B)
+    goto <bb 5>; [INV]
+  else
+    goto <bb 6>; [INV]
+
+  <bb 5> :
+  _gfortran_runtime_error_at (&"At line 12 of file parallel-loop-private.f90"[1]{lb: 1 sz: 1}, &"Attempting to allocate already allocated variable \'%s\'"[1]{lb: 1 sz: 1}, &"gwork"[1]{lb: 1 sz: 1});
+
+  <bb 6> :
+  _3 = __builtin_malloc (8192);
+  gwork.data = _3;
+  _4 = gwork.data;
+  if (_4 == 0B)
+    goto <bb 7>; [INV]
+  else
+    goto <bb 8>; [INV]
+
+  <bb 7> :
+  _gfortran_os_error_at (&"In file \'parallel-loop-private.f90\', around line 12"[1]{lb: 1 sz: 1}, &"Error allocating %lu bytes"[1]{lb: 1 sz: 1}, 8192);
+
+  <bb 8> :
+  gwork.dim[0].lbound = 1;
+  gwork.dim[0].ubound = 512;
+  gwork.dim[0].stride = 1;
+  gwork.offset = -1;
+  gwork.span = 16;
+  _5 = gwork.data;
+  if (_5 != 0B)
+    goto <bb 9>; [INV]
+  else
+    goto <bb 10>; [INV]
+
+  <bb 9> :
+  _6 = gwork.dim[0].ubound;
+  _7 = gwork.dim[0].lbound;
+  _8 = _6 - _7;
+  D.4735 = _8 + 1;
+  D.4736 = D.4735;
+  D.4734 = D.4736;
+  D.4734 = D.4734 * 16;
+  goto <bb 11>; [INV]
+
+  <bb 10> :
+  D.4734 = 0;
+
+  <bb 11> :
+  D.4779 = gwork.data;
+  .omp_data_arr.4.D.4747 = D.4779;
+  .omp_data_arr.4.gwork = &gwork;
+  .omp_data_arr.4.D.4750 = &gwork.data;
+  D.4780 = (unsigned long) D.4734;
+  .omp_data_sizes.5[0] = D.4780;
+  .omp_data_sizes.5[1] = 64;
+  .omp_data_sizes.5[2] = 0;
+  __builtin_GOACC_parallel_keyed (-1, foo_._omp_fn.0, 3, &.omp_data_arr.4, &.omp_data_sizes.5, &.omp_data_kinds.6, 0);
+  .omp_data_sizes.5 = {CLOBBER};
+  .omp_data_arr.4 = {CLOBBER};
+  _9 = gwork.data;
+  if (_9 != 0B)
+    goto <bb 12>; [INV]
+  else
+    goto <bb 13>; [INV]
+
+  <bb 12> :
+  _10 = gwork.data;
+  __builtin_free (_10);
+  gwork.data = 0B;
+
+  <bb 13> :
+  gwork = {CLOBBER(eos)};
+  return;
+
+}
+
+

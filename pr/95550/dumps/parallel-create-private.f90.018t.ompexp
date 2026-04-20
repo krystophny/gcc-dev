@@ -1,0 +1,534 @@
+
+;; Function MAIN__ (MAIN__, funcdef_no=0, decl_uid=4696, cgraph_uid=1, symbol_order=0)
+
+
+OMP region tree
+
+bb 17: gimple_omp_target
+    bb 38: gimple_omp_for
+    bb 39: GIMPLE_OMP_CONTINUE
+    bb 42: GIMPLE_OMP_RETURN
+bb 48: GIMPLE_OMP_RETURN
+
+Added new low gimple function MAIN__._omp_fn.0 to callgraph
+Introduced new external node (__builtin_malloc/4).
+Introduced new external node (__builtin_free/5).
+Introduced new external node (_gfortran_os_error_at/6).
+
+;; Function MAIN__._omp_fn.0 (MAIN__._omp_fn.0, funcdef_no=2, decl_uid=4814, cgraph_uid=3, symbol_order=2)
+
+__attribute__((oacc parallel, omp target entrypoint, noclone))
+void MAIN__._omp_fn.0 (const struct .omp_data_t.9 & restrict .omp_data_i)
+{
+  struct array01_integer(kind=4) a [value-expr: *.omp_data_i->a];
+  unsigned long D.4935;
+  integer(kind=8) D.4934;
+  integer(kind=4) D.4933;
+  integer(kind=4) * D.4932;
+  sizetype D.4931;
+  integer(kind=8) D.4930;
+  void * D.4929;
+  integer(kind=8) D.4928;
+  integer(kind=4) D.4927;
+  integer(kind=8) D.4926;
+  integer(kind=8) D.4925;
+  void * D.4924;
+  void * D.4923;
+  unsigned long D.4922;
+  unsigned long D.4921;
+  integer(kind=8) D.4920;
+  integer(kind=8) D.4919;
+  integer(kind=8) D.4918;
+  integer(kind=8) D.4917;
+  integer(kind=8) D.4916;
+  struct array01_integer(kind=4) * D.4915;
+  void * D.4914;
+  void * D.4913;
+  integer(kind=4) D.4912;
+  integer(kind=8) D.4911;
+  integer(kind=8) D.4910;
+  integer(kind=8) D.4909;
+  void * D.4908;
+  integer(kind=4) i;
+  integer(kind=4) .bound.18;
+  integer(kind=4) .offset.17;
+  integer(kind=4) .step.14;
+  integer(kind=4) .chunk_max.15;
+  integer(kind=4) .chunk_no.16;
+  struct array01_integer(kind=4) a;
+  integer(kind=4) .data_dep.10;
+  void * D.4899;
+  struct array01_integer(kind=4) * D.4898;
+  void * D.4897;
+  integer(kind=8) S.6;
+  integer(kind=8) D.4895;
+  integer(kind=4) shadow_loopvar.5;
+  integer(kind=4) D.4893;
+  integer(kind=8) D.4892;
+  integer(kind=8) D.4891;
+  integer(kind=8) D.4890;
+  integer(kind=8) D.4889;
+  struct array01_integer(kind=4) * D.4888;
+  integer(kind=8) D.4887;
+  struct array01_integer(kind=4) * D.4886;
+  integer(kind=8) offset.4;
+  void * restrict D.4884;
+  void * restrict D.4883;
+  unsigned long iftmp.8;
+  integer(kind=8) D.4881;
+  logical(kind=4) D.4880;
+  struct array01_integer(kind=4) atmp.3;
+  integer(kind=8) D.4878;
+  integer(kind=8) D.4877;
+  struct array01_integer(kind=4) * D.4876;
+  integer(kind=8) D.4875;
+  struct array01_integer(kind=4) * D.4874;
+  integer(kind=8) D.4873;
+  struct array01_integer(kind=4) * D.4872;
+  integer(kind=4)[0:] * restrict D.4871;
+  struct array01_integer(kind=4) * D.4870;
+
+  <bb 52> :
+
+  <bb 18> :
+  D.4870 = .omp_data_i->a;
+  D.4871 = D.4870->data;
+  D.4872 = .omp_data_i->a;
+  D.4873 = D.4872->offset;
+  D.4874 = .omp_data_i->a;
+  D.4875 = D.4874->dim[0].lbound;
+  D.4876 = .omp_data_i->a;
+  D.4877 = D.4876->dim[0].ubound;
+  D.4878 = D.4877 - D.4875;
+  atmp.3.dtype = {};
+  atmp.3.dtype.elem_len = 4;
+  atmp.3.dtype.rank = 1;
+  atmp.3.dtype.type = 1;
+  atmp.3.dim[0].stride = 1;
+  atmp.3.dim[0].lbound = 0;
+  atmp.3.dim[0].ubound = D.4878;
+  D.4880 = D.4878 < 0;
+  D.4881 = D.4878 + 1;
+  atmp.3.span = 4;
+  if (D.4880 != 0)
+    goto <bb 19>; [INV]
+  else
+    goto <bb 20>; [INV]
+
+  <bb 21> :
+  D.4883 = __builtin_malloc (iftmp.8);
+  D.4884 = D.4883;
+  atmp.3.data = D.4884;
+  atmp.3.offset = 0;
+  offset.4 = 0;
+  D.4886 = .omp_data_i->a;
+  D.4887 = D.4886->dim[0].ubound;
+  D.4888 = .omp_data_i->a;
+  D.4889 = D.4888->dim[0].lbound;
+  D.4890 = D.4887 - D.4889;
+  D.4891 = D.4890 + 1;
+  D.4892 = MAX_EXPR <D.4891, 0>;
+  D.4893 = (integer(kind=4)) D.4892;
+  shadow_loopvar.5 = 1;
+
+  <bb 22> :
+  if (shadow_loopvar.5 > D.4893)
+    goto <bb 24>; [INV]
+  else
+    goto <bb 23>; [INV]
+
+  <bb 24> :
+  D.4895 = D.4875;
+  S.6 = 0;
+
+  <bb 25> :
+  if (S.6 > D.4878)
+    goto <bb 27>; [INV]
+  else
+    goto <bb 26>; [INV]
+
+  <bb 27> :
+  D.4897 = atmp.3.data;
+  __builtin_free (D.4897);
+  atmp.3 = {CLOBBER(eos)};
+  D.4898 = .omp_data_i->a;
+  D.4899 = D.4898->data;
+  if (D.4899 != 0B)
+    goto <bb 28>; [INV]
+  else
+    goto <bb 31>; [INV]
+
+  <bb 32> :
+  .data_dep.10 = 0;
+  .data_dep.10 = .UNIQUE (OACC_HEAD_MARK, .data_dep.10, 2, 4);
+
+  <bb 33> :
+  .data_dep.10 = .UNIQUE (OACC_FORK, .data_dep.10, -1);
+
+  <bb 34> :
+  .data_dep.10 = .UNIQUE (OACC_HEAD_MARK, .data_dep.10, 1);
+
+  <bb 35> :
+  .data_dep.10 = .UNIQUE (OACC_PRIVATE, .data_dep.10, -1, &a);
+
+  <bb 36> :
+  .data_dep.10 = .UNIQUE (OACC_FORK, .data_dep.10, -1);
+
+  <bb 37> :
+  .data_dep.10 = .UNIQUE (OACC_HEAD_MARK, .data_dep.10);
+
+  <bb 38> :
+  .chunk_no.16 = 0;
+  .chunk_max.15 = .GOACC_LOOP (CHUNKS, 1, 10, 1, -1, 0);
+  .step.14 = .GOACC_LOOP (STEP, 1, 10, 1, -1, 0);
+
+  <bb 50> :
+  .offset.17 = .GOACC_LOOP (OFFSET, 1, 10, 1, -1, 0, .chunk_no.16);
+  .bound.18 = .GOACC_LOOP (BOUND, 1, 10, 1, -1, 0, .offset.17);
+  if (.offset.17 < .bound.18)
+    goto <bb 39>; [INV]
+  else
+    goto <bb 40>; [INV]
+
+  <bb 39> :
+  i = 1 + .offset.17;
+  D.4908 = a.data;
+  D.4909 = a.offset;
+  D.4910 = (integer(kind=8)) i;
+  D.4911 = D.4909 + D.4910;
+  D.4912 = i * 9;
+  MEM <integer(kind=4)[0:]> [(integer(kind=4)[0:] *)D.4908][D.4911] = D.4912;
+  .offset.17 = .offset.17 + .step.14;
+  if (.offset.17 < .bound.18)
+    goto <bb 39>; [INV]
+  else
+    goto <bb 40>; [INV]
+
+  <bb 40> :
+  D.4913 = a.data;
+  if (D.4913 != 0B)
+    goto <bb 41>; [INV]
+  else
+    goto <bb 42>; [INV]
+
+  <bb 42> :
+  GIMPLE_NOP
+  .chunk_no.16 = .chunk_no.16 + 1;
+  if (.chunk_no.16 < .chunk_max.15)
+    goto <bb 50>; [80.00%]
+  else
+    goto <bb 51>; [20.00%]
+
+  <bb 51> :
+  i = 1 + 10;
+
+  <bb 43> :
+  .data_dep.10 = .UNIQUE (OACC_TAIL_MARK, .data_dep.10, 2);
+
+  <bb 44> :
+  .data_dep.10 = .UNIQUE (OACC_JOIN, .data_dep.10, -1);
+
+  <bb 45> :
+  .data_dep.10 = .UNIQUE (OACC_TAIL_MARK, .data_dep.10, 1);
+
+  <bb 46> :
+  .data_dep.10 = .UNIQUE (OACC_JOIN, .data_dep.10, -1);
+
+  <bb 47> :
+  .data_dep.10 = .UNIQUE (OACC_TAIL_MARK, .data_dep.10);
+
+  <bb 48> :
+  return;
+
+  <bb 41> :
+  D.4914 = a.data;
+  __builtin_free (D.4914);
+  a.data = 0B;
+  goto <bb 42>; [INV]
+
+  <bb 31> :
+  a.data = 0B;
+  goto <bb 32>; [INV]
+
+  <bb 28> :
+  D.4915 = .omp_data_i->a;
+  a = *D.4915;
+  D.4916 = a.dim[0].ubound;
+  D.4917 = a.dim[0].lbound;
+  D.4918 = D.4916 - D.4917;
+  D.4919 = D.4918 + 1;
+  D.4920 = D.4919 * 4;
+  D.4921 = (unsigned long) D.4920;
+  D.4922 = MAX_EXPR <D.4921, 1>;
+  D.4923 = __builtin_malloc (D.4922);
+  if (D.4923 == 0B)
+    goto <bb 29>; [INV]
+  else
+    goto <bb 30>; [INV]
+
+  <bb 30> :
+  a.data = D.4923;
+  goto <bb 32>; [INV]
+
+  <bb 29> :
+  _gfortran_os_error_at (&"In file \'parallel-create-private.f90\', around line 17"[1]{lb: 1 sz: 1}, &"Error allocating %lu bytes"[1]{lb: 1 sz: 1}, D.4921);
+
+  <bb 26> :
+  D.4924 = atmp.3.data;
+  D.4925 = S.6 + D.4895;
+  D.4926 = D.4925 + D.4873;
+  D.4927 = MEM <integer(kind=4)[0:]> [(integer(kind=4)[0:] *)D.4924][S.6];
+  (*D.4871)[D.4926] = D.4927;
+  S.6 = S.6 + 1;
+  goto <bb 25>; [INV]
+
+  <bb 23> :
+  D.4928 = offset.4;
+  D.4929 = atmp.3.data;
+  D.4930 = D.4928 * 4;
+  D.4931 = (sizetype) D.4930;
+  D.4932 = D.4929 + D.4931;
+  D.4933 = shadow_loopvar.5 * -2;
+  *D.4932 = D.4933;
+  offset.4 = offset.4 + 1;
+  shadow_loopvar.5 = shadow_loopvar.5 + 1;
+  goto <bb 22>; [INV]
+
+  <bb 20> :
+  D.4934 = D.4881 * 4;
+  D.4935 = (unsigned long) D.4934;
+  iftmp.8 = MAX_EXPR <D.4935, 1>;
+  goto <bb 21>; [INV]
+
+  <bb 19> :
+  iftmp.8 = 1;
+  goto <bb 21>; [INV]
+
+}
+
+
+
+;; Function MAIN__ (MAIN__, funcdef_no=0, decl_uid=4696, cgraph_uid=1, symbol_order=0)
+
+Merging blocks 17 and 53
+Merging blocks 17 and 49
+fix_loop_structure: fixing up loops for function
+__attribute__((fn spec (". ")))
+void MAIN__ ()
+{
+  integer(kind=4) .bound.18;
+  integer(kind=4) .offset.17;
+  integer(kind=4) .chunk_no.16;
+  integer(kind=4) .chunk_max.15;
+  integer(kind=4) .step.14;
+  void * D.4840;
+  unsigned long D.4839;
+  integer(kind=4) i;
+  struct array01_integer(kind=4) a;
+  integer(kind=4) .data_dep.10;
+  void * D.4858;
+  void * D.4855;
+  unsigned long D.4851;
+  integer(kind=8) D.4850;
+  integer(kind=8) D.4849;
+  integer(kind=8) D.4848;
+  integer(kind=8) D.4847;
+  integer(kind=8) D.4846;
+  struct array01_integer(kind=4) * D.4845;
+  void * D.4842;
+  struct array01_integer(kind=4) * D.4841;
+  integer(kind=8) S.6;
+  integer(kind=8) D.4757;
+  integer(kind=8) D.4759;
+  integer(kind=8) offset.4;
+  integer(kind=4) shadow_loopvar.5;
+  integer(kind=4) D.4755;
+  void * restrict D.4753;
+  void * restrict D.4752;
+  integer(kind=8) D.4751;
+  logical(kind=4) D.4750;
+  struct array01_integer(kind=4) atmp.3;
+  integer(kind=8) D.4742;
+  integer(kind=8) D.4741;
+  integer(kind=8) D.4740;
+  integer(kind=8) D.4739;
+  integer(kind=4)[0:] * restrict D.4738;
+  integer(kind=8) D.4737;
+  integer(kind=8) D.4736;
+  integer(kind=8) D.4735;
+  logical(kind=4) D.4727;
+  integer(kind=8) S.2;
+  integer(kind=8) D.4732;
+  integer(kind=8) D.4731;
+  integer(kind=8) D.4730;
+  integer(kind=8) D.4729;
+  integer(kind=4)[0:] * restrict D.4728;
+  logical(kind=4) unallocated_init_guard.1;
+  static integer(kind=4) A.0[10] = {3, 6, 9, 12, 15, 18, 21, 24, 27, 30};
+  integer(kind=4) j;
+  integer(kind=4) i;
+  struct array01_integer(kind=4) a;
+  struct .omp_data_t.9 .omp_data_arr.11;
+  unsigned long .omp_data_sizes.12[3];
+  static unsigned short .omp_data_kinds.13[3] = {512, 773, 772};
+  unsigned long D.4864;
+  struct array01_integer(kind=4) * D.4838;
+  struct array01_integer(kind=4) * D.4837;
+  struct array01_integer(kind=4) * D.4836;
+  struct array01_integer(kind=4) * D.4835;
+  struct array01_integer(kind=4) * D.4834;
+  struct array01_integer(kind=4) * D.4833;
+
+  <bb 2> :
+  a.data = 0B;
+  a.dtype = {};
+  a.dtype.elem_len = 4;
+  a.dtype.rank = 1;
+  a.dtype.type = 1;
+  unallocated_init_guard.1 = 0;
+  _1 = a.data;
+  if (_1 == 0B)
+    goto <bb 3>; [INV]
+  else
+    goto <bb 5>; [INV]
+
+  <bb 3> :
+  if (unallocated_init_guard.1 != 0)
+    goto <bb 4>; [INV]
+  else
+    goto <bb 5>; [INV]
+
+  <bb 4> :
+  a.dim[0].lbound = 1;
+  a.dim[0].ubound = 0;
+  a.dim[0].stride = 0;
+  a.offset = 0;
+
+  <bb 5> :
+  _2 = a.data;
+  D.4727 = _2 == 0B;
+  if (D.4727 != 0)
+    goto <bb 8>; [INV]
+  else
+    goto <bb 6>; [INV]
+
+  <bb 6> :
+  _3 = a.dim[0].lbound;
+  _4 = _3 + 9;
+  _5 = a.dim[0].ubound;
+  if (_4 != _5)
+    goto <bb 8>; [INV]
+  else
+    goto <bb 7>; [INV]
+
+  <bb 7> :
+  goto <bb 11>; [INV]
+
+  <bb 8> :
+  a.dim[0].lbound = 1;
+  a.dim[0].ubound = 10;
+  a.dim[0].stride = 1;
+  _6 = a.dim[0].lbound;
+  _7 = -_6;
+  a.offset = _7;
+  a.span = 4;
+  if (D.4727 != 0)
+    goto <bb 9>; [INV]
+  else
+    goto <bb 10>; [INV]
+
+  <bb 9> :
+  _8 = __builtin_malloc (40);
+  a.data = _8;
+  a.dtype = {};
+  a.dtype.elem_len = 4;
+  a.dtype.rank = 1;
+  a.dtype.type = 1;
+  goto <bb 11>; [INV]
+
+  <bb 10> :
+  _9 = a.data;
+  _10 = __builtin_realloc (_9, 40);
+  a.data = _10;
+
+  <bb 11> :
+  D.4728 = a.data;
+  D.4729 = a.offset;
+  D.4730 = a.dim[0].lbound;
+  D.4731 = a.dim[0].ubound;
+  D.4732 = a.dim[0].lbound;
+  S.2 = 0;
+
+  <bb 12> :
+  if (S.2 > 9)
+    goto <bb 14>; [INV]
+  else
+    goto <bb 13>; [INV]
+
+  <bb 13> :
+  _11 = S.2 + D.4732;
+  _12 = D.4729 + _11;
+  _13 = A.0[S.2];
+  (*D.4728)[_12] = _13;
+  S.2 = S.2 + 1;
+  goto <bb 12>; [INV]
+
+  <bb 14> :
+  _14 = a.data;
+  if (_14 != 0B)
+    goto <bb 15>; [INV]
+  else
+    goto <bb 16>; [INV]
+
+  <bb 15> :
+  _15 = a.dim[0].ubound;
+  _16 = a.dim[0].lbound;
+  _17 = _15 - _16;
+  D.4736 = _17 + 1;
+  D.4737 = D.4736;
+  D.4735 = D.4737 * 4;
+  goto <bb 17>; [INV]
+
+  <bb 16> :
+  D.4735 = 0;
+
+  <bb 17> :
+  _18 = a.data;
+  .omp_data_arr.11.D.4817 = _18;
+  .omp_data_arr.11.a = &a;
+  .omp_data_arr.11.D.4820 = &a.data;
+  D.4864 = (unsigned long) D.4735;
+  .omp_data_sizes.12[0] = D.4864;
+  .omp_data_sizes.12[1] = 64;
+  .omp_data_sizes.12[2] = 0;
+  __builtin_GOACC_parallel_keyed (-1, MAIN__._omp_fn.0, 3, &.omp_data_arr.11, &.omp_data_sizes.12, &.omp_data_kinds.13, 0);
+  .omp_data_sizes.12 = {CLOBBER};
+  .omp_data_arr.11 = {CLOBBER};
+  a = {CLOBBER(eos)};
+  return;
+
+}
+
+
+
+;; Function main (main, funcdef_no=1, decl_uid=4763, cgraph_uid=2, symbol_order=1)
+
+__attribute__((externally_visible))
+integer(kind=4) main (integer(kind=4) argc, character(kind=1) * * argv)
+{
+  static integer(kind=4) options.7[7] = {10308, 16383, 0, 1, 1, 0, 31};
+  integer(kind=4) D.4937;
+
+  <bb 2> :
+  _gfortran_set_args (argc, argv);
+  _gfortran_set_options (7, &options.7[0]);
+  MAIN__ ();
+  D.4937 = 0;
+
+  <bb 3> :
+<L0>:
+  return D.4937;
+
+}
+
+
