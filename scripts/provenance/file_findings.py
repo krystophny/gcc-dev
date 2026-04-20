@@ -43,27 +43,27 @@ def load_reviewed() -> set[str]:
 
 # Title emitted by title_for(): "[SEV] provenance: <short> <- <upstream>"
 # where <short> is the repo path with the leading "gcc/" stripped.
-CLOSED_TITLE_RE = re.compile(
+ISSUE_TITLE_RE = re.compile(
     r"^\[[^\]]+\]\s*provenance:\s*(?P<short>\S+)\s*<-\s*", re.IGNORECASE
 )
 # Paths referenced inside the issue body as `gcc/...`.
 BODY_PATH_RE = re.compile(r"`(gcc/[^`\s]+)`")
 
 
-def load_closed_issue_paths(repo: str) -> set[str]:
-    """Return paths referenced by CLOSED provenance-labelled issues.
+def _load_issue_paths(repo: str, state: str) -> set[str]:
+    """Return paths referenced by provenance-labelled issues in the given state.
 
-    Uses `gh issue list` to pull closed issues with the `provenance` label
-    and extracts paths from both the title (filer-generated issues) and the
-    body (hand-written multi-file issues).  Requires `gh` on PATH; silently
-    returns an empty set on error so scanners still work offline.
+    Uses `gh issue list` with --state {open,closed,all} and extracts paths
+    from both the title (filer-generated issues) and the body (hand-written
+    multi-file issues).  Requires `gh` on PATH; silently returns an empty
+    set on error so scanners still work offline.
     """
     try:
         result = subprocess.run(
             [
                 "gh", "issue", "list",
                 "--repo", repo,
-                "--state", "closed",
+                "--state", state,
                 "--label", "provenance",
                 "--limit", "500",
                 "--json", "title,body",
@@ -80,13 +80,21 @@ def load_closed_issue_paths(repo: str) -> set[str]:
     for issue in issues:
         title = issue.get("title", "") or ""
         body = issue.get("body", "") or ""
-        match = CLOSED_TITLE_RE.match(title)
+        match = ISSUE_TITLE_RE.match(title)
         if match:
             short = match.group("short")
             paths.add(short if short.startswith("gcc/") else f"gcc/{short}")
         for body_match in BODY_PATH_RE.finditer(body):
             paths.add(body_match.group(1))
     return paths
+
+
+def load_closed_issue_paths(repo: str) -> set[str]:
+    return _load_issue_paths(repo, "closed")
+
+
+def load_open_issue_paths(repo: str) -> set[str]:
+    return _load_issue_paths(repo, "open")
 
 
 def severity_ok(finding: dict, min_rank: int) -> bool:
@@ -215,7 +223,8 @@ def main() -> int:
 
     reviewed = load_reviewed()
     closed = load_closed_issue_paths(args.repo)
-    suppressed = reviewed | closed
+    open_ = load_open_issue_paths(args.repo)
+    suppressed = reviewed | closed | open_
     min_rank = SEV_RANK[args.min_severity]
 
     # dedupe: one issue per (path, upstream_project)
@@ -243,7 +252,7 @@ def main() -> int:
 
     print(f"findings_total={len(findings)} unreviewed={len(filtered)}"
           f" reviewed_registry={len(reviewed)} closed_issues={len(closed)}"
-          f" min={args.min_severity}")
+          f" open_issues={len(open_)} min={args.min_severity}")
 
     created = 0
     for f in filtered:

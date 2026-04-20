@@ -88,6 +88,25 @@ sparse_paths = [
     "misc",
 ]
 
+# GMP has no canonical git repo; upstream lives in Mercurial at
+# https://gmplib.org/repo/gmp/.  sethtroisi/libgmp is an established
+# git mirror of that hg tree.  GMP ships its asm kernels as *.asm
+# (m4-preprocessed), which is why KEEP_REGEX in fetch_corpus.sh has
+# to retain the .asm extension.
+[[source]]
+name = "gmp"
+url = "git@github.com:sethtroisi/libgmp.git"
+branch = "master"
+origin_class = "gnu"
+sparse_paths = [
+    "mpn",
+    "mpf",
+    "mpz",
+    "mpq",
+    "gmp-impl.h",
+    "longlong.h",
+]
+
 [[source]]
 name = "llvm-project"
 url = "git@github.com:llvm/llvm-project.git"
@@ -628,3 +647,96 @@ sparse_paths = [
     "Sources/CoreFoundation",
     "Sources/Foundation",
 ]
+
+# -----------------------------------------------------------------------------
+# Targeted expansion 2026-04-20: upstreams that feed specific GCC subtrees.
+#
+# gnulib proper        -> gcc/libiberty/, gcc/include/ (sha1, md5, getopt, ...)
+# binutils-gdb         -> gcc/libiberty/, gcc/include/ (cross-project sibling)
+# newlib-cygwin        -> gcc/libgcc/config/* overlap on embedded targets
+# gettext              -> canonical-source sibling for glibc/gnulib imports
+# ulfjack-ryu          -> gcc/libstdc++-v3/src/c++17/ryu/ (called out in #127)
+# fmtlib               -> gcc/libstdc++-v3/include/std/format machinery
+# a68g (Algol 68 Genie) -> gcc/libga68/, gcc/gcc/algol68/
+# libatomic_ops        -> gcc/libatomic/, Boehm-GC-era atomic primitives
+# gnucobol             -> gcc/libgcobol/ COBOL runtime
+# -----------------------------------------------------------------------------
+
+[[source]]
+name = "gnulib"
+url = "git@github.com:coreutils/gnulib.git"
+branch = "master"
+origin_class = "gnu"
+sparse_paths = ["lib"]
+
+[[source]]
+name = "binutils-gdb"
+url = "git@github.com:bminor/binutils-gdb.git"
+branch = "master"
+origin_class = "gnu"
+sparse_paths = [
+    "libiberty",
+    "include",
+    "bfd",
+    "gas",
+    "ld",
+    "binutils",
+]
+
+[[source]]
+name = "newlib-cygwin"
+url = "git@github.com:mirror/newlib-cygwin.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "newlib/libc",
+    "newlib/libm",
+    "libgloss",
+]
+
+[[source]]
+name = "gettext"
+url = "git@github.com:autotools-mirror/gettext.git"
+branch = "master"
+origin_class = "gnu"
+sparse_paths = [
+    "gettext-runtime/intl",
+    "gettext-tools/src",
+    "gettext-tools/libgettextpo",
+    "gnulib-local/lib",
+]
+
+[[source]]
+name = "ulfjack-ryu"
+url = "git@github.com:ulfjack/ryu.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = ["ryu"]
+
+[[source]]
+name = "fmtlib"
+url = "git@github.com:fmtlib/fmt.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = ["include", "src"]
+
+[[source]]
+name = "a68g"
+url = "git@github.com:dvirtz/Algol68G-mirror.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = ["source"]
+
+[[source]]
+name = "libatomic_ops"
+url = "git@github.com:ivmai/libatomic_ops.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = ["src"]
+
+[[source]]
+name = "gnucobol"
+url = "git@github.com:OCamlPro/gnucobol.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = ["libcob", "cobc"]

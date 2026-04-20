@@ -23,7 +23,7 @@ fi
 
 mkdir -p "${CORPUS_ROOT}"
 
-KEEP_REGEX='\.(c|cc|cpp|cxx|c\+\+|C|h|hh|hpp|hxx|H|inc|ipp|tcc|rs|go|d|di|m|mm|py|f|f90|f95|f03|f08|for|fpp|F|F90|S|s)$'
+KEEP_REGEX='\.(c|cc|cpp|cxx|c\+\+|C|h|hh|hpp|hxx|H|inc|ipp|tcc|rs|go|d|di|m|mm|py|f|f90|f95|f03|f08|for|fpp|F|F90|S|s|asm)$'
 
 log() { printf '[fetch_corpus] %s\n' "$*"; }
 
@@ -67,32 +67,40 @@ fetch_one() {
     if [[ -d "${dest}/.git" ]]; then
         log "update ${name} (${url}@${branch})"
         (
-            cd "${dest}"
+            cd "${dest}" || exit 1
             git sparse-checkout init --no-cone 2>/dev/null || true
             git sparse-checkout set --skip-checks -- "${sparse_paths[@]}" 2>/dev/null || \
                 git sparse-checkout set -- "${sparse_paths[@]}" 2>/dev/null || true
             git fetch --depth=1 --filter=blob:none origin "${branch}"
             git checkout FETCH_HEAD
             git rev-parse FETCH_HEAD > .corpus-sha
-        )
+        ) || { log "FAILED update ${name}"; return 1; }
     else
         log "clone ${name} (${url}@${branch}) sparse=${#sparse_paths[@]}"
         rm -rf "${dest}"
-        git clone \
+        if ! git clone \
             --no-checkout \
             --filter=blob:none \
             --depth=1 \
             --branch "${branch}" \
             --single-branch \
-            "${url}" "${dest}"
+            "${url}" "${dest}"; then
+            log "FAILED clone ${name} (${url}@${branch})"
+            rm -rf "${dest}"
+            return 1
+        fi
+        if [[ ! -d "${dest}/.git" ]]; then
+            log "FAILED clone ${name}: ${dest} missing after git clone"
+            return 1
+        fi
         (
-            cd "${dest}"
+            cd "${dest}" || exit 1
             git sparse-checkout init --no-cone
             git sparse-checkout set --skip-checks -- "${sparse_paths[@]}" 2>/dev/null || \
                 git sparse-checkout set -- "${sparse_paths[@]}"
             git checkout
             git rev-parse HEAD > .corpus-sha
-        )
+        ) || { log "FAILED sparse-checkout ${name}"; return 1; }
     fi
 
     prune_clone "${dest}"

@@ -157,38 +157,70 @@ reviewed_by = "krystophny"
 [[reviewed]]
 path = "gcc/include/fnmatch.h"
 upstream = "glibc/posix/fnmatch.h"
-resolution = "open"
-rationale = "Same-license trail gap; tracked in #123."
+resolution = "attributed"
+rationale = "Already carries 'NOTE: The canonical source of this file is maintained with the GNU C Library' since SVN r14877 (1997-08-21). Scanner false positive: ORIGIN_PATTERN does not recognise the canonical-source phrase."
 issue = "https://github.com/krystophny/gcc-dev/issues/123"
-reviewed_on = "2026-04-19"
+reviewed_on = "2026-04-20"
 reviewed_by = "krystophny"
+chain = """
+glibc posix/fnmatch.h (FSF, LGPL-2.1+)
+  -> gcc/include/fnmatch.h at SVN r14877, 1997-08-21, Jason Merrill
+     (commit 6599da043e22, 'Initial revision'); FSF relicense to GPLv2+;
+     canonical-source note present from the first commit.
+"""
 
 [[reviewed]]
 path = "gcc/include/md5.h"
 upstream = "glibc/locale/programs/md5.h"
-resolution = "open"
-rationale = "Same-license trail gap; tracked in #123."
+resolution = "attributed"
+rationale = "Already carries 'NOTE: The canonical source of this file is maintained with the GNU C Library' since initial import (2000-08-28). Scanner false positive."
 issue = "https://github.com/krystophny/gcc-dev/issues/123"
-reviewed_on = "2026-04-19"
+reviewed_on = "2026-04-20"
 reviewed_by = "krystophny"
+chain = """
+glibc locale/programs/md5.h (FSF, LGPL-2.1+)
+  -> gcc/include/md5.h at 2000-08-28, Jason Merrill (commit
+     881c6935bf56, '[multiple changes]'), pulled in alongside dwarf2out
+     MD5 use; FSF relicense to GPLv2+; canonical-source note present
+     from the first commit.
+"""
 
 [[reviewed]]
 path = "gcc/include/sha1.h"
 upstream = "glibc/locale/programs/md5.h"
-resolution = "open"
-rationale = "Same-license trail gap; tracked in #123."
+resolution = "trail_gap"
+rationale = "Gnulib-origin (not glibc); imported 2008 from gnulib without any origin phrase. Same-license trail gap; needs 'NOTE: This source is derived from gnulib (lib/sha1.h).'"
 issue = "https://github.com/krystophny/gcc-dev/issues/123"
-reviewed_on = "2026-04-19"
+reviewed_on = "2026-04-20"
 reviewed_by = "krystophny"
+chain = """
+Scott G. Miller sha1 implementation, authored for gnulib c. 2000
+  -> gnulib lib/sha1.h (FSF, LGPL-2.1+)
+  -> gcc/include/sha1.h at SVN r133503, 2008-03-25, Ian Lance Taylor
+     (commit 598848e4d627, 'sha1.h: New file, from gnulib.')
+  -> FSF relicense to GPLv3+ on 2010-04-20, Nick Clifton. No origin
+     phrase retained in either import or relicense commit.
+Scanner's glibc/locale/programs/md5.h hit is cross-hash noise on the
+uint32_t feature-detection contortion block; true donor is gnulib.
+"""
 
 [[reviewed]]
 path = "gcc/include/getopt.h"
 upstream = "glibc/posix/bits/getopt_ext.h"
-resolution = "open"
-rationale = "Same-license trail gap; tracked in #123."
+resolution = "attributed"
+rationale = "Carries 'NOTE: The canonical source of this file is maintained with the GNU C Library' since SVN r18980 (1998-04-03). Scanner false positive; scanner match is against glibc's post-2019 bits/getopt_ext.h split, not the whole file."
 issue = "https://github.com/krystophny/gcc-dev/issues/123"
-reviewed_on = "2026-04-19"
+reviewed_on = "2026-04-20"
 reviewed_by = "krystophny"
+chain = """
+glibc posix/getopt.h (FSF, LGPL-2.1+; declared 'also part of gnulib')
+  -> gcc/include/getopt.h at SVN r14877, 1997-08-21, Jason Merrill;
+     canonical-source note added at SVN r18980, 1998-04-03, Jeff Law
+     ('dummy commit before merge' = sync-from-glibc); FSF relicense to
+     GPLv2+. The 2019 glibc split into posix/getopt.h +
+     posix/bits/getopt_ext.h postdates GCC's single-file copy, which
+     is why the scanner's top hit is the partial-surface _ext.h file.
+"""
 
 [[reviewed]]
 path = "gcc/libiberty/strverscmp.c"
@@ -235,4 +267,51 @@ resolution = "not_derived"
 rationale = "Scanner noise: line_jaccard=0.024; 20-line spec file vs multi-KB Unicode property table. Same k-gram collision pattern as #130. Tracked in #131."
 issue = "https://github.com/krystophny/gcc-dev/issues/131"
 reviewed_on = "2026-04-19"
+reviewed_by = "krystophny"
+
+# --- Corpus expansion 2026-04-20 (added newlib-cygwin + gnulib proper) ---
+
+[[reviewed]]
+path = "gcc/libgcc/config/visium/memcpy.c"
+upstream = "newlib-cygwin/newlib/libc/machine/visium/memcpy.c"
+resolution = "open"
+rationale = "Near-verbatim newlib visium memcpy (winnow 0.93, line 0.72); silent header. Needs research and attribution; tracked in #132."
+issue = "https://github.com/krystophny/gcc-dev/issues/132"
+reviewed_on = "2026-04-20"
+reviewed_by = "krystophny"
+
+[[reviewed]]
+path = "gcc/libgcc/config/visium/memset.c"
+upstream = "newlib-cygwin/newlib/libc/machine/visium/memset.c"
+resolution = "open"
+rationale = "Near-verbatim newlib visium memset (winnow 0.91, line 0.67); silent header. Same pattern as #132; tracked in #133."
+issue = "https://github.com/krystophny/gcc-dev/issues/133"
+reviewed_on = "2026-04-20"
+reviewed_by = "krystophny"
+
+[[reviewed]]
+path = "gcc/libgcc/config/rl78/vregs.h"
+upstream = "newlib-cygwin/libgloss/rl78/vregs.h"
+resolution = "open"
+rationale = "newlib libgloss rl78 virtual-register header; silent. Tracked in #134."
+issue = "https://github.com/krystophny/gcc-dev/issues/134"
+reviewed_on = "2026-04-20"
+reviewed_by = "krystophny"
+
+[[reviewed]]
+path = "gcc/libiberty/sha1.c"
+upstream = "gnulib/lib/sha1.c"
+resolution = "open"
+rationale = "Sibling of the #123 sha1.h trail gap; imported 2008 from gnulib with Scott G. Miller credit but no gnulib origin phrase. Tracked in #135."
+issue = "https://github.com/krystophny/gcc-dev/issues/135"
+reviewed_on = "2026-04-20"
+reviewed_by = "krystophny"
+
+[[reviewed]]
+path = "gcc/libiberty/physmem.c"
+upstream = "gnulib/lib/physmem.c"
+resolution = "open"
+rationale = "gnulib physmem() carried into libiberty; silent header. Tracked in #136."
+issue = "https://github.com/krystophny/gcc-dev/issues/136"
+reviewed_on = "2026-04-20"
 reviewed_by = "krystophny"
