@@ -44,8 +44,39 @@ for entry in data.get('source', []):
 PY
 }
 
+rename_extensionless_headers() {
+    # STL-style headers (microsoft/GSL, libstdc++ include/, parts of zig/std)
+    # ship extensionless files.  Rename them to *.hpp before prune so they
+    # survive KEEP_REGEX and is_text_candidate().  Only files under a path
+    # segment named include or inc are renamed; top-level LICENSE/COPYING/
+    # README/NEWS/AUTHORS and Makefiles are left alone.
+    local dest="$1"
+    find "${dest}" \
+        -type f \
+        \( -path "*/include/*" -o -path "*/inc/*" \) \
+        -not -path "${dest}/.git/*" \
+        -not -name .corpus-sha \
+        -not -name '*.*' \
+        -not -iname 'LICENSE*' \
+        -not -iname 'COPYING*' \
+        -not -iname 'COPYRIGHT*' \
+        -not -iname 'README*' \
+        -not -iname 'AUTHORS*' \
+        -not -iname 'NEWS*' \
+        -not -iname 'Makefile*' \
+        -not -iname '*.in' \
+        -exec sh -c '
+            for f in "$@"; do
+                if head -c 4096 "$f" 2>/dev/null | grep -qE "^\s*(#|//|/\*|namespace|template|class|struct|inline|constexpr|typedef|using|enum)" 2>/dev/null; then
+                    mv "$f" "$f.hpp"
+                fi
+            done
+        ' _ {} + 2>/dev/null || true
+}
+
 prune_clone() {
     local dest="$1"
+    rename_extensionless_headers "${dest}"
     # remove anything not matching source-code extensions; then drop empty dirs.
     find "${dest}" \
         -regextype posix-extended \
@@ -71,14 +102,14 @@ fetch_one() {
             git sparse-checkout init --no-cone 2>/dev/null || true
             git sparse-checkout set --skip-checks -- "${sparse_paths[@]}" 2>/dev/null || \
                 git sparse-checkout set -- "${sparse_paths[@]}" 2>/dev/null || true
-            git fetch --depth=1 --filter=blob:none origin "${branch}"
+            timeout 600 git fetch --depth=1 --filter=blob:none origin "${branch}"
             git checkout FETCH_HEAD
             git rev-parse FETCH_HEAD > .corpus-sha
         ) || { log "FAILED update ${name}"; return 1; }
     else
         log "clone ${name} (${url}@${branch}) sparse=${#sparse_paths[@]}"
         rm -rf "${dest}"
-        if ! git clone \
+        if ! timeout 600 git clone \
             --no-checkout \
             --filter=blob:none \
             --depth=1 \

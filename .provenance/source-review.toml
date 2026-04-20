@@ -506,3 +506,48 @@ rationale = "Part of the 2021-01-21 same-author FSF-assigned std::experimental::
 issue = "none"
 reviewed_on = "2026-04-20"
 reviewed_by = "krystophny"
+
+[[reviewed]]
+path = "gcc/gcc/ginclude/stdarg.h"
+upstream = "zig-stdlib/lib/libc/include/any-windows-any/stdarg.h"
+resolution = "not_derived"
+rationale = "Reverse-provenance coincidence.  GCC is the canonical source: ginclude/stdarg.h carries Copyright 1989-2026 Free Software Foundation.  Zig ships a 25-year-old vendored copy under lib/libc/include/any-windows-any/ (the MinGW-w64 header bundle) with Copyright 1989-2000 and the original 'This file is part of GCC' notice preserved verbatim.  Zig's vendored copy attributes GCC correctly; no gap on the GCC side."
+issue = "none"
+reviewed_on = "2026-04-20"
+reviewed_by = "krystophny"
+
+[[reviewed]]
+path = "gcc/gcc/ginclude/stddef.h"
+upstream = "zig-stdlib/lib/libc/include/any-windows-any/stddef.h"
+resolution = "not_derived"
+rationale = "Two independent implementations of the ISO C <stddef.h> primitives (size_t, offsetof, ptrdiff_t, NULL, wchar_t).  GCC's ginclude/stddef.h is the FSF-authored canonical compiler header; Zig's any-windows-any/stddef.h is the mingw-w64 public-domain header.  Code-level match is the shared C-standard boilerplate, not derivation."
+issue = "none"
+reviewed_on = "2026-04-20"
+reviewed_by = "krystophny"
+
+[[reviewed]]
+path = "gcc/libgcc/unwind-generic.h"
+upstream = "zig-stdlib/lib/libc/include/generic-netbsd/unwind.h"
+resolution = "not_derived"
+rationale = "Reverse-provenance: Zig vendors GCC's unwind-generic.h verbatim (including the FSF Copyright 2001-2020, GPL-3+RLE preamble, and 'This file is part of GCC' line) under their generic-netbsd libc bundle.  Zig attributes GCC correctly; no GCC-side gap."
+issue = "none"
+reviewed_on = "2026-04-20"
+reviewed_by = "krystophny"
+
+[[reviewed]]
+path = "gcc/include/xregex2.h"
+upstream = "zig-stdlib/lib/libc/include/generic-glibc/regex.h"
+resolution = "not_derived"
+rationale = "Zig bundles glibc's regex.h (via generic-glibc/) in its libc headers; GCC's include/xregex2.h is the same glibc-origin regex header imported into GCC's include/ tree.  Shared upstream is glibc/posix/regex.h, not a GCC<->Zig import.  Attribution on both sides chains through glibc."
+issue = "none"
+reviewed_on = "2026-04-20"
+reviewed_by = "krystophny"
+
+[[reviewed]]
+path = "gcc/libstdc++-v3/include/pstl/parallel_backend_tbb.h"
+upstream = "onedpl/include/oneapi/dpl/pstl/parallel_backend_tbb.h"
+resolution = "not_derived"
+rationale = "GCC's libstdc++ pstl/ was synchronised in 2023 by Thomas Rodgers from llvm/llvm-project's pstl subdirectory at commit 843c12d6a ('[libc++][pstl] Implement tag dispatching mechanism'; gcc-mirror 3162ca09dbd).  oneapi-src/oneDPL is a sibling fork of the same LLVM pstl ancestry that Intel continues to maintain with an added 'Copyright (C) Intel Corporation' line; GCC synced from the LLVM branch, not from oneDPL, so the LLVM-only header on the GCC side is the complete and correct attribution.  Content overlap between GCC and oneDPL is via their common LLVM ancestor.  Applies to all 22 libstdc++-v3/include/pstl/*.h files surfaced by the reverse scan."
+issue = "none"
+reviewed_on = "2026-04-20"
+reviewed_by = "krystophny"

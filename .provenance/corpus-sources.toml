@@ -1040,3 +1040,202 @@ sparse_paths = [
     "src/lib/libssl",
     "src/lib/libtls",
 ]
+
+# -----------------------------------------------------------------------------
+# Recent non-GNU expansion 2026-04-20 (round 2): modern permissive-licensed
+# upstreams that feed specific GCC subtrees. Focus on active 2024-2026
+# upstreams and on pairs where the GCC-side subtree is a direct mirror or
+# close derivative. Highest-signal candidates at the top.
+# -----------------------------------------------------------------------------
+
+# dlang/phobos is the canonical D standard library; gcc/libphobos/src/std
+# is a direct in-tree vendored copy. Boost Software License.  Forward
+# scan should surface attribution gaps where libphobos files have been
+# edited without preserving upstream headers.
+[[source]]
+name = "dlang-phobos"
+url = "git@github.com:dlang/phobos.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = ["std", "etc"]
+
+# Apple objc4 is the reference Objective-C runtime (APSL 2.0).  Cross-check
+# against gcc/libobjc where selector dispatch, class layout, and associative
+# reference code frequently rhyme across the two runtimes.
+[[source]]
+name = "apple-objc4"
+url = "git@github.com:apple-oss-distributions/objc4.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = [
+    "runtime",
+    "include",
+]
+
+# Ziglang standard library is an active MIT-licensed C/system code base with
+# fresh implementations of math, fmt, hash, compress, and crypto kernels.
+# High chance of Zig borrowing GCC/glibc helpers, and of GCC helpers (libgcc
+# soft-float style) inspiring Zig's zig/compiler_rt.
+[[source]]
+name = "zig-stdlib"
+url = "git@github.com:ziglang/zig.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "lib/std",
+    "lib/compiler_rt",
+    "lib/libc",
+]
+
+# Microsoft GSL (Guidelines Support Library) is the reference implementation
+# of gsl::span and helpers that fed std::span, std::not_null semantics, and
+# Contracts proposals.  MIT.
+[[source]]
+name = "microsoft-gsl"
+url = "git@github.com:microsoft/GSL.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = [
+    "include",
+]
+
+# greg7mdp/parallel-hashmap is a widely-used flat/node hashmap (Apache-2.0).
+# Cross-check against libstdc++-v3/include/bits/hashtable*.
+[[source]]
+name = "parallel-hashmap"
+url = "git@github.com:greg7mdp/parallel-hashmap.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "parallel_hashmap",
+]
+
+# martinus/unordered_dense is a very fast recent MIT unordered_map.
+# Cross-check against libstdc++-v3 hashtable internals.
+[[source]]
+name = "unordered-dense"
+url = "git@github.com:martinus/unordered_dense.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = [
+    "include",
+    "src",
+]
+
+# oneapi-src/oneDPL is Intel's parallel STL implementation (Apache-2.0 with
+# LLVM-exception).  Most likely overlap is libstdc++-v3/include/pstl, which
+# is historically upstreamed from oneDPL/Parallel STL; the GCC side might
+# carry outdated attribution.
+[[source]]
+name = "onedpl"
+url = "git@github.com:oneapi-src/oneDPL.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = [
+    "include/oneapi/dpl",
+]
+
+# David-Haim/concurrencpp is an MIT coroutine runtime that predates or
+# parallels libstdc++ coroutine infrastructure.
+[[source]]
+name = "concurrencpp"
+url = "git@github.com:David-Haim/concurrencpp.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "include",
+    "source",
+]
+
+# taskflow/taskflow is a modern MIT parallel task runtime; cross-check
+# against libgomp/task.c scheduling helpers.
+[[source]]
+name = "taskflow"
+url = "git@github.com:taskflow/taskflow.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "taskflow",
+]
+
+# quickjs-ng is the actively-maintained MIT fork of Bellard's quickjs.
+# Carries independent dtoa/strtod, BigNum and unicode tables; probe the
+# libstdc++ <charconv> (ryu/dragonbox) and libquadmath strtod pathways.
+[[source]]
+name = "quickjs-ng"
+url = "git@github.com:quickjs-ng/quickjs.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = ["*.c", "*.h"]
+
+# xtensor-stack/xsimd is a BSD SIMD wrapper library that shares design
+# space with libstdc++-v3/include/experimental/bits/simd* (which we
+# already probe via std-simd).  Independent cross-check.
+[[source]]
+name = "xsimd"
+url = "git@github.com:xtensor-stack/xsimd.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "include/xsimd",
+]
+
+# NVIDIA/cccl is the merged CUB + Thrust + libcudacxx tree (Apache-2.0 with
+# LLVM-exception).  libcudacxx mirrors libcxx; independent cross-check for
+# where libstdc++ concept/ranges/mdspan code may have rhymed with it.
+[[source]]
+name = "nvidia-cccl"
+url = "git@github.com:NVIDIA/cccl.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = [
+    "libcudacxx/include/cuda/std",
+    "thrust/thrust",
+    "cub/cub",
+]
+
+# scylladb/seastar is an Apache-2.0 async C++ framework; cross-check its
+# scheduling and reactor primitives against libgomp/libatomic.
+[[source]]
+name = "seastar"
+url = "git@github.com:scylladb/seastar.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "include/seastar/core",
+    "src/core",
+]
+
+# OpenACCUserGroup/OpenACCV-V is the reference OpenACC validation and
+# verification testsuite (BSD-3-Clause). Pairs with sollve_vv for OpenACC-
+# only coverage and exercises libgomp OpenACC intrinsic paths.
+[[source]]
+name = "openacc-vv"
+url = "git@github.com:OpenACCUserGroup/OpenACCV-V.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = ["Tests"]
+
+# ldc-developers/phobos is LDC's separate fork of Phobos (BOOST-1.0).
+# Useful contrast: if gcc/libphobos diverges from dlang/phobos but agrees
+# with ldc-phobos, that hints at the actual upstream of record.
+[[source]]
+name = "ldc-phobos"
+url = "git@github.com:ldc-developers/phobos.git"
+branch = "ldc"
+origin_class = "non_gnu"
+sparse_paths = ["std", "etc"]
+
+# facebook/wangle dependency folly is already indexed, but wangle itself
+# contains independent executor/codec code (Apache-2.0) worth cross-checking
+# against libstdc++ executors and libgomp tasking.
+[[source]]
+name = "wangle"
+url = "git@github.com:facebook/wangle.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = [
+    "wangle/concurrent",
+    "wangle/codec",
+    "wangle/service",
+]

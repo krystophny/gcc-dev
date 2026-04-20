@@ -151,6 +151,22 @@ TRACKERS = {
     "onetbb": ("https://github.com/oneapi-src/oneTBB/issues", "oneapi-src/oneTBB issues"),
     "libunwind-nongnu": ("https://github.com/libunwind/libunwind/issues", "libunwind/libunwind issues"),
     "libdispatch": ("https://github.com/apple/swift-corelibs-libdispatch/issues", "swift-corelibs-libdispatch issues"),
+    "dlang-phobos": ("https://github.com/dlang/phobos/issues", "dlang/phobos issues"),
+    "apple-objc4": ("https://feedbackassistant.apple.com/", "Apple Feedback Assistant"),
+    "zig-stdlib": ("https://github.com/ziglang/zig/issues", "ziglang/zig issues"),
+    "microsoft-gsl": ("https://github.com/microsoft/GSL/issues", "microsoft/GSL issues"),
+    "parallel-hashmap": ("https://github.com/greg7mdp/parallel-hashmap/issues", "greg7mdp/parallel-hashmap issues"),
+    "unordered-dense": ("https://github.com/martinus/unordered_dense/issues", "martinus/unordered_dense issues"),
+    "onedpl": ("https://github.com/oneapi-src/oneDPL/issues", "oneapi-src/oneDPL issues"),
+    "concurrencpp": ("https://github.com/David-Haim/concurrencpp/issues", "David-Haim/concurrencpp issues"),
+    "taskflow": ("https://github.com/taskflow/taskflow/issues", "taskflow/taskflow issues"),
+    "quickjs-ng": ("https://github.com/quickjs-ng/quickjs/issues", "quickjs-ng/quickjs issues"),
+    "xsimd": ("https://github.com/xtensor-stack/xsimd/issues", "xtensor-stack/xsimd issues"),
+    "nvidia-cccl": ("https://github.com/NVIDIA/cccl/issues", "NVIDIA/cccl issues"),
+    "seastar": ("https://github.com/scylladb/seastar/issues", "scylladb/seastar issues"),
+    "openacc-vv": ("https://github.com/OACC-Validation/OpenACCV-V/issues", "OpenACCV-V issues"),
+    "ldc-phobos": ("https://github.com/ldc-developers/phobos/issues", "ldc-developers/phobos issues"),
+    "wangle": ("https://github.com/facebook/wangle/issues", "facebook/wangle issues"),
 }
 
 
