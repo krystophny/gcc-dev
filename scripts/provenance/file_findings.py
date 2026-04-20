@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 import textwrap
@@ -38,6 +39,54 @@ def load_reviewed() -> set[str]:
     with REVIEW_TOML.open("rb") as handle:
         data = tomllib.load(handle)
     return {entry["path"] for entry in data.get("reviewed", []) if "path" in entry}
+
+
+# Title emitted by title_for(): "[SEV] provenance: <short> <- <upstream>"
+# where <short> is the repo path with the leading "gcc/" stripped.
+CLOSED_TITLE_RE = re.compile(
+    r"^\[[^\]]+\]\s*provenance:\s*(?P<short>\S+)\s*<-\s*", re.IGNORECASE
+)
+# Paths referenced inside the issue body as `gcc/...`.
+BODY_PATH_RE = re.compile(r"`(gcc/[^`\s]+)`")
+
+
+def load_closed_issue_paths(repo: str) -> set[str]:
+    """Return paths referenced by CLOSED provenance-labelled issues.
+
+    Uses `gh issue list` to pull closed issues with the `provenance` label
+    and extracts paths from both the title (filer-generated issues) and the
+    body (hand-written multi-file issues).  Requires `gh` on PATH; silently
+    returns an empty set on error so scanners still work offline.
+    """
+    try:
+        result = subprocess.run(
+            [
+                "gh", "issue", "list",
+                "--repo", repo,
+                "--state", "closed",
+                "--label", "provenance",
+                "--limit", "500",
+                "--json", "title,body",
+            ],
+            capture_output=True, text=True, check=True,
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return set()
+    try:
+        issues = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return set()
+    paths: set[str] = set()
+    for issue in issues:
+        title = issue.get("title", "") or ""
+        body = issue.get("body", "") or ""
+        match = CLOSED_TITLE_RE.match(title)
+        if match:
+            short = match.group("short")
+            paths.add(short if short.startswith("gcc/") else f"gcc/{short}")
+        for body_match in BODY_PATH_RE.finditer(body):
+            paths.add(body_match.group(1))
+    return paths
 
 
 def severity_ok(finding: dict, min_rank: int) -> bool:
@@ -165,6 +214,8 @@ def main() -> int:
         return 1
 
     reviewed = load_reviewed()
+    closed = load_closed_issue_paths(args.repo)
+    suppressed = reviewed | closed
     min_rank = SEV_RANK[args.min_severity]
 
     # dedupe: one issue per (path, upstream_project)
@@ -172,7 +223,7 @@ def main() -> int:
     filtered = []
     for f in findings:
         path = f.get("path")
-        if not path or path in reviewed:
+        if not path or path in suppressed:
             continue
         if not severity_ok(f, min_rank):
             continue
@@ -191,7 +242,8 @@ def main() -> int:
         filtered = filtered[: args.limit]
 
     print(f"findings_total={len(findings)} unreviewed={len(filtered)}"
-          f" reviewed_registry={len(reviewed)} min={args.min_severity}")
+          f" reviewed_registry={len(reviewed)} closed_issues={len(closed)}"
+          f" min={args.min_severity}")
 
     created = 0
     for f in filtered:

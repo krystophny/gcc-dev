@@ -81,6 +81,15 @@ LICENSE_FILE_NAMES = (
 ORIGIN_PATTERN = re.compile(
     r"\b(copied|adapted|derived|based)\b.{0,80}\b(from|on)\b", re.IGNORECASE
 )
+# GNU-project convention used across glibc, gnulib, gettext, and the
+# embedded copies GCC ships.  A file that says "the canonical source of
+# this file is maintained with the GNU C Library" (or the GNU gettext
+# runtime, gnulib, ...) is explicitly attributing its upstream even
+# though it avoids the copied/derived/adapted phrasing.
+CANONICAL_SOURCE_PATTERN = re.compile(
+    r"canonical\s+source\s+of\s+this\s+file\s+is\s+maintained\s+with\b",
+    re.IGNORECASE,
+)
 INTERNAL_SOURCE_PATTERN = re.compile(
     r"\b(copied|adapted|derived|based)\b.{0,120}"
     r"(?:gcc/testsuite/|libgomp/testsuite/|gfortran\.dg/|libgomp\.|'\.\.?/|\"\.\.?/|\.\./|\./)",
@@ -375,6 +384,8 @@ def header_has_provenance_markers(prefix: str) -> tuple[bool, list[str]]:
         hits.append("SPDX")
     if ORIGIN_PATTERN.search(prefix):
         hits.append("origin-phrase")
+    if CANONICAL_SOURCE_PATTERN.search(prefix):
+        hits.append("canonical-source")
     # Only treat a URL as a marker when it points somewhere other than GNU /
     # FSF. A bare `http://www.gnu.org/licenses/` is license boilerplate, not
     # an external provenance pointer.
