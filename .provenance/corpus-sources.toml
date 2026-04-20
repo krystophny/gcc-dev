@@ -1239,3 +1239,205 @@ sparse_paths = [
     "wangle/codec",
     "wangle/service",
 ]
+
+# -----------------------------------------------------------------------------
+# Recent non-GNU expansion 2026-04-20 (round 3): C++20/23/26 reference
+# implementations, modern crypto/Unicode upstreams, and Fortran-specific
+# sources that commonly rhyme with GCC runtime trees.  Strict focus on
+# recent (2020+) permissive-licensed sources.
+# -----------------------------------------------------------------------------
+
+# NVIDIA/stdexec is the reference implementation of P2300 (std::execution,
+# senders/receivers).  libstdc++-v3/include/std/execution and the supporting
+# bits/sender_receiver* headers are being built out of this tree; silent
+# copies would show up strongly.  Apache-2.0 WITH LLVM-exception.
+[[source]]
+name = "stdexec"
+url = "git@github.com:NVIDIA/stdexec.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = [
+    "include",
+    "source",
+]
+
+# HowardHinnant/date is the reference implementation behind the C++20
+# <chrono> calendar types, time zones, and format routines.  libstdc++
+# <chrono> calendar/tz code was imported from here (MIT).
+[[source]]
+name = "hinnant-date"
+url = "git@github.com:HowardHinnant/date.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "include/date",
+    "src",
+]
+
+# nlohmann/json is the most widely vendored modern JSON library (MIT).
+# libstdc++ itself has no <json>, but libiberty and contrib scripts could
+# carry copies; also relevant when libstdc++-v3 gains P3045 <json> support.
+[[source]]
+name = "nlohmann-json"
+url = "git@github.com:nlohmann/json.git"
+branch = "develop"
+origin_class = "non_gnu"
+sparse_paths = [
+    "include/nlohmann",
+    "single_include/nlohmann",
+]
+
+# simdutf/simdutf is Daniel Lemire's fast Unicode UTF-8/16/32 transcoder
+# (Apache-2.0 / MIT dual).  Increasingly used by Node, V8, Chromium, Python;
+# cross-check libstdc++ <locale>/<codecvt> and libiberty transform helpers.
+[[source]]
+name = "simdutf"
+url = "git@github.com:simdutf/simdutf.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "src",
+    "include",
+]
+
+# google/re2 is the reference linear-time regex engine (BSD-3-Clause).
+# Cross-check libstdc++ <regex> algorithms and libiberty regex helpers.
+[[source]]
+name = "re2"
+url = "git@github.com:google/re2.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = [
+    "re2",
+    "util",
+]
+
+# boostorg/regex was the seed of libstdc++ <regex> (Boost Software License).
+# Likely source of any lurking verbatim adaptations in the GCC regex tree.
+[[source]]
+name = "boost-regex"
+url = "git@github.com:boostorg/regex.git"
+branch = "develop"
+origin_class = "non_gnu"
+sparse_paths = [
+    "include/boost/regex",
+    "src",
+]
+
+# boostorg/json is a modern fast JSON parser/serializer (Boost SW License);
+# cross-check libstdc++ if <json> lands, and any libiberty JSON helpers.
+[[source]]
+name = "boost-json"
+url = "git@github.com:boostorg/json.git"
+branch = "develop"
+origin_class = "non_gnu"
+sparse_paths = [
+    "include/boost/json",
+    "src",
+]
+
+# boostorg/asio is the reference implementation behind the Networking TS
+# and the executor model (P0443).  Cross-check libstdc++ executor code.
+[[source]]
+name = "boost-asio"
+url = "git@github.com:boostorg/asio.git"
+branch = "develop"
+origin_class = "non_gnu"
+sparse_paths = [
+    "include/boost/asio",
+]
+
+# boostorg/atomic is the progenitor of many libatomic/libstdc++ atomic
+# kernel shapes (Boost SW License).
+[[source]]
+name = "boost-atomic"
+url = "git@github.com:boostorg/atomic.git"
+branch = "develop"
+origin_class = "non_gnu"
+sparse_paths = [
+    "include/boost/atomic",
+    "src",
+]
+
+# google/boringssl is Google's fork of OpenSSL used by Chromium/Android/QUIC
+# (OpenSSL + ISC dual).  Separate enough from openssl master that libiberty
+# crypto helpers and libstdc++-v3 hash internals deserve an independent probe.
+[[source]]
+name = "boringssl"
+url = "git@github.com:google/boringssl.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = [
+    "crypto/bn",
+    "crypto/sha",
+    "crypto/md5",
+    "crypto/aes",
+    "crypto/modes",
+    "crypto/rand",
+    "crypto/fipsmodule",
+]
+
+# Mbed-TLS/mbedtls is ARM's compact TLS stack widely embedded in firmware
+# (Apache-2.0 / GPL-2 dual).  Cross-check libiberty md5/sha1 helpers.
+[[source]]
+name = "mbedtls"
+url = "git@github.com:Mbed-TLS/mbedtls.git"
+branch = "development"
+origin_class = "non_gnu"
+sparse_paths = [
+    "library",
+    "include/mbedtls",
+]
+
+# JuliaStrings/utf8proc is a compact Unicode normalisation library (MIT).
+# Cross-check against libstdc++ locale/codecvt, libiberty Unicode tables.
+[[source]]
+name = "utf8proc"
+url = "git@github.com:JuliaStrings/utf8proc.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = ["*.c", "*.h"]
+
+# fortran-lang/stdlib is the community modern-Fortran standard library
+# (MIT).  Cross-check against libgfortran intrinsics/io and Fortran runtime;
+# this is the only upstream actively reimplementing the Fortran runtime in
+# portable form, so collisions here would be high-signal.
+[[source]]
+name = "fortran-lang-stdlib"
+url = "git@github.com:fortran-lang/stdlib.git"
+branch = "master"
+origin_class = "non_gnu"
+sparse_paths = [
+    "src",
+]
+
+# sourceryinstitute/OpenCoarrays is the external coarray runtime that GCC's
+# libcaf interface was designed around (BSD-3-Clause).  libgfortran ships
+# libcaf_single + libcaf_mpi shells; cross-check for import traffic in both
+# directions.
+[[source]]
+name = "opencoarrays"
+url = "git@github.com:sourceryinstitute/OpenCoarrays.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = [
+    "src/runtime-libraries",
+    "src/extensions",
+    "src/tests",
+]
+
+# apple/swift has a substantial C/C++ runtime (stdlib core, ObjC interop,
+# Runtime/Demangle) that can rhyme with libstdc++ demangle helpers and
+# libsupc++ typeinfo machinery (Apache-2.0 with runtime exception).
+[[source]]
+name = "swift"
+url = "git@github.com:swiftlang/swift.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = [
+    "stdlib/public/runtime",
+    "stdlib/public/stubs",
+    "stdlib/public/SwiftShims/swift/shims",
+    "include/swift/Demangling",
+    "lib/Demangling",
+]
