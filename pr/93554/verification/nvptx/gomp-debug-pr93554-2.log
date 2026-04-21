@@ -1,10 +1,10 @@
-GOACC_parallel_keyed: mapnum=2, hostaddrs=0x7ffe6349ee90, size=0x65e070, kinds=0x65e060
+GOACC_parallel_keyed: mapnum=2, hostaddrs=0x7ffec17d7b70, size=0x65e070, kinds=0x65e060
 GOMP_NVPTX_NATIVE_GPU_THREAD_STACK_SIZE: <Not defined>
 GOMP_NVPTX_LOWLAT_POOL: <Not defined>
 GOMP_NVPTX_JIT: <Not defined>
 Loading:
 ---
--- [log preamble above; offload entry function body below] --
+-- [log preamble above; offload entry function bodies below] --
 .entry MAIN__$_omp_fn$0 (.param .u64 %in_ar0)
 {
 .reg .u64 %ar0;
@@ -328,6 +328,6 @@ $L16:
 ret;
 }
 
--- [end of .entry MAIN__$_omp_fn$0 body; ~runtime PTX omitted] --
+-- [runtime PTX helper functions omitted] --
 Loading:
 nvptx GOMP_OFFLOAD_openacc_exec

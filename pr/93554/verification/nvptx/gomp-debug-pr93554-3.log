@@ -1,10 +1,10 @@
-GOACC_parallel_keyed: mapnum=4, hostaddrs=0x7ffeaf20bc60, size=0x7ffeaf20bc80, kinds=0x65b068
+GOACC_parallel_keyed: mapnum=4, hostaddrs=0x7ffc4f565c90, size=0x7ffc4f565cb0, kinds=0x65b068
 GOMP_NVPTX_NATIVE_GPU_THREAD_STACK_SIZE: <Not defined>
 GOMP_NVPTX_LOWLAT_POOL: <Not defined>
 GOMP_NVPTX_JIT: <Not defined>
 Loading:
 ---
--- [log preamble above; offload entry function body below] --
+-- [log preamble above; offload entry function bodies below] --
 .entry MAIN__$_omp_fn$0 (.param .u64 %in_ar0)
 {
 .reg .u64 %ar0;
@@ -153,12 +153,12 @@ cvt.s32.s16 %r131,%r46;
 shl.b32 %r44,%r131,5;
 add.u32 %r36,%r44,32;
 // #APP 
-// 32 "pr/93554/tests/pr93554-private-independence.f90" 1
+// 35 "pr/93554/tests/pr93554-private-independence.f90" 1
 // Start: Added by -minit-regs=3:
 // #NO_APP 
 mov.u64 %r31,0;
 // #APP 
-// 32 "pr/93554/tests/pr93554-private-independence.f90" 1
+// 35 "pr/93554/tests/pr93554-private-independence.f90" 1
 // End: Added by -minit-regs=3:
 // #NO_APP 
 $L8:
@@ -361,6 +361,6 @@ $L7:
 ret;
 }
 
--- [end of .entry MAIN__$_omp_fn$0 body; ~runtime PTX omitted] --
+-- [runtime PTX helper functions omitted] --
 Loading:
 nvptx GOMP_OFFLOAD_openacc_exec

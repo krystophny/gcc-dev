@@ -1,8 +1,29 @@
-GCC-emitted PTX call sites for __nvptx_malloc / __nvptx_free
-Summed across all offload entry function bodies in each trace.
+GCC-emitted PTX __nvptx_malloc / __nvptx_free call sites
+(NVPTX sm_89, RTX 5060 Ti, CUDA 13.2, driver 595.58.03; 2026-04-21)
+Summed across all offload entry bodies in each trace.
 
-test                                                 entries  body lines   malloc   free
-------------------------------------------------------------------------------------------
-pr93554 (derived-alloc-component, baseline)                5         750        5      5
-pr93554 (alloc-in-body, NEW)                               1         233        2      1
-pr93554 (private-independence, NEW)                        1         354        1      1
+test                                          entries   body  malloc  free
+--------------------------------------------------------------------------------
+pr93554-1 (derived-alloc-component)                 5    684       5     5
+pr107227-1 (whole-allocatable)                      5   1118       5     5
+pr95550-1 (parallel-create-private)                 5    886       5     5
+pr93554-2 (alloc-in-body, NEW)                      1    321       2     1
+pr93554-3 (private-independence, NEW)               1    354       1     1
+
+Legend: 'entries' is the number of .entry <program|subroutine>$_omp_fn$n
+blocks in the trace (one per OpenACC compute region).  'malloc' and
+'free' count call sites to __nvptx_malloc / __nvptx_free inside those
+blocks (i.e. PTX that executes on the device, not helper functions).
+
+Reading the result:
+- The three baseline tests emit malloc/free for every parallelism
+  variant, but the guard (if priv.data != 0B) is always false at
+  runtime because the allocatable component stays null throughout
+  the region; the call is compiled but never executed.
+- pr93554-2 allocates the component inside the loop body and never
+  deallocates, so the per-thread finaliser's free runs at region
+  exit on every thread (malloc=2 is the user-facing allocate plus a
+  descriptor helper).
+- pr93554-3 carries a whole allocatable through num_gangs(4) gang
+  partitioning; the OpenACC runtime allocates the per-gang copy on
+  entry and frees it on exit.  Malloc/free = 1/1 per entry.
