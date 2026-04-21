@@ -77,12 +77,16 @@ Artifacts:
 - `verification/host-run.log`, `.log.filtered` -- direct-compile host
   matrix (30 PASS, 0 FAIL).
 - `verification/nvptx-run.log` -- offload compile + run (5 PASS, 0 FAIL).
-- `verification/nvptx/gomp-debug-pr93554.log` -- S1 `GOMP_DEBUG=1`
+- `verification/nvptx/gomp-debug-pr93554-1.log` -- S1 `GOMP_DEBUG=1`
   trace (5 offload entry points, `__nvptx_free` gated).
-- `verification/nvptx/gomp-debug-pr93554-alloc-in-body.log` -- S4
-  trace (malloc=2, free=1 per offload entry body).
-- `verification/nvptx/gomp-debug-pr93554-private-independence.log` --
-  S5 trace (malloc=1, free=1 per offload entry body).
+- `verification/nvptx/gomp-debug-pr107227-1.log`,
+  `verification/nvptx/gomp-debug-pr95550-1.log` -- S2 and S3 traces
+  (same gated pattern as S1).
+- `verification/nvptx/gomp-debug-pr93554-2.log` -- S4 trace
+  (malloc=2, free=1 per offload entry body; free reachable at
+  runtime because the component is allocated inside the body).
+- `verification/nvptx/gomp-debug-pr93554-3.log` -- S5 trace
+  (malloc=1, free=1 per offload entry body; free reachable per gang).
 - `verification/nvptx/ptx-malloc-free-summary.txt` -- per-scenario
   call-site scan.
 - `verification/provenance-tests.md` -- per-test lineage audit.

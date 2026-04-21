@@ -50,8 +50,8 @@ variant over a 32-element allocatable.  Results:
 See `pr/93554/verification/host-run.log`,
 `pr/93554/verification/host-run.log.filtered`, and
 `pr/93554/verification/nvptx-run.log`.  The `GOMP_DEBUG=1` trace for
-this scenario sits in the S1 log
-`pr/93554/verification/nvptx/gomp-debug-pr93554.log`; the whole-
-allocatable runtime-free edge is additionally exercised by S4/S5
-under the PR93554 umbrella (see
+this scenario sits at
+`pr/93554/verification/nvptx/gomp-debug-pr95550-1.log`; the whole-
+allocatable runtime-free edge is additionally exercised by
+pr93554-2 / pr93554-3 under the PR93554 umbrella (see
 `pr/93554/verification/nvptx/ptx-malloc-free-summary.txt`).

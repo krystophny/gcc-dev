@@ -58,11 +58,13 @@ reproducible via `nvptx/ptx-malloc-free-summary.txt`.
   matrix output.
 - `pr/93554/verification/nvptx-run.log` -- nvptx compile + run for
   each scenario.
-- `pr/93554/verification/nvptx/gomp-debug-pr93554.log` -- S1 debug
+- `pr/93554/verification/nvptx/gomp-debug-pr93554-1.log` -- S1 debug
   trace (PTX emits `__nvptx_free` in five entry points, all gated).
-- `pr/93554/verification/nvptx/gomp-debug-pr93554-alloc-in-body.log`
-  and `.../gomp-debug-pr93554-private-independence.log` -- S4 and S5
-  debug traces where the in-entry-body `__nvptx_free` is reachable.
+- `pr/93554/verification/nvptx/gomp-debug-pr107227-1.log` and
+  `.../gomp-debug-pr95550-1.log` -- S2 and S3, same pattern.
+- `pr/93554/verification/nvptx/gomp-debug-pr93554-2.log` and
+  `.../gomp-debug-pr93554-3.log` -- S4 and S5 (the NEW tests) where
+  the in-entry-body `__nvptx_free` is reachable at runtime.
 - `pr/93554/verification/nvptx/ptx-malloc-free-summary.txt` --
   per-scenario malloc/free call-site scan inside the offload entry
   function body.
