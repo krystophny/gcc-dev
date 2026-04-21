@@ -11,6 +11,7 @@
 ! loop-body arithmetic performed through the shared output array.
 
 ! { dg-do run }
+!TODO { dg-prune-output {using 'vector_length \(32\)', ignoring 1} }
 
 program pr93554
   implicit none

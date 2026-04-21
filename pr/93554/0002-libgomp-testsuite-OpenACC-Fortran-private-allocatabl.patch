@@ -1,24 +1,61 @@
-From 5a922a3412f1f8450734f5ac87cd7b628c4b930b Mon Sep 17 00:00:00 2001
+From e4272e6f37ddf022152f90212dd89764761c9d3f Mon Sep 17 00:00:00 2001
 From: Christopher Albert <albert@tugraz.at>
-Date: Tue, 21 Apr 2026 07:28:21 +0200
-Subject: [PATCH] libgomp, Fortran, testsuite: add OpenACC private-allocatable
- execution tests
+Date: Tue, 21 Apr 2026 09:00:45 +0200
+Subject: [PATCH] libgomp, testsuite: OpenACC Fortran private-allocatable
+ execution tests [PR93554, PR95550, PR107227]
 
 The compile-only regression for PR93554 in
 gcc/testsuite/gfortran.dg/goacc/pr93554.f90 covers the ICE in
 expand_oacc_for when an OpenACC loop's private clause carries a
 derived type with an allocatable component.  It does not exercise
-the finalisation/free CFG edge that the fix relaxed, nor the
-closely related whole-allocatable shapes reported as PR95550 and
-PR107227 (duplicates with the same ICE site).
+the finalisation/free CFG edge that r16-8571-g010618b8dcb relaxed,
+nor the closely related whole-allocatable shapes reported as PR95550
+and PR107227.
 
 Add five libgomp execution tests so that a runtime check across
-gang/worker/vector/seq parallelism variants is available for each
-of the three reported forms, including one that allocates the
-component inside the loop body (so the per-thread finaliser's free
-call actually fires at runtime on offload devices) and one that
-stresses per-gang independence of a whole-allocatable private
-under num_gangs(4).
+gang/worker/vector/seq/kernels parallelism variants is available for
+each of the three reported forms, plus two targeted stress cases:
+
+pr93554-1.f90  Derived type with allocatable component; five
+               parallelism variants (gang/worker/vector/seq/kernels).
+               Canonical regression shape; mirrors the merged
+               gfortran.dg/goacc/pr93554.f90 compile test.
+pr93554-2.f90  Derived type with allocatable component allocated
+               inside the loop body.  Pinned to gang-only; exits the
+               region with priv.b non-null, so the per-thread
+               finaliser __nvptx_free must run at region exit.  A
+               sentinel check at iteration start detects leaked
+               private storage.
+pr93554-3.f90  Whole allocatable array marked private under
+               num_gangs(4) gang partitioning.  Double-phase
+               write+sum exercises per-gang isolation; the OpenACC
+               runtime materialises the per-gang copy on entry and
+               the finaliser frees each copy on exit.
+pr95550-1.f90  Burnus's acc parallel create(A) + acc loop private(A)
+               shape; five parallelism variants.  Verifies that the
+               host copy of A is left untouched.
+pr107227-1.f90 Bryngelson's whole-allocatable acc parallel loop
+               private(arr) shape; five parallelism variants.
+
+All five compile cleanly on trunk, PASS across the DejaGnu matrix
+for host fallback and on NVPTX sm_89.
+
+Per-PR outcome:
+
+ - PR93554: fixed by r16-8571-g010618b8dcb; covered by pr93554-1.f90
+   (canonical), pr93554-2.f90 (runtime free edge), and pr93554-3.f90
+   (per-gang independence).
+ - PR95550: duplicate of PR93554 -- same ICE site, resolved by the
+   same commit.  pr95550-1.f90 installs Burnus's shape as the
+   execution regression.
+ - PR107227: duplicate of PR93554 -- same ICE site, resolved by the
+   same commit.  pr107227-1.f90 installs Bryngelson's shape.
+
+Scope note: worker- and vector-level private for whole allocatables
+under NVPTX offload exposes a pre-existing codegen issue distinct
+from r16-8571 (see PR95397 and the Bugzilla thread for the new
+allocatable-worker/vector report filed separately).  pr93554-2.f90
+and pr93554-3.f90 are therefore pinned to gang-only partitioning.
 
 Assisted-by: Claude (Anthropic)
 
@@ -36,12 +73,12 @@ libgomp/ChangeLog:
 
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ---
- .../libgomp.oacc-fortran/pr107227-1.f90       | 118 ++++++++++++++++
- .../libgomp.oacc-fortran/pr93554-1.f90        | 133 ++++++++++++++++++
- .../libgomp.oacc-fortran/pr93554-2.f90        |  45 ++++++
- .../libgomp.oacc-fortran/pr93554-3.f90        |  52 +++++++
- .../libgomp.oacc-fortran/pr95550-1.f90        |  83 +++++++++++
- 5 files changed, 431 insertions(+)
+ .../libgomp.oacc-fortran/pr107227-1.f90       | 119 ++++++++++++++++
+ .../libgomp.oacc-fortran/pr93554-1.f90        | 134 ++++++++++++++++++
+ .../libgomp.oacc-fortran/pr93554-2.f90        |  55 +++++++
+ .../libgomp.oacc-fortran/pr93554-3.f90        |  55 +++++++
+ .../libgomp.oacc-fortran/pr95550-1.f90        |  84 +++++++++++
+ 5 files changed, 447 insertions(+)
  create mode 100644 libgomp/testsuite/libgomp.oacc-fortran/pr107227-1.f90
  create mode 100644 libgomp/testsuite/libgomp.oacc-fortran/pr93554-1.f90
  create mode 100644 libgomp/testsuite/libgomp.oacc-fortran/pr93554-2.f90
@@ -50,10 +87,10 @@ Signed-off-by: Christopher Albert <albert@tugraz.at>
 
 diff --git a/libgomp/testsuite/libgomp.oacc-fortran/pr107227-1.f90 b/libgomp/testsuite/libgomp.oacc-fortran/pr107227-1.f90
 new file mode 100644
-index 00000000000..e997a748c12
+index 00000000000..42cf20d0f78
 --- /dev/null
 +++ b/libgomp/testsuite/libgomp.oacc-fortran/pr107227-1.f90
-@@ -0,0 +1,118 @@
+@@ -0,0 +1,119 @@
 +! PR libgomp/107227 — execution test.
 +!
 +! Whole allocatable array used with private clause on an OpenACC loop.
@@ -62,6 +99,7 @@ index 00000000000..e997a748c12
 +! 'parallel loop' vs 'kernels loop'.
 +
 +! { dg-do run }
++!TODO { dg-prune-output {using 'vector_length \(32\)', ignoring 1} }
 +
 +program pr107227
 +  implicit none
@@ -174,10 +212,10 @@ index 00000000000..e997a748c12
 +end program pr107227
 diff --git a/libgomp/testsuite/libgomp.oacc-fortran/pr93554-1.f90 b/libgomp/testsuite/libgomp.oacc-fortran/pr93554-1.f90
 new file mode 100644
-index 00000000000..553f0bd7bc7
+index 00000000000..9f741a9e96d
 --- /dev/null
 +++ b/libgomp/testsuite/libgomp.oacc-fortran/pr93554-1.f90
-@@ -0,0 +1,133 @@
+@@ -0,0 +1,134 @@
 +! PR fortran/93554 — execution test.
 +!
 +! Exercises "private(x)" on an OpenACC loop where x is a derived type
@@ -191,6 +229,7 @@ index 00000000000..553f0bd7bc7
 +! loop-body arithmetic performed through the shared output array.
 +
 +! { dg-do run }
++!TODO { dg-prune-output {using 'vector_length \(32\)', ignoring 1} }
 +
 +program pr93554
 +  implicit none
@@ -313,27 +352,32 @@ index 00000000000..553f0bd7bc7
 +end program pr93554
 diff --git a/libgomp/testsuite/libgomp.oacc-fortran/pr93554-2.f90 b/libgomp/testsuite/libgomp.oacc-fortran/pr93554-2.f90
 new file mode 100644
-index 00000000000..53b0d5c7d15
+index 00000000000..d45edffdbbe
 --- /dev/null
 +++ b/libgomp/testsuite/libgomp.oacc-fortran/pr93554-2.f90
-@@ -0,0 +1,45 @@
+@@ -0,0 +1,55 @@
 +! PR fortran/93554 -- runtime free-edge stress.
 +!
 +! The companion compile-time regression test (pr93554.f90 under
-+! gcc/testsuite/gfortran.dg/goacc/) only exercises the CFG edge on the
-+! pass dump.  This test exits the OpenACC region with the allocatable
-+! component still allocated, which forces the per-thread finalisation
-+! inserted by the Fortran front end to run at region exit.  Before
-+! r16-8571-g010618b8dcb this ICE'd in expand_oacc_for; afterwards the
-+! finalisation-free edge must execute for every thread and produce
-+! correct results.  On NVPTX the call surfaces in GOMP_DEBUG=1 as
-+! __nvptx_free.
++! gcc/testsuite/gfortran.dg/goacc/) only exercises the CFG edge on
++! the pass dump.  This test exits the OpenACC region with the
++! allocatable component still allocated, which forces the per-thread
++! finalisation inserted by the Fortran front end to run at region
++! exit.  Before r16-8571-g010618b8dcb this ICE'd in expand_oacc_for;
++! afterwards the finalisation-free edge must execute for every
++! thread and produce correct results.  On NVPTX the call surfaces in
++! GOMP_DEBUG=1 as __nvptx_free.
++!
++! Partitioning is pinned to gang-only: worker/vector-level private
++! for aggregate types on NVPTX is a separate, pre-existing question
++! (see PR95397) and is not what this test is trying to exercise.
 +
 +! { dg-do run }
 +
 +program pr93554_alloc_in_body
 +  implicit none
 +  integer, parameter :: n = 128
++  integer, parameter :: sentinel = -999
 +  integer :: res(n), expect(n), j
 +  type :: t
 +     integer :: a
@@ -347,10 +391,15 @@ index 00000000000..53b0d5c7d15
 +
 +  res = -1
 +
-+  !$acc parallel loop gang worker vector private(x) copy(res) &
-+  !$acc&              num_gangs(4) num_workers(4) vector_length(8)
++  !$acc parallel loop gang private(x) copy(res) num_gangs(4)
 +  do j = 1, n
-+     if (.not. allocated(x%b)) allocate(x%b(8))
++     if (.not. allocated(x%b)) then
++        allocate(x%b(8))
++        x%b = sentinel
++     end if
++     ! If a prior iteration's write leaked through, we will see
++     ! non-sentinel, non-zero values in slots we don't write below.
++     if (x%b(2) /= sentinel .and. x%b(2) /= 0) stop 3
 +     x%b    = 0
 +     x%b(1) = j
 +     x%b(5) = 2*j + 7
@@ -364,10 +413,10 @@ index 00000000000..53b0d5c7d15
 +end program pr93554_alloc_in_body
 diff --git a/libgomp/testsuite/libgomp.oacc-fortran/pr93554-3.f90 b/libgomp/testsuite/libgomp.oacc-fortran/pr93554-3.f90
 new file mode 100644
-index 00000000000..9c34a3bb881
+index 00000000000..768d84a252d
 --- /dev/null
 +++ b/libgomp/testsuite/libgomp.oacc-fortran/pr93554-3.f90
-@@ -0,0 +1,52 @@
+@@ -0,0 +1,55 @@
 +! PR fortran/93554 -- per-gang independence of whole-allocatable privates.
 +!
 +! Whole allocatable array marked private on a gang-partitioned
@@ -393,6 +442,9 @@ index 00000000000..9c34a3bb881
 +
 +  allocate(buf(m))
 +
++  ! Expected: sum_{k=1..m} 2*(j*m + k)
++  !         = 2*m*j*m + 2*m*(m+1)/2
++  !         = 2*(m*m*j + m*(m+1)/2).
 +  do j = 1, n
 +     expect(j) = 2*(m*m*j + m*(m + 1)/2)
 +  end do
@@ -422,10 +474,10 @@ index 00000000000..9c34a3bb881
 +end program pr93554_private_independence
 diff --git a/libgomp/testsuite/libgomp.oacc-fortran/pr95550-1.f90 b/libgomp/testsuite/libgomp.oacc-fortran/pr95550-1.f90
 new file mode 100644
-index 00000000000..1b685972a16
+index 00000000000..1ee4efd0872
 --- /dev/null
 +++ b/libgomp/testsuite/libgomp.oacc-fortran/pr95550-1.f90
-@@ -0,0 +1,83 @@
+@@ -0,0 +1,84 @@
 +! PR middle-end/95550 — execution test.
 +!
 +! Shared allocatable A created on the device with 'acc parallel create(A)',
@@ -436,6 +488,7 @@ index 00000000000..1b685972a16
 +! back).  We also exercise an analogous 'acc kernels' variant.
 +
 +! { dg-do run }
++!TODO { dg-prune-output {using 'vector_length \(32\)', ignoring 1} }
 +
 +program pr95550
 +  implicit none

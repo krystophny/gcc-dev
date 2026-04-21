@@ -40,7 +40,7 @@ derived type with an allocatable component.
 
 Covered by `pr/93554/tests/pr95550-parallel-create-private.f90`
 (upstream name `pr95550-1.f90` in the staged test patch
-`pr/93554/0002-libgomp-Fortran-testsuite-add-OpenACC-private-alloca.patch`),
+`pr/93554/0002-libgomp-testsuite-OpenACC-Fortran-private-allocatabl.patch`),
 which exercises `gang`, `worker`, `vector`, `seq` and an `acc kernels`
 variant over a 32-element allocatable.  Results:
 

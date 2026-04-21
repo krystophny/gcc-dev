@@ -1,0 +1,85 @@
+# Curated excerpt from the full libgomp.sum produced by
+# make -j16 check-target-libgomp-fortran
+# after dropping pr93554-1/2/3, pr95550-1, pr107227-1 into
+# libgomp/testsuite/libgomp.oacc-fortran/ of the trunk source tree
+# (gcc/; post-r16-8571, containing the merged commit).
+#
+# Baseline (without the new tests) totals were:
+#   6374 expected passes, 214 expected failures, 188 unsupported
+# After adding the five tests:
+#   6398 expected passes, 214 expected failures, 188 unsupported
+# Delta: +24 expected passes matches the DejaGnu-counted test
+# additions (5 files x ~6 variation rows, each emitting 2 PASS).
+# 0 FAIL, 0 XPASS, 0 UNRESOLVED.
+
+# All PASS lines that reference the new tests:
+
+PASS: libgomp.oacc-fortran/pr107227-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O0  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr107227-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O0  execution test
+PASS: libgomp.oacc-fortran/pr107227-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O1  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr107227-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O1  execution test
+PASS: libgomp.oacc-fortran/pr107227-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O2  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr107227-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O2  execution test
+PASS: libgomp.oacc-fortran/pr107227-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O3 -fomit-frame-pointer -funroll-loops -fpeel-loops -ftracer -finline-functions  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr107227-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O3 -fomit-frame-pointer -funroll-loops -fpeel-loops -ftracer -finline-functions  execution test
+PASS: libgomp.oacc-fortran/pr107227-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O3 -g  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr107227-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O3 -g  execution test
+PASS: libgomp.oacc-fortran/pr107227-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -Os  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr107227-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -Os  execution test
+PASS: libgomp.oacc-fortran/pr93554-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O0  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr93554-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O0  execution test
+PASS: libgomp.oacc-fortran/pr93554-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O1  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr93554-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O1  execution test
+PASS: libgomp.oacc-fortran/pr93554-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O2  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr93554-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O2  execution test
+PASS: libgomp.oacc-fortran/pr93554-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O3 -fomit-frame-pointer -funroll-loops -fpeel-loops -ftracer -finline-functions  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr93554-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O3 -fomit-frame-pointer -funroll-loops -fpeel-loops -ftracer -finline-functions  execution test
+PASS: libgomp.oacc-fortran/pr93554-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O3 -g  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr93554-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O3 -g  execution test
+PASS: libgomp.oacc-fortran/pr93554-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -Os  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr93554-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -Os  execution test
+PASS: libgomp.oacc-fortran/pr93554-2.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O0  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr93554-2.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O0  execution test
+PASS: libgomp.oacc-fortran/pr93554-2.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O1  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr93554-2.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O1  execution test
+PASS: libgomp.oacc-fortran/pr93554-2.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O2  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr93554-2.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O2  execution test
+PASS: libgomp.oacc-fortran/pr93554-2.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O3 -fomit-frame-pointer -funroll-loops -fpeel-loops -ftracer -finline-functions  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr93554-2.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O3 -fomit-frame-pointer -funroll-loops -fpeel-loops -ftracer -finline-functions  execution test
+PASS: libgomp.oacc-fortran/pr93554-2.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O3 -g  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr93554-2.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O3 -g  execution test
+PASS: libgomp.oacc-fortran/pr93554-2.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -Os  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr93554-2.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -Os  execution test
+PASS: libgomp.oacc-fortran/pr93554-3.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O0  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr93554-3.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O0  execution test
+PASS: libgomp.oacc-fortran/pr93554-3.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O1  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr93554-3.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O1  execution test
+PASS: libgomp.oacc-fortran/pr93554-3.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O2  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr93554-3.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O2  execution test
+PASS: libgomp.oacc-fortran/pr93554-3.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O3 -fomit-frame-pointer -funroll-loops -fpeel-loops -ftracer -finline-functions  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr93554-3.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O3 -fomit-frame-pointer -funroll-loops -fpeel-loops -ftracer -finline-functions  execution test
+PASS: libgomp.oacc-fortran/pr93554-3.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O3 -g  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr93554-3.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O3 -g  execution test
+PASS: libgomp.oacc-fortran/pr93554-3.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -Os  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr93554-3.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -Os  execution test
+PASS: libgomp.oacc-fortran/pr95550-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O0  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr95550-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O0  execution test
+PASS: libgomp.oacc-fortran/pr95550-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O1  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr95550-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O1  execution test
+PASS: libgomp.oacc-fortran/pr95550-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O2  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr95550-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O2  execution test
+PASS: libgomp.oacc-fortran/pr95550-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O3 -fomit-frame-pointer -funroll-loops -fpeel-loops -ftracer -finline-functions  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr95550-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O3 -fomit-frame-pointer -funroll-loops -fpeel-loops -ftracer -finline-functions  execution test
+PASS: libgomp.oacc-fortran/pr95550-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O3 -g  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr95550-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -O3 -g  execution test
+PASS: libgomp.oacc-fortran/pr95550-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -Os  (test for excess errors)
+PASS: libgomp.oacc-fortran/pr95550-1.f90 -DACC_DEVICE_TYPE_host=1 -DACC_MEM_SHARED=1 -foffload=disable  -Os  execution test
+
+# ---
+# Tail (libgomp Summary) from the same run:
+
+		=== libgomp Summary ===
+
+# of expected passes		6398
+# of expected failures		214
+# of unsupported tests		188

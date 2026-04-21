@@ -6,6 +6,7 @@
 ! 'parallel loop' vs 'kernels loop'.
 
 ! { dg-do run }
+!TODO { dg-prune-output {using 'vector_length \(32\)', ignoring 1} }
 
 program pr107227
   implicit none

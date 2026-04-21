@@ -86,7 +86,7 @@ Artifacts:
 - `verification/nvptx/ptx-malloc-free-summary.txt` -- per-scenario
   call-site scan.
 - `verification/provenance-tests.md` -- per-test lineage audit.
-- `0002-libgomp-Fortran-testsuite-add-OpenACC-private-alloca.patch` --
+- `0002-libgomp-testsuite-OpenACC-Fortran-private-allocatabl.patch` --
   upstream test patch (not yet submitted).
 - `dumps/*.018t.ompexp` -- `ompexp` pass dumps for each reproducer.
 - `dumps/baseline-ice.log` -- pre-fix ICE backtrace.
@@ -114,7 +114,7 @@ Thomas Schwinge raised three points on gcc-patches on 2026-04-13:
 2. Add execution test cases -- five drafted under `pr/93554/tests/`,
    staged upstream at `libgomp/testsuite/libgomp.oacc-fortran/` on
    branch `pr93554-tests` and exported as
-   `0002-libgomp-Fortran-testsuite-add-OpenACC-private-alloca.patch`;
+   `0002-libgomp-testsuite-OpenACC-Fortran-private-allocatabl.patch`;
    not yet submitted to gcc-patches.
 3. Confirm later passes handle the looser CFG on the device -- the
    new S4 / S5 tests allocate a private inside the body and carry a

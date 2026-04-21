@@ -8,6 +8,7 @@
 ! back).  We also exercise an analogous 'acc kernels' variant.
 
 ! { dg-do run }
+!TODO { dg-prune-output {using 'vector_length \(32\)', ignoring 1} }
 
 program pr95550
   implicit none

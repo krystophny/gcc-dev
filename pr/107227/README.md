@@ -42,7 +42,7 @@ allocatable array inserts basic blocks between `cont_bb` and `exit_bb`.
 
 Covered by `pr/93554/tests/pr107227-private-whole-allocatable.f90`
 (upstream name `pr107227-1.f90` in the staged test patch
-`pr/93554/0002-libgomp-Fortran-testsuite-add-OpenACC-private-alloca.patch`),
+`pr/93554/0002-libgomp-testsuite-OpenACC-Fortran-private-allocatabl.patch`),
 exercising `gang`, `worker`, `vector`, `seq` and a `kernels` variant
 over a 32-element `real, allocatable :: arr(:)` that is explicitly
 allocated and deallocated around each region.  Results:

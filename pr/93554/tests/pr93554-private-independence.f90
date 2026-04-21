@@ -23,6 +23,9 @@ program pr93554_private_independence
 
   allocate(buf(m))
 
+  ! Expected: sum_{k=1..m} 2*(j*m + k)
+  !         = 2*m*j*m + 2*m*(m+1)/2
+  !         = 2*(m*m*j + m*(m+1)/2).
   do j = 1, n
      expect(j) = 2*(m*m*j + m*(m + 1)/2)
   end do
