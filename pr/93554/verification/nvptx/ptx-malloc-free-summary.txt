@@ -1,0 +1,8 @@
+GCC-emitted PTX call sites for __nvptx_malloc / __nvptx_free
+Summed across all offload entry function bodies in each trace.
+
+test                                                 entries  body lines   malloc   free
+------------------------------------------------------------------------------------------
+pr93554 (derived-alloc-component, baseline)                5         750        5      5
+pr93554 (alloc-in-body, NEW)                               1         233        2      1
+pr93554 (private-independence, NEW)                        1         354        1      1

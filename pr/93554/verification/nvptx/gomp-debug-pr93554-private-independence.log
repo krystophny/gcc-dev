@@ -1,0 +1,366 @@
+GOACC_parallel_keyed: mapnum=4, hostaddrs=0x7ffeaf20bc60, size=0x7ffeaf20bc80, kinds=0x65b068
+GOMP_NVPTX_NATIVE_GPU_THREAD_STACK_SIZE: <Not defined>
+GOMP_NVPTX_LOWLAT_POOL: <Not defined>
+GOMP_NVPTX_JIT: <Not defined>
+Loading:
+---
+-- [log preamble above; offload entry function body below] --
+.entry MAIN__$_omp_fn$0 (.param .u64 %in_ar0)
+{
+.reg .u64 %ar0;
+ld.param.u64 %ar0,[%in_ar0];
+.local .align 8 .b8 %stack_ar[16];
+.reg .u64 %stack;
+cvta.local.u64 %stack,%stack_ar;
+.reg .u64 %r22;
+.reg .u32 %r23;
+.reg .u64 %r27;
+.reg .u64 %r29;
+.reg .u64 %r31;
+.reg .u32 %r33;
+.reg .u32 %r36;
+.reg .u64 %r38;
+.reg .u32 %r42;
+.reg .u32 %r44;
+.reg .u32 %r46;
+.reg .u32 %r51;
+.reg .u32 %r54;
+.reg .u32 %r57;
+.reg .u32 %r60;
+.reg .u32 %r63;
+.reg .u32 %r66;
+.reg .u32 %r69;
+.reg .u32 %r72;
+.reg .u32 %r75;
+.reg .u32 %r78;
+.reg .u32 %r80;
+.reg .u32 %r82;
+.reg .u64 %r83;
+.reg .u32 %r85;
+.reg .u32 %r87;
+.reg .u64 %r128;
+.reg .pred %r129;
+.reg .u32 %r131;
+.reg .u32 %r133;
+.reg .u16 %r134;
+.reg .u32 %r135;
+.reg .u32 %r136;
+.reg .u64 %r137;
+.reg .u64 %r138;
+.reg .u64 %r139;
+.reg .u32 %r142;
+.reg .u32 %r143;
+.reg .u32 %r144;
+.reg .u32 %r146;
+.reg .u32 %r147;
+.reg .u32 %r148;
+.reg .u32 %r150;
+.reg .u32 %r151;
+.reg .u32 %r152;
+.reg .u32 %r154;
+.reg .u32 %r155;
+.reg .u32 %r156;
+.reg .u32 %r158;
+.reg .u32 %r159;
+.reg .u32 %r160;
+.reg .u32 %r162;
+.reg .u32 %r163;
+.reg .u32 %r164;
+.reg .u32 %r166;
+.reg .u32 %r167;
+.reg .u32 %r168;
+.reg .u32 %r170;
+.reg .u32 %r171;
+.reg .u32 %r172;
+.reg .u32 %r174;
+.reg .u32 %r175;
+.reg .u32 %r176;
+.reg .u32 %r178;
+.reg .u32 %r179;
+.reg .u32 %r180;
+.reg .u32 %r182;
+.reg .u32 %r183;
+.reg .u32 %r184;
+.reg .u32 %r186;
+.reg .u32 %r187;
+.reg .u32 %r188;
+.reg .u32 %r190;
+.reg .u32 %r191;
+.reg .u32 %r192;
+.reg .u32 %r194;
+.reg .u32 %r195;
+.reg .u32 %r196;
+.reg .u32 %r198;
+.reg .u32 %r199;
+.reg .u32 %r200;
+.reg .u32 %r202;
+.reg .u32 %r203;
+.reg .u32 %r204;
+.reg .u32 %r205;
+.reg .u32 %r206;
+.reg .u32 %r207;
+.reg .u32 %r208;
+.reg .u32 %r209;
+.reg .u32 %r210;
+.reg .u32 %r211;
+.reg .u32 %r212;
+.reg .u32 %r213;
+.reg .u32 %r214;
+.reg .u32 %r215;
+.reg .u32 %r216;
+.reg .u32 %r217;
+.reg .u32 %r218;
+.reg .u32 %r219;
+.reg .u32 %r220;
+.reg .pred %r221;
+.reg .u64 %r223;
+.reg .u64 %r224;
+.reg .u64 %r225;
+.reg .u64 %r226;
+.reg .u64 %r228;
+.reg .u64 %r229;
+.reg .pred %r231;
+.reg .u64 %r232;
+.reg .u64 %r233;
+.reg .u64 %r235;
+.reg .pred %r236;
+.reg .pred %r237;
+.reg .u32 %r238;
+.reg .pred %r239;
+.reg .u32 %r240;
+{
+.reg .u32 %x;
+mov.u32 %x,%tid.x;
+setp.ne.u32 %r236,%x,0;
+}
+setp.eq.u32 %r239,1,0;
+@%r236 bra $L13;
+mov.u64 %r128,%ar0;
+ld.u64 %r22,[%r128+16];
+ld.u64 %r29,[%r22];
+setp.ne.u64 %r129,%r29,0;
+mov.pred %r239,%r129;
+$L13:
+bar.warp.sync 0xffffffff;
+mov.pred %r129,%r239;
+selp.u32 %r240,1,0,%r129;
+shfl.sync.idx.b32 %r240,%r240,0,31,0xffffffff;
+setp.ne.u32 %r129,%r240,0;
+@%r129 bra.uni $L2;
+@%r236 bra $L8;
+mov.u32 %r46,%ctaid.x;
+cvt.s32.s16 %r131,%r46;
+shl.b32 %r44,%r131,5;
+add.u32 %r36,%r44,32;
+// #APP 
+// 32 "pr/93554/tests/pr93554-private-independence.f90" 1
+// Start: Added by -minit-regs=3:
+// #NO_APP 
+mov.u64 %r31,0;
+// #APP 
+// 32 "pr/93554/tests/pr93554-private-independence.f90" 1
+// End: Added by -minit-regs=3:
+// #NO_APP 
+$L8:
+bar.warp.sync 0xffffffff;
+bra $L3;
+$L5:
+@%r236 bra $L10;
+mov.u32 %r23,%ctaid.x;
+cvt.s32.s16 %r133,%r23;
+shl.b32 %r44,%r133,5;
+add.u32 %r36,%r44,32;
+$L10:
+bar.warp.sync 0xffffffff;
+$L3:
+@%r236 bra $L9;
+cvt.u16.u32 %r134,%r44;
+cvt.u32.u16 %r135,%r134;
+shl.b32 %r136,%r135,4;
+add.u32 %r42,%r136,17;
+cvt.u64.u32 %r137,%r44;
+shl.b64 %r138,%r137,2;
+ld.u64 %r139,[%r128];
+add.u64 %r83,%r139,%r138;
+shl.b64 %r235,%r31,2;
+add.u64 %r38,%r29,%r235;
+mov.u32 %r204,0;
+$L4:
+add.u32 %r44,%r44,1;
+cvt.s32.s16 %r142,%r42;
+add.u32 %r143,%r142,%r142;
+st.u32 [%r38+4],%r143;
+add.u32 %r144,%r42,1;
+cvt.s32.s16 %r146,%r144;
+add.u32 %r147,%r146,%r146;
+st.u32 [%r38+8],%r147;
+add.u32 %r148,%r42,2;
+cvt.s32.s16 %r150,%r148;
+add.u32 %r151,%r150,%r150;
+st.u32 [%r38+12],%r151;
+add.u32 %r152,%r42,3;
+cvt.s32.s16 %r154,%r152;
+add.u32 %r155,%r154,%r154;
+st.u32 [%r38+16],%r155;
+add.u32 %r156,%r42,4;
+cvt.s32.s16 %r158,%r156;
+add.u32 %r159,%r158,%r158;
+st.u32 [%r38+20],%r159;
+add.u32 %r160,%r42,5;
+cvt.s32.s16 %r162,%r160;
+add.u32 %r163,%r162,%r162;
+st.u32 [%r38+24],%r163;
+add.u32 %r164,%r42,6;
+cvt.s32.s16 %r166,%r164;
+add.u32 %r167,%r166,%r166;
+st.u32 [%r38+28],%r167;
+add.u32 %r168,%r42,7;
+cvt.s32.s16 %r170,%r168;
+add.u32 %r171,%r170,%r170;
+st.u32 [%r38+32],%r171;
+add.u32 %r172,%r42,8;
+cvt.s32.s16 %r174,%r172;
+add.u32 %r175,%r174,%r174;
+st.u32 [%r38+36],%r175;
+add.u32 %r176,%r42,9;
+cvt.s32.s16 %r178,%r176;
+add.u32 %r179,%r178,%r178;
+st.u32 [%r38+40],%r179;
+add.u32 %r180,%r42,10;
+cvt.s32.s16 %r182,%r180;
+add.u32 %r183,%r182,%r182;
+st.u32 [%r38+44],%r183;
+add.u32 %r184,%r42,11;
+cvt.s32.s16 %r186,%r184;
+add.u32 %r187,%r186,%r186;
+st.u32 [%r38+48],%r187;
+add.u32 %r188,%r42,12;
+cvt.s32.s16 %r190,%r188;
+add.u32 %r191,%r190,%r190;
+st.u32 [%r38+52],%r191;
+add.u32 %r192,%r42,13;
+cvt.s32.s16 %r194,%r192;
+add.u32 %r195,%r194,%r194;
+st.u32 [%r38+56],%r195;
+add.u32 %r196,%r42,14;
+cvt.s32.s16 %r198,%r196;
+add.u32 %r199,%r198,%r198;
+st.u32 [%r38+60],%r199;
+add.u32 %r200,%r42,15;
+cvt.s32.s16 %r202,%r200;
+add.u32 %r203,%r202,%r202;
+st.u32 [%r38+64],%r203;
+st.u32 [%r83],%r204;
+ld.u32 %r33,[%r38+4];
+st.u32 [%r83],%r33;
+ld.u32 %r205,[%r38+8];
+add.u32 %r51,%r33,%r205;
+st.u32 [%r83],%r51;
+ld.u32 %r206,[%r38+12];
+add.u32 %r54,%r51,%r206;
+st.u32 [%r83],%r54;
+ld.u32 %r207,[%r38+16];
+add.u32 %r57,%r54,%r207;
+st.u32 [%r83],%r57;
+ld.u32 %r208,[%r38+20];
+add.u32 %r60,%r57,%r208;
+st.u32 [%r83],%r60;
+ld.u32 %r209,[%r38+24];
+add.u32 %r63,%r60,%r209;
+st.u32 [%r83],%r63;
+ld.u32 %r210,[%r38+28];
+add.u32 %r66,%r63,%r210;
+st.u32 [%r83],%r66;
+ld.u32 %r211,[%r38+32];
+add.u32 %r69,%r66,%r211;
+st.u32 [%r83],%r69;
+ld.u32 %r212,[%r38+36];
+add.u32 %r72,%r69,%r212;
+st.u32 [%r83],%r72;
+ld.u32 %r213,[%r38+40];
+add.u32 %r75,%r72,%r213;
+st.u32 [%r83],%r75;
+ld.u32 %r214,[%r38+44];
+add.u32 %r78,%r75,%r214;
+st.u32 [%r83],%r78;
+ld.u32 %r215,[%r38+48];
+add.u32 %r80,%r78,%r215;
+st.u32 [%r83],%r80;
+ld.u32 %r216,[%r38+52];
+add.u32 %r82,%r80,%r216;
+st.u32 [%r83],%r82;
+ld.u32 %r217,[%r38+56];
+add.u32 %r85,%r82,%r217;
+st.u32 [%r83],%r85;
+ld.u32 %r218,[%r38+60];
+add.u32 %r87,%r85,%r218;
+st.u32 [%r83],%r87;
+ld.u32 %r220,[%r38+64];
+add.u32 %r219,%r220,%r87;
+st.u32 [%r83],%r219;
+add.u32 %r42,%r42,16;
+add.u64 %r83,%r83,4;
+setp.lt.s32 %r221,%r44,%r36;
+@%r221 bra $L4;
+{
+.param .u64 %out_arg1;
+st.param.u64 [%out_arg1],%r29;
+call __nvptx_free,(%out_arg1);
+}
+$L9:
+bar.warp.sync 0xffffffff;
+bra $L7;
+$L2:
+setp.eq.u32 %r237,1,0;
+@%r236 bra $L12;
+ld.u64 %r31,[%r22+8];
+ld.u64 %r224,[%r22+56];
+ld.u64 %r225,[%r22+48];
+sub.u64 %r223,%r224,%r225;
+add.u64 %r226,%r223,1;
+shl.b64 %r27,%r226,2;
+max.u64 %r228,%r27,1;
+{
+.param .u64 %value_in;
+.param .u64 %out_arg1;
+st.param.u64 [%out_arg1],%r228;
+call (%value_in),__nvptx_malloc,(%out_arg1);
+ld.param.u64 %r229,[%value_in];
+}
+mov.u64 %r29,%r229;
+setp.ne.u64 %r231,%r229,0;
+mov.pred %r237,%r231;
+$L12:
+bar.warp.sync 0xffffffff;
+mov.pred %r231,%r237;
+selp.u32 %r238,1,0,%r231;
+shfl.sync.idx.b32 %r238,%r238,0,31,0xffffffff;
+setp.ne.u32 %r231,%r238,0;
+@%r231 bra.uni $L5;
+@%r236 bra $L11;
+st.u64 [%stack],%r27;
+mov.u64 %r233,$LC0;
+mov.u64 %r232,$LC1;
+{
+.param .u64 %out_arg1;
+st.param.u64 [%out_arg1],%r232;
+.param .u64 %out_arg2;
+st.param.u64 [%out_arg2],%r233;
+.param .u64 %out_arg3;
+st.param.u64 [%out_arg3],%stack;
+call _gfortran_os_error_at,(%out_arg1,%out_arg2,%out_arg3);
+trap;
+// (noreturn)
+exit;
+// (noreturn)
+}
+$L11:
+exit;
+bar.warp.sync 0xffffffff;
+$L7:
+ret;
+}
+
+-- [end of .entry MAIN__$_omp_fn$0 body; ~runtime PTX omitted] --
+Loading:
+nvptx GOMP_OFFLOAD_openacc_exec

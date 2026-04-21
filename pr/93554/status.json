@@ -68,7 +68,22 @@
     "commit": "010618b8dcb",
     "patch": "0001-fortran-Fix-ICE-in-expand_oacc_for-with-private-deri.patch"
   },
-  "updated_at": "2026-04-14T07:52:57Z",
+  "tests_patch": {
+    "branch": "pr93554-tests",
+    "commit": "5a922a3412f1f8450734f5ac87cd7b628c4b930b",
+    "patch": "0002-libgomp-Fortran-testsuite-add-OpenACC-private-alloca.patch",
+    "files": [
+      "libgomp/testsuite/libgomp.oacc-fortran/pr93554-1.f90",
+      "libgomp/testsuite/libgomp.oacc-fortran/pr93554-2.f90",
+      "libgomp/testsuite/libgomp.oacc-fortran/pr93554-3.f90",
+      "libgomp/testsuite/libgomp.oacc-fortran/pr95550-1.f90",
+      "libgomp/testsuite/libgomp.oacc-fortran/pr107227-1.f90"
+    ],
+    "trailers": ["Signed-off-by", "Assisted-by"],
+    "gcc_verify": "OK",
+    "submitted": false
+  },
+  "updated_at": "2026-04-21T07:30:00Z",
   "validation": {
     "baseline": {
       "contains_any": [

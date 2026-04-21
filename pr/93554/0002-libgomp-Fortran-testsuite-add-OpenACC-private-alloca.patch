@@ -1,0 +1,514 @@
+From 5a922a3412f1f8450734f5ac87cd7b628c4b930b Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Tue, 21 Apr 2026 07:28:21 +0200
+Subject: [PATCH] libgomp, Fortran, testsuite: add OpenACC private-allocatable
+ execution tests
+
+The compile-only regression for PR93554 in
+gcc/testsuite/gfortran.dg/goacc/pr93554.f90 covers the ICE in
+expand_oacc_for when an OpenACC loop's private clause carries a
+derived type with an allocatable component.  It does not exercise
+the finalisation/free CFG edge that the fix relaxed, nor the
+closely related whole-allocatable shapes reported as PR95550 and
+PR107227 (duplicates with the same ICE site).
+
+Add five libgomp execution tests so that a runtime check across
+gang/worker/vector/seq parallelism variants is available for each
+of the three reported forms, including one that allocates the
+component inside the loop body (so the per-thread finaliser's free
+call actually fires at runtime on offload devices) and one that
+stresses per-gang independence of a whole-allocatable private
+under num_gangs(4).
+
+Assisted-by: Claude (Anthropic)
+
+	PR fortran/93554
+	PR middle-end/95550
+	PR libgomp/107227
+
+libgomp/ChangeLog:
+
+	* testsuite/libgomp.oacc-fortran/pr93554-1.f90: New test.
+	* testsuite/libgomp.oacc-fortran/pr93554-2.f90: New test.
+	* testsuite/libgomp.oacc-fortran/pr93554-3.f90: New test.
+	* testsuite/libgomp.oacc-fortran/pr95550-1.f90: New test.
+	* testsuite/libgomp.oacc-fortran/pr107227-1.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ .../libgomp.oacc-fortran/pr107227-1.f90       | 118 ++++++++++++++++
+ .../libgomp.oacc-fortran/pr93554-1.f90        | 133 ++++++++++++++++++
+ .../libgomp.oacc-fortran/pr93554-2.f90        |  45 ++++++
+ .../libgomp.oacc-fortran/pr93554-3.f90        |  52 +++++++
+ .../libgomp.oacc-fortran/pr95550-1.f90        |  83 +++++++++++
+ 5 files changed, 431 insertions(+)
+ create mode 100644 libgomp/testsuite/libgomp.oacc-fortran/pr107227-1.f90
+ create mode 100644 libgomp/testsuite/libgomp.oacc-fortran/pr93554-1.f90
+ create mode 100644 libgomp/testsuite/libgomp.oacc-fortran/pr93554-2.f90
+ create mode 100644 libgomp/testsuite/libgomp.oacc-fortran/pr93554-3.f90
+ create mode 100644 libgomp/testsuite/libgomp.oacc-fortran/pr95550-1.f90
+
+diff --git a/libgomp/testsuite/libgomp.oacc-fortran/pr107227-1.f90 b/libgomp/testsuite/libgomp.oacc-fortran/pr107227-1.f90
+new file mode 100644
+index 00000000000..e997a748c12
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.oacc-fortran/pr107227-1.f90
+@@ -0,0 +1,118 @@
++! PR libgomp/107227 — execution test.
++!
++! Whole allocatable array used with private clause on an OpenACC loop.
++! Same ICE site as PR93554; expected to be resolved by
++! r16-8571-g010618b8dcb.  Covers gang/worker/vector/seq and
++! 'parallel loop' vs 'kernels loop'.
++
++! { dg-do run }
++
++program pr107227
++  implicit none
++  integer, parameter :: n = 32
++  integer :: res(n), i, expect(n)
++
++  do i = 1, n
++     expect(i) = 2 * i
++  end do
++
++  call gang_parallel()
++  call worker_parallel()
++  call vector_parallel()
++  call seq_parallel()
++  call gang_kernels()
++
++contains
++
++  subroutine check(tag, res_)
++    integer, intent(in) :: tag
++    integer, intent(in) :: res_(n)
++    integer :: j
++    do j = 1, n
++       if (res_(j) /= expect(j)) then
++          write(0,*) "tag=", tag, " j=", j, " got=", res_(j), " want=", expect(j)
++          stop tag
++       end if
++    end do
++  end subroutine check
++
++  subroutine gang_parallel()
++    integer :: j
++    real, allocatable :: arr(:)
++    allocate(arr(n))
++    res = -1
++    !$acc parallel loop gang private(arr) copy(res)
++    do j = 1, n
++       arr(j) = 2.0 * real(j)
++       res(j) = int(arr(j))
++    end do
++    !$acc end parallel loop
++    call check(11, res)
++    deallocate(arr)
++  end subroutine gang_parallel
++
++  subroutine worker_parallel()
++    integer :: j
++    real, allocatable :: arr(:)
++    allocate(arr(n))
++    res = -1
++    !$acc parallel num_gangs(4) num_workers(4) vector_length(1) copy(res)
++    !$acc loop worker private(arr)
++    do j = 1, n
++       arr(j) = 2.0 * real(j)
++       res(j) = int(arr(j))
++    end do
++    !$acc end parallel
++    call check(12, res)
++    deallocate(arr)
++  end subroutine worker_parallel
++
++  subroutine vector_parallel()
++    integer :: j
++    real, allocatable :: arr(:)
++    allocate(arr(n))
++    res = -1
++    !$acc parallel num_gangs(1) num_workers(1) vector_length(32) copy(res)
++    !$acc loop vector private(arr)
++    do j = 1, n
++       arr(j) = 2.0 * real(j)
++       res(j) = int(arr(j))
++    end do
++    !$acc end parallel
++    call check(13, res)
++    deallocate(arr)
++  end subroutine vector_parallel
++
++  subroutine seq_parallel()
++    integer :: j
++    real, allocatable :: arr(:)
++    allocate(arr(n))
++    res = -1
++    !$acc parallel num_gangs(1) num_workers(1) vector_length(1) copy(res)
++    !$acc loop seq private(arr)
++    do j = 1, n
++       arr(j) = 2.0 * real(j)
++       res(j) = int(arr(j))
++    end do
++    !$acc end parallel
++    call check(14, res)
++    deallocate(arr)
++  end subroutine seq_parallel
++
++  subroutine gang_kernels()
++    integer :: j
++    real, allocatable :: arr(:)
++    allocate(arr(n))
++    res = -1
++    !$acc kernels copy(res)
++    !$acc loop private(arr)
++    do j = 1, n
++       arr(j) = 2.0 * real(j)
++       res(j) = int(arr(j))
++    end do
++    !$acc end kernels
++    call check(15, res)
++    deallocate(arr)
++  end subroutine gang_kernels
++
++end program pr107227
+diff --git a/libgomp/testsuite/libgomp.oacc-fortran/pr93554-1.f90 b/libgomp/testsuite/libgomp.oacc-fortran/pr93554-1.f90
+new file mode 100644
+index 00000000000..553f0bd7bc7
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.oacc-fortran/pr93554-1.f90
+@@ -0,0 +1,133 @@
++! PR fortran/93554 — execution test.
++!
++! Exercises "private(x)" on an OpenACC loop where x is a derived type
++! with an allocatable component.  Four subroutines cover the four
++! partitioning levels (gang, worker, vector, seq) that 'acc loop' may
++! carry, in both the 'parallel loop' and 'kernels loop' forms.
++!
++! Before r16-8571-g010618b8dcb this ICE'd in expand_oacc_for at
++! omp-expand.cc; afterwards it compiles and is expected to execute
++! correctly: the private copy of 'x' must not leak results into the
++! loop-body arithmetic performed through the shared output array.
++
++! { dg-do run }
++
++program pr93554
++  implicit none
++  integer, parameter :: n = 32
++  integer :: res(n), i, expect(n)
++
++  do i = 1, n
++     expect(i) = 10 + i
++  end do
++
++  call gang_parallel()
++  call worker_parallel()
++  call vector_parallel()
++  call seq_parallel()
++  call gang_kernels()
++
++contains
++
++  subroutine check(tag, res_)
++    integer, intent(in) :: tag
++    integer, intent(in) :: res_(n)
++    integer :: j
++    do j = 1, n
++       if (res_(j) /= expect(j)) then
++          write(0,*) "tag=", tag, " j=", j, " got=", res_(j), " want=", expect(j)
++          stop tag
++       end if
++    end do
++  end subroutine check
++
++  subroutine gang_parallel()
++    type :: t
++       integer :: a
++       integer, allocatable :: b(:)
++    end type
++    type(t) :: x
++    integer :: j
++    res = -1
++    !$acc parallel loop gang private(x) copy(res)
++    do j = 1, n
++       x%a = 10 + j
++       res(j) = x%a
++    end do
++    !$acc end parallel loop
++    call check(1, res)
++  end subroutine gang_parallel
++
++  subroutine worker_parallel()
++    type :: t
++       integer :: a
++       integer, allocatable :: b(:)
++    end type
++    type(t) :: x
++    integer :: j
++    res = -1
++    !$acc parallel num_gangs(4) num_workers(4) vector_length(1) copy(res)
++    !$acc loop worker private(x)
++    do j = 1, n
++       x%a = 10 + j
++       res(j) = x%a
++    end do
++    !$acc end parallel
++    call check(2, res)
++  end subroutine worker_parallel
++
++  subroutine vector_parallel()
++    type :: t
++       integer :: a
++       integer, allocatable :: b(:)
++    end type
++    type(t) :: x
++    integer :: j
++    res = -1
++    !$acc parallel num_gangs(1) num_workers(1) vector_length(32) copy(res)
++    !$acc loop vector private(x)
++    do j = 1, n
++       x%a = 10 + j
++       res(j) = x%a
++    end do
++    !$acc end parallel
++    call check(3, res)
++  end subroutine vector_parallel
++
++  subroutine seq_parallel()
++    type :: t
++       integer :: a
++       integer, allocatable :: b(:)
++    end type
++    type(t) :: x
++    integer :: j
++    res = -1
++    !$acc parallel num_gangs(1) num_workers(1) vector_length(1) copy(res)
++    !$acc loop seq private(x)
++    do j = 1, n
++       x%a = 10 + j
++       res(j) = x%a
++    end do
++    !$acc end parallel
++    call check(4, res)
++  end subroutine seq_parallel
++
++  subroutine gang_kernels()
++    type :: t
++       integer :: a
++       integer, allocatable :: b(:)
++    end type
++    type(t) :: x
++    integer :: j
++    res = -1
++    !$acc kernels copy(res)
++    !$acc loop private(x)
++    do j = 1, n
++       x%a = 10 + j
++       res(j) = x%a
++    end do
++    !$acc end kernels
++    call check(5, res)
++  end subroutine gang_kernels
++
++end program pr93554
+diff --git a/libgomp/testsuite/libgomp.oacc-fortran/pr93554-2.f90 b/libgomp/testsuite/libgomp.oacc-fortran/pr93554-2.f90
+new file mode 100644
+index 00000000000..53b0d5c7d15
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.oacc-fortran/pr93554-2.f90
+@@ -0,0 +1,45 @@
++! PR fortran/93554 -- runtime free-edge stress.
++!
++! The companion compile-time regression test (pr93554.f90 under
++! gcc/testsuite/gfortran.dg/goacc/) only exercises the CFG edge on the
++! pass dump.  This test exits the OpenACC region with the allocatable
++! component still allocated, which forces the per-thread finalisation
++! inserted by the Fortran front end to run at region exit.  Before
++! r16-8571-g010618b8dcb this ICE'd in expand_oacc_for; afterwards the
++! finalisation-free edge must execute for every thread and produce
++! correct results.  On NVPTX the call surfaces in GOMP_DEBUG=1 as
++! __nvptx_free.
++
++! { dg-do run }
++
++program pr93554_alloc_in_body
++  implicit none
++  integer, parameter :: n = 128
++  integer :: res(n), expect(n), j
++  type :: t
++     integer :: a
++     integer, allocatable :: b(:)
++  end type
++  type(t) :: x
++
++  do j = 1, n
++     expect(j) = 3*j + 7
++  end do
++
++  res = -1
++
++  !$acc parallel loop gang worker vector private(x) copy(res) &
++  !$acc&              num_gangs(4) num_workers(4) vector_length(8)
++  do j = 1, n
++     if (.not. allocated(x%b)) allocate(x%b(8))
++     x%b    = 0
++     x%b(1) = j
++     x%b(5) = 2*j + 7
++     res(j) = x%b(1) + x%b(5)
++  end do
++  !$acc end parallel loop
++
++  do j = 1, n
++     if (res(j) /= expect(j)) stop 1
++  end do
++end program pr93554_alloc_in_body
+diff --git a/libgomp/testsuite/libgomp.oacc-fortran/pr93554-3.f90 b/libgomp/testsuite/libgomp.oacc-fortran/pr93554-3.f90
+new file mode 100644
+index 00000000000..9c34a3bb881
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.oacc-fortran/pr93554-3.f90
+@@ -0,0 +1,52 @@
++! PR fortran/93554 -- per-gang independence of whole-allocatable privates.
++!
++! Whole allocatable array marked private on a gang-partitioned
++! !$acc parallel loop with num_gangs(4).  Each iteration populates
++! its per-gang private buf, overwrites it, and reads the final
++! contents back.  A miscompile that lets the relaxed CFG leak
++! private storage between iterations on the same gang -- or across
++! gangs -- scrambles the checksum.  The test also forces the
++! per-gang finaliser to free buf at region exit (same code path as
++! PR107227 / PR95550 at runtime).
++!
++! Kept gang-only deliberately: worker- and vector-level private for
++! whole allocatables is a separate GCC/NVPTX implementation question
++! unrelated to r16-8571.
++
++! { dg-do run }
++
++program pr93554_private_independence
++  implicit none
++  integer, parameter :: n = 128, m = 16
++  integer :: res(n), expect(n), j, k
++  integer, allocatable :: buf(:)
++
++  allocate(buf(m))
++
++  do j = 1, n
++     expect(j) = 2*(m*m*j + m*(m + 1)/2)
++  end do
++
++  res = -1
++
++  !$acc parallel loop gang private(buf) copy(res) num_gangs(4)
++  do j = 1, n
++     do k = 1, m
++        buf(k) = j*m + k
++     end do
++     do k = 1, m
++        buf(k) = 2*buf(k)
++     end do
++     res(j) = 0
++     do k = 1, m
++        res(j) = res(j) + buf(k)
++     end do
++  end do
++  !$acc end parallel loop
++
++  do j = 1, n
++     if (res(j) /= expect(j)) stop 2
++  end do
++
++  deallocate(buf)
++end program pr93554_private_independence
+diff --git a/libgomp/testsuite/libgomp.oacc-fortran/pr95550-1.f90 b/libgomp/testsuite/libgomp.oacc-fortran/pr95550-1.f90
+new file mode 100644
+index 00000000000..1b685972a16
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.oacc-fortran/pr95550-1.f90
+@@ -0,0 +1,83 @@
++! PR middle-end/95550 — execution test.
++!
++! Shared allocatable A created on the device with 'acc parallel create(A)',
++! then used privately inside an 'acc loop private(A)'.  Same ICE site as
++! PR93554; expected to be resolved by r16-8571-g010618b8dcb.
++!
++! Post-region the host-side A must be unchanged (create does not copy
++! back).  We also exercise an analogous 'acc kernels' variant.
++
++! { dg-do run }
++
++program pr95550
++  implicit none
++  integer, parameter :: n = 32
++  integer, allocatable :: a(:)
++  integer :: i, j
++
++  allocate(a(n))
++  do j = 1, n
++     a(j) = 3 * j
++  end do
++
++  !$acc parallel create(a) num_gangs(1) num_workers(1) vector_length(1)
++  !$acc loop seq private(a)
++  do i = 1, n
++     a(i) = 9 * i
++  end do
++  !$acc end parallel
++
++  ! Host copy of 'a' must be untouched: create(...) does not copy back.
++  do j = 1, n
++     if (a(j) /= 3 * j) then
++        write(0,*) "host a corrupted after parallel-create-private: j=", j, " got=", a(j)
++        stop 21
++     end if
++  end do
++
++  !$acc parallel create(a) num_gangs(4) num_workers(4) vector_length(1)
++  !$acc loop worker private(a)
++  do i = 1, n
++     a(i) = 9 * i
++  end do
++  !$acc end parallel
++
++  do j = 1, n
++     if (a(j) /= 3 * j) stop 22
++  end do
++
++  !$acc parallel create(a) num_gangs(1) num_workers(1) vector_length(32)
++  !$acc loop vector private(a)
++  do i = 1, n
++     a(i) = 9 * i
++  end do
++  !$acc end parallel
++
++  do j = 1, n
++     if (a(j) /= 3 * j) stop 23
++  end do
++
++  !$acc parallel create(a)
++  !$acc loop gang private(a)
++  do i = 1, n
++     a(i) = 9 * i
++  end do
++  !$acc end parallel
++
++  do j = 1, n
++     if (a(j) /= 3 * j) stop 24
++  end do
++
++  !$acc kernels create(a)
++  !$acc loop private(a)
++  do i = 1, n
++     a(i) = 9 * i
++  end do
++  !$acc end kernels
++
++  do j = 1, n
++     if (a(j) /= 3 * j) stop 25
++  end do
++
++  deallocate(a)
++end program pr95550
+-- 
+2.53.0
+

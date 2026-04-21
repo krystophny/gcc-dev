@@ -49,62 +49,80 @@ Full evidence is under `pr/93554/verification/`.
 
 **Scope of testing**
 
-| scenario | repro                                                | compile-baseline | compile-trunk | host-fallback              | nvptx-device |
-|----------|------------------------------------------------------|------------------|---------------|----------------------------|--------------|
-| PR93554  | `pr/93554/repro/derived-alloc-component.f90`         | ICE              | clean         | PASS (-O0..-O3, -Os)       | PASS         |
-| PR95550  | `pr/95550/repro/parallel-create-private.f90` and     | ICE              | clean         | PASS (-O0..-O3, -Os)       | PASS         |
-|          | `pr/95550/repro/parallel-loop-private.f90`           | ICE              | clean         | n/a (subroutine-only repro)| n/a          |
-| PR107227 | `pr/107227/repro/parallel-loop-private.f90`          | ICE              | clean         | PASS (-O0..-O3, -Os)       | PASS         |
+Five execution tests under `pr/93554/tests/` cover the three reported
+shapes plus two targeted stress scenarios:
 
-Execution coverage comes from three new tests under `pr/93554/tests/`:
+| scenario | meta-repo file                                       | upstream name         | compile-baseline | compile-trunk | host-fallback (6 opt lvl) | nvptx-device | runtime free edge |
+|----------|------------------------------------------------------|-----------------------|------------------|---------------|---------------------------|--------------|-------------------|
+| S1       | `pr93554-private-derived-alloc-component.f90`        | `pr93554-1.f90`       | ICE              | clean         | PASS 6/6                  | PASS         | gated (PTX only)  |
+| S2       | `pr107227-private-whole-allocatable.f90`             | `pr107227-1.f90`      | ICE              | clean         | PASS 6/6                  | PASS         | gated (PTX only)  |
+| S3       | `pr95550-parallel-create-private.f90`                | `pr95550-1.f90`       | ICE              | clean         | PASS 6/6                  | PASS         | gated (PTX only)  |
+| S4 NEW   | `pr93554-alloc-in-body.f90`                          | `pr93554-2.f90`       | ICE              | clean         | PASS 6/6                  | PASS         | reachable at runtime |
+| S5 NEW   | `pr93554-private-independence.f90`                   | `pr93554-3.f90`       | ICE              | clean         | PASS 6/6                  | PASS         | reachable at runtime |
 
-- `pr93554-private-derived-alloc-component.f90`
-- `pr107227-private-whole-allocatable.f90`
-- `pr95550-parallel-create-private.f90`
-
-Each exercises `!$acc parallel loop` with explicit `gang`, `worker`,
-`vector`, `seq` and an additional `!$acc kernels` variant, and asserts
-post-region values with `stop <N>`.  All variants pass on host fallback
-across six optimisation levels, and on NVPTX for `-g -O2`.
+S1--S3 exercise `!$acc parallel loop` with explicit `gang`, `worker`,
+`vector`, `seq` and `!$acc kernels` variants.  S4 allocates the
+private's allocatable component inside the loop body, forcing the
+per-thread finaliser `__nvptx_free` to run.  S5 carries a whole
+allocatable `buf` through `num_gangs(4)` gang partitioning -- the
+OpenACC runtime materialises the per-gang copy on entry, which must
+be freed on exit.
 
 Artifacts:
 
-- `verification/env.txt` — compilers, commit hashes, CUDA/driver.
-- `verification/cfg.md` — CFG analysis including an OpenMP control case
-  (`!$omp parallel do private(x)`) that shows why the OpenMP path never
-  tripped the assertions.
-- `verification/matrix.md` — the full test matrix and caveats.
-- `verification/host-run.log` — filtered PASS lines + libgomp summary
-  (6374 passes, 0 new FAIL/XPASS).
-- `verification/host-run.log.filtered` — matching lines from full libgomp.log (context beyond the filtered PASS list).
-- `verification/nvptx-run.log` — offload compile + run output.
-- `verification/nvptx/gomp-debug-pr93554.log` — `GOMP_DEBUG=1` trace
-  showing the finalisation is emitted as `__nvptx_free` / `__nvptx_malloc`
-  calls inside the device kernel.
-- `dumps/*.018t.ompexp` — `ompexp` pass dumps for each reproducer
-  (trunk and baseline).
-- `dumps/baseline-ice.log` — pre-fix ICE backtrace for PR93554.
+- `verification/env.txt` -- compilers, commit hashes, CUDA/driver.
+- `verification/cfg.md` -- CFG analysis (OpenMP control case plus a
+  per-test coverage table in the "Coverage" section).
+- `verification/matrix.md` -- full matrix, targets, and caveats.
+- `verification/host-run.log`, `.log.filtered` -- direct-compile host
+  matrix (30 PASS, 0 FAIL).
+- `verification/nvptx-run.log` -- offload compile + run (5 PASS, 0 FAIL).
+- `verification/nvptx/gomp-debug-pr93554.log` -- S1 `GOMP_DEBUG=1`
+  trace (5 offload entry points, `__nvptx_free` gated).
+- `verification/nvptx/gomp-debug-pr93554-alloc-in-body.log` -- S4
+  trace (malloc=2, free=1 per offload entry body).
+- `verification/nvptx/gomp-debug-pr93554-private-independence.log` --
+  S5 trace (malloc=1, free=1 per offload entry body).
+- `verification/nvptx/ptx-malloc-free-summary.txt` -- per-scenario
+  call-site scan.
+- `verification/provenance-tests.md` -- per-test lineage audit.
+- `0002-libgomp-Fortran-testsuite-add-OpenACC-private-alloca.patch` --
+  upstream test patch (not yet submitted).
+- `dumps/*.018t.ompexp` -- `ompexp` pass dumps for each reproducer.
+- `dumps/baseline-ice.log` -- pre-fix ICE backtrace.
 
 ## Bounds
 
-- Tests do not allocate the allocatable entity inside the loop body, so
-  the finalisation free path is a no-op at runtime.  The PTX emits the
-  free regardless, which is what we want to demonstrate.  A stricter
-  test that *does* allocate inside the body would also stress the
-  `CHUNKS > 1` placement of finalisation; that is a pre-existing code
-  generation question, unaffected by this commit.
-- AMD GCN offload was not tested (NVPTX-only local hardware).
+- AMD GCN offload is not tested (NVPTX-only local hardware).
+- NVPTX runs target `sm_89` PTX JIT-compiled by the driver on a
+  Blackwell GPU; no multi-sm_XX matrix -- the fix is architecturally
+  neutral at the GCC level.
+- `CHUNKS > 1` placement of the finaliser is a pre-existing code
+  generation question unaffected by r16-8571.  S4 reaches the free
+  edge for every chunk boundary the runtime picks but does not
+  assert a specific chunk count.
+- Fully-partitioned `gang worker vector` private for whole
+  allocatables on NVPTX surfaces a separate issue (writes across
+  vector lanes alias through a per-worker private); S5 therefore
+  pins to gang-only partitioning to keep the focus on r16-8571.
 
 ## Review thread
 
 Thomas Schwinge raised three points on gcc-patches on 2026-04-13:
 
-1. Verify PR95550 and PR107227 are actually resolved — done, see above.
-2. Add execution test cases — drafted under `pr/93554/tests/`; not yet
-   submitted upstream pending reviewer feedback.
-3. Confirm later passes handle the looser CFG — host-fallback and NVPTX
-   execution both pass; `GOMP_DEBUG` trace shows finalisation lands on
-   device.
+1. Verify PR95550 and PR107227 are actually resolved -- done, see above.
+2. Add execution test cases -- five drafted under `pr/93554/tests/`,
+   staged upstream at `libgomp/testsuite/libgomp.oacc-fortran/` on
+   branch `pr93554-tests` and exported as
+   `0002-libgomp-Fortran-testsuite-add-OpenACC-private-alloca.patch`;
+   not yet submitted to gcc-patches.
+3. Confirm later passes handle the looser CFG on the device -- the
+   new S4 / S5 tests allocate a private inside the body and carry a
+   whole-allocatable private through multiple gangs respectively, so
+   `__nvptx_free` is reachable at runtime in both offload entry
+   bodies; correctness holds at every optimisation level (host
+   fallback, NVPTX sm_89).  See `verification/cfg.md` Coverage
+   section and `verification/nvptx/ptx-malloc-free-summary.txt`.
 
 GitHub issue #62 carries the running summary.  Nothing has been posted
 to Bugzilla or gcc-patches by this round of work.

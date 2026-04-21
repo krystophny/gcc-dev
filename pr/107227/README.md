@@ -40,13 +40,22 @@ allocatable array inserts basic blocks between `cont_bb` and `exit_bb`.
 
 ## Execution
 
-Covered by `pr/93554/tests/pr107227-private-whole-allocatable.f90`,
+Covered by `pr/93554/tests/pr107227-private-whole-allocatable.f90`
+(upstream name `pr107227-1.f90` in the staged test patch
+`pr/93554/0002-libgomp-Fortran-testsuite-add-OpenACC-private-alloca.patch`),
 exercising `gang`, `worker`, `vector`, `seq` and a `kernels` variant
 over a 32-element `real, allocatable :: arr(:)` that is explicitly
 allocated and deallocated around each region.  Results:
 
-- host-fallback (`-O0 .. -O3, -Os`): PASS.
-- NVPTX device: PASS.
+- host-fallback (6 optimisation levels): 6/6 PASS.
+- NVPTX device (sm_89 JIT to Blackwell): PASS.
 
-See `pr/93554/verification/host-run.log` and
-`pr/93554/verification/nvptx-run.log`.
+See `pr/93554/verification/host-run.log`,
+`pr/93554/verification/host-run.log.filtered`, and
+`pr/93554/verification/nvptx-run.log`.  Runtime reachability of the
+finaliser `__nvptx_free` for the whole-allocatable private shape is
+verified by the parent PR93554's S5 scenario
+(`pr93554-private-independence.f90` -- a gang-partitioned,
+multi-iteration read/write stress of a whole-allocatable private);
+see `pr/93554/verification/nvptx/ptx-malloc-free-summary.txt` and
+`pr/93554/verification/cfg.md` (Coverage section).

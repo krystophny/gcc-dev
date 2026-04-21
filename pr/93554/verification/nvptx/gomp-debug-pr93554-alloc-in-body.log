@@ -1,0 +1,245 @@
+GOACC_parallel_keyed: mapnum=2, hostaddrs=0x7fff00361640, size=0x65a070, kinds=0x65a060
+GOMP_NVPTX_NATIVE_GPU_THREAD_STACK_SIZE: <Not defined>
+GOMP_NVPTX_LOWLAT_POOL: <Not defined>
+GOMP_NVPTX_JIT: <Not defined>
+Loading:
+---
+-- [log preamble above; offload entry function body below] --
+.entry MAIN__$_omp_fn$0 (.param .u64 %in_ar0)
+{
+.reg .u64 %ar0;
+ld.param.u64 %ar0,[%in_ar0];
+.local .align 8 .b8 %stack_ar[16];
+.reg .u64 %stack;
+cvta.local.u64 %stack,%stack_ar;
+.reg .u64 %r24;
+.reg .u64 %r32;
+.reg .u32 %r33;
+.reg .u64 %r34;
+.reg .u32 %r35;
+.reg .u64 %r38;
+.reg .u64 %r39;
+.reg .u32 %r43;
+.reg .u64 %r50;
+.reg .u64 %r52;
+.reg .u64 %r53;
+.reg .u32 %r65;
+.reg .u32 %r66;
+.reg .u32 %r67;
+.reg .u64 %r68;
+.reg .pred %r69;
+.reg .u32 %r71;
+.reg .u32 %r72;
+.reg .u32 %r75;
+.reg .u32 %r76;
+.reg .pred %r77;
+.reg .pred %r78;
+.reg .pred %r79;
+.reg .u64 %r80;
+.reg .u32 %r82;
+.reg .u32 %r83;
+.reg .u64 %r84;
+.reg .u64 %r85;
+.reg .u64 %r86;
+.reg .u64 %r88;
+.reg .u64 %r89;
+.reg .u64 %r90;
+.reg .u32 %r91;
+.reg .u32 %r92;
+.reg .u64 %r93;
+.reg .pred %r98;
+.reg .u64 %r99;
+.reg .u64 %r100;
+.reg .u64 %r101;
+.reg .u64 %r102;
+.reg .u64 %r103;
+.reg .u32 %r107;
+.reg .u64 %r109;
+.reg .u64 %r111;
+.reg .u64 %r112;
+.reg .pred %r114;
+.reg .u64 %r115;
+.reg .u64 %r116;
+.reg .pred %r119;
+.reg .u64 %r122;
+.reg .u64 %r123;
+.reg .u64 %r124;
+.reg .u64 %r125;
+.reg .u64 %r128;
+.reg .u64 %r129;
+.reg .pred %r130;
+.reg .pred %r131;
+{
+.reg .u32 %y;
+mov.u32 %y,%tid.y;
+setp.ne.u32 %r130,%y,0;
+}
+{
+.reg .u32 %x;
+mov.u32 %x,%tid.x;
+setp.ne.u32 %r131,%x,0;
+}
+@%r130 bra.uni $L14;
+@%r131 bra $L15;
+mov.u64 %r68,%ar0;
+ld.u64 %r24,[%r68+8];
+ld.u64 %r50,[%r24+16];
+ld.u64 %r52,[%r24+56];
+ld.u64 %r53,[%r24+64];
+ld.u64 %r38,[%r24+8];
+setp.ne.u64 %r69,%r38,0;
+@%r69 bra $L2;
+$L11:
+// fork 2;
+cvta.shared.u64 %r129,__oacc_bcast;
+st.u64 [%r129],%r38;
+st.u64 [%r129+8],%r50;
+st.u64 [%r129+16],%r52;
+st.u64 [%r129+24],%r53;
+st.u64 [%r129+32],%r68;
+$L15:
+bar.warp.sync 0xffffffff;
+$L14:
+barrier.sync.aligned 0;
+// forked 2;
+cvta.shared.u64 %r128,__oacc_bcast;
+ld.u64 %r38,[%r128];
+ld.u64 %r50,[%r128+8];
+ld.u64 %r52,[%r128+16];
+ld.u64 %r53,[%r128+24];
+ld.u64 %r68,[%r128+32];
+// fork 4;
+// forked 4;
+mov.u32 %r65,%ctaid.x;
+mov.u32 %r66,%tid.y;
+mov.u32 %r67,%tid.x;
+cvt.s32.s16 %r71,%r66;
+shl.b32 %r72,%r71,5;
+cvt.s32.s16 %r75,%r65;
+shl.b32 %r76,%r75,7;
+vadd.u32.u32.u32.add %r33,%r67,%r72,%r76;
+setp.gt.s32 %r77,%r33,127;
+@%r77 bra $L3;
+setp.eq.u64 %r78,%r38,0;
+@%r78 bra $L4;
+add.u64 %r32,%r50,1;
+add.u64 %r34,%r50,5;
+setp.le.s64 %r79,%r52,%r53;
+@%r79 bra $L5;
+$L9:
+add.u32 %r35,%r33,1;
+shl.b64 %r80,%r32,2;
+add.u64 %r39,%r38,%r80;
+st.u32 [%r39],%r35;
+cvt.s32.s16 %r82,%r35;
+add.u32 %r83,%r82,%r82;
+add.u32 %r43,%r83,7;
+shl.b64 %r84,%r34,2;
+add.u64 %r85,%r38,%r84;
+st.u32 [%r85],%r43;
+ld.u64 %r86,[%r68];
+cvt.s64.s32 %r88,%r33;
+shl.b64 %r89,%r88,2;
+add.u64 %r90,%r86,%r89;
+ld.u32 %r92,[%r39];
+add.u32 %r91,%r92,%r43;
+st.u32 [%r90],%r91;
+bra $L6;
+$L12:
+mov.u64 %r34,4;
+mov.u64 %r32,0;
+mov.u64 %r53,8;
+mov.u64 %r52,1;
+mov.u64 %r50,-1;
+$L5:
+setp.lt.s64 %r98,%r53,%r52;
+@%r98 bra $L7;
+add.u64 %r99,%r53,1;
+sub.u64 %r100,%r99,%r52;
+shl.b64 %r93,%r100,2;
+bra $L8;
+$L7:
+mov.u64 %r93,4;
+$L8:
+add.u64 %r101,%r50,%r52;
+shl.b64 %r102,%r101,2;
+add.u64 %r103,%r38,%r102;
+mov.u32 %r107,0;
+{
+.param .u64 %value_in;
+.param .u64 %out_arg1;
+st.param.u64 [%out_arg1],%r103;
+.param .u32 %out_arg2;
+st.param.u32 [%out_arg2],%r107;
+.param .u64 %out_arg3;
+st.param.u64 [%out_arg3],%r93;
+call (%value_in),memset,(%out_arg1,%out_arg2,%out_arg3);
+ld.param.u64 %r109,[%value_in];
+}
+bra $L9;
+$L4:
+mov.u64 %r111,32;
+{
+.param .u64 %value_in;
+.param .u64 %out_arg1;
+st.param.u64 [%out_arg1],%r111;
+call (%value_in),__nvptx_malloc,(%out_arg1);
+ld.param.u64 %r112,[%value_in];
+}
+mov.u64 %r38,%r112;
+setp.ne.u64 %r114,%r38,0;
+@%r114 bra $L12;
+st.u64 [%stack],%r111;
+mov.u64 %r116,$LC0;
+mov.u64 %r115,$LC1;
+{
+.param .u64 %out_arg1;
+st.param.u64 [%out_arg1],%r115;
+.param .u64 %out_arg2;
+st.param.u64 [%out_arg2],%r116;
+.param .u64 %out_arg3;
+st.param.u64 [%out_arg3],%stack;
+call _gfortran_os_error_at,(%out_arg1,%out_arg2,%out_arg3);
+trap;
+// (noreturn)
+exit;
+// (noreturn)
+}
+$L3:
+setp.ne.u64 %r119,%r38,0;
+@%r119 bra $L6;
+$L10:
+// joining 4;
+// join 4;
+// joining 2;
+barrier.sync.aligned 0;
+// join 2;
+bra $L13;
+$L6:
+{
+.param .u64 %out_arg1;
+st.param.u64 [%out_arg1],%r38;
+call __nvptx_free,(%out_arg1);
+}
+bra $L10;
+$L2:
+sub.u64 %r123,%r53,%r52;
+add.u64 %r124,%r123,1;
+shl.b64 %r122,%r124,2;
+max.u64 %r122,%r122,1;
+{
+.param .u64 %value_in;
+.param .u64 %out_arg1;
+st.param.u64 [%out_arg1],%r122;
+call (%value_in),__nvptx_malloc,(%out_arg1);
+ld.param.u64 %r125,[%value_in];
+}
+mov.u64 %r38,%r125;
+bra $L11;
+$L13:
+ret;
+}
+
+-- [end of .entry MAIN__$_omp_fn$0 body; ~runtime PTX omitted] --
+Loading:
+nvptx GOMP_OFFLOAD_openacc_exec

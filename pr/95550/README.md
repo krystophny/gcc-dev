@@ -38,12 +38,20 @@ derived type with an allocatable component.
 
 ## Execution
 
-Covered by `pr/93554/tests/pr95550-parallel-create-private.f90`, which
-exercises `gang`, `worker`, `vector`, `seq` and an `acc kernels`
+Covered by `pr/93554/tests/pr95550-parallel-create-private.f90`
+(upstream name `pr95550-1.f90` in the staged test patch
+`pr/93554/0002-libgomp-Fortran-testsuite-add-OpenACC-private-alloca.patch`),
+which exercises `gang`, `worker`, `vector`, `seq` and an `acc kernels`
 variant over a 32-element allocatable.  Results:
 
-- host-fallback (`-O0 .. -O3, -Os`): PASS.
-- NVPTX device: PASS.
+- host-fallback (6 optimisation levels): 6/6 PASS.
+- NVPTX device (sm_89 JIT to Blackwell): PASS.
 
-See `pr/93554/verification/host-run.log` and
-`pr/93554/verification/nvptx-run.log`.
+See `pr/93554/verification/host-run.log`,
+`pr/93554/verification/host-run.log.filtered`, and
+`pr/93554/verification/nvptx-run.log`.  The `GOMP_DEBUG=1` trace for
+this scenario sits in the S1 log
+`pr/93554/verification/nvptx/gomp-debug-pr93554.log`; the whole-
+allocatable runtime-free edge is additionally exercised by S4/S5
+under the PR93554 umbrella (see
+`pr/93554/verification/nvptx/ptx-malloc-free-summary.txt`).

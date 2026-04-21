@@ -1,39 +1,8 @@
-=== pr107227-private-whole-allocatable ===
-/home/ert/code/gcc-dev/pr/93554/tests/pr107227-private-whole-allocatable.f90: In function 'worker_parallel.3._omp_fn.0':
-/home/ert/code/gcc-dev/pr/93554/tests/pr107227-private-whole-allocatable.f90:59:73: warning: using 'vector_length (32)', ignoring 1
-   59 |     !$acc parallel num_gangs(4) num_workers(4) vector_length(1) copy(res)
-      |                                                                         ^
-/home/ert/code/gcc-dev/pr/93554/tests/pr107227-private-whole-allocatable.f90: In function 'seq_parallel.1._omp_fn.0':
-/home/ert/code/gcc-dev/pr/93554/tests/pr107227-private-whole-allocatable.f90:91:73: warning: using 'vector_length (32)', ignoring 1
-   91 |     !$acc parallel num_gangs(1) num_workers(1) vector_length(1) copy(res)
-      |                                                                         ^
---- host fallback ---
-EXIT=0
---- nvidia device ---
-EXIT=0
-=== pr93554-private-derived-alloc-component ===
-/home/ert/code/gcc-dev/pr/93554/tests/pr93554-private-derived-alloc-component.f90: In function 'worker_parallel.3._omp_fn.0':
-/home/ert/code/gcc-dev/pr/93554/tests/pr93554-private-derived-alloc-component.f90:69:73: warning: using 'vector_length (32)', ignoring 1
-   69 |     !$acc parallel num_gangs(4) num_workers(4) vector_length(1) copy(res)
-      |                                                                         ^
-/home/ert/code/gcc-dev/pr/93554/tests/pr93554-private-derived-alloc-component.f90: In function 'seq_parallel.1._omp_fn.0':
-/home/ert/code/gcc-dev/pr/93554/tests/pr93554-private-derived-alloc-component.f90:105:73: warning: using 'vector_length (32)', ignoring 1
-  105 |     !$acc parallel num_gangs(1) num_workers(1) vector_length(1) copy(res)
-      |                                                                         ^
---- host fallback ---
-EXIT=0
---- nvidia device ---
-EXIT=0
-=== pr95550-parallel-create-private ===
-/home/ert/code/gcc-dev/pr/93554/tests/pr95550-parallel-create-private.f90: In function 'MAIN__._omp_fn.1':
-/home/ert/code/gcc-dev/pr/93554/tests/pr95550-parallel-create-private.f90:38:71: warning: using 'vector_length (32)', ignoring 1
-   38 |   !$acc parallel create(a) num_gangs(4) num_workers(4) vector_length(1)
-      |                                                                       ^
-/home/ert/code/gcc-dev/pr/93554/tests/pr95550-parallel-create-private.f90: In function 'MAIN__._omp_fn.0':
-/home/ert/code/gcc-dev/pr/93554/tests/pr95550-parallel-create-private.f90:23:71: warning: using 'vector_length (32)', ignoring 1
-   23 |   !$acc parallel create(a) num_gangs(1) num_workers(1) vector_length(1)
-      |                                                                       ^
---- host fallback ---
-EXIT=0
---- nvidia device ---
-EXIT=0
+PASS S1 pr93554-private-derived-alloc-component rc=0
+PASS S2 pr107227-private-whole-allocatable rc=0
+PASS S3 pr95550-parallel-create-private rc=0
+PASS S4 pr93554-alloc-in-body rc=0
+PASS S5 pr93554-private-independence rc=0
+
+== totals ==
+pass=5 fail=0

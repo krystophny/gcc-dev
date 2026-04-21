@@ -1,73 +1,95 @@
-# Verification matrix
+# Verification matrix (expanded, 2026-04-21)
 
-Scenarios (each in `pr/93554/tests/`):
+Five execution tests sit under `pr/93554/tests/`; the same set moves
+to `libgomp/testsuite/libgomp.oacc-fortran/` in the staged patch on
+branch `pr93554-tests` (see `pr/93554/0002-*.patch`).
 
-- **S1** — `pr93554-private-derived-alloc-component.f90`: derived type with
-  allocatable component, `private` on OpenACC loop.
-- **S2** — `pr107227-private-whole-allocatable.f90`: whole allocatable array,
-  `private` on OpenACC loop.
-- **S3** — `pr95550-parallel-create-private.f90`: `acc parallel create(A)`
-  combined with `acc loop private(A)`.
+| scenario | meta-repo file                                       | upstream name         |
+|----------|------------------------------------------------------|-----------------------|
+| S1       | `pr93554-private-derived-alloc-component.f90`        | `pr93554-1.f90`       |
+| S2       | `pr107227-private-whole-allocatable.f90`             | `pr107227-1.f90`      |
+| S3       | `pr95550-parallel-create-private.f90`                | `pr95550-1.f90`       |
+| S4       | `pr93554-alloc-in-body.f90`                          | `pr93554-2.f90` (NEW) |
+| S5       | `pr93554-private-independence.f90`                   | `pr93554-3.f90` (NEW) |
 
-Parallelism levels exercised per scenario: gang / worker / vector / seq on
-`!$acc parallel loop`, plus a `!$acc kernels` + `!$acc loop` case.
+S1--S3 exercise the three reported shapes at compile time and at
+runtime but exit their OpenACC regions with the private allocatable
+still NULL, so the finalisation `free` edge sits in PTX as an
+always-false-gated branch.  S4 allocates the component inside the
+loop body; S5 carries a whole allocatable private through
+`num_gangs(4)` gang partitioning.  Both force the per-thread free to
+actually run on the device.
 
-Targets:
+## Targets
 
-- **compile-trunk** — `gcc-build/gcc/gfortran` (post-fix, r16-8571).
-- **compile-baseline** — pre-fix `xgcc`, worktree at `010618b8dcb^`.
-- **host-fallback** — `make check-DEJAGNU` with unix target
-  (`-foffload=disable`, `-DACC_DEVICE_TYPE_host=1`, `-DACC_MEM_SHARED=1`).
-- **nvptx-device** — direct run with
-  `-foffload=nvptx-none`, `ACC_DEVICE_TYPE=nvidia` on an sm_89 GPU.
+- **compile-trunk** -- `gcc-build/gcc/gfortran` (post-fix, r16-8571).
+- **compile-baseline** -- pre-fix `xgcc`, worktree at `010618b8dcb^`.
+- **host-fallback** -- trunk `gfortran` direct compile + run, six
+  optimisation levels (`-O0 -O1 -O2 -O3 -Os -Og`).
+- **nvptx-device** -- `gcc-offload-build/install/bin/gfortran
+  -foffload=nvptx-none`, `ACC_DEVICE_TYPE=nvidia` on an RTX 5060 Ti
+  (Blackwell) loading PTX targeted at `sm_89`.
 
 ## Results
 
-| scenario | compile-baseline | compile-trunk | host-fallback                 | nvptx-device |
-|----------|------------------|---------------|-------------------------------|--------------|
-| S1       | ICE (omp-expand.cc:7722) | clean | PASS across -O0..-O3,-Os | PASS |
-| S2       | ICE (omp-expand.cc:7722) | clean | PASS across -O0..-O3,-Os | PASS |
-| S3       | ICE (omp-expand.cc:7722) | clean | PASS across -O0..-O3,-Os | PASS |
+| scenario | compile-baseline          | compile-trunk | host-fallback (6 opt lvl) | nvptx-device | runtime free edge taken |
+|----------|---------------------------|---------------|---------------------------|--------------|-------------------------|
+| S1       | ICE (omp-expand.cc:7722)  | clean         | PASS 6/6                  | PASS         | no  (gated, PTX only)   |
+| S2       | ICE (omp-expand.cc:7722)  | clean         | PASS 6/6                  | PASS         | no  (gated, PTX only)   |
+| S3       | ICE (omp-expand.cc:7722)  | clean         | PASS 6/6                  | PASS         | no  (gated, PTX only)   |
+| S4 NEW   | ICE (omp-expand.cc:7722)  | clean         | PASS 6/6                  | PASS         | YES (malloc=2, free=1 per offload entry) |
+| S5 NEW   | ICE (omp-expand.cc:7722)  | clean         | PASS 6/6                  | PASS         | YES (malloc=1, free=1 per offload entry) |
 
-Each host-fallback cell represents 6 optimisation levels × 2 per test (excess
-errors check + execution) = 12 PASS records per scenario; see
-`host-run.log` for the verbatim PASS lines.
+Host-fallback totals: 5 scenarios x 6 opt levels = 30 PASS, 0 FAIL
+(see `host-run.log`, `host-run.log.filtered`).  NVPTX totals:
+5 PASS, 0 FAIL (`nvptx-run.log`).  PTX call-site counts for the new
+scenarios come from the `GOMP_DEBUG=1` traces in `nvptx/`; the scan is
+reproducible via `nvptx/ptx-malloc-free-summary.txt`.
 
-## Supporting evidence
+## Evidence bundle
 
-- `pr/<n>/dumps/baseline-*.log` — pre-fix ICE backtraces, all ending at
+- `pr/<n>/dumps/baseline-*.log` -- pre-fix ICE backtraces, all ending at
   `omp-expand.cc:7722` inside `expand_oacc_for`.
-- `pr/<n>/dumps/*.018t.ompexp` — post-fix `ompexp`-pass dumps for each
-  scenario.
-- `pr/93554/verification/cfg.md` — CFG analysis demonstrating where the
-  finalisation blocks land and why the pre-fix assertions no longer hold.
-- `pr/93554/verification/host-run.log` — filtered PASS lines plus the
-  libgomp summary totals (6374 passes, 0 new FAIL/XPASS, 214 existing
-  XFAIL, 188 unsupported).
-- `pr/93554/verification/host-run.log.full` — full `libgomp.log`.
-- `pr/93554/verification/nvptx-run.log` — compile + run output for each
-  test on the offload toolchain, host fallback and nvidia device.
-- `pr/93554/verification/nvptx/gomp-debug-pr93554.log` — `GOMP_DEBUG=1`
-  run on NVPTX for S1.  The PTX preamble shows entry points for all
-  five loop variants (gang/worker/vector/seq/kernels) and contains
-  explicit `call __nvptx_free` / `call __nvptx_malloc` inside the
-  device kernel, confirming that the finalisation path observed in the
-  post-fix CFG is actually emitted into the device image rather than
-  dropped on the host side.
+- `pr/<n>/dumps/*.018t.ompexp` -- post-fix `ompexp`-pass dumps.
+- `pr/93554/verification/cfg.md` -- CFG analysis with a per-test
+  coverage table in the "Coverage" section.
+- `pr/93554/verification/host-run.log`,
+  `pr/93554/verification/host-run.log.filtered` -- direct-compile host
+  matrix output.
+- `pr/93554/verification/nvptx-run.log` -- nvptx compile + run for
+  each scenario.
+- `pr/93554/verification/nvptx/gomp-debug-pr93554.log` -- S1 debug
+  trace (PTX emits `__nvptx_free` in five entry points, all gated).
+- `pr/93554/verification/nvptx/gomp-debug-pr93554-alloc-in-body.log`
+  and `.../gomp-debug-pr93554-private-independence.log` -- S4 and S5
+  debug traces where the in-entry-body `__nvptx_free` is reachable.
+- `pr/93554/verification/nvptx/ptx-malloc-free-summary.txt` --
+  per-scenario malloc/free call-site scan inside the offload entry
+  function body.
+- `pr/93554/verification/provenance-tests.md` -- per-test lineage
+  audit for the five execution tests.
 
-## Bounds of this verification
+## Bounds
 
-- The fix is a structural assertion relaxation in the middle-end OpenACC
-  expander.  Host and NVPTX execution both produce correct results for
-  all tested variants, which rules out an obvious class of follow-on
-  miscompiles (missing frees, scrambled private storage, wrong loop
-  trip count).
-- The `GOMP_DEBUG` trace confirms finalisation runs on the device.  It
-  does **not** prove optimal placement: under `CHUNKS > 1`, the emitted
-  free lives inside the chunk loop (see `cfg.md`).  The current tests do
-  not stress that — they do not allocate the component or whole array
-  inside the loop body, so the free branch is a no-op at runtime.  This
-  is a separate, pre-existing code-generation question unaffected by
-  this commit; flagging it as a follow-up if someone chooses to explore
-  it.
-- AMD GCN offload was not tested — the local box is NVPTX-only.
+- The "runtime free edge taken" column reflects *reachability*, not
+  dynamic execution count.  S4 and S5 reach the edge under every
+  thread that finishes the region.  Dedicated leak-stress runs (long
+  driver loop + `acc_get_property(acc_property_free_memory)`) were not
+  added -- static reachability plus correct numeric output is the
+  load-bearing evidence for Thomas's concern #3.
+- AMD GCN offload is not tested; local hardware is NVPTX-only.
+- NVPTX runs target `sm_89` PTX JIT-compiled at load time on the
+  Blackwell GPU.  No multi-sm_XX matrix -- the fix is architecturally
+  neutral at the GCC level; PTX differences would not depend on it.
+- `CHUNKS > 1` placement of the finaliser remains a pre-existing
+  code-generation question unaffected by r16-8571.  S4 reaches the
+  free edge for every chunk boundary the runtime picks but does not
+  assert a specific chunk count.
+- Fully-partitioned `gang worker vector` private for whole
+  allocatables on NVPTX exposes a separate issue -- writes across
+  vector lanes alias through the single per-worker private, which is
+  orthogonal to r16-8571 (the CFG change is equally present with or
+  without vector partitioning).  S5 therefore pins partitioning to
+  gang-only, which is enough to validate the free edge for the shape
+  that matches PR107227 / PR95550 and keeps the test focused on the
+  regression under verification.

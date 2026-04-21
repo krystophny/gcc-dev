@@ -160,3 +160,39 @@ Artifacts:
 - `pr/93554/dumps/baseline-ice.log`,
   `pr/95550/dumps/baseline-{create,loop}-ice.log`,
   `pr/107227/dumps/baseline-ice.log` — pre-fix ICE output.
+
+## Coverage of the inserted CFG edges by the execution tests
+
+| scenario | loop directive                     | private entity              | allocates in body | finalisation at exit | runtime free reachable |
+|----------|------------------------------------|-----------------------------|-------------------|----------------------|------------------------|
+| S1       | `!$acc parallel/kernels loop`      | derived type + alloc comp.  | no                | yes (gated always-false) | no |
+| S2       | `!$acc parallel loop`              | whole allocatable           | no (host-allocated) | yes (per-thread private) | no |
+| S3       | `!$acc parallel create + loop`     | whole allocatable           | no                | yes                  | no |
+| S4 NEW   | `!$acc parallel loop gang ...`     | derived type + alloc comp.  | YES               | yes                  | YES (malloc=2, free=1 per offload entry body) |
+| S5 NEW   | `!$acc parallel loop gang`         | whole allocatable           | no (host-allocated) | yes                  | YES (malloc=1, free=1 per offload entry body) |
+
+S1--S3 prove the compile-time relaxation of the two original
+assertions is sufficient for the three reported shapes, and that the
+finalisation block is emitted into device PTX (five entry points in
+S1, one each in S2/S3).  What they do *not* prove is that the new
+edges are exercised at runtime, because `priv.data` is NULL at region
+exit and the `if (priv.data != 0B)` guard short-circuits.
+
+S4 makes `x%b.data` non-NULL inside the body (the `allocate(x%b(8))`
+line), so every thread that exits the region reaches the free call
+emitted in the offload entry function body.  S5 does the same for a
+whole-allocatable `buf` by letting the OpenACC runtime materialise
+the per-thread private copy on entry; that copy is non-NULL
+throughout the region and must be freed on exit.  Call-site counts
+(malloc / free) for S4 and S5 come from the `.entry MAIN__$_omp_fn$0`
+body inside the `GOMP_DEBUG=1` traces, summarised in
+`nvptx/ptx-malloc-free-summary.txt`.
+
+Correctness of the `res(j)` output across all five scenarios at six
+optimisation levels (host fallback) and on NVPTX sm_89 (see
+`host-run.log`, `nvptx-run.log`) is the load-bearing signal that the
+later compiler passes handle the looser CFG correctly on the device.
+A dropped-free miscompile that corrupts the private's contents or
+leaks the device allocation would show up either as wrong sums (S4,
+S5) or as address-dependent crashes under `GOMP_DEBUG=1`; neither was
+observed.
