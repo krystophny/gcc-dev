@@ -1,63 +1,37 @@
-# Bugzilla-provenance attribution audit — 2026-04-22
+# Fujitsu-CTS provenance attribution — 2026-04-22
 
-Retrospective attribution-header additions for 27 Fortran testcases
-re-using Bugzilla Comment #0 reducers (4 of them Fujitsu-CTS
-derivatives).  Audit covers meta-repo issues #139–#165 on
-`krystophny/gcc-dev`.
+## Scope (revised 2026-04-22)
 
-Each patch adds one (or, for Fujitsu-derived reducers, two) comment
-lines to a test file.  No behavioural change.  Attribution is not
-strictly required for small Bugzilla reducers — GCC testsuite
-convention is inconsistent — but we are adding it retroactively for
-provenance safety and completeness.
+The provenance audit originally flagged 27 testcases (#139–#165).  On
+review, retroactive `! Contributed by <Bugzilla reporter>` headers are
+not needed: when the Bugzilla reporter wrote the reducer themselves,
+the existing `PR fortran/N` comment + Bugzilla URL is already an
+adequate trace.
 
-## Patch groups
+What DOES need an in-file header is external third-party material.
+Four of the 27 cases are derivatives of the **Fujitsu Compiler Test
+Suite** (github.com/fujitsu/compiler-test-suite, Apache-2.0 WITH
+LLVM-exception, GPLv3-compatible).  For those, the chain of custody
+belongs in the file itself.
 
-**Group A1** — tests already in `upstream/master` via an Albert commit
-(18 issues, 17 patches since #149 + #150 share a file pair).
-Distribution: patch series on top of `upstream/master`.
+## Deliverable
 
-**Group A2** — tests already in `upstream/master` via another maintainer's
-commit (6 issues).  Distribution: same patch series; the patches will
-not be sent without the original committer's OK (recorded as a
-Bugzilla follow-up note per issue).
+**One single upstream patch** on branch
+`testsuite/fujitsu-cts-attribution-2026-04` adding the Fujitsu
+provenance header to the three upstream-master testcases derived from
+the Fujitsu CTS:
 
-**Group B** — `pr103276.f90` currently lives only on Bugzilla attachment
-63134 and fork branch `origin/openacc`; not in `upstream/master`.
-Distribution: one patch that adds the attributed testcase on top of
-`upstream/master`; intended to obsolete attachment 63134 once the
-companion `trans-openmp.cc` change is rebased onto current trunk (the
-cherry-pick conflict was non-trivial so the frontend portion is NOT
-included here — it stays at commit `0bb84432a01` on `origin/openacc`
-pending rebase).
+- `gcc/testsuite/gfortran.dg/pdt_85.f03`         (PR fortran/123949)
+- `gcc/testsuite/gfortran.dg/pr123949.f90`       (PR fortran/123949)
+- `gcc/testsuite/gfortran.dg/pr124208.f90`       (PR fortran/124208)
 
-**Group C** — three files that live only on fork branches, never
-published externally.  Header edits on the respective branches;
-patches kept here for reference.
+Two further Fujitsu-derived testcases live on fork branches and carry
+the header via a per-branch commit (not externally distributed):
 
-## Layout
+- `gcc/testsuite/gfortran.dg/pr124631.f90` on `pr124631-fix`
+- `gcc/testsuite/gfortran.dg/pr124666.f90` on `pr124666-fix`
 
-```
-provenance-audit-2026-04/
-└── 0000-cover-letter.patch          # series cover letter (Groups A1+A2)
-
-pr/<N>/attribution/
-└── 0NNN-testsuite-Add-Bugzilla-reporter-attribution-*.patch
-```
-
-For branch `testsuite/contributed-by-audit-2026-04` (Group A1+A2, 23
-patches + cover, branched off `upstream/master`) see the gcc checkout;
-the `0NNN-*.patch` numbering in each `pr/<N>/attribution/` directory
-matches the series order.
-
-Group B: `pr/103276/attribution/0001-testsuite-Add-attributed-pr103276.f90-testcase-PR-fo.patch`
-on branch `testsuite/pr103276-with-attribution`.
-
-Group C fork-only patches live on the respective fork branches
-(`pr124631-fix`, `pr124666-fix`, `pr121472-constructor-finalizer-ice`)
-and are also copied into each `pr/<N>/attribution/` directory.
-
-## Commit trailers (every patch)
+## Commit trailers
 
 ```
 Assisted-by: Claude (Anthropic)
@@ -65,20 +39,21 @@ Assisted-by: GPT (OpenAI)
 Signed-off-by: Christopher Albert <albert@tugraz.at>
 ```
 
-`Assisted-by:` lines sit before the ChangeLog block — GCC's
-`contrib/gcc-changelog/git_commit.py` only recognises a fixed set of
-trailer prefixes (signed-off-by, reviewed-by, tested-by, acked-by,
-suggested-by, reported-by, co-authored-by), so non-standard `Assisted-by:`
-must live in the description area to avoid `git gcc-verify` failures.
+`Assisted-by:` sits above the ChangeLog block because GCC's trailer
+parser in `contrib/gcc-changelog/git_commit.py` does not whitelist it.
 
-## Delivery status
+## Closed as not needed (23 issues)
 
-No patch has been posted to `gcc-patches@gcc.gnu.org`, `fortran@gcc.gnu.org`,
-or Bugzilla.  Files are on-disk only, in this meta-repo, awaiting user
-approval.
+Issues #139, #140, #141, #142, #143, #144, #145, #146, #147, #148,
+#149, #150, #151, #152, #153, #154, #155, #156, #157, #158, #159,
+#160, #161 — all tracked reducers are internal Bugzilla Comment #0
+code from the reporter themselves, adequately traced via the PR
+reference.  No header needed.
 
-## Issues updated
+## Remaining open
 
-Meta-repo issues #139–#165 were rewritten to record the distribution
-status and the per-file delivery path for each case; see
-`/home/ert/.claude/plans/floofy-honking-pike.md` for the full plan.
+- #162 PR123949 — in upstream/master, single patch below.
+- #163 PR124208 — in upstream/master, single patch below.
+- #164 PR124631 — fork-only, header on `pr124631-fix`.
+- #165 PR124666 — fork-only, header on `pr124666-fix`.
+- #166 follow-up tracker (next steps).
