@@ -1460,3 +1460,22 @@ sparse_paths = [
     "include/swift/Demangling",
     "lib/Demangling",
 ]
+
+# -----------------------------------------------------------------------------
+# Recent non-GNU expansion 2026-04-22: Fujitsu Compiler Test Suite.
+#
+# Fujitsu open-sourced their proprietary C/C++/Fortran compiler test suite so
+# it can eventually merge into the LLVM test-suite. The Fortran tree (1054
+# numbered directories, each with .f90 source + .reference_output) is the only
+# large Fortran corpus of its kind in permissive licensing (Apache-2.0 WITH
+# LLVM-exception). Cross-check against libgfortran intrinsics/runtime and the
+# gfortran.dg testsuite: any strong match would indicate a silent Fujitsu-
+# origin import, which is the whole point of the reverse-provenance scan.
+# -----------------------------------------------------------------------------
+
+[[source]]
+name = "fujitsu-compiler-test-suite"
+url = "git@github.com:fujitsu/compiler-test-suite.git"
+branch = "main"
+origin_class = "non_gnu"
+sparse_paths = ["Fortran"]
