@@ -223,10 +223,38 @@ git push origin main
 
 ## Provenance review
 
+### Hard rules
+
+- **Never copy verbatim. Not even tests.** Every testcase, reproducer,
+  helper, and code fragment we add to `gcc/` must be our own expression.
+  Rewrite from scratch: different variable names, different array
+  shapes, different format strings, different surrounding structure.
+  Only purely factual bug-trigger values (`INT_MAX`, kind boundaries,
+  standards-defined constants) are safe to reuse in isolation.
+- **Bugzilla reporters routinely paste third-party test-suite content
+  verbatim** (Fujitsu CTS, NAG, commercial benchmark suites). A
+  reproducer appearing in a Bugzilla comment does **not** license it
+  for downstream redistribution. Before deriving any testcase from a
+  Bugzilla-posted reproducer, trace its origin: look for file paths
+  (e.g. `Fortran/NNNN/NNNN_NNNN.f08`), suite names, or distinctive
+  idioms. If the content is from an external suite, treat it as
+  provenance-sensitive upstream material and rewrite from scratch.
+- **The public availability of a reproducer is not attribution.** An
+  Apache-2.0, BSD, or proprietary reproducer does not become
+  GPL-compatible just because someone pasted it into a public bug
+  tracker. Attribution and license obligations stay with the
+  redistributor — us, if we ship the derivative.
+- **If you cannot rewrite cleanly, drop the testcase.** A bug with a
+  correct code fix and no regression test is acceptable. A fix plus a
+  license-unclear test is not.
+
+### Process
+
 - Provenance review is mandatory for every patch, testcase, reproducer, helper,
   imported snippet, and externally-inspired code fragment.
 - During editing, keep asking where each non-trivial code fragment came from and
-  whether it is safe to keep verbatim, adapt, or rewrite from scratch.
+  whether it is safe to adapt or must be rewritten from scratch. The answer is
+  never "keep verbatim".
 - Treat Bugzilla reproducers, mailing-list examples, upstream tests, standards
   examples, blog posts, SARD/CWE examples, OpenMP/OpenACC examples, BLAS/LAPACK
   code, and copied helper code as provenance-sensitive by default.

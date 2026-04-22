@@ -77,6 +77,20 @@ Every commit on a patch branch requires:
 Full procedure and the `GCC_FORCE_MKLOG=1` commit recipe are in
 `docs/patch-workflow.md`.
 
+## Provenance Ground Rules
+
+Never copy anything verbatim into `gcc/` — not code, not tests, not
+reproducers. Bugzilla reporters frequently paste third-party test-suite
+content (Fujitsu CTS, NAG, commercial benchmarks) directly into comments;
+public posting in a bug tracker is not a license grant. Before deriving
+any testcase from a Bugzilla-posted reproducer, trace its origin and
+rewrite from scratch with different variable names, shapes, format
+strings, and surrounding structure. Only isolated factual bug-trigger
+values (`INT_MAX`, kind boundaries, standards constants) are safe to
+reuse. If you cannot rewrite cleanly, ship the code fix without a
+testcase rather than a license-unclear one. Full rules in
+`docs/patch-workflow.md` under "Provenance review".
+
 ## Current Patch Status
 
 **On origin (individual branches + integration branch `openacc`):**
