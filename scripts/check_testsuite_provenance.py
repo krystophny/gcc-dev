@@ -116,10 +116,12 @@ SOURCE_PATTERNS = (
 )
 
 ORIGIN_PATTERN = re.compile(
-    r"\b(copied|adapted|derived|based)\b.{0,80}\b(from|on)\b", re.IGNORECASE
+    r"\b(copied|adapted|derived|based|reduced|imported|ported|translated)\b"
+    r".{0,80}\b(from|on)\b",
+    re.IGNORECASE,
 )
 INTERNAL_SOURCE_PATTERN = re.compile(
-    r"\b(copied|adapted|derived|based)\b.{0,120}"
+    r"\b(copied|adapted|derived|based|reduced|imported|ported|translated)\b.{0,120}"
     r"(?:gcc/testsuite/|libgomp/testsuite/|gfortran\.dg/|libgomp\.|'\.\.?/|\"\.\.?/|\.\./|\./)",
     re.IGNORECASE,
 )
@@ -793,6 +795,15 @@ def add_corpus_matches(
         finding.add(45, f"corpus match similarity {best:.2f} to authoritative source")
     if origin_class == "non_gnu":
         finding.add(20, "corpus origin is a non-GNU upstream project")
+        has_origin_phrase = bool(ORIGIN_PATTERN.search(full_text))
+        has_spdx_snippet = "SPDX-Snippet" in full_text
+        if not (has_origin_phrase or has_spdx_snippet):
+            finding.add(
+                40,
+                "corpus matches a non-GNU upstream but file carries no in-tree "
+                "provenance header (e.g. 'Reduced from ...', 'Copied from ...', "
+                "'SPDX-SnippetFromOriginal')",
+            )
     elif origin_class == "gnu":
         finding.add(-10, "corpus origin is a GNU upstream project")
 
