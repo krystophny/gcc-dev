@@ -22,7 +22,6 @@ gcc-dev/                    # META-REPO (GitHub: krystophny/gcc-dev)
 │   ├── gcc/testsuite/gfortran.dg/  # Frontend tests
 │   └── libgomp/            # OpenMP/OpenACC runtime library
 ├── gcc-build/              # Local dev build (not tracked)
-├── gcc-master-build/       # Upstream master build (not tracked)
 ├── pr/                     # Bug work directories (tracked)
 │   └── <number>/           # reproducer.f90, *.patch, README.md
 ├── gcc-offload-build/      # NVPTX offload build + install (not tracked)

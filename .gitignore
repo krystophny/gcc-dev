@@ -32,6 +32,11 @@
 __pycache__/
 .pytest_cache/
 
+# Tool caches and runtime state
+/.claude/scheduled_tasks.lock
+/.corpus-sha
+/.sloptools/
+
 # Temporary files
 *.tmp
 *~
