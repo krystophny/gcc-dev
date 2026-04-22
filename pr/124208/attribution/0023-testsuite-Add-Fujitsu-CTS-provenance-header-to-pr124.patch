@@ -1,0 +1,44 @@
+From abc99b4e09c460cf9412dda8c75b80e90ac8ce03 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Wed, 22 Apr 2026 12:28:06 +0200
+Subject: [PATCH 23/23] testsuite: Add Fujitsu-CTS provenance header to
+ pr124208.f90 [PR fortran/124208]
+
+Retrospective attribution header added as part of a manual
+Bugzilla-provenance audit on 2026-04-22 (meta-repo tracking commit
+40f0a94; GitHub issues on krystophny/gcc-dev).  The existing GCC
+Fortran testsuite convention (see pr113363.f90, pdt_50.f03,
+arrayio_4.f90) uses an in-file "! Contributed by ..." line; practice
+is inconsistent and attribution is not strictly required for small
+Bugzilla reducers, but we are adding it retroactively for provenance
+safety and completeness.  No behavioural change.
+
+Assisted-by: Claude (Anthropic)
+Assisted-by: GPT (OpenAI)
+
+	PR fortran/124208
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/pr124208.f90: Add reporter attribution header.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/testsuite/gfortran.dg/pr124208.f90 | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/gcc/testsuite/gfortran.dg/pr124208.f90 b/gcc/testsuite/gfortran.dg/pr124208.f90
+index be833d19e65..d2a539223fe 100644
+--- a/gcc/testsuite/gfortran.dg/pr124208.f90
++++ b/gcc/testsuite/gfortran.dg/pr124208.f90
+@@ -1,5 +1,7 @@
+ ! { dg-do compile }
+ ! PR fortran/124208
++! Reduced from github.com/fujitsu/compiler-test-suite Fortran/0887/0887_0005.f90
++! by David Binderman  <dcb314@hotmail.com> via PR fortran/124208 Comment #0.
+ 
+ subroutine nested_forall_in_associate
+   implicit none
+-- 
+2.53.0
+

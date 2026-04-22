@@ -1,0 +1,60 @@
+From ec8608e7b40559d4ac1261ae6cafb775844e26d1 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Wed, 22 Apr 2026 12:28:05 +0200
+Subject: [PATCH 22/23] testsuite: Add Fujitsu-CTS provenance header to
+ pdt_85.f03 and pr123949.f90 [PR fortran/123949]
+
+Retrospective attribution header added as part of a manual
+Bugzilla-provenance audit on 2026-04-22 (meta-repo tracking commit
+40f0a94; GitHub issues on krystophny/gcc-dev).  The existing GCC
+Fortran testsuite convention (see pr113363.f90, pdt_50.f03,
+arrayio_4.f90) uses an in-file "! Contributed by ..." line; practice
+is inconsistent and attribution is not strictly required for small
+Bugzilla reducers, but we are adding it retroactively for provenance
+safety and completeness.  No behavioural change.
+
+Assisted-by: Claude (Anthropic)
+Assisted-by: GPT (OpenAI)
+
+	PR fortran/123949
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/pdt_85.f03: Add reporter attribution header.
+	* gfortran.dg/pr123949.f90: Add reporter attribution header.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/testsuite/gfortran.dg/pdt_85.f03   | 2 ++
+ gcc/testsuite/gfortran.dg/pr123949.f90 | 2 ++
+ 2 files changed, 4 insertions(+)
+
+diff --git a/gcc/testsuite/gfortran.dg/pdt_85.f03 b/gcc/testsuite/gfortran.dg/pdt_85.f03
+index e22d18be981..58eb2fc4432 100644
+--- a/gcc/testsuite/gfortran.dg/pdt_85.f03
++++ b/gcc/testsuite/gfortran.dg/pdt_85.f03
+@@ -2,6 +2,8 @@
+ !
+ ! Verify that large KIND values create distinct PDT instances.
+ !
++! Reduced from github.com/fujitsu/compiler-test-suite Fortran/0413/0413_0003.f90
++! by David Binderman  <dcb314@hotmail.com> via PR fortran/123949 Comment #0.
+ module m
+   implicit none
+   integer(8), parameter :: k1 = 2147483648_8 + 100_8
+diff --git a/gcc/testsuite/gfortran.dg/pr123949.f90 b/gcc/testsuite/gfortran.dg/pr123949.f90
+index ad4855cff04..2492e5fcfef 100644
+--- a/gcc/testsuite/gfortran.dg/pr123949.f90
++++ b/gcc/testsuite/gfortran.dg/pr123949.f90
+@@ -1,6 +1,8 @@
+ ! { dg-do compile }
+ !
+ ! PR fortran/123949
++! Reduced from github.com/fujitsu/compiler-test-suite Fortran/0413/0413_0003.f90
++! by David Binderman  <dcb314@hotmail.com> via PR fortran/123949 Comment #0.
+ ! ICE in gfc_match_decl_type_spec with large KIND parameter values.
+ !
+ module pr123949_mod
+-- 
+2.53.0
+

@@ -1,0 +1,46 @@
+From 48378cdf05eda591f30f00a46dbd4683540f9f0c Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Wed, 22 Apr 2026 12:36:58 +0200
+Subject: [PATCH] testsuite: Add reporter attribution to fork-only
+ finalize_constructor_1.f90 [PR fortran/121472]
+
+Fork-only testcase on branch pr121472-constructor-finalizer-ice, never
+submitted to upstream or uploaded to Bugzilla (the four PR121472
+patches attached to the Bugzilla bug do not include this file).
+Retrospective attribution header added as part of a manual Bugzilla-
+provenance audit on 2026-04-22 (meta-repo tracking commit 40f0a94;
+GitHub issues on krystophny/gcc-dev).  The test was derived from
+Andrew Benson's Bugzilla Comment #0 reproducer; adding the credit now
+so the chain of custody is in place before any future upstream
+submission.  No behavioural change.
+
+Assisted-by: Claude (Anthropic)
+Assisted-by: GPT (OpenAI)
+
+	PR fortran/121472
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/finalize_constructor_1.f90: Add reporter attribution
+	header.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/testsuite/gfortran.dg/finalize_constructor_1.f90 | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/gcc/testsuite/gfortran.dg/finalize_constructor_1.f90 b/gcc/testsuite/gfortran.dg/finalize_constructor_1.f90
+index ea95d0707a2..3064bcd123c 100644
+--- a/gcc/testsuite/gfortran.dg/finalize_constructor_1.f90
++++ b/gcc/testsuite/gfortran.dg/finalize_constructor_1.f90
+@@ -2,6 +2,7 @@
+ ! { dg-output " constructor: *1(\n|\r\n|\r)" }
+ ! { dg-output " finalizer: *2(\n|\r\n|\r)" }
+ ! PR fortran/121472
++! Contributed by Andrew Benson  <abensonca@gcc.gnu.org>
+ ! Test that derived types with finalizers and constructor interfaces compile
+ ! without ICE and produce ISO F2018 compliant finalization behavior.
+ !
+-- 
+2.53.0
+

@@ -1,0 +1,43 @@
+From 318e3db6e51c016d541a672021525549c612b5ef Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Wed, 22 Apr 2026 12:28:05 +0200
+Subject: [PATCH 20/23] testsuite: Add Bugzilla reporter attribution to
+ pr121472.f90 [PR fortran/121472]
+
+Retrospective attribution header added as part of a manual
+Bugzilla-provenance audit on 2026-04-22 (meta-repo tracking commit
+40f0a94; GitHub issues on krystophny/gcc-dev).  The existing GCC
+Fortran testsuite convention (see pr113363.f90, pdt_50.f03,
+arrayio_4.f90) uses an in-file "! Contributed by ..." line; practice
+is inconsistent and attribution is not strictly required for small
+Bugzilla reducers, but we are adding it retroactively for provenance
+safety and completeness.  No behavioural change.
+
+Assisted-by: Claude (Anthropic)
+Assisted-by: GPT (OpenAI)
+
+	PR fortran/121472
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/pr121472.f90: Add reporter attribution header.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/testsuite/gfortran.dg/pr121472.f90 | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/gcc/testsuite/gfortran.dg/pr121472.f90 b/gcc/testsuite/gfortran.dg/pr121472.f90
+index 00c990cd267..f1a689bd21c 100644
+--- a/gcc/testsuite/gfortran.dg/pr121472.f90
++++ b/gcc/testsuite/gfortran.dg/pr121472.f90
+@@ -1,5 +1,6 @@
+ ! { dg-do compile }
+ ! PR fortran/121472 - ICE with constructor for finalized zero-size type
++! Contributed by Andrew Benson  <abensonca@gcc.gnu.org>
+ 
+ module pr121472_m
+     implicit none
+-- 
+2.53.0
+

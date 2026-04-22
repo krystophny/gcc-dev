@@ -1,0 +1,44 @@
+From b8663228adf7907ac4aa9b63d77591ce796995d5 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Wed, 22 Apr 2026 12:28:01 +0200
+Subject: [PATCH 06/23] testsuite: Add Bugzilla reporter attribution to
+ goacc/pr93554.f90 [PR fortran/93554]
+
+Retrospective attribution header added as part of a manual
+Bugzilla-provenance audit on 2026-04-22 (meta-repo tracking commit
+40f0a94; GitHub issues on krystophny/gcc-dev).  The existing GCC
+Fortran testsuite convention (see pr113363.f90, pdt_50.f03,
+arrayio_4.f90) uses an in-file "! Contributed by ..." line; practice
+is inconsistent and attribution is not strictly required for small
+Bugzilla reducers, but we are adding it retroactively for provenance
+safety and completeness.  No behavioural change.
+
+Assisted-by: Claude (Anthropic)
+Assisted-by: GPT (OpenAI)
+
+	PR fortran/93554
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/goacc/pr93554.f90: Add reporter attribution header.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/testsuite/gfortran.dg/goacc/pr93554.f90 | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/gcc/testsuite/gfortran.dg/goacc/pr93554.f90 b/gcc/testsuite/gfortran.dg/goacc/pr93554.f90
+index 11a27db2623..b7bb03d4bd4 100644
+--- a/gcc/testsuite/gfortran.dg/goacc/pr93554.f90
++++ b/gcc/testsuite/gfortran.dg/goacc/pr93554.f90
+@@ -2,6 +2,7 @@
+ ! { dg-additional-options "-fopenacc" }
+ !
+ ! PR fortran/93554
++! Contributed by G. Steinmetz  <gscfq@t-online.de>
+ ! ICE in expand_oacc_for when a derived type with an allocatable
+ ! component is used with the private clause on an acc loop.
+ 
+-- 
+2.53.0
+

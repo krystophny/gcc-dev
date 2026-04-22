@@ -1,0 +1,44 @@
+From 141925351c77bc41ece40e4b5858cf7e5eebb98c Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Wed, 22 Apr 2026 12:28:01 +0200
+Subject: [PATCH 07/23] testsuite: Add Bugzilla reporter attribution to
+ pr93715.f90 [PR fortran/93715]
+
+Retrospective attribution header added as part of a manual
+Bugzilla-provenance audit on 2026-04-22 (meta-repo tracking commit
+40f0a94; GitHub issues on krystophny/gcc-dev).  The existing GCC
+Fortran testsuite convention (see pr113363.f90, pdt_50.f03,
+arrayio_4.f90) uses an in-file "! Contributed by ..." line; practice
+is inconsistent and attribution is not strictly required for small
+Bugzilla reducers, but we are adding it retroactively for provenance
+safety and completeness.  No behavioural change.
+
+Assisted-by: Claude (Anthropic)
+Assisted-by: GPT (OpenAI)
+
+	PR fortran/93715
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/pr93715.f90: Add reporter attribution header.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/testsuite/gfortran.dg/pr93715.f90 | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/gcc/testsuite/gfortran.dg/pr93715.f90 b/gcc/testsuite/gfortran.dg/pr93715.f90
+index 5dba371bea5..6c4ceee80f7 100644
+--- a/gcc/testsuite/gfortran.dg/pr93715.f90
++++ b/gcc/testsuite/gfortran.dg/pr93715.f90
+@@ -2,6 +2,7 @@
+ ! { dg-options "-fcoarray=single" }
+ !
+ ! PR fortran/93715
++! Contributed by G. Steinmetz  <gscfq@t-online.de>
+ ! A scalar coarray used in asynchronous I/O caused an ICE in
+ ! gfc_trans_auto_array_allocation.
+ 
+-- 
+2.53.0
+

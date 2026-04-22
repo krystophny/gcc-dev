@@ -1,0 +1,44 @@
+From 946ac1bd7edeeb33c343c2221483422655c09dc8 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Wed, 22 Apr 2026 12:28:04 +0200
+Subject: [PATCH 18/23] testsuite: Add Bugzilla reporter attribution to
+ pr110877.f90 [PR fortran/110877]
+
+Retrospective attribution header added as part of a manual
+Bugzilla-provenance audit on 2026-04-22 (meta-repo tracking commit
+40f0a94; GitHub issues on krystophny/gcc-dev).  The existing GCC
+Fortran testsuite convention (see pr113363.f90, pdt_50.f03,
+arrayio_4.f90) uses an in-file "! Contributed by ..." line; practice
+is inconsistent and attribution is not strictly required for small
+Bugzilla reducers, but we are adding it retroactively for provenance
+safety and completeness.  No behavioural change.
+
+Assisted-by: Claude (Anthropic)
+Assisted-by: GPT (OpenAI)
+
+	PR fortran/110877
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/pr110877.f90: Add reporter attribution header.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/testsuite/gfortran.dg/pr110877.f90 | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/gcc/testsuite/gfortran.dg/pr110877.f90 b/gcc/testsuite/gfortran.dg/pr110877.f90
+index 4348ba0a0e3..5a994548ce6 100644
+--- a/gcc/testsuite/gfortran.dg/pr110877.f90
++++ b/gcc/testsuite/gfortran.dg/pr110877.f90
+@@ -1,6 +1,7 @@
+ ! { dg-do run }
+ !
+ ! PR fortran/110877
++! Contributed by townsend@astro.wisc.edu
+ ! Incorrect copy of allocatable component in polymorphic assignment
+ ! from an array dummy argument.
+ 
+-- 
+2.53.0
+
