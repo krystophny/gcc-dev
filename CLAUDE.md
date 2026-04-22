@@ -33,14 +33,19 @@ gcc-dev/                    # META-REPO (GitHub: krystophny/gcc-dev)
 - `origin` = github.com/krystophny/gcc (fork, safe to push)
 - `upstream` = gcc.gnu.org/git/gcc.git (NEVER push, use git send-email)
 
+The fork carries only `origin/master` tracking upstream. All patch work is
+stored as exported `.patch` files under `pr/<number>/` in this meta-repo;
+there are no persistent `pr*-fix` branches on the fork. Create a local
+branch off `upstream/master` for each fix, commit, export, and delete the
+branch once the patch file is in `pr/<number>/`.
+
 ```bash
-git -C gcc log upstream/master..origin/master --oneline  # patches on fork
 git -C gcc format-patch -1 HEAD -o ../pr/<number>/       # export patch
 ```
 
 Prefer standard Git workflows plus the `git gcc-*` helpers (`git gcc-verify`,
 `git gcc-commit-mklog`, `git gcc-mklog`, `git gcc-descr`, `git gcc-undescr`)
-over ad-hoc bookkeeping; keep fix work isolated via branches and worktrees.
+over ad-hoc bookkeeping.
 
 ## Quick Reference
 
@@ -93,23 +98,26 @@ testcase rather than a license-unclear one. Full rules in
 
 ## Current Patch Status
 
-**On origin (individual branches + integration branch `openacc`):**
+Active patches live as exported `.patch` files under `pr/<number>/` in this
+meta-repo. See `pr/<number>/README.md` and `pr/<number>/status.json` for the
+current state (on-bugzilla / on-mailing-list / merged), and
+`pr/backport-matrix.md` for backport coverage.
 
-| PR | Branch | Description |
-|----|--------|-------------|
-| 79524 | `pr79524-fix` | Fix heap-use-after-free in resolve_charlen |
-| 85352 | `pr85352-fix` | Fix bogus reject of ENTRY specification expressions |
-| 93715 | `pr93715-fix` | Fix ICE in gfc_trans_auto_array_allocation for scalar coarray |
-| 93814 | `pr93814-fix` | Fix ICE in build_entry_thunks with CHARACTER bind(c) ENTRY |
-| 94978 | `pr94978-fix` | Fix bogus array-out-of-bounds warning in do-loop |
-| 96986 | `pr96986-fix` | Fix false explicit-interface-required for ENTRY with volatile |
-| 102430 | `origin/master` | Reject array/allocatable LINEAR on DO |
-| 103367 | `pr103367-fix` | Fix ICE in gfc_conv_array_initializer with invalid index |
-| 109788 | `pr109788-fix` | Fix character SPREAD intrinsic descriptor specialization |
-| 123280+96080 | `pr123280-fix` | Fix acc_is_present for assumed-shape and pointers |
-| 103276 | `pr103276-fix` | Skip pointer mapping for pass-by-ref in ENTER/EXIT DATA |
-| 123252 | `pr123252-fix` | Map scalar fields on enter data for components |
-| 123282 | `pr123282-fix` | Fix OpenACC refcount for Fortran allocatable array descriptors |
+| PR | Description |
+|----|-------------|
+| 79524 | Fix heap-use-after-free in resolve_charlen |
+| 85352 | Fix bogus reject of ENTRY specification expressions |
+| 93715 | Fix ICE in gfc_trans_auto_array_allocation for scalar coarray |
+| 93814 | Fix ICE in build_entry_thunks with CHARACTER bind(c) ENTRY |
+| 94978 | Fix bogus array-out-of-bounds warning in do-loop |
+| 96986 | Fix false explicit-interface-required for ENTRY with volatile |
+| 102430 | Reject array/allocatable LINEAR on DO |
+| 103367 | Fix ICE in gfc_conv_array_initializer with invalid index |
+| 109788 | Fix character SPREAD intrinsic descriptor specialization |
+| 123280+96080 | Fix acc_is_present for assumed-shape and pointers |
+| 103276 | Skip pointer mapping for pass-by-ref in ENTER/EXIT DATA |
+| 123252 | Map scalar fields on enter data for components |
+| 123282 | Fix OpenACC refcount for Fortran allocatable array descriptors |
 
 **Merged upstream:** 32365, 82721, 90519, 92613, 95338, 96255, 100155, 100194,
 102459, 102596, 103139, 106946, 107721, 108382, 110877, 120286, 120723,

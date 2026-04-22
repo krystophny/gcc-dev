@@ -156,14 +156,19 @@ grep -q '^Signed-off-by: ' "$patch" \
 grep -q '^Assisted-by: ' "$patch" \
   || { echo "ERROR: exported patch missing Assisted-by trailer"; exit 1; }
 
-# 7. Push to fork
-git push origin pr<number>-fix
-
-# 8. Track in meta-repo
+# 7. Track in meta-repo (no push to fork)
 cd .. && git add pr/<number>/
 git commit -m "pr<number>: add patch"
 git push origin main
+
+# 8. Delete the local branch once the patch file is in pr/<number>/
+git -C gcc checkout master
+git -C gcc branch -D pr<number>-fix
 ```
+
+The fork (`origin` in `gcc/`) carries only `master`. Patch bodies live as
+`.patch` files in `pr/<number>/`; no persistent `pr*-fix` branches on the
+fork, so there's nothing to push there.
 
 **If `gcc-verify` rejects an incomplete hook-generated ChangeLog skeleton:**
 - Keep the mklog hook enabled, but switch from plain `git commit -F ...` to an
