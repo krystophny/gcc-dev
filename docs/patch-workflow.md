@@ -248,26 +248,6 @@ git push origin main
 - Do not generate a patch until both the automatic checker and the manual
   provenance review are complete.
 
-### When an in-file provenance header is required
-
-- **Not required** for Bugzilla reporter reducers written by the reporter
-  themselves.  The `! PR fortran/N` line plus the public Bugzilla URL already
-  traces the chain of custody.
-- **Required** when the testcase derives from external third-party material
-  (Fujitsu Compiler Test Suite, academic code, LAPACK/BLAS snippets, Boost
-  examples, other compilers' testsuites, etc.).  In this case add a single
-  `! Reduced from <origin> ...` / `! Copied from <origin> ...` line near the
-  top of the file naming the specific upstream file and, when applicable, the
-  intermediate reducer author.  Example (Fujitsu CTS via a Bugzilla reducer):
-
-  ```fortran
-  ! Reduced from github.com/fujitsu/compiler-test-suite Fortran/NNNN/NNNN_NNNN.f90
-  ! by David Binderman <dcb314@hotmail.com> via PR fortran/<PR> Comment #0.
-  ```
-- `check_testsuite_provenance.py` flags corpus matches against non-GNU
-  upstreams that lack such a header, so the rule is enforced automatically at
-  checker time.
-
 ## PR directory structure
 
 Each `pr/<number>/` contains:
