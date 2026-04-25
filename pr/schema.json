@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "GCC Fortran PR status",
+  "description": "Schema for pr/<n>/status.json. Written exclusively by `python3 scripts/gcc-workflow.py sync-metadata`.",
+  "type": "object",
+  "required": ["pr", "title", "bugzilla", "fix_status", "classification", "trunk", "backports", "updated_at"],
+  "additionalProperties": true,
+  "properties": {
+    "pr": {"type": "integer", "minimum": 1},
+    "title": {"type": "string", "minLength": 1},
+    "github_issue": {"type": ["integer", "null"]},
+    "fix_status": {"enum": ["open", "patch-ready", "merged", "worksforme"]},
+    "notes": {"type": "string"},
+    "updated_at": {"type": "string", "format": "date-time"},
+    "bugzilla": {
+      "type": "object",
+      "required": ["id", "url"],
+      "additionalProperties": true,
+      "properties": {
+        "id": {"type": "integer", "minimum": 1},
+        "url": {"type": "string", "pattern": "^https://gcc\\.gnu\\.org/bugzilla/show_bug\\.cgi\\?id=[0-9]+$"},
+        "summary": {"type": ["string", "null"]},
+        "status": {"type": ["string", "null"]},
+        "resolution": {"type": ["string", "null"]},
+        "keywords": {"type": "array", "items": {"type": "string"}},
+        "refreshed_at": {"type": "string"},
+        "last_synced_utc": {"type": "string"},
+        "lookup_error": {"type": "string"}
+      }
+    },
+    "classification": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "regression": {"type": "boolean"},
+        "severity": {"enum": ["accepts-invalid", "diagnostic", "ice-on-invalid", "ice-on-valid", "other", "rejects-valid", "runtime-crash", "wrong-code"]},
+        "validity_class": {"enum": ["invalid-code", "valid-code"]}
+      }
+    },
+    "trunk": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "branch": {"type": ["string", "null"]},
+        "commit": {"oneOf": [{"type": "null"}, {"type": "string", "pattern": "^[0-9a-f]{7,40}$"}]},
+        "patch": {"type": ["string", "null"]}
+      }
+    },
+    "backports": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "apply_mode": {"enum": ["evidence-only", "needs-adaptation", "needs-special-env", "not-affected", "unknown", "validated-targeted"]},
+          "full_suite": {"enum": ["clean", "fail", "manual-matrix", "not-run", "pass"]},
+          "targeted_tests": {"enum": ["fail", "manual-matrix", "not-run", "pass"]}
+        }
+      }
+    },
+    "validation": {"type": "object"},
+    "artifacts": {"type": "object"},
+    "submission_status": {"type": "object"}
+  }
+}

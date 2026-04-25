@@ -667,6 +667,68 @@ def load_status(pr_dir: Path) -> Dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+SCHEMA_PATH = PR_ROOT / "schema.json"
+BUGZILLA_STALE_DAYS = 14
+
+
+def _parse_iso8601(value: str) -> Optional[_dt.datetime]:
+    try:
+        return _dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def validate_status_files(
+    paths: List[Path],
+    stale_days: int = BUGZILLA_STALE_DAYS,
+    strict: bool = False,
+) -> int:
+    try:
+        import jsonschema  # type: ignore
+    except ImportError as exc:
+        raise WorkflowError(
+            "jsonschema is required for validate; install via `pacman -S python-jsonschema`"
+        ) from exc
+    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    validator = jsonschema.Draft7Validator(schema)
+    errors = 0
+    warnings = 0
+    now = _dt.datetime.now(UTC)
+
+    def soft(msg: str) -> None:
+        nonlocal errors, warnings
+        if strict:
+            print(f"error: {msg}")
+            errors += 1
+        else:
+            print(f"warn: {msg}")
+            warnings += 1
+
+    for pr_dir in paths:
+        status_path = pr_dir / "status.json"
+        if not status_path.exists():
+            continue
+        data = json.loads(status_path.read_text(encoding="utf-8"))
+        rel = status_path.relative_to(ROOT)
+        for err in sorted(validator.iter_errors(data), key=lambda e: list(e.path)):
+            location = "/".join(str(p) for p in err.path) or "<root>"
+            print(f"error: {rel}: {location}: {err.message}")
+            errors += 1
+        bz_id = data.get("bugzilla", {}).get("id")
+        pr_value = data.get("pr")
+        if bz_id != pr_value and not str(pr_dir.name).startswith(str(bz_id) + "-"):
+            soft(f"{rel}: bugzilla.id={bz_id} differs from pr={pr_value} (intentional? document in README)")
+        if data.get("fix_status") == "merged" and not data.get("trunk", {}).get("commit"):
+            soft(f"{rel}: fix_status=merged but trunk.commit is null")
+        last_sync = data.get("bugzilla", {}).get("last_synced_utc")
+        if last_sync:
+            ts = _parse_iso8601(last_sync)
+            if ts and (now - ts).days > stale_days:
+                soft(f"{rel}: bugzilla.last_synced_utc is {(now - ts).days}d old (>{stale_days}d)")
+    print(f"checked {len(paths)} status file(s); {errors} error(s), {warnings} warning(s)")
+    return 0 if errors == 0 else 1
+
+
 def write_json(path: Path, data: Dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -1529,6 +1591,20 @@ def parse_args() -> argparse.Namespace:
     p_mail.add_argument("--branch", default="trunk")
     p_mail.add_argument("--execute", action="store_true")
 
+    p_val = sub.add_parser("validate", help="Validate pr/<n>/status.json against pr/schema.json")
+    p_val.add_argument("prs", nargs="*", help="Optional PR subset")
+    p_val.add_argument(
+        "--stale-days",
+        type=int,
+        default=BUGZILLA_STALE_DAYS,
+        help=f"Warn when bugzilla.last_synced_utc is older than N days (default {BUGZILLA_STALE_DAYS})",
+    )
+    p_val.add_argument(
+        "--strict",
+        action="store_true",
+        help="Treat cross-field consistency warnings as errors",
+    )
+
     return parser.parse_args()
 
 
@@ -1562,6 +1638,12 @@ def main() -> int:
     if args.cmd == "submit-mail":
         submit_mail(args.pr, args.branch, args.execute)
         return 0
+    if args.cmd == "validate":
+        return validate_status_files(
+            status_pr_dirs(args.prs or None),
+            stale_days=args.stale_days,
+            strict=args.strict,
+        )
     raise WorkflowError(f"unknown command: {args.cmd}")
 
 
