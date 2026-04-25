@@ -81,6 +81,31 @@ Every commit on a patch branch requires:
 Full procedure and the `GCC_FORCE_MKLOG=1` commit recipe are in
 `docs/patch-workflow.md`.
 
+## Mailing-list reply etiquette
+
+GCC lists are interleaved / bottom-post only. Any reply drafted for
+`gcc@gcc.gnu.org`, `gcc-patches@gcc.gnu.org`, `fortran@gcc.gnu.org`, or
+`libstdc++@gcc.gnu.org` must:
+
+- Reply at the bottom (or interleaved). Never top-post.
+- Thread off the actual tail of the discussion (use the most recent
+  message's `Message-Id` as `In-Reply-To`) so the new reply lands at the
+  end of the thread instead of branching it.
+- Quote the **whole response thread**, not a trimmed snippet. Walk the
+  In-Reply-To chain back to the thread root and produce properly nested
+  `>` / `>>` / `>>>` quoting at each ancestor depth, with one
+  `On <date>, <author> wrote:` attribution line per level. Mailbox
+  providers that hide `In-Reply-To` headers (Exchange / EWS) require
+  reconstructing the chain by matching attribution lines and quoted text
+  in each message body before assembling the bottom-quote.
+- Plain text only, UTF-8, no HTML, no signatures past `-- \n`.
+- Keep the existing `Cc:` set intact (reply-all), with `gcc@gcc.gnu.org`
+  always retained for thread continuity.
+
+Save mailing-list replies as drafts in the user's Exchange Drafts and let
+the user review and send. Never send to a public list without explicit
+user permission for that specific message.
+
 ## Provenance Ground Rules
 
 Never copy anything verbatim into `gcc/` — not code, not tests, not
