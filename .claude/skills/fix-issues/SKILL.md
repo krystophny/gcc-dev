@@ -69,10 +69,10 @@ Use TaskCreate to track progress. Create a plan first with EnterPlanMode.
 
 ### Phase 2: Fix
 
-1. Create a branch in gcc/:
+1. Create a local branch in gcc/ off upstream/master:
    ```bash
-   git -C gcc checkout upstream/master
-   git -C gcc checkout -b pr<number>-fix
+   git -C gcc fetch upstream master
+   git -C gcc checkout -b pr<number>-fix upstream/master
    ```
 2. Implement the minimal fix
 3. Rebuild:
@@ -128,8 +128,12 @@ cd gcc && GCC_FORCE_MKLOG=1 GCC_MKLOG_ARGS='["-b", "fortran/<number>"]' \
 git gcc-verify HEAD
 git log -1 --format=%B | grep -q '^Signed-off-by: ' || echo "ERROR: missing Signed-off-by"
 git format-patch -1 HEAD -o ../pr/<number>/
-git push origin pr<number>-fix
+git checkout master
+git branch -D pr<number>-fix
 ```
+
+Patch work is stored as exported `.patch` files under `pr/<number>/`; no
+persistent `pr*-fix` branches on the fork.
 
 ### Phase 6: Post to Bugzilla
 

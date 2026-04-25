@@ -14,15 +14,17 @@ This runs: fetch, check-merged, close-merged, regressions, bugzilla-status.
 
 After running, interpret the output and:
 
-1. **Update CLAUDE.md** - Move newly merged PRs from the "Current Patch Status"
-   table to the "Merged upstream" list (comma-separated, sorted numerically).
-2. **Report untracked regressions** - List any Bugzilla regressions not yet
+1. **Report untracked regressions** - List any Bugzilla regressions not yet
    tracked as GitHub issues. If the user asks, create issues for them using:
    ```bash
    gh issue create --title "PR<number>: <summary>" --body "<bugzilla link>"
    ```
-3. **Report Bugzilla status changes** - Flag any issues where Bugzilla shows
+2. **Report Bugzilla status changes** - Flag any issues where Bugzilla shows
    RESOLVED/FIXED but the GitHub issue is still open.
+
+Per-PR state lives in `pr/<number>/status.json` and is owned by
+`scripts/gcc-workflow.py sync-metadata`. Do not hand-edit status fields in
+markdown.
 
 ## Composable Sub-tasks
 
@@ -36,15 +38,6 @@ The user may request individual steps:
 - **"find untracked regressions"** - Run `scripts/sync-issues.sh regressions`
 - **"close merged issues"** - Run `scripts/sync-issues.sh close-merged` (requires confirmation or `--yes`)
 - **"dry run close"** - Run `scripts/sync-issues.sh close-merged --dry-run`
-
-## CLAUDE.md Update Rules
-
-When updating the "Merged upstream" list in CLAUDE.md:
-
-- The list is a single comma-separated line of PR numbers, sorted numerically.
-- Remove the corresponding row from the "Current Patch Status" table.
-- Use `git -C gcc gcc-descr <hash>` to get the GCC revision tag for the
-  close comment if not already provided by the script output.
 
 ## Important
 
