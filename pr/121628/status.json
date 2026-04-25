@@ -82,7 +82,7 @@
       "-B",
       "gcc-build/gcc",
       "-c",
-      "pr/121628/121628.f90",
+      "pr/121628/reproducer.f90",
       "-o",
       "/dev/null"
     ],

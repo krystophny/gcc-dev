@@ -213,30 +213,16 @@ report what was checked — no shortcuts:
 Apply the same checklist to the embedded `gcc/` worktree before any
 fork push to `github.com/krystophny/gcc`.
 
-## Current Patch Status
+## Patch status — sources of truth
 
-Active patches live as exported `.patch` files under `pr/<number>/` in this
-meta-repo. See `pr/<number>/README.md` and `pr/<number>/status.json` for the
-current state (on-bugzilla / on-mailing-list / merged), and
-`pr/backport-matrix.md` for backport coverage.
+Per-PR state lives next to each patch; do not duplicate it here.
 
-| PR | Description |
-|----|-------------|
-| 79524 | Fix heap-use-after-free in resolve_charlen |
-| 85352 | Fix bogus reject of ENTRY specification expressions |
-| 93715 | Fix ICE in gfc_trans_auto_array_allocation for scalar coarray |
-| 93814 | Fix ICE in build_entry_thunks with CHARACTER bind(c) ENTRY |
-| 94978 | Fix bogus array-out-of-bounds warning in do-loop |
-| 96986 | Fix false explicit-interface-required for ENTRY with volatile |
-| 102430 | Reject array/allocatable LINEAR on DO |
-| 103367 | Fix ICE in gfc_conv_array_initializer with invalid index |
-| 109788 | Fix character SPREAD intrinsic descriptor specialization |
-| 123280+96080 | Fix acc_is_present for assumed-shape and pointers |
-| 103276 | Skip pointer mapping for pass-by-ref in ENTER/EXIT DATA |
-| 123252 | Map scalar fields on enter data for components |
-| 123282 | Fix OpenACC refcount for Fortran allocatable array descriptors |
-
-**Merged upstream:** 32365, 82721, 90519, 92613, 95338, 96255, 100155, 100194,
-102459, 102596, 103139, 106946, 107721, 108382, 110877, 120286, 120723,
-121472, 121475, 121628, 123868, 123943, 123947, 123949, 124208, 124235,
-124482, 124512, 124631, 124661, 124666, 124751
+- `pr/<number>/status.json` — machine-readable: `fix_status`,
+  `bugzilla.{status,resolution}`, `trunk.commit`, backports.
+- `pr/<number>/README.md` — human summary.
+- `pr/backport-matrix.{md,json}` — generated backport overview.
+- `docs/upstream-master-commits.md` — commits on GCC trunk authored by
+  the user, with mirror links and AI-assistance attribution.
+- Upstream `gcc/` worktree (`upstream/master`) — authoritative for
+  whether a patch landed; query with `git -C gcc log upstream/master
+  --grep PR<N>`.
