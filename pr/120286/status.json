@@ -65,10 +65,10 @@
   "title": "OpenMP frees privatized polymorphic pointer targets",
   "trunk": {
     "branch": null,
-    "commit": null,
+    "commit": "0438b22c04879ea743ebdb286708c76b5a039893",
     "patch": "0001-fortran-Preserve-scalar-class-pointers-in-OpenMP-pri.patch"
   },
-  "updated_at": "2026-04-14T07:52:19Z",
+  "updated_at": "2026-04-25T12:29:47Z",
   "validation": {
     "compile": [
       "gcc-build/gcc/gfortran",

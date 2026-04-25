@@ -62,10 +62,10 @@
   "title": "Fortran DO CONCURRENT Type-Spec Implementation",
   "trunk": {
     "branch": null,
-    "commit": null,
+    "commit": "5e62a23cc3a64fa0312ffa414fcd1aaba18baa02",
     "patch": "0001-fortran-Mark-type-spec-iterators-referenced.patch"
   },
-  "updated_at": "2026-04-14T07:53:07Z",
+  "updated_at": "2026-04-25T12:30:57Z",
   "validation": {
     "baseline": {
       "contains_any": [

@@ -64,10 +64,10 @@
   "title": "Deep Copy Reproducer",
   "trunk": {
     "branch": "archive/pr121628-c-version",
-    "commit": null,
-    "patch": "0001-c-version-replace-hash_set.patch"
+    "commit": "e0b70284cfac5b7a96f42e340b4c287fba7f8734",
+    "patch": "0001-fortran-Fix-deep-copy-of-recursive-allocatable-compo.patch"
   },
-  "updated_at": "2026-04-14T07:52:24Z",
+  "updated_at": "2026-04-25T12:29:47Z",
   "validation": {
     "baseline": {
       "contains_any": [

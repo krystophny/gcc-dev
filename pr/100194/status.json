@@ -62,10 +62,10 @@
   "title": "ICE in gfc_trans_create_temp_array with assumed-rank + contiguous",
   "trunk": {
     "branch": null,
-    "commit": null,
+    "commit": "b807851428512039bf827426e2143cc80d7c2463",
     "patch": "0001-fortran-Fix-ICE-in-gfc_trans_create_temp_array-for-a.patch"
   },
-  "updated_at": "2026-04-14T07:52:03Z",
+  "updated_at": "2026-04-25T12:30:57Z",
   "validation": {
     "baseline": {
       "contains_any": [

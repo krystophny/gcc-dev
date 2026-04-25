@@ -65,10 +65,10 @@
   "title": "Corrupted error message / ICE after duplicate type",
   "trunk": {
     "branch": null,
-    "commit": null,
+    "commit": "5cfaad50af7dc25f6174044cdc05ebd56b6c4e3c",
     "patch": "0001-fortran-Fix-ICE-after-rejected-CHARACTER-duplicate-d.patch"
   },
-  "updated_at": "2026-04-14T07:52:50Z",
+  "updated_at": "2026-04-25T12:29:47Z",
   "validation": {
     "baseline": {
       "contains_any": [

@@ -734,6 +734,26 @@ def write_json(path: Path, data: Dict[str, Any]) -> None:
     path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+BUGZILLA_DEDUP_SECONDS = 3600
+
+
+def _bugzilla_refresh_due(existing: Optional[Dict[str, Any]], force: bool) -> bool:
+    """True when a Bugzilla refresh should hit the network.
+
+    Skips the XML-RPC call if the existing entry was synced more recently
+    than BUGZILLA_DEDUP_SECONDS, unless the caller passed --force.
+    """
+    if force or not existing:
+        return True
+    last = existing.get("last_synced_utc")
+    if not last:
+        return True
+    ts = _parse_iso8601(last)
+    if not ts:
+        return True
+    return (_dt.datetime.now(UTC) - ts).total_seconds() >= BUGZILLA_DEDUP_SECONDS
+
+
 def bugzilla_lookup(pr: int) -> Dict[str, Any]:
     server = xmlrpc.client.ServerProxy(BUGZILLA_XMLRPC)
     response = server.Bug.get(
@@ -752,13 +772,56 @@ def bugzilla_lookup(pr: int) -> Dict[str, Any]:
     if not bugs:
         return {}
     bug = bugs[0]
+    now = timestamp()
     return {
         "summary": bug.get("summary"),
         "status": bug.get("status"),
         "resolution": bug.get("resolution"),
         "keywords": bug.get("keywords", []),
-        "refreshed_at": timestamp(),
+        "refreshed_at": now,
+        "last_synced_utc": now,
     }
+
+
+def find_trunk_commit(pr: int) -> Optional[str]:
+    """Search upstream/master for the canonical commit fixing PR<pr>.
+
+    Local-only: queries the embedded gcc/ worktree, never hits the
+    upstream git server. Run `git -C gcc fetch upstream master` separately
+    to refresh the local view.
+    """
+    git_dir = GCC_DIR / ".git"
+    if not GCC_DIR.exists() or not git_dir.exists():
+        return None
+    try:
+        proc = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(GCC_DIR),
+                "log",
+                "upstream/master",
+                "-E",
+                "--grep",
+                rf"\bPR{pr}\b",
+                "--format=%H",
+                "-n",
+                "1",
+                "--",
+                "gcc/fortran/",
+                "gcc/testsuite/gfortran.dg/",
+                "libgomp/",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        return None
+    if proc.returncode != 0:
+        return None
+    out = proc.stdout.strip()
+    return out or None
 
 
 def ensure_branch_matrix(existing: Optional[Dict[str, Any]]) -> Dict[str, Any]:
@@ -770,13 +833,18 @@ def ensure_branch_matrix(existing: Optional[Dict[str, Any]]) -> Dict[str, Any]:
     return matrix
 
 
-def build_status(pr_dir: Path, refresh_bugzilla: bool, existing: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+def build_status(
+    pr_dir: Path,
+    refresh_bugzilla: bool,
+    existing: Optional[Dict[str, Any]],
+    force_bugzilla: bool = False,
+) -> Dict[str, Any]:
     existing = existing or {}
     pr = int(pr_dir.name)
     readme = read_text(pr_dir / "README.md")
     bugzilla = parse_bugzilla(readme, pr)
     bugzilla_info = existing.get("bugzilla", {})
-    if refresh_bugzilla:
+    if refresh_bugzilla and _bugzilla_refresh_due(bugzilla_info, force_bugzilla):
         try:
             bugzilla_info = bugzilla_lookup(bugzilla)
         except Exception as exc:  # pragma: no cover - network-dependent
@@ -784,7 +852,11 @@ def build_status(pr_dir: Path, refresh_bugzilla: bool, existing: Optional[Dict[s
     patch_files = sorted(p.name for p in pr_dir.glob("0001-*.patch"))
     existing_trunk = existing.get("trunk", {})
     existing_classification = existing.get("classification", {})
-    trunk_commit = parse_trunk_commit(readme) or existing_trunk.get("commit")
+    trunk_commit = (
+        find_trunk_commit(bugzilla)
+        or parse_trunk_commit(readme)
+        or existing_trunk.get("commit")
+    )
     trunk_branch = parse_branch_name(readme) or existing_trunk.get("branch")
     existing_patch = existing_trunk.get("patch")
     fix_status = infer_fix_status(existing.get("fix_status"), bugzilla_info, patch_files)
@@ -825,7 +897,11 @@ def build_status(pr_dir: Path, refresh_bugzilla: bool, existing: Optional[Dict[s
     return metadata
 
 
-def sync_metadata(paths: List[Path], refresh_bugzilla: bool) -> None:
+def sync_metadata(
+    paths: List[Path],
+    refresh_bugzilla: bool,
+    force_bugzilla: bool = False,
+) -> None:
     for pr_dir in paths:
         readme = read_text(pr_dir / "README.md")
         if not parse_first_match(r"show_bug\.cgi\?id=(\d+)", readme):
@@ -835,7 +911,7 @@ def sync_metadata(paths: List[Path], refresh_bugzilla: bool) -> None:
         status_path = pr_dir / "status.json"
         if status_path.exists():
             existing = json.loads(status_path.read_text(encoding="utf-8"))
-        data = build_status(pr_dir, refresh_bugzilla, existing)
+        data = build_status(pr_dir, refresh_bugzilla, existing, force_bugzilla=force_bugzilla)
         write_json(status_path, data)
         print(f"updated {status_path.relative_to(ROOT)}")
 
@@ -1555,6 +1631,14 @@ def parse_args() -> argparse.Namespace:
     p_sync.add_argument("prs", nargs="*", help="PR numbers to sync; default all")
     p_sync.add_argument("--all", action="store_true", help="Sync all PR directories")
     p_sync.add_argument("--refresh-bugzilla", action="store_true", help="Refresh public Bugzilla metadata via XML-RPC")
+    p_sync.add_argument(
+        "--force-bugzilla",
+        action="store_true",
+        help=(
+            f"Bypass the {BUGZILLA_DEDUP_SECONDS}s refresh dedup floor "
+            "(use sparingly; one XML-RPC call per PR)"
+        ),
+    )
 
     p_scan = sub.add_parser("scan-regressions", help="Write the top-level regression backport matrix")
     p_scan.add_argument("prs", nargs="*", help="Optional PR subset")
@@ -1612,7 +1696,7 @@ def main() -> int:
     args = parse_args()
     if args.cmd == "sync-metadata":
         paths = pr_dirs(None if args.all or not args.prs else args.prs)
-        sync_metadata(paths, args.refresh_bugzilla)
+        sync_metadata(paths, args.refresh_bugzilla, force_bugzilla=args.force_bugzilla)
         return 0
     if args.cmd == "scan-regressions":
         scan_regressions(status_pr_dirs(args.prs or None))
