@@ -1,102 +1,87 @@
 # GCC Fortran Development
 
-Meta-repository for GCC Fortran frontend and libgomp development.
+Meta-repository for my work on the GCC Fortran frontend, libgomp, and
+libgfortran. Holds reproducers, exported `.patch` files, build scripts,
+provenance tooling, and per-PR notes; the GCC source itself lives in
+the embedded `gcc/` git repo (separate history).
 
-## Quick Start
+## Layout
+
+| Path | Contents |
+|------|----------|
+| `gcc/` | Upstream GCC source (separate repo, mirror at [krystophny/gcc](https://github.com/krystophny/gcc)) |
+| `gcc-build/` | Local development build (untracked) |
+| `pr/<number>/` | Reproducer, exported patch(es), README, machine-readable `status.json` |
+| `scripts/` | Build helpers, workflow automation, provenance scanners |
+| `docs/` | Workflow, build, bug-pattern and contribution documentation |
+
+## Quick start
 
 ```bash
-# Build local dev compiler
-cd gcc-build && make -j$(nproc)
+# rebuild after edits
+cd gcc-build/gcc && make -j$(nproc)
 
-# Test with GPU offload (requires /opt/gcc16)
-/opt/gcc16/bin/gfortran -fopenacc -foffload=nvptx-none test.f90
-LD_LIBRARY_PATH=/opt/gcc16/lib64 ./a.out
+# run the Fortran frontend testsuite
+make -j$(nproc) -k check-gfortran > /tmp/test.log 2>&1
+grep -cE "^FAIL|^XPASS" testsuite/gfortran/gfortran.sum   # must be 0 new
+
+# run the libgomp Fortran runtime tests
+cd .. && make -j$(nproc) check-target-libgomp-fortran \
+    > /tmp/libgomp-fortran.log 2>&1
 ```
 
-## Structure
-
-| Directory | Purpose |
-|-----------|---------|
-| `gcc/` | GCC source (separate git repo) |
-| `gcc-build/` | Local development build |
-| `pr/` | Bug reproducers and patches |
-| `scripts/` | Build scripts for /opt/gcc16 |
-
-## Tracking Model
-
-Per-PR `README.md` files now keep only durable context:
-- Bugzilla link
-- GitHub issue link (when one exists)
-- technical notes such as root cause, reproducer shape, and fix strategy
-
-Live workflow state lives in GitHub issues and structured metadata:
-- GitHub issues: current merge / patch / review status
-- `pr/<number>/status.json`: machine-readable local workflow state
-- `pr/backport-matrix.{md,json}`: generated branch/backport overview
+Single test: `make check-gfortran RUNTESTFLAGS="dg.exp=pr<N>.f90"`.
 
 ## Documentation
 
-- [CLAUDE.md](CLAUDE.md) - Complete development guide
-- [pr/README.md](pr/README.md) - PR tracking overview
-- [pr/regression-status.md](pr/regression-status.md) - Current Fortran regression summary
-- [pr/backport-matrix.md](pr/backport-matrix.md) - Regression backport status
-- [docs/gcc-trunk-contributor-stats-2026.md](docs/gcc-trunk-contributor-stats-2026.md) - 2026 GCC-wide trunk contribution report
-- [docs/bugzilla-stats/2026-04-14-summary.json](docs/bugzilla-stats/2026-04-14-summary.json) - 1-year GCC/Fortran bug and regression snapshot
+- [docs/build-and-test.md](docs/build-and-test.md) — compilers, build configs,
+  check-gfortran, OpenACC offload, aarch64 VMs
+- [docs/patch-workflow.md](docs/patch-workflow.md) — triage, commit rules,
+  provenance, PR layout, GitHub issue labelling
+- [docs/upstream-submission.md](docs/upstream-submission.md) — Bugzilla CLI,
+  mailing-list submission, backport-aware workflow
+- [docs/bug-patterns.md](docs/bug-patterns.md) — catalogue of recurring
+  root-cause patterns with symptom / cause / fix / evidence
+- [docs/provenance-research.md](docs/provenance-research.md) — how to chase a
+  provenance finding from scanner hit to upstream introduction commit
+- [docs/upstream-master-commits.md](docs/upstream-master-commits.md) —
+  list of my commits currently on GCC `master`, with mirror links and
+  AI-assistance attribution
+- [CLAUDE.md](CLAUDE.md) — agent rules and project pointers
 
-## Provenance Audit
+## PR tracking
 
-Use the meta-repo provenance checker to rank testsuite files that look copied,
-adapted, or externally licensed without enough local attribution:
+State for each open PR lives next to it:
+
+- `pr/<number>/README.md` — durable context: Bugzilla / GitHub-issue link,
+  reproducer shape, root cause, fix strategy
+- `pr/<number>/status.json` — machine-readable workflow state
+- `pr/backport-matrix.{md,json}` — generated branch / backport overview
+- GitHub issues — current merge / patch / review status
+
+Backport, packet rendering and submission helpers all run through
+`python3 scripts/gcc-workflow.py ...`; see
+[docs/upstream-submission.md](docs/upstream-submission.md).
+
+## Provenance audit
+
+Rank testsuite files that look copied, adapted, or externally licensed
+without enough local attribution:
 
 ```bash
 make provenance-check
-python3 scripts/check_testsuite_provenance.py --top 100 --json /tmp/provenance.json
-python3 scripts/check_testsuite_provenance.py --include-testsuites --scope all --top 100 --json /tmp/provenance-tests-all.json
+python3 scripts/check_testsuite_provenance.py --top 100 \
+    --json /tmp/provenance.json
+python3 scripts/check_testsuite_provenance.py \
+    --include-testsuites --scope all --top 100 \
+    --json /tmp/provenance-tests-all.json
 ```
 
-By default the checker reviews tests that are part of the local patch, so new
-or modified tests contributed by us are still checked. Whole inherited
-testsuites remain excluded unless `--include-testsuites` is passed. With
-`--include-testsuites --scope all`, the checker performs a whole-tree
-historical audit.
+Manifest entries in `.provenance/testsuites.toml` mark reviewed files as
+`false_positive`, `accepted_external`, `project_policy`, or
+`needs_local_license`.
 
-It scores external-origin clues, nearby license files, SPDX/GNU metadata, and
-optional reviewed path rules from `.provenance/testsuites.toml`.
-
-Manifest entries can mark reviewed files as:
-- `false_positive`: reviewed and suppressed from the default report
-- `accepted_external`: external content with an adequate attribution trail
-- `project_policy`: inherited tests accepted by GCC testsuite policy and suppressed by default
-- `needs_local_license`: real external content that still needs cleaner local attribution or license placement
-
-## Backport Workflow
-
-Structured PR metadata now lives in `pr/<number>/status.json`.
-Generated maintainer packets live under `pr/<number>/submission/`, and
-branch-specific backport state lives under `pr/<number>/backports/`.
-
-```bash
-# Seed or refresh structured metadata
-python3 scripts/gcc-workflow.py sync-metadata --all
-
-# Push current workflow state into linked GitHub issues
-python3 scripts/gcc-workflow.py sync-issues --all
-
-# Regenerate maintainer packets for regression PRs
-python3 scripts/gcc-workflow.py render-packet --all --regressions
-
-# Write the top-level regression/backport matrix
-python3 scripts/gcc-workflow.py scan-regressions
-
-# Prepare and run branch applicability checks
-python3 scripts/gcc-workflow.py branch-check --branches gcc-15,gcc-14,gcc-13
-
-# Dry-run upstream submission for a generated packet
-python3 scripts/gcc-workflow.py submit-bugzilla 120723 --branch trunk
-python3 scripts/gcc-workflow.py submit-mail 120723 --branch gcc-15
-```
-
-## Installed Compilers
+## Installed compilers
 
 | Path | Description |
 |------|-------------|
@@ -106,5 +91,6 @@ python3 scripts/gcc-workflow.py submit-mail 120723 --branch gcc-15
 ## Links
 
 - [GCC Bugzilla](https://gcc.gnu.org/bugzilla/)
-- [GitHub Issues](https://github.com/krystophny/gcc-dev/issues)
-- [GCC Fortran Mailing List](https://gcc.gnu.org/mailman/listinfo/fortran)
+- [GCC Fortran mailing list](https://gcc.gnu.org/mailman/listinfo/fortran)
+- [GitHub issues](https://github.com/krystophny/gcc-dev/issues)
+- [krystophny/gcc mirror](https://github.com/krystophny/gcc)
