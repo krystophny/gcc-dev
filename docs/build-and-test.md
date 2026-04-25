@@ -5,7 +5,7 @@
 ### Offload Build (gcc-offload-build/install)
 
 Full GCC 16 with NVPTX offload support for OpenACC/OpenMP GPU testing.
-Built by `scripts/build_gcc16_nvptx.sh`, installs into `gcc-offload-build/install/`.
+Built by `scripts/build-gcc16-nvptx.sh`, installs into `gcc-offload-build/install/`.
 
 ```bash
 OFFLOAD=$PWD/gcc-offload-build/install

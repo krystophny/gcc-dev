@@ -151,6 +151,6 @@ mkdir -p "${accel_build}" "${host_build}"
 (cd "${host_build}" && log gcc16_host_install make install)
 
 if [[ "${do_smoke}" == "1" ]]; then
-  "${root_dir}/scripts/openacc_nvptx_smoke.sh"
-  "${root_dir}/scripts/openmp_nvptx_smoke.sh"
+  "${root_dir}/scripts/openacc-nvptx-smoke.sh"
+  "${root_dir}/scripts/openmp-nvptx-smoke.sh"
 fi
