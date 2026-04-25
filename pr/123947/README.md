@@ -18,8 +18,10 @@ generation ping-pong in mutually recursive type graphs.
 
 ## Reproducers
 
-- `pr/123947/attachment-63564-full.f90` (Bugzilla full testcase)
-- `pr/123947/attachment-63567-mre.f90` (Bugzilla reduced testcase)
+- Bugzilla full and reduced testcases (attachments 63564, 63567): see
+  https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123947 (not redistributed
+  here - external content with no license grant; download directly).
+- `pr/123947/reproducer.f90` (local reproducer)
 - `pr/123947/reproducer-reduced.f90` (local reduced testcase)
 - Local verification-only (not added 1:1 to testsuite):
   `/tmp/pr123947_local_0583_variant.f90`

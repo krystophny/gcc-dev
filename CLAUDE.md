@@ -139,6 +139,80 @@ reuse. If you cannot rewrite cleanly, ship the code fix without a
 testcase rather than a license-unclear one. Full rules in
 `docs/patch-workflow.md` under "Provenance review".
 
+## Meta-repo external-content policy
+
+This meta-repo is GPL-3.0-or-later (`LICENSE`). Track only:
+
+- The user's own work (patches, reproducers, notes, scripts, docs).
+- Download/fetch scripts and TOML configs that point at canonical upstream
+  sources (e.g. `scripts/provenance/fetch_corpus.sh`,
+  `.provenance/corpus-sources.toml`). External code itself is fetched into
+  gitignored `corpusbin/`, `gcc/`, `third_party/` and never committed.
+
+Forbidden in tracked content:
+
+- Verbatim Bugzilla page scrapes (`bugzilla.txt` HTML/text dumps). The GCC
+  Bugzilla and mailing-list archives carry no explicit license grant for
+  user-submitted content (see gcc.gnu.org/contribute, /bugs, /lists);
+  redistribution outside GCC is legally ambiguous, and a logged-in scrape
+  also leaks the user's own email in the page header. Link to the
+  Bugzilla URL instead.
+- Direct Bugzilla attachments stored under their attachment-id name
+  (`attachment-NNNNN-*.f90`). Same reason. Either rewrite as a local
+  reduction (the user's own work, GPL) or link to the Bugzilla URL.
+- Mailing-list message bodies copied wholesale. Quote only the minimum
+  needed for context; otherwise link to the pipermail/inbox URL.
+
+Allowed external content:
+
+- Files derived from a permissively-licensed upstream that explicitly
+  permits redistribution (Apache-2.0, BSD, MIT, Boost, Fujitsu CTS's
+  Apache-2.0 WITH LLVM-exception). These must carry an in-file provenance
+  header naming the exact upstream file, project URL, license, and the
+  intermediary (e.g. Bugzilla reporter who reduced it). Pattern:
+
+  ```
+  ! Reduced from github.com/fujitsu/compiler-test-suite Fortran/0413/0413_0003.f90
+  ! by David Binderman <dcb314@hotmail.com> via PR fortran/123949 Comment #0.
+  ! Fujitsu CTS is Apache-2.0 WITH LLVM-exception (GPL-3-compatible).
+  ```
+
+When in doubt, drop the file and keep only the user's own reduction.
+
+### Pre-push checklist (mandatory before every push to `origin`)
+
+This repo is public on GitHub. Treat every push as final publication.
+Before `git push` (or `git push --force`), explicitly walk this list and
+report what was checked — no shortcuts:
+
+1. `git diff --stat origin/main...HEAD` — review every path being added
+   or modified. For each file, confirm it is the user's own work, an
+   allowed permissively-licensed derivative with proper provenance
+   header, or a link/script to external content.
+2. `git diff origin/main...HEAD -- '*.txt' '*.md' '*.f90' '*.f' '*.for'
+   '*.c' '*.cc' '*.h' '*.patch'` — scan diffs for verbatim Bugzilla
+   page scrapes (`Log out <email>`, `[reply] [-]Comment N`,
+   `attachment-NNNNN`), verbatim mailing-list bodies, raw Bugzilla
+   attachment filenames, or external testcases without a provenance
+   header.
+3. `git ls-files | xargs grep -lE 'attachment-[0-9]+' && git ls-files |
+   xargs grep -l 'Log out '` — must return empty.
+4. Secret scan: `git diff origin/main...HEAD | grep -iE
+   '(api[_-]?key|api[_-]?token|secret[_-]?key|password|BEGIN (RSA|
+   OPENSSH|PGP|EC) PRIVATE|ghp_|glpat-|sk-)'` — must be empty.
+5. Personal-data scan: search the diff for non-user emails and decide
+   per-occurrence whether the email is already public via GCC
+   convention (`Contributed by <reporter>` lines, Signed-off-by
+   trailers, ChangeLog Co-authored-by) or a leak.
+6. If anything fails: stop, fix in a new commit (or amend if the
+   problem commit is local-only), re-run the checklist, then push.
+7. Force-push (`--force-with-lease`): in addition to 1-6, confirm the
+   history rewrite scope with the user before pushing. Do not force-
+   push without explicit user authorization for that specific push.
+
+Apply the same checklist to the embedded `gcc/` worktree before any
+fork push to `github.com/krystophny/gcc`.
+
 ## Current Patch Status
 
 Active patches live as exported `.patch` files under `pr/<number>/` in this

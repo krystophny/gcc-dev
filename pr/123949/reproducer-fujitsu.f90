@@ -1,3 +1,6 @@
+! Reduced from github.com/fujitsu/compiler-test-suite Fortran/0413/0413_0003.f90
+! by David Binderman <dcb314@hotmail.com> via PR fortran/123949 Comment #0.
+! Fujitsu CTS is Apache-2.0 WITH LLVM-exception (GPL-3-compatible).
 module m1
 integer(8),parameter::n=2147483648_8+100_8
  type x8(k)
