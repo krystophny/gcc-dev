@@ -1,0 +1,26 @@
+name: meta
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        # The embedded gcc/ tree is a separate repo and not present here;
+        # validate only reads the committed pr/<n>/status.json files, so
+        # find_trunk_commit's GCC-worktree probe is a no-op in CI.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: install jsonschema
+        run: pip install --quiet jsonschema
+      - name: make check-meta
+        # Local-only: validate JSON Schema, scan for orphan status docs,
+        # warn on stale snapshot dates. No Bugzilla XML-RPC, no upstream
+        # git fetch, no GitHub API calls beyond the checkout.
+        run: make check-meta

@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# Local guard before pushing to origin. Implements the CLAUDE.md
+# pre-push checklist as a runnable hook. Local-only: never queries
+# upstream Bugzilla, GCC git, or GitHub. Install via `make install-hooks`.
+#
+# Bypass with `git push --no-verify` only when explicitly authorized;
+# CLAUDE.md forbids --no-verify by default.
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+remote="${1:-origin}"
+fail=0
+
+step() { printf '\n[pre-push] %s\n' "$*"; }
+
+step "make check-meta"
+if ! make check-meta; then
+    fail=1
+fi
+
+step "scan tracked files for forbidden Bugzilla scrape patterns"
+hits="$(git ls-files | xargs -r grep -lE 'attachment-[0-9]{3,}|Log out [^ ]+@' 2>/dev/null \
+        | grep -vE '^(CLAUDE\.md|AGENTS\.md|GEMINI\.md|docs/patch-workflow\.md|docs/provenance-research\.md)$' \
+        || true)"
+if [[ -n "$hits" ]]; then
+    echo "error: forbidden scrape pattern in tracked file(s):"
+    printf '  %s\n' $hits
+    fail=1
+fi
+
+step "secret scan over commits being pushed"
+range="$(git rev-parse "${remote}/main")...HEAD"
+if ! git rev-parse --verify "${remote}/main" >/dev/null 2>&1; then
+    range="HEAD~20..HEAD"
+fi
+secret_hits="$(git diff "$range" 2>/dev/null \
+        | grep -iE '(api[_-]?key|api[_-]?token|secret[_-]?key|password[[:space:]]*=|BEGIN (RSA|OPENSSH|PGP|EC) PRIVATE|ghp_[A-Za-z0-9]{20,}|glpat-[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9]{20,})' \
+        || true)"
+if [[ -n "$secret_hits" ]]; then
+    echo "error: possible secret in diff against $range:"
+    echo "$secret_hits"
+    fail=1
+fi
+
+if [[ $fail -ne 0 ]]; then
+    echo
+    echo "[pre-push] refusing to push. Fix the issues above or use --no-verify"
+    echo "           (only with explicit user authorization per CLAUDE.md)."
+    exit 1
+fi
+echo "[pre-push] all checks passed"
