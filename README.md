@@ -89,13 +89,6 @@ Manifest entries in `.provenance/testsuites.toml` mark reviewed files as
 `false_positive`, `accepted_external`, `project_policy`, or
 `needs_local_license`.
 
-## Installed compilers
-
-| Path | Description |
-|------|-------------|
-| `/opt/gcc16` | GCC 16 with NVPTX offload (local patches) |
-| `/opt/gcc16-master` | Upstream master (no patches) |
-
 ## Links
 
 - [GCC Bugzilla](https://gcc.gnu.org/bugzilla/)
