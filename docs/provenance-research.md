@@ -1,5 +1,13 @@
 # Provenance Research Workflow
 
+> **Disclaimer.** Everything described in this document is a personal
+> research workflow over scanner output. Findings produced by the
+> workflow are working observations, not legal conclusions or
+> allegations against any contributor or project. See
+> [`../DISCLAIMER.md`](../DISCLAIMER.md). Severity tags, "silent" /
+> "marked" classifications, and chain-of-custody narratives are
+> heuristics, not legal judgements.
+
 How to investigate a single provenance finding — one issue, one file, one
 upstream match — from raw scanner hit to a defensible, documented chain of
 custody. Use this when a `provenance` GitHub issue (e.g. #121, #122, #126) is

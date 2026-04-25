@@ -5,6 +5,14 @@ libgfortran. Holds reproducers, exported `.patch` files, build scripts,
 provenance tooling, and per-PR notes; the GCC source itself lives in
 the embedded `gcc/` git repo (separate history).
 
+> **Notice.** This is a personal research and development meta-repo; it
+> is not affiliated with the GCC project or the FSF. Provenance notes,
+> scanner output, severity tags, and chain-of-custody narratives are
+> working observations, not legal conclusions or allegations against
+> any contributor or project. See [`DISCLAIMER.md`](DISCLAIMER.md) for
+> the no-warranty / non-liability terms and [`LICENSE`](LICENSE) for
+> the GPL-3.0-or-later license.
+
 ## Layout
 
 | Path | Contents |

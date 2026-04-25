@@ -1,9 +1,24 @@
 # Reviewed source-level provenance findings.
 #
-# Entries here are findings from scripts/provenance/scan_sources.py that a
-# human has investigated and resolved.  The scanner (in a follow-up commit)
-# will consume this file and suppress matching candidates on future runs so
-# that the noisy "already reviewed" tail does not re-fire.
+# IMPORTANT: every entry below is a personal working observation from a
+# string-similarity scanner plus a partial header inspection. Entries are
+# NOT findings of fact, NOT legal opinions, and NOT allegations of
+# copyright infringement, license violation, or any other wrongdoing
+# against any contributor, project, maintainer, or organisation named in
+# them.  Many scanner hits are false positives (sibling imports of a
+# common upstream, language-standard boilerplate, valid FSF copyright
+# assignment, in-tree LICENSE files at a different path, k-gram
+# collisions on Unicode tables, etc.).  Strong-tone phrases that occur in
+# rationale strings - "stripped", "dropped", "silent", "lacks attribution"
+# - describe scanner output, not the contributor's intent.  Severity tags
+# reflect personal prioritisation of follow-up work, not legal severity.
+#
+# See ../DISCLAIMER.md for the full no-warranty / non-liability terms.
+#
+# Entries here are scanner candidates that a human has reviewed and
+# resolved. The scanner consumes this file to suppress matching
+# candidates on future runs so that the noisy "already reviewed" tail
+# does not re-fire.
 #
 # Each entry must cite:
 #   path         - gcc/<subtree>/<file>
@@ -86,7 +101,7 @@ gofrontend/go/backend.h (Copyright 2011 The Go Authors, BSD-3-Clause)
 path = "gcc/gcc/rust/rust-diagnostics.cc"
 upstream = "gofrontend/go/go-diagnostics.cc"
 resolution = "open"
-rationale = "Ported from gccgo in 2022; author credit preserved ('Contributed by Than McIntosh, Google.') but Copyright/BSD license paragraph stripped. Same mitigation as #126 rust-backend.h: the Go Authors' BSD-3-Clause text is already shipped in gcc/gcc/go/gofrontend/LICENSE + gcc/libgo/LICENSE. Severity downgraded from high to medium 2026-04-20. Fix = restore Copyright Go Authors line alongside the existing McIntosh author credit (a68g-style)."
+rationale = "Ported from gccgo in 2022; author credit preserved ('Contributed by Than McIntosh, Google.') but the per-file Copyright/BSD paragraph from the gofrontend original is not present on the gccrs copy. Mitigation: the Go Authors' BSD-3-Clause text is already shipped in gcc/gcc/go/gofrontend/LICENSE + gcc/libgo/LICENSE so the subtree-level redistribution carries the notice. Severity downgraded from high to medium 2026-04-20. Suggested follow-up = restore the Copyright Go Authors line alongside the existing McIntosh credit (a68g-style)."
 issue = "https://github.com/krystophny/gcc-dev/issues/126"
 reviewed_on = "2026-04-20"
 reviewed_by = "krystophny"
@@ -97,8 +112,10 @@ BSD-3-Clause; author Than McIntosh, golang/gofrontend 57bf3f21005c)
      preserved verbatim)
   -> gccrs adaptation at gcc/rust/rust-diagnostics.cc, introduced
      2022-08-24 by Philip Herron in gcc-mirror fe6264fa28a3 ('wrappers
-     ported from reusing gccgo').  Author credit preserved, Copyright
-     and BSD license paragraph dropped.
+     ported from reusing gccgo').  Author credit preserved; the
+     per-file Copyright and BSD paragraph from the gofrontend original
+     is not present on the gccrs copy (subtree-level LICENSE files
+     under gcc/gcc/go/gofrontend/ + gcc/libgo/ do carry it).
 """
 
 [[reviewed]]
@@ -386,11 +403,12 @@ gnulib (or textutils/coreutils) as the donor.
 # himself in commit 2bcceb6fc59 (2021-01-21, Matthias Kretz <kretz@kde.org>,
 # "libstdc++: Add std::experimental::simd from the Parallelism TS 2").
 #
-# The GCC copy drops the BSD-3-Clause header and the GSI + Kretz copyright
-# line and carries only "Copyright (C) 2020-2026 Free Software Foundation,
-# Inc." under GPL-3+ with the GCC Runtime Library Exception.  That relicense
-# is legitimate under FSF copyright assignment, which GCC still required in
-# 2021.  Kretz continues to maintain the BSD mirror at VcDevel/std-simd.
+# The GCC copy does not carry the BSD-3-Clause header or the GSI + Kretz
+# copyright line and instead carries only "Copyright (C) 2020-2026 Free
+# Software Foundation, Inc." under GPL-3+ with the GCC Runtime Library
+# Exception. That relicense is legitimate under FSF copyright assignment,
+# which GCC still required in 2021. Kretz continues to maintain the BSD
+# mirror at VcDevel/std-simd.
 #
 # Classifier sees the upstream BSD header as "silent" (no FSF attribution) and
 # the GCC header as "marked" only weakly via the generic "This file is part of
