@@ -63,13 +63,18 @@ State for each open PR lives next to it:
 
 - `pr/<number>/README.md` — durable context: Bugzilla / GitHub-issue link,
   reproducer shape, root cause, fix strategy
-- `pr/<number>/status.json` — machine-readable workflow state
+- `pr/<number>/status.json` — machine-readable workflow state, schema
+  in `pr/schema.json`, written by `gcc-workflow.py sync-metadata`
 - `pr/backport-matrix.{md,json}` — generated branch / backport overview
 - GitHub issues — current merge / patch / review status
 
 Backport, packet rendering and submission helpers all run through
 `python3 scripts/gcc-workflow.py ...`; see
 [docs/upstream-submission.md](docs/upstream-submission.md).
+
+`make check-meta` validates the schema, scans for orphan status docs,
+and warns on stale snapshot dates. `make install-hooks` installs the
+pre-push hook that runs the same checks plus a secret/scrape scan.
 
 ## Provenance audit
 
