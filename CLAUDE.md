@@ -84,25 +84,42 @@ Full procedure and the `GCC_FORCE_MKLOG=1` commit recipe are in
 ## Mailing-list reply etiquette
 
 GCC lists (`gcc@gcc.gnu.org`, `gcc-patches@gcc.gnu.org`,
-`fortran@gcc.gnu.org`, `libstdc++@gcc.gnu.org`) are interleaved /
-bottom-post: the quoted thread is shown top-down (oldest first) and the
-new reply sits at the bottom. Always use the sloppy MCP `mail_reply`
-tool with `quote_style: "bottom_post"` — it formats the quoted parent
-and threading headers correctly out of the box. Do not hand-roll the
-quote with `mail_send` unless `mail_reply` cannot reach the message.
+`fortran@gcc.gnu.org`, `libstdc++@gcc.gnu.org`) want bottom-posted plain
+text: the **quoted thread comes first (top), the reply text goes
+underneath (below)**. Never top-post (reply on top, quote below) and
+never reply with only a trimmed snippet of the immediate parent — the
+**whole ancestor chain** must be visible above the new reply.
 
-Required behaviour for every drafted reply:
+Drafting procedure:
 
-- `mcp__sloppy__mail_reply`, `quote_style: "bottom_post"`, `draft_only: true`.
-- `message_id` = the **tail** of the discussion (the most recent message
-  in the thread), so the new reply lands at the end and does not branch
-  the thread.
-- `reply_all: true` to keep the existing `Cc:` set intact, including
-  `gcc@gcc.gnu.org` for thread continuity. If EWS rejects the
-  reply-all merge with `invalid address "X <X>"` (duplicated `Name
-  <addr>` form), fall back to `reply_all: false` plus explicit `to:` and
-  `cc:` lists rebuilt by hand from the original recipients.
-- Plain text only, UTF-8, no HTML, no signatures past `-- \n`.
+1. Use `mcp__sloppy__mail_reply` with `quote_style: "bottom_post"` for
+   the threading headers and the immediate-parent quote, **only when the
+   parent already preserves the full ancestor chain in its body**.
+   `mail_reply` does not walk the chain; it just quotes whichever body
+   the parent kept.
+2. When the parent has trimmed earlier ancestors (almost always the case
+   on long GCC threads), fall back to `mcp__sloppy__mail_send` with
+   `draft_only: true` and **hand-roll** the body:
+   - Reconstruct the linear `In-Reply-To` chain from leaf back to the
+     thread root by matching attribution lines (`On <date>, X wrote:`,
+     `Am <de-date> schrieb X:`) and first-quoted paragraphs across
+     `mail_message_get` bodies. EWS hides `In-Reply-To` headers so the
+     match-by-content walk is the only option.
+     A general-purpose subagent is well-suited to this.
+   - Emit each ancestor's full body with one extra `>` per nesting
+     level, plus an English `On <date>, <author> wrote:` attribution
+     line at the matching depth.
+   - Order top-down: quoted leaf first (depth 1), then progressively
+     older ancestors at depths 2, 3, …; the reply text is the only
+     unquoted block and sits at the very bottom.
+   - Set `in_reply_to` to the leaf message-id and pass a full
+     `references` chain root → leaf so the new reply lands at the tail
+     of the existing thread and does not branch it.
+3. Either way: plain text only, UTF-8, no HTML, no signatures past `-- \n`,
+   and keep `gcc@gcc.gnu.org` plus the original Cc set in `cc`. If
+   `reply_all: true` errors with `invalid address "X <X>"` (EWS's
+   duplicated `Name <addr>` form), supply `to`/`cc` explicitly and set
+   `reply_all: false`.
 
 Save mailing-list replies as drafts in the user's Exchange Drafts and
 let the user review and send. Never send to a public list without
