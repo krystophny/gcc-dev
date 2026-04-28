@@ -10,6 +10,8 @@ the rebuilt gfortran.  Extra arguments are appended to RUNTESTFLAGS, e.g.:
 
   scripts/check-fortran.sh dg.exp=pr42954-linux.f90
   scripts/check-fortran.sh gomp.exp
+
+Set GCC_TEST_JOBS to override the default parallel make job count.
 EOF
 }
 
@@ -66,6 +68,10 @@ log=$gcc_build/testsuite/gfortran/gfortran.log
 include_dir=$(find "$build_dir" -path '*/libgfortran/include' -type d | head -n 1)
 caf_lib_dir=$(find "$build_dir" -path '*/libgfortran/.libs' -type d | head -n 1)
 wrapper=${TMPDIR:-/tmp}/gcc-dev-gfortran-under-test.$$
+jobs=${GCC_TEST_JOBS:-}
+if [ -z "$jobs" ]; then
+  jobs=$(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)
+fi
 
 [ -x "$gfortran" ] || { echo "error: missing rebuilt compiler: $gfortran" >&2; exit 2; }
 [ -d "$testsuite_src" ] || { echo "error: missing testsuite source: $testsuite_src" >&2; exit 2; }
@@ -92,7 +98,7 @@ if [ -n "$extra_flags" ]; then
 fi
 
 set +e
-make -C "$gcc_build" -k check-fortran RUNTESTFLAGS="$runtest_flags"
+make -C "$gcc_build" -j"$jobs" -k check-fortran RUNTESTFLAGS="$runtest_flags"
 status=$?
 set -e
 

@@ -100,7 +100,8 @@ Use `scripts/check-fortran.sh` for GCC Fortran frontend tests in this
 meta-repo.  It creates a no-space `GFORTRAN_UNDER_TEST` wrapper for the
 rebuilt compiler and supplies the required testsuite source, libgfortran
 include, and CAF library paths.  Do not hand-roll these paths at the
-prompt.
+prompt.  The script runs the GCC test target in parallel by default;
+set `GCC_TEST_JOBS=<n>` to override the job count.
 
 Valid commands:
 
