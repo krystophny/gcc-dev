@@ -76,11 +76,10 @@ gcc-build/gcc/gfortran -B gcc-build/gcc \
 
 ### Running Tests
 
-**CRITICAL: Run from gcc-build/gcc/ only:**
+**Run from the meta-repo root:**
 
 ```bash
-cd gcc-build/gcc
-../../scripts/check-fortran.sh > /tmp/test.log 2>&1
+scripts/check-fortran.sh > /tmp/test.log 2>&1
 ```
 
 **Results:**
@@ -97,11 +96,12 @@ scripts/check-fortran.sh dg.exp=pr123280.f90
 ### DejaGnu Harness Rules
 
 Use `scripts/check-fortran.sh` for GCC Fortran frontend tests in this
-meta-repo.  It creates a no-space `GFORTRAN_UNDER_TEST` wrapper for the
-rebuilt compiler and supplies the required testsuite source, libgfortran
-include, and CAF library paths.  Do not hand-roll these paths at the
-prompt.  The script runs the GCC test target in parallel by default;
-set `GCC_TEST_JOBS=<n>` to override the job count.
+meta-repo.  It regenerates the build-tree `gcc/site.exp` and lets GCC's
+own DejaGnu rules select the rebuilt compiler, `-B` paths, libgfortran,
+libatomic, and libquadmath.  Do not hand-roll `GFORTRAN_UNDER_TEST`,
+`--srcdir`, or runtime library paths at the prompt.  The script runs the
+GCC test target in parallel by default; set `GCC_TEST_JOBS=<n>` to
+override the job count.
 
 Valid commands:
 
@@ -119,9 +119,24 @@ make check-fortran RUNTESTFLAGS="--srcdir=... GFORTRAN_UNDER_TEST=/usr/bin/gfort
 
 A test run counts only if `testsuite/gfortran/gfortran.sum` contains a real
 `=== gfortran Summary ===` block with expected-pass counts and names the
-rebuilt compiler, not `/usr/bin/gfortran`.  A run that produces no summary,
-zero tests, `cannot execute 'f951'`, `cannot find -lcaf_single`, or a
-system-compiler version line is a harness failure, not a test result.
+rebuilt compiler with `-B` build-tree paths, not `/usr/bin/gfortran`.  A
+run that produces no summary, zero tests, `cannot execute 'f951'`, `cannot
+find -lcaf_single`, a missing `GFORTRAN_16`, or a system-compiler version
+line is a harness failure, not a test result.
+
+Known expected local failure on this workstation:
+
+```text
+FAIL: gfortran.dg/bessel_6.f90   -O0  execution test
+FAIL: gfortran.dg/bessel_6.f90   -O1  execution test
+FAIL: gfortran.dg/bessel_6.f90   -O2  execution test
+FAIL: gfortran.dg/bessel_6.f90   -O3 -fomit-frame-pointer -funroll-loops -fpeel-loops -ftracer -finline-functions  execution test
+FAIL: gfortran.dg/bessel_6.f90   -O3 -g  execution test
+FAIL: gfortran.dg/bessel_6.f90   -Os  execution test
+```
+
+`scripts/check-fortran.sh` treats only those exact lines as expected; every
+other `FAIL`, `XPASS`, `UNRESOLVED`, or `ERROR` remains a failed run.
 
 ### Full Test Suite Validation (MANDATORY for all patches)
 

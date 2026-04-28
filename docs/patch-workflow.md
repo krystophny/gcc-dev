@@ -70,10 +70,11 @@ Proceed to the patch creation steps below.
 
 ### Step 4: Final validation (MANDATORY before posting)
 
-Every patch MUST pass ALL of the following test suites with zero new
-failing DejaGnu entries compared to baseline:
+Every patch MUST pass ALL of the following test suites with zero failing
+DejaGnu entries, except the documented local `bessel_6.f90` expected
+failure in `docs/build-and-test.md`:
 
-1. `scripts/check-fortran.sh` — Fortran frontend + gomp/goacc/goacc-gomp directories
+1. `scripts/check-fortran.sh` — Fortran frontend tests
 2. `check-target-libgomp-fortran` — libgomp Fortran runtime harnesses
 
 ```bash
@@ -114,7 +115,7 @@ git -C gcc checkout -b pr<number>-fix
 # 2. Make changes, rebuild, test
 cd gcc-build/gcc && make -j32
 ../../scripts/check-fortran.sh dg.exp=pr<number>.f90
-# The script creates the required no-space GFORTRAN_UNDER_TEST wrapper.
+# The script regenerates gcc/site.exp and uses GCC's build-tree harness.
 
 # 3. Stage changes
 git -C gcc add gcc/fortran/changed-file.cc
