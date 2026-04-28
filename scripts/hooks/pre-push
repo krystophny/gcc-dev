@@ -20,7 +20,9 @@ if ! make check-meta; then
 fi
 
 step "scan tracked files for forbidden Bugzilla scrape patterns"
-hits="$(git ls-files | xargs -r grep -lE 'attachment-[0-9]{3,}|Log out [^ ]+@' 2>/dev/null \
+attachment_re='attachment-''[0-9]{3,}'
+logout_re='Log'' out [^ ]+@'
+hits="$(git ls-files | xargs -r grep -lE "${attachment_re}|${logout_re}" 2>/dev/null \
         | grep -vE '^(CLAUDE\.md|AGENTS\.md|GEMINI\.md|docs/patch-workflow\.md|docs/provenance-research\.md)$' \
         || true)"
 if [[ -n "$hits" ]]; then

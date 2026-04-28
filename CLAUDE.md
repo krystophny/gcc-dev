@@ -52,13 +52,15 @@ Build trunk, rebuild after edits, and run the full validation suite:
 
 ```bash
 cd gcc-build/gcc && make -j32                                   # rebuild
-make -j32 -k check-gfortran > /tmp/test.log 2>&1                # frontend
+../../scripts/check-fortran.sh > /tmp/test.log 2>&1             # frontend
 grep -cE "^FAIL|^XPASS" testsuite/gfortran/gfortran.sum         # must be 0 new
 cd .. && make -j32 check-target-libgomp-fortran \
   > /tmp/libgomp-fortran.log 2>&1                               # runtime
 ```
 
-Single test: `make check-gfortran RUNTESTFLAGS="dg.exp=pr<N>.f90"`.
+Single test: `scripts/check-fortran.sh dg.exp=pr<N>.f90`.
+Do not hand-roll `GFORTRAN_UNDER_TEST`; the script creates the no-space
+wrapper and passes the required testsuite, include, and CAF library paths.
 
 Both suites must pass with zero new FAIL/XPASS before posting any patch. See
 `docs/build-and-test.md` for coverage details, OpenACC caveats, DejaGnu
@@ -72,9 +74,19 @@ and all read-only Bugzilla queries are fine. See
 `docs/upstream-submission.md` for the full list of tools and confirmation
 requirements.
 
+Every patch is **exactly one commit**.  Squash any work-in-progress or
+staged sub-commits before `git format-patch`; no `0001-..., 0002-...,
+0003-...` series for a single PR.  Two genuinely independent changes
+are two PRs and two `pr/<number>/` directories — one commit each.
+
 Every commit on a patch branch requires:
-- `-s` (Signed-off-by)
-- `Assisted-by:` trailer naming the model used
+- `-s` (Signed-off-by) at the very end of the message
+- `Assisted-by:` trailer naming the model used, placed in the body
+  immediately above the `	PR <component>/<n>` line — **not** at the
+  end of the message.  GCC's `gcc/contrib/gcc-changelog/git_commit.py`
+  does not recognize `assisted-by:` as an end-trailer, so end placement
+  fails `git gcc-verify`.  See `docs/patch-workflow.md` "Assisted-by
+  placement" for the full layout and rationale.
 - `git gcc-verify HEAD` passing
 - both trailers re-verified in the exported patch
 
@@ -191,12 +203,12 @@ report what was checked — no shortcuts:
    header, or a link/script to external content.
 2. `git diff origin/main...HEAD -- '*.txt' '*.md' '*.f90' '*.f' '*.for'
    '*.c' '*.cc' '*.h' '*.patch'` — scan diffs for verbatim Bugzilla
-   page scrapes (`Log out <email>`, `[reply] [-]Comment N`,
+   page scrapes (the Bugzilla logged-in header text, `[reply] [-]Comment N`,
    `attachment-NNNNN`), verbatim mailing-list bodies, raw Bugzilla
    attachment filenames, or external testcases without a provenance
    header.
 3. `git ls-files | xargs grep -lE 'attachment-[0-9]+' && git ls-files |
-   xargs grep -l 'Log out '` — must return empty.
+   xargs grep -l 'Log'' out '` — must return empty.
 4. Secret scan: `git diff origin/main...HEAD | grep -iE
    '(api[_-]?key|api[_-]?token|secret[_-]?key|password|BEGIN (RSA|
    OPENSSH|PGP|EC) PRIVATE|ghp_|glpat-|sk-)'` — must be empty.

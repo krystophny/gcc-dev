@@ -80,30 +80,60 @@ gcc-build/gcc/gfortran -B gcc-build/gcc \
 
 ```bash
 cd gcc-build/gcc
-make -j32 -k check-gfortran > /tmp/test.log 2>&1 &
+../../scripts/check-fortran.sh > /tmp/test.log 2>&1
 ```
 
 **Results:**
 ```bash
-grep -E "^FAIL|^XPASS" gcc-build/gcc/testsuite/gfortran/gfortran.sum
+grep -E "^(FAIL|XPASS|UNRESOLVED|ERROR):" \
+  gcc-build/gcc/testsuite/gfortran/gfortran.sum
 ```
 
 **Single test:**
 ```bash
-make check-gfortran RUNTESTFLAGS="dg.exp=pr123280.f90"
+scripts/check-fortran.sh dg.exp=pr123280.f90
 ```
+
+### DejaGnu Harness Rules
+
+Use `scripts/check-fortran.sh` for GCC Fortran frontend tests in this
+meta-repo.  It creates a no-space `GFORTRAN_UNDER_TEST` wrapper for the
+rebuilt compiler and supplies the required testsuite source, libgfortran
+include, and CAF library paths.  Do not hand-roll these paths at the
+prompt.
+
+Valid commands:
+
+```bash
+scripts/check-fortran.sh dg.exp=pr123280.f90
+scripts/check-fortran.sh > /tmp/check-fortran.log 2>&1
+```
+
+Invalid commands:
+
+```bash
+make check-gfortran RUNTESTFLAGS="GFORTRAN_UNDER_TEST='... -B...' dg.exp=pr123280.f90"
+make check-fortran RUNTESTFLAGS="--srcdir=... GFORTRAN_UNDER_TEST=/usr/bin/gfortran"
+```
+
+A test run counts only if `testsuite/gfortran/gfortran.sum` contains a real
+`=== gfortran Summary ===` block with expected-pass counts and names the
+rebuilt compiler, not `/usr/bin/gfortran`.  A run that produces no summary,
+zero tests, `cannot execute 'f951'`, `cannot find -lcaf_single`, or a
+system-compiler version line is a harness failure, not a test result.
 
 ### Full Test Suite Validation (MANDATORY for all patches)
 
-Every patch MUST pass the full `check-gfortran` test suite before being accepted.
+Every patch MUST pass the full Fortran frontend suite before being accepted.
 No partial passes. No skipped tests. Zero new failures.
 
 ```bash
-cd gcc-build/gcc && make -j32 -k check-gfortran > /tmp/test.log 2>&1
-grep -cE "^FAIL|^XPASS" testsuite/gfortran/gfortran.sum  # must be 0 new
+scripts/check-fortran.sh > /tmp/test.log 2>&1
+grep -cE "^(FAIL|XPASS|UNRESOLVED|ERROR):" \
+  gcc-build/gcc/testsuite/gfortran/gfortran.sum  # must be 0
 ```
 
-`check-gfortran` covers the frontend `gomp`, `goacc`, and `goacc-gomp`
+The frontend suite covers `gomp`, `goacc`, and `goacc-gomp`
 directories, but it does not cover the libgomp Fortran runtime harnesses.
 Before posting any patch, also run this from `gcc-build/`:
 
@@ -112,7 +142,7 @@ make -j32 check-target-libgomp-fortran > /tmp/libgomp-fortran.log 2>&1
 ```
 
 Treat any `FAIL` or `XPASS` in that runtime run as blocking, exactly like
-`check-gfortran`, and verify in the log that both
+the frontend suite, and verify in the log that both
 `libgomp.fortran/fortran.exp` and `libgomp.oacc-fortran/fortran.exp` ran.
 If either harness is missing, run it explicitly via `check-target-libgomp`
 before posting.
@@ -261,7 +291,7 @@ scripts/hcloud-vm.sh tail
 # Run a single test
 scripts/hcloud-vm.sh test pr123949.f90
 
-# Run full check-gfortran (in tmux)
+# Run full Fortran frontend checks (in tmux)
 scripts/hcloud-vm.sh check
 
 # Interactive SSH (with agent forwarding for GitHub)

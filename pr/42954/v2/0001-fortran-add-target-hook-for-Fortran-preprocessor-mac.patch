@@ -1,0 +1,967 @@
+From a81f949a9a61a47f1c6f13240c28330c4310f5fc Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Tue, 28 Apr 2026 06:46:07 +0200
+Subject: [PATCH] fortran: add target hook for Fortran preprocessor macros
+ [PR42954]
+
+gfortran -E -dM has emitted no target-identification macros since 2008
+because gcc/fortran/cpp.cc disabled TARGET_CPU_CPP_BUILTINS,
+TARGET_OS_CPP_BUILTINS, and TARGET_OBJFMT_CPP_BUILTINS.  Those target
+macros expand into C-family-only state on many targets, so calling them
+from the Fortran front end is not safe.
+
+Add a small Fortran target hook vector and call one hook from the Fortran
+preprocessor.  This keeps target-specific code out of gcc/fortran/cpp.cc
+and gives target maintainers a place to add Fortran-safe macros without
+using C-family helpers such as builtin_define_std.
+
+This first patch intentionally implements only a viable scaffold:
+Linux targets define the common Linux, Unix, and ELF reserved-namespace
+macros, and x86 targets add the basic architecture and float-size macros.
+Bare names such as linux and unix are not defined because they are valid
+Fortran identifiers.  CPU feature macros, non-x86 CPU hooks, and other
+operating systems are left for follow-up patches.
+
+The now-reachable __attribute__((target)) block in
+gomp/declare-variant-10.f90 is removed because gfortran has no
+__attribute__ syntax; it was previously compiled out only because
+__i386__ and __x86_64__ were never defined by gfortran.
+
+Assisted-by: Claude (Anthropic)
+
+	PR fortran/42954
+
+gcc/ChangeLog:
+
+	* Makefile.in (tm_f_file_list, tm_f_include_list): New
+	substitution variables.
+	(F_TARGET_DEF, F_TARGET_H): New.
+	(TM_F_H): New.
+	(tm_f.h, cs-tm_f.h): New rules.
+	(fortran/f-target-hooks-def.h, s-f-target-hooks-def-h): New rules.
+	(default-f.o): New rule.
+	(generated_files): Add $(TM_F_H) and fortran/f-target-hooks-def.h.
+	(s-tm-texi): Recognize fortran/f-target.def as a hook source.
+	(build/genhooks.o): Depend on $(F_TARGET_DEF).
+	* configure.ac: Compute tm_f_file_list and tm_f_include_list from
+	$tm_f_file; substitute both.
+	* configure: Regenerate.
+	* config.gcc (target_has_targetfm): Document and initialize.
+	(tm_f_file): New.
+	(fortran_target_objs): Add per-target Fortran objects, linux-f.o on
+	Linux targets, and default-f.o otherwise.
+	* config/default-f.cc: New file.
+	* config/i386/i386-f.cc: New file.
+	* config/i386/i386-f.h: New file.
+	* config/i386/t-i386 (i386-f.o): New rule.
+	* config/linux-f.cc: New file.
+	* config/t-linux (linux-f.o): New rule.
+	* doc/tm.texi.in (Fortran ABI parameters): Add
+	TARGET_F_CPP_BUILTINS.
+	* doc/tm.texi: Regenerate.
+	* genhooks.cc: Include fortran/f-target.def.
+	* hooks.cc (hook_void_cpp_reader): New function.
+	* hooks.h (hook_void_cpp_reader): Declare.
+
+gcc/fortran/ChangeLog:
+
+	* cpp.cc: Include tm_f.h and fortran/f-target.h.  Drop the local
+	TARGET_CPU_CPP_BUILTINS, TARGET_OS_CPP_BUILTINS,
+	TARGET_OBJFMT_CPP_BUILTINS, builtin_define, builtin_define_std, and
+	builtin_assert fallback macros.
+	(cpp_define_builtins): Call targetfm.f_cpp_builtins.
+	* f-target-def.h: New file.
+	* f-target.def: New file.
+	* f-target.h: New file.
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/gomp/declare-variant-10.f90: Drop dead
+	__attribute__((target)) block.
+	* gfortran.dg/pr42954-linux.f90: New test.
+	* gfortran.dg/pr42954-x86.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/Makefile.in                               | 31 +++++++-
+ gcc/config.gcc                                | 20 +++++
+ gcc/config/default-f.cc                       | 28 +++++++
+ gcc/config/i386/i386-f.cc                     | 78 +++++++++++++++++++
+ gcc/config/i386/i386-f.h                      | 25 ++++++
+ gcc/config/i386/t-i386                        |  4 +
+ gcc/config/linux-f.cc                         | 56 +++++++++++++
+ gcc/config/t-linux                            |  4 +
+ gcc/configure                                 | 19 ++++-
+ gcc/configure.ac                              | 13 ++++
+ gcc/doc/tm.texi                               | 14 ++++
+ gcc/doc/tm.texi.in                            |  7 ++
+ gcc/fortran/cpp.cc                            | 45 ++---------
+ gcc/fortran/f-target-def.h                    | 20 +++++
+ gcc/fortran/f-target.def                      | 44 +++++++++++
+ gcc/fortran/f-target.h                        | 32 ++++++++
+ gcc/genhooks.cc                               |  1 +
+ gcc/hooks.cc                                  |  5 ++
+ gcc/hooks.h                                   |  1 +
+ .../gfortran.dg/gomp/declare-variant-10.f90   |  3 -
+ gcc/testsuite/gfortran.dg/pr42954-linux.f90   | 33 ++++++++
+ gcc/testsuite/gfortran.dg/pr42954-x86.f90     | 11 +++
+ 22 files changed, 449 insertions(+), 45 deletions(-)
+ create mode 100644 gcc/config/default-f.cc
+ create mode 100644 gcc/config/i386/i386-f.cc
+ create mode 100644 gcc/config/i386/i386-f.h
+ create mode 100644 gcc/config/linux-f.cc
+ create mode 100644 gcc/fortran/f-target-def.h
+ create mode 100644 gcc/fortran/f-target.def
+ create mode 100644 gcc/fortran/f-target.h
+ create mode 100644 gcc/testsuite/gfortran.dg/pr42954-linux.f90
+ create mode 100644 gcc/testsuite/gfortran.dg/pr42954-x86.f90
+
+diff --git a/gcc/Makefile.in b/gcc/Makefile.in
+index 8ecef4ccdc7..dda02937dbc 100644
+--- a/gcc/Makefile.in
++++ b/gcc/Makefile.in
+@@ -613,6 +613,8 @@ tm_d_file_list=@tm_d_file_list@
+ tm_d_include_list=@tm_d_include_list@
+ tm_rust_file_list=@tm_rust_file_list@
+ tm_rust_include_list=@tm_rust_include_list@
++tm_f_file_list=@tm_f_file_list@
++tm_f_include_list=@tm_f_include_list@
+ tm_jit_file_list=@tm_jit_file_list@
+ tm_jit_include_list=@tm_jit_include_list@
+ build_xm_file_list=@build_xm_file_list@
+@@ -922,6 +924,7 @@ TCONFIG_H = tconfig.h $(xm_file_list)
+ TM_P_H    = tm_p.h    $(tm_p_file_list) $(TREE_H)
+ TM_D_H    = tm_d.h    $(tm_d_file_list)
+ TM_RUST_H = tm_rust.h $(tm_rust_file_list)
++TM_F_H    = tm_f.h    $(tm_f_file_list)
+ TM_JIT_H  = tm_jit.h    $(tm_jit_file_list)
+ GTM_H     = tm.h      $(tm_file_list) insn-constants.h
+ TM_H      = $(GTM_H) insn-flags.h $(OPTIONS_H)
+@@ -983,12 +986,14 @@ C_TARGET_DEF = c-family/c-target.def target-hooks-macros.h
+ COMMON_TARGET_DEF = common/common-target.def target-hooks-macros.h
+ D_TARGET_DEF = d/d-target.def target-hooks-macros.h
+ RUST_TARGET_DEF = rust/rust-target.def target-hooks-macros.h
++F_TARGET_DEF = fortran/f-target.def target-hooks-macros.h
+ JIT_TARGET_DEF = jit/jit-target.def target-hooks-macros.h
+ TARGET_H = $(TM_H) target.h $(TARGET_DEF) insn-modes.h insn-codes.h
+ C_TARGET_H = c-family/c-target.h $(C_TARGET_DEF)
+ COMMON_TARGET_H = common/common-target.h $(INPUT_H) $(COMMON_TARGET_DEF)
+ D_TARGET_H = d/d-target.h $(D_TARGET_DEF)
+ RUST_TARGET_H = rust/rust-target.h $(RUST_TARGET_DEF)
++F_TARGET_H = fortran/f-target.h $(F_TARGET_DEF)
+ JIT_TARGET_H = jit/jit-target.h $(JIT_TARGET_DEF)
+ MACHMODE_H = machmode.h mode-classes.def
+ HOOKS_H = hooks.h
+@@ -2137,6 +2142,7 @@ tm.h: cs-tm.h ; @true
+ tm_p.h: cs-tm_p.h ; @true
+ tm_d.h: cs-tm_d.h ; @true
+ tm_rust.h: cs-tm_rust.h ; @true
++tm_f.h: cs-tm_f.h ; @true
+ tm_jit.h: cs-tm_jit.h ; @true
+ 
+ cs-config.h: Makefile
+@@ -2177,6 +2183,11 @@ cs-tm_rust.h: Makefile
+ 	HEADERS="$(tm_rust_include_list)" DEFINES="" \
+ 	$(SHELL) $(srcdir)/mkconfig.sh tm_rust.h
+ 
++cs-tm_f.h: Makefile
++	TARGET_CPU_DEFAULT="" \
++	HEADERS="$(tm_f_include_list)" DEFINES="" \
++	$(SHELL) $(srcdir)/mkconfig.sh tm_f.h
++
+ cs-tm_jit.h: Makefile
+ 	TARGET_CPU_DEFAULT="" \
+ 	HEADERS="$(tm_jit_include_list)" DEFINES="" \
+@@ -2655,6 +2666,12 @@ default-rust.o: config/default-rust.cc
+ 	$(COMPILE) $<
+ 	$(POSTCOMPILE)
+ 
++# Files used by the Fortran language front end.
++
++default-f.o: config/default-f.cc
++	$(COMPILE) $<
++	$(POSTCOMPILE)
++
+ # Language-independent files.
+ 
+ DRIVER_DEFINES = \
+@@ -3001,6 +3018,15 @@ s-rust-target-hooks-def-h: build/genhooks$(build_exeext)
+ 					     rust/rust-target-hooks-def.h
+ 	$(STAMP) s-rust-target-hooks-def-h
+ 
++fortran/f-target-hooks-def.h: s-f-target-hooks-def-h; @true
++
++s-f-target-hooks-def-h: build/genhooks$(build_exeext)
++	$(RUN_GEN) build/genhooks$(build_exeext) "Fortran Target Hook" \
++					     > tmp-f-target-hooks-def.h
++	$(SHELL) $(srcdir)/../move-if-change tmp-f-target-hooks-def.h \
++					     fortran/f-target-hooks-def.h
++	$(STAMP) s-f-target-hooks-def-h
++
+ jit/jit-target-hooks-def.h: s-jit-target-hooks-def-h; @true
+ 
+ s-jit-target-hooks-def-h: build/genhooks$(build_exeext)
+@@ -3035,6 +3061,7 @@ s-tm-texi: build/genhooks$(build_exeext) $(srcdir)/doc/tm.texi.in
+ 	    || test $(srcdir)/doc/tm.texi -nt $(srcdir)/common/common-target.def \
+ 	    || test $(srcdir)/doc/tm.texi -nt $(srcdir)/d/d-target.def \
+ 	    || test $(srcdir)/doc/tm.texi -nt $(srcdir)/rust/rust-target.def \
++	    || test $(srcdir)/doc/tm.texi -nt $(srcdir)/fortran/f-target.def \
+ 	  ); then \
+ 	  echo >&2 ; \
+ 	  echo You should edit $(srcdir)/doc/tm.texi.in rather than $(srcdir)/doc/tm.texi . >&2 ; \
+@@ -3218,6 +3245,7 @@ generated_files = config.h tm.h $(TM_P_H) $(TM_D_H) $(TM_JIT_H) $(TM_H) \
+        gimple-match-auto.h generic-match-auto.h \
+        c-family/c-target-hooks-def.h d/d-target-hooks-def.h \
+        $(TM_RUST_H) rust/rust-target-hooks-def.h \
++       $(TM_F_H) fortran/f-target-hooks-def.h \
+        case-cfn-macros.h \
+        jit/jit-target-hooks-def.h case-cfn-macros.h \
+        cfn-operators.pd omp-device-properties.h
+@@ -3353,7 +3381,8 @@ build/genrecog.o : genrecog.cc $(RTL_BASE_H) $(BCONFIG_H) $(SYSTEM_H)	\
+   $(CORETYPES_H) $(GTM_H) errors.h $(READ_MD_H) $(GENSUPPORT_H)		\
+   $(HASH_TABLE_H) inchash.h
+ build/genhooks.o : genhooks.cc $(TARGET_DEF) $(C_TARGET_DEF)		\
+-  $(COMMON_TARGET_DEF) $(D_TARGET_DEF) $(RUST_TARGET_DEF) $(JIT_TARGET_DEF) \
++  $(COMMON_TARGET_DEF) $(D_TARGET_DEF) $(RUST_TARGET_DEF)		\
++  $(F_TARGET_DEF) $(JIT_TARGET_DEF)					\
+   $(BCONFIG_H) $(SYSTEM_H) errors.h
+ build/genmddump.o : genmddump.cc $(RTL_BASE_H) $(BCONFIG_H) $(SYSTEM_H)	\
+   $(CORETYPES_H) $(GTM_H) errors.h $(READ_MD_H) $(GENSUPPORT_H)
+diff --git a/gcc/config.gcc b/gcc/config.gcc
+index 8fe99616f82..7214670b1d2 100644
+--- a/gcc/config.gcc
++++ b/gcc/config.gcc
+@@ -216,6 +216,9 @@
+ #  target_has_targetrustm	Set to yes or no depending on whether the target
+ #			has its own definition of targetrustm.
+ #
++#  target_has_targetfm	Set to yes or no depending on whether the target
++#			has its own definition of targetfm.
++#
+ #  target_has_targetjitm	Set to yes or no depending on whether the target
+ #			has its own definition of targetjitm.
+ 
+@@ -241,6 +244,7 @@ target_has_targetcm=no
+ target_has_targetm_common=yes
+ target_has_targetdm=no
+ target_has_targetrustm=no
++target_has_targetfm=no
+ target_has_targetjitm=no
+ tm_defines=
+ xm_defines=
+@@ -642,6 +646,16 @@ then
+ 	rust_target_objs="${rust_target_objs} ${cpu_type}-rust.o"
+ fi
+ 
++tm_f_file=
++if test -f ${srcdir}/config/${cpu_type}/${cpu_type}-f.h
++then
++	tm_f_file="${cpu_type}/${cpu_type}-f.h"
++fi
++if test -f ${srcdir}/config/${cpu_type}/${cpu_type}-f.cc
++then
++	fortran_target_objs="${fortran_target_objs} ${cpu_type}-f.o"
++fi
++
+ tm_jit_file=
+ if test -f ${srcdir}/config/${cpu_type}/${cpu_type}-jit.h
+ then
+@@ -1009,6 +1023,8 @@ case ${target} in
+       target_has_targetdm=yes
+       rust_target_objs="${rust_target_objs} linux-rust.o"
+       target_has_targetrustm=yes
++      fortran_target_objs="${fortran_target_objs} linux-f.o"
++      target_has_targetfm=yes
+       ;;
+     *-*-kfreebsd*-gnu)
+       d_target_objs="${d_target_objs} kfreebsd-d.o"
+@@ -3791,6 +3807,10 @@ if [ "$target_has_targetrustm" = "no" ]; then
+   rust_target_objs="$rust_target_objs default-rust.o"
+ fi
+ 
++if [ "$target_has_targetfm" = "no" ]; then
++  fortran_target_objs="$fortran_target_objs default-f.o"
++fi
++
+ if [ "$target_has_targetjitm" = "no" ]; then
+   jit_target_objs="$jit_target_objs default-jit.o"
+ fi
+diff --git a/gcc/config/default-f.cc b/gcc/config/default-f.cc
+new file mode 100644
+index 00000000000..9968fbbe513
+--- /dev/null
++++ b/gcc/config/default-f.cc
+@@ -0,0 +1,28 @@
++/* Default Fortran target hook initializer.
++   Copyright (C) 2026 Free Software Foundation, Inc.
++
++GCC is free software; you can redistribute it and/or modify it under
++the terms of the GNU General Public License as published by the Free
++Software Foundation; either version 3, or (at your option) any later
++version.
++
++GCC is distributed in the hope that it will be useful, but WITHOUT ANY
++WARRANTY; without even the implied warranty of MERCHANTABILITY or
++FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
++for more details.
++
++You should have received a copy of the GNU General Public License
++along with GCC; see the file COPYING3.  If not see
++<http://www.gnu.org/licenses/>.  */
++
++/* Do not include tm.h or tm_p.h here; definitions needed by the target
++   architecture to initialize targetfm should instead be added to tm_f.h.  */
++
++#include "config.h"
++#include "system.h"
++#include "coretypes.h"
++#include "tm_f.h"
++#include "fortran/f-target.h"
++#include "fortran/f-target-def.h"
++
++struct gcc_targetfm targetfm = TARGETFM_INITIALIZER;
+diff --git a/gcc/config/i386/i386-f.cc b/gcc/config/i386/i386-f.cc
+new file mode 100644
+index 00000000000..1476a4e37a6
+--- /dev/null
++++ b/gcc/config/i386/i386-f.cc
+@@ -0,0 +1,78 @@
++/* x86 support needed only by the Fortran front end.
++   Copyright (C) 2026 Free Software Foundation, Inc.
++
++GCC is free software; you can redistribute it and/or modify
++it under the terms of the GNU General Public License as published by
++the Free Software Foundation; either version 3, or (at your option)
++any later version.
++
++GCC is distributed in the hope that it will be useful,
++but WITHOUT ANY WARRANTY; without even the implied warranty of
++MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++GNU General Public License for more details.
++
++You should have received a copy of the GNU General Public License
++along with GCC; see the file COPYING3.  If not see
++<http://www.gnu.org/licenses/>.  */
++
++#define IN_TARGET_CODE 1
++
++#include "config.h"
++#include "system.h"
++#include "coretypes.h"
++#include "tm.h"
++#include "cpplib.h"
++#include "tm_f.h"
++#include "memmodel.h"
++#include "tm_p.h"
++#include "fortran/f-target.h"
++
++/* Provide the x86 portion of TARGET_F_CPP_BUILTINS.  Mirrors the
++   architecture-identification and float-size portion of
++   ix86_target_macros in gcc/config/i386/i386-c.cc; ISA feature macros
++   (__SSE__, __AVX__, ...) and arch / tune macros (__haswell__,
++   __tune_*__) are intentionally out of scope and remain a follow-up
++   exercise.  Bare-namespace macros ("i386" without underscores) are
++   never emitted because they would clash with valid Fortran
++   identifiers.  */
++
++void
++ix86_f_cpu_cpp_builtins (cpp_reader *pfile)
++{
++  if (TARGET_64BIT)
++    {
++      cpp_assert (pfile, "cpu=x86_64");
++      cpp_assert (pfile, "machine=x86_64");
++      cpp_define (pfile, "__amd64");
++      cpp_define (pfile, "__amd64__");
++      cpp_define (pfile, "__x86_64");
++      cpp_define (pfile, "__x86_64__");
++      if (TARGET_X32)
++	{
++	  cpp_define (pfile, "_ILP32");
++	  cpp_define (pfile, "__ILP32__");
++	}
++    }
++  else
++    {
++      cpp_assert (pfile, "cpu=i386");
++      cpp_assert (pfile, "machine=i386");
++      cpp_define (pfile, "__i386");
++      cpp_define (pfile, "__i386__");
++      cpp_define (pfile, "_ILP32");
++      cpp_define (pfile, "__ILP32__");
++    }
++
++  if (!TARGET_80387)
++    cpp_define (pfile, "_SOFT_FLOAT");
++
++  if (TARGET_LONG_DOUBLE_64)
++    cpp_define (pfile, "__LONG_DOUBLE_64__");
++
++  if (TARGET_LONG_DOUBLE_128)
++    cpp_define (pfile, "__LONG_DOUBLE_128__");
++
++  cpp_define_formatted (pfile, "__SIZEOF_FLOAT80__=%d",
++			GET_MODE_SIZE (XFmode));
++  cpp_define (pfile, "__SIZEOF_FLOAT128__=16");
++}
+diff --git a/gcc/config/i386/i386-f.h b/gcc/config/i386/i386-f.h
+new file mode 100644
+index 00000000000..a87aff058df
+--- /dev/null
++++ b/gcc/config/i386/i386-f.h
+@@ -0,0 +1,25 @@
++/* Subroutines for the Fortran front end on the x86 architecture.
++   Copyright (C) 2026 Free Software Foundation, Inc.
++
++GCC is free software; you can redistribute it and/or modify
++it under the terms of the GNU General Public License as published by
++the Free Software Foundation; either version 3, or (at your option)
++any later version.
++
++GCC is distributed in the hope that it will be useful,
++but WITHOUT ANY WARRANTY; without even the implied warranty of
++MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++GNU General Public License for more details.
++
++You should have received a copy of the GNU General Public License
++along with GCC; see the file COPYING3.  If not see
++<http://www.gnu.org/licenses/>.  */
++
++#ifndef GCC_I386_F_H
++#define GCC_I386_F_H
++
++extern void ix86_f_cpu_cpp_builtins (cpp_reader *);
++
++#define TARGET_F_CPU_CPP_BUILTINS ix86_f_cpu_cpp_builtins
++
++#endif /* GCC_I386_F_H  */
+diff --git a/gcc/config/i386/t-i386 b/gcc/config/i386/t-i386
+index ae0fb8ed474..f231ad14841 100644
+--- a/gcc/config/i386/t-i386
++++ b/gcc/config/i386/t-i386
+@@ -50,6 +50,10 @@ i386-rust.o: $(srcdir)/config/i386/i386-rust.cc
+ 	$(COMPILE) $<
+ 	$(POSTCOMPILE)
+ 
++i386-f.o: $(srcdir)/config/i386/i386-f.cc
++	$(COMPILE) $<
++	$(POSTCOMPILE)
++
+ i386-jit.o: $(srcdir)/config/i386/i386-jit.cc
+ 	$(COMPILE) $<
+ 	$(POSTCOMPILE)
+diff --git a/gcc/config/linux-f.cc b/gcc/config/linux-f.cc
+new file mode 100644
+index 00000000000..190d33e9a47
+--- /dev/null
++++ b/gcc/config/linux-f.cc
+@@ -0,0 +1,56 @@
++/* Linux support needed only by the Fortran front end.
++   Copyright (C) 2026 Free Software Foundation, Inc.
++
++GCC is free software; you can redistribute it and/or modify it under
++the terms of the GNU General Public License as published by the Free
++Software Foundation; either version 3, or (at your option) any later
++version.
++
++GCC is distributed in the hope that it will be useful, but WITHOUT ANY
++WARRANTY; without even the implied warranty of MERCHANTABILITY or
++FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
++for more details.
++
++You should have received a copy of the GNU General Public License
++along with GCC; see the file COPYING3.  If not see
++<http://www.gnu.org/licenses/>.  */
++
++#include "config.h"
++#include "system.h"
++#include "coretypes.h"
++#include "tm.h"
++#include "cpplib.h"
++#include "tm_f.h"
++#include "fortran/f-target.h"
++#include "fortran/f-target-def.h"
++
++#ifndef TARGET_F_CPU_CPP_BUILTINS
++#define TARGET_F_CPU_CPP_BUILTINS(PFILE) ((void) (PFILE))
++#endif
++
++/* Implement TARGET_F_CPP_BUILTINS for Linux targets.  This intentionally
++   covers only target-identity macros; option-dependent CPU feature macros
++   can be added by target maintainers in follow-up patches.  */
++
++static void
++linux_f_cpp_builtins (cpp_reader *pfile)
++{
++  TARGET_F_CPU_CPP_BUILTINS (pfile);
++
++  if (OPTION_GLIBC)
++    cpp_define (pfile, "__gnu_linux__");
++  cpp_define (pfile, "__linux__");
++  cpp_define (pfile, "__linux");
++  cpp_define (pfile, "__unix__");
++  cpp_define (pfile, "__unix");
++  cpp_assert (pfile, "system=linux");
++  cpp_assert (pfile, "system=unix");
++  cpp_assert (pfile, "system=posix");
++
++  cpp_define (pfile, "__ELF__");
++}
++
++#undef TARGET_F_CPP_BUILTINS
++#define TARGET_F_CPP_BUILTINS linux_f_cpp_builtins
++
++struct gcc_targetfm targetfm = TARGETFM_INITIALIZER;
+diff --git a/gcc/config/t-linux b/gcc/config/t-linux
+index 238f1f074ce..b639b78b41f 100644
+--- a/gcc/config/t-linux
++++ b/gcc/config/t-linux
+@@ -27,3 +27,7 @@ linux-d.o: $(srcdir)/config/linux-d.cc
+ linux-rust.o: $(srcdir)/config/linux-rust.cc
+ 	  $(COMPILE) $<
+ 	  $(POSTCOMPILE)
++
++linux-f.o: $(srcdir)/config/linux-f.cc
++	  $(COMPILE) $<
++	  $(POSTCOMPILE)
+diff --git a/gcc/configure b/gcc/configure
+index ef780a23c2f..402a68100af 100755
+--- a/gcc/configure
++++ b/gcc/configure
+@@ -662,6 +662,8 @@ xm_include_list
+ xm_file_list
+ tm_jit_include_list
+ tm_jit_file_list
++tm_f_include_list
++tm_f_file_list
+ tm_rust_include_list
+ tm_rust_file_list
+ tm_d_include_list
+@@ -15205,6 +15207,17 @@ for f in $tm_rust_file; do
+   esac
+ done
+ 
++tm_f_file_list=
++tm_f_include_list=
++for f in $tm_f_file; do
++  case $f in
++    * )
++       tm_f_file_list="${tm_f_file_list} \$(srcdir)/config/$f"
++       tm_f_include_list="${tm_f_include_list} config/$f"
++       ;;
++  esac
++done
++
+ tm_jit_file_list=
+ tm_jit_include_list=
+ for f in $tm_jit_file; do
+@@ -21975,7 +21988,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 21978 "configure"
++#line 21991 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+@@ -22081,7 +22094,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 22084 "configure"
++#line 22097 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+@@ -34359,6 +34372,8 @@ fi
+ 
+ 
+ 
++
++
+ 
+ 
+ 
+diff --git a/gcc/configure.ac b/gcc/configure.ac
+index cdf2997cb5f..85d6eef08f0 100644
+--- a/gcc/configure.ac
++++ b/gcc/configure.ac
+@@ -2492,6 +2492,17 @@ for f in $tm_rust_file; do
+   esac
+ done
+ 
++tm_f_file_list=
++tm_f_include_list=
++for f in $tm_f_file; do
++  case $f in
++    * )
++       tm_f_file_list="${tm_f_file_list} \$(srcdir)/config/$f"
++       tm_f_include_list="${tm_f_include_list} config/$f"
++       ;;
++  esac
++done
++
+ tm_jit_file_list=
+ tm_jit_include_list=
+ for f in $tm_jit_file; do
+@@ -7495,6 +7506,8 @@ AC_SUBST(tm_d_file_list)
+ AC_SUBST(tm_d_include_list)
+ AC_SUBST(tm_rust_file_list)
+ AC_SUBST(tm_rust_include_list)
++AC_SUBST(tm_f_file_list)
++AC_SUBST(tm_f_include_list)
+ AC_SUBST(tm_jit_file_list)
+ AC_SUBST(tm_jit_include_list)
+ AC_SUBST(xm_file_list)
+diff --git a/gcc/doc/tm.texi b/gcc/doc/tm.texi
+index 2832a447e3e..8661eccc403 100644
+--- a/gcc/doc/tm.texi
++++ b/gcc/doc/tm.texi
+@@ -56,6 +56,7 @@ through the macros defined in the @file{.h} file.
+ * C++ ABI::             Controlling C++ ABI changes.
+ * D Language and ABI::  Controlling D ABI changes.
+ * Rust Language and ABI:: Controlling Rust ABI changes.
++* Fortran Language and ABI:: Controlling Fortran ABI parameters.
+ * JIT Language and ABI:: JIT ABI parameters
+ * Named Address Spaces:: Adding support for named address spaces
+ * Misc::                Everything else.
+@@ -11443,6 +11444,19 @@ Similar to @code{TARGET_RUST_CPU_INFO}, but is used for configuration info
+ relating to the target operating system.
+ @end deftypefn
+ 
++@node Fortran Language and ABI
++@section Fortran ABI parameters
++@cindex parameters, fortran abi
++
++@deftypefn {Fortran Target Hook} void TARGET_F_CPP_BUILTINS (cpp_reader *@var{pfile})
++Define preprocessor symbols that describe the target for the Fortran
++preprocessor.  Implementations should call @code{cpp_define},
++@code{cpp_assert}, and @code{cpp_define_formatted} (from libcpp) directly
++on @var{pfile}; they must not depend on C-family-only state such as
++@code{parse_in} or @code{flag_iso}.  Bare names such as @code{linux} or
++@code{unix} clash with valid Fortran identifiers and must be omitted.
++@end deftypefn
++
+ @node JIT Language and ABI
+ @section JIT ABI parameters
+ @cindex parameters, jit abi
+diff --git a/gcc/doc/tm.texi.in b/gcc/doc/tm.texi.in
+index 274bb899d0c..c8c20b97b54 100644
+--- a/gcc/doc/tm.texi.in
++++ b/gcc/doc/tm.texi.in
+@@ -56,6 +56,7 @@ through the macros defined in the @file{.h} file.
+ * C++ ABI::             Controlling C++ ABI changes.
+ * D Language and ABI::  Controlling D ABI changes.
+ * Rust Language and ABI:: Controlling Rust ABI changes.
++* Fortran Language and ABI:: Controlling Fortran ABI parameters.
+ * JIT Language and ABI:: JIT ABI parameters
+ * Named Address Spaces:: Adding support for named address spaces
+ * Misc::                Everything else.
+@@ -7330,6 +7331,12 @@ floating-point support; they are not included in this mechanism.
+ 
+ @hook TARGET_RUST_OS_INFO
+ 
++@node Fortran Language and ABI
++@section Fortran ABI parameters
++@cindex parameters, fortran abi
++
++@hook TARGET_F_CPP_BUILTINS
++
+ @node JIT Language and ABI
+ @section JIT ABI parameters
+ @cindex parameters, jit abi
+diff --git a/gcc/fortran/cpp.cc b/gcc/fortran/cpp.cc
+index 6b5f136e4f3..f2646d37d99 100644
+--- a/gcc/fortran/cpp.cc
++++ b/gcc/fortran/cpp.cc
+@@ -35,23 +35,13 @@ along with GCC; see the file COPYING3.  If not see
+ #include "incpath.h"
+ #include "cppbuiltin.h"
+ #include "mkdeps.h"
++#include "tm_f.h"
++#include "fortran/f-target.h"
+ 
+ #ifndef TARGET_SYSTEM_ROOT
+ # define TARGET_SYSTEM_ROOT NULL
+ #endif
+ 
+-#ifndef TARGET_CPU_CPP_BUILTINS
+-# define TARGET_CPU_CPP_BUILTINS()
+-#endif
+-
+-#ifndef TARGET_OS_CPP_BUILTINS
+-# define TARGET_OS_CPP_BUILTINS()
+-#endif
+-
+-#ifndef TARGET_OBJFMT_CPP_BUILTINS
+-# define TARGET_OBJFMT_CPP_BUILTINS()
+-#endif
+-
+ 
+ /* Holds switches parsed by gfc_cpp_handle_option (), but whose
+    handling is deferred to gfc_cpp_init ().  */
+@@ -177,33 +167,10 @@ cpp_define_builtins (cpp_reader *pfile)
+   if (flag_openmp)
+     cpp_define (pfile, "_OPENMP=202111");
+ 
+-  /* The defines below are necessary for the TARGET_* macros.
+-
+-     FIXME:  Note that builtin_define_std() actually is a function
+-     in c-cppbuiltin.cc which uses flags undefined for Fortran.
+-     Let's skip this for now. If needed, one needs to look into it
+-     once more.  */
+-
+-# define builtin_define(TXT) cpp_define (pfile, TXT)
+-# define builtin_define_std(TXT)
+-# define builtin_assert(TXT) cpp_assert (pfile, TXT)
+-
+-  /* FIXME: Pandora's Box
+-    Using the macros below results in multiple breakages:
+-     - mingw will fail to compile this file as dependent macros
+-       assume to be used in c-cppbuiltin.cc only. Further, they use
+-       flags only valid/defined in C (same as noted above).
+-       [config/i386/mingw32.h, config/i386/cygming.h]
+-     - other platforms (not as popular) break similarly
+-       [grep for 'builtin_define_with_int_value' in gcc/config/]
+-
+-  TARGET_CPU_CPP_BUILTINS ();
+-  TARGET_OS_CPP_BUILTINS ();
+-  TARGET_OBJFMT_CPP_BUILTINS (); */
+-
+-#undef builtin_define
+-#undef builtin_define_std
+-#undef builtin_assert
++  /* Provide target-specific cpp macros via a per-target hook.  The hook
++     implementation calls cpp_define / cpp_assert directly and must not
++     depend on C-family-only state such as parse_in or flag_iso.  */
++  targetfm.f_cpp_builtins (pfile);
+ }
+ 
+ bool
+diff --git a/gcc/fortran/f-target-def.h b/gcc/fortran/f-target-def.h
+new file mode 100644
+index 00000000000..b1747927e9e
+--- /dev/null
++++ b/gcc/fortran/f-target-def.h
+@@ -0,0 +1,20 @@
++/* f-target-def.h -- Default initializers for Fortran target hooks.
++   Copyright (C) 2026 Free Software Foundation, Inc.
++
++   This program is free software; you can redistribute it and/or modify it
++   under the terms of the GNU General Public License as published by the
++   Free Software Foundation; either version 3, or (at your option) any
++   later version.
++
++   This program is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with this program; see the file COPYING3.  If not see
++   <http://www.gnu.org/licenses/>.  */
++
++#include "fortran/f-target-hooks-def.h"
++#include "tree.h"
++#include "hooks.h"
+diff --git a/gcc/fortran/f-target.def b/gcc/fortran/f-target.def
+new file mode 100644
+index 00000000000..a9d86607f10
+--- /dev/null
++++ b/gcc/fortran/f-target.def
+@@ -0,0 +1,44 @@
++/* f-target.def -- Target hook definitions for the Fortran front end.
++   Copyright (C) 2026 Free Software Foundation, Inc.
++
++   This program is free software; you can redistribute it and/or modify it
++   under the terms of the GNU General Public License as published by the
++   Free Software Foundation; either version 3, or (at your option) any
++   later version.
++
++   This program is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with this program; see the file COPYING3.  If not see
++   <http://www.gnu.org/licenses/>.  */
++
++/* See target-hooks-macros.h for details of macros that should be
++   provided by the including file, and how to use them here.  */
++
++#include "target-hooks-macros.h"
++
++#undef HOOK_TYPE
++#define HOOK_TYPE "Fortran Target Hook"
++
++HOOK_VECTOR (TARGETFM_INITIALIZER, gcc_targetfm)
++
++#undef HOOK_PREFIX
++#define HOOK_PREFIX "TARGET_"
++
++/* Target-specific preprocessor builtins.  */
++DEFHOOK
++(f_cpp_builtins,
++ "Define preprocessor symbols that describe the target for the Fortran\n\
++preprocessor.  Implementations should call @code{cpp_define},\n\
++@code{cpp_assert}, and @code{cpp_define_formatted} (from libcpp) directly\n\
++on @var{pfile}; they must not depend on C-family-only state such as\n\
++@code{parse_in} or @code{flag_iso}.  Bare names such as @code{linux} or\n\
++@code{unix} clash with valid Fortran identifiers and must be omitted.",
++ void, (cpp_reader *pfile),
++ hook_void_cpp_reader)
++
++/* Close the 'struct gcc_targetfm' definition.  */
++HOOK_VECTOR_END (C90_EMPTY_HACK)
+diff --git a/gcc/fortran/f-target.h b/gcc/fortran/f-target.h
+new file mode 100644
+index 00000000000..339f614c488
+--- /dev/null
++++ b/gcc/fortran/f-target.h
+@@ -0,0 +1,32 @@
++/* f-target.h -- Data structure definitions for target-specific Fortran
++   behavior.
++   Copyright (C) 2026 Free Software Foundation, Inc.
++
++   This program is free software; you can redistribute it and/or modify it
++   under the terms of the GNU General Public License as published by the
++   Free Software Foundation; either version 3, or (at your option) any
++   later version.
++
++   This program is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with this program; see the file COPYING3.  If not see
++   <http://www.gnu.org/licenses/>.  */
++
++#ifndef GCC_F_TARGET_H
++#define GCC_F_TARGET_H
++
++#define DEFHOOKPOD(NAME, DOC, TYPE, INIT) TYPE NAME;
++#define DEFHOOK(NAME, DOC, TYPE, PARAMS, INIT) TYPE (* NAME) PARAMS;
++#define DEFHOOK_UNDOC DEFHOOK
++#define HOOKSTRUCT(FRAGMENT) FRAGMENT
++
++#include "f-target.def"
++
++/* Each target can provide their own.  */
++extern struct gcc_targetfm targetfm;
++
++#endif /* GCC_F_TARGET_H  */
+diff --git a/gcc/genhooks.cc b/gcc/genhooks.cc
+index 42dbace771f..cadd6dd3e9e 100644
+--- a/gcc/genhooks.cc
++++ b/gcc/genhooks.cc
+@@ -36,6 +36,7 @@ static struct hook_desc hook_array[] = {
+ #include "common/common-target.def"
+ #include "d/d-target.def"
+ #include "rust/rust-target.def"
++#include "fortran/f-target.def"
+ #include "jit/jit-target.def"
+ #undef DEFHOOK
+ };
+diff --git a/gcc/hooks.cc b/gcc/hooks.cc
+index 2b47fd3e50f..f75c7dc1bad 100644
+--- a/gcc/hooks.cc
++++ b/gcc/hooks.cc
+@@ -306,6 +306,11 @@ hook_void_constcharptr (const char *)
+ {
+ }
+ 
++void
++hook_void_cpp_reader (cpp_reader *)
++{
++}
++
+ void
+ hook_void_tree_treeptr (tree, tree *)
+ {
+diff --git a/gcc/hooks.h b/gcc/hooks.h
+index 1ad4abb5500..2a45b3f8d91 100644
+--- a/gcc/hooks.h
++++ b/gcc/hooks.h
+@@ -82,6 +82,7 @@ extern bool hook_bool_wint_wint_uint_bool_true (const widest_int &,
+ 
+ extern void hook_void_void (void);
+ extern void hook_void_constcharptr (const char *);
++extern void hook_void_cpp_reader (cpp_reader *);
+ extern void hook_void_rtx_insn_int (rtx_insn *, int);
+ extern void hook_void_FILEptr_constcharptr (FILE *, const char *);
+ extern void hook_void_FILEptr_constcharptr_const_tree (FILE *, const char *,
+diff --git a/gcc/testsuite/gfortran.dg/gomp/declare-variant-10.f90 b/gcc/testsuite/gfortran.dg/gomp/declare-variant-10.f90
+index 0e0ab518010..115195e1194 100644
+--- a/gcc/testsuite/gfortran.dg/gomp/declare-variant-10.f90
++++ b/gcc/testsuite/gfortran.dg/gomp/declare-variant-10.f90
+@@ -64,9 +64,6 @@ contains
+     call f18 ()	  ! { dg-final { scan-tree-dump-times "f18 \\\(\\\);" 1 "gimple" } } */
+   end subroutine
+ 
+-#if defined(__i386__) || defined(__x86_64__)
+-  __attribute__((target ("avx512f,avx512bw")))
+-#endif
+   subroutine test2 ()
+     !$omp target
+       call f04 () ! { dg-final { scan-tree-dump-times "f03 \\\(\\\);" 1 "gimple" { target { { i?86-*-* x86_64-*-* } && { ! ilp32 } } } } }
+diff --git a/gcc/testsuite/gfortran.dg/pr42954-linux.f90 b/gcc/testsuite/gfortran.dg/pr42954-linux.f90
+new file mode 100644
+index 00000000000..20a67f1ea5b
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr42954-linux.f90
+@@ -0,0 +1,33 @@
++! { dg-do preprocess { target *-*-linux* } }
++! { dg-options "-cpp" }
++!
++! PR fortran/42954 - target macros missing in gfortran -cpp
++
++#ifndef __linux__
++# error __linux__ not defined
++#endif
++
++#ifndef __linux
++# error __linux not defined
++#endif
++
++#ifndef __unix__
++# error __unix__ not defined
++#endif
++
++#ifndef __unix
++# error __unix not defined
++#endif
++
++#ifdef linux
++# error bare linux should not be defined
++#endif
++
++#ifdef unix
++# error bare unix should not be defined
++#endif
++
++#ifndef __ELF__
++# error __ELF__ not defined
++#endif
++end
+diff --git a/gcc/testsuite/gfortran.dg/pr42954-x86.f90 b/gcc/testsuite/gfortran.dg/pr42954-x86.f90
+new file mode 100644
+index 00000000000..07788718286
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr42954-x86.f90
+@@ -0,0 +1,11 @@
++! { dg-do preprocess { target { i?86-*-* x86_64-*-* } } }
++! { dg-options "-cpp" }
++!
++! PR fortran/42954 - target macros missing in gfortran -cpp
++
++#if !defined(__i386__) && !defined(__i386) \
++    && !defined(__x86_64__) && !defined(__x86_64) \
++    && !defined(__amd64__) && !defined(__amd64)
++# error x86 target macros not defined
++#endif
++end
+-- 
+2.54.0
+

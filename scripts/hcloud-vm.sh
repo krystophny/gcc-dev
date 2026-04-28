@@ -31,7 +31,7 @@ Commands:
   bootstrap-lto      Configure + start LTO bootstrap in tmux
   build              Configure + build (debug, no bootstrap)
   test <name.f90>    Run a single gfortran dejagnu test
-  check              Run full check-gfortran in tmux
+  check              Run full Fortran frontend checks in tmux
   tail               Tail the bootstrap/check log
 
 Environment:
@@ -190,30 +190,31 @@ set -euo pipefail
 
 # Find the build directory (LTO bootstrap or debug)
 if [ -d /root/gcc-dev/gcc-build-lto/gcc ]; then
-    cd /root/gcc-dev/gcc-build-lto/gcc
+    build_dir=/root/gcc-dev/gcc-build-lto
 elif [ -d /root/gcc-dev/gcc-build/gcc ]; then
-    cd /root/gcc-dev/gcc-build/gcc
+    build_dir=/root/gcc-dev/gcc-build
 else
     echo "ERROR: No build directory found" >&2
     exit 1
 fi
 
-make check-gfortran RUNTESTFLAGS="dg.exp=${test_name}" 2>&1 | tail -20
+/root/gcc-dev/scripts/check-fortran.sh --build-dir "\$build_dir" \
+  --gcc-src /root/gcc-dev/gcc "dg.exp=${test_name}" 2>&1 | tail -20
 echo "---"
 grep -E "^(PASS|FAIL|XFAIL|XPASS|UNSUPPORTED):" \
-    testsuite/gfortran/gfortran.sum 2>/dev/null | tail -20 || true
+    "\$build_dir/gcc/testsuite/gfortran/gfortran.sum" 2>/dev/null | tail -20 || true
 TEST
 }
 
 cmd_check() {
-    echo "Running full check-gfortran on $(vm_ip) in tmux..."
+    echo "Running full Fortran frontend checks on $(vm_ip) in tmux..."
     vm_ssh bash <<'CHECK'
 set -euo pipefail
 
 if [ -d /root/gcc-dev/gcc-build-lto/gcc ]; then
-    cd /root/gcc-dev/gcc-build-lto/gcc
+    build_dir=/root/gcc-dev/gcc-build-lto
 elif [ -d /root/gcc-dev/gcc-build/gcc ]; then
-    cd /root/gcc-dev/gcc-build/gcc
+    build_dir=/root/gcc-dev/gcc-build
 else
     echo "ERROR: No build directory found" >&2
     exit 1
@@ -221,14 +222,14 @@ fi
 
 tmux kill-session -t gcc-test 2>/dev/null || true
 tmux new-session -d -s gcc-test \
-    "make -j$(nproc) -k check-gfortran > /tmp/check-gfortran.log 2>&1; echo DONE"
+    "/root/gcc-dev/scripts/check-fortran.sh --build-dir \"$build_dir\" --gcc-src /root/gcc-dev/gcc > /tmp/check-fortran.log 2>&1; echo DONE"
 echo "Test running in tmux session 'gcc-test'."
 echo "Monitor: scripts/hcloud-vm.sh tail"
 CHECK
 }
 
 cmd_tail() {
-    vm_ssh 'tail -20 /tmp/lto-bootstrap.log 2>/dev/null || tail -20 /tmp/check-gfortran.log 2>/dev/null || echo "No log found."'
+    vm_ssh 'tail -20 /tmp/lto-bootstrap.log 2>/dev/null || tail -20 /tmp/check-fortran.log 2>/dev/null || echo "No log found."'
 }
 
 cmd_ssh() {

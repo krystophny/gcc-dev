@@ -1265,24 +1265,55 @@ def reset_gfortran_results(build_dir: Path) -> None:
             path.unlink()
 
 
-def current_fail_xpass(build_dir: Path) -> List[str]:
+def read_gfortran_sum(build_dir: Path) -> str:
     sum_path = build_dir / "gcc" / "testsuite" / "gfortran" / "gfortran.sum"
     if not sum_path.exists():
-        return []
+        raise WorkflowError(
+            f"missing {sum_path}; check-fortran did not produce a DejaGnu "
+            "summary. Run scripts/check-fortran.sh from the meta-repo."
+        )
+    text = read_text(sum_path)
+    if "=== gfortran Summary ===" not in text or "# of expected passes" not in text:
+        raise WorkflowError(
+            f"{sum_path} does not contain a real gfortran test summary. "
+            "The harness likely ran zero tests or used the wrong testsuite. "
+            "Do not count this as a pass."
+        )
+    if "/usr/bin/gfortran" in text:
+        raise WorkflowError(
+            f"{sum_path} names /usr/bin/gfortran; the run used the system "
+            "compiler, not the rebuilt GCC compiler."
+        )
+    return text
+
+
+def current_fail_xpass(build_dir: Path) -> List[str]:
+    text = read_gfortran_sum(build_dir)
     return [
         line.strip()
-        for line in read_text(sum_path).splitlines()
-        if line.startswith("FAIL:") or line.startswith("XPASS:")
+        for line in text.splitlines()
+        if line.startswith(("FAIL:", "XPASS:", "UNRESOLVED:", "ERROR:"))
     ]
 
 
-def run_targeted_tests(build_dir: Path, tests: List[str]) -> Tuple[str, str]:
+def check_fortran_cmd(build_dir: Path, gcc_src: Path, *extra_flags: str) -> List[str]:
+    return [
+        str(ROOT / "scripts" / "check-fortran.sh"),
+        "--build-dir",
+        str(build_dir),
+        "--gcc-src",
+        str(gcc_src),
+        *extra_flags,
+    ]
+
+
+def run_targeted_tests(build_dir: Path, gcc_src: Path, tests: List[str]) -> Tuple[str, str]:
     failures = []
     for test in tests:
         reset_gfortran_results(build_dir)
         run(
-            ["make", "check-gfortran", f"RUNTESTFLAGS=dg.exp={test}"],
-            cwd=build_dir / "gcc",
+            check_fortran_cmd(build_dir, gcc_src, f"dg.exp={test}"),
+            cwd=ROOT,
             capture=False,
             check=False,
         )
@@ -1290,7 +1321,7 @@ def run_targeted_tests(build_dir: Path, tests: List[str]) -> Tuple[str, str]:
         if bad:
             failures.append(f"{test}: {'; '.join(bad)}")
     if failures:
-        return "fail", "targeted test regressions: " + " | ".join(failures)
+        return "fail", "targeted test failures: " + " | ".join(failures)
     return "pass", f"targeted tests passed: {', '.join(tests)}"
 
 
@@ -1313,7 +1344,7 @@ def load_or_compute_full_suite_baseline(branch: str, worktree: Path, build_dir: 
     run(["git", "-C", str(worktree), "reset", "--hard", ref], capture=False)
     build_branch_compiler(build_dir)
     reset_gfortran_results(build_dir)
-    run(["make", "-j32", "-k", "check-gfortran"], cwd=build_dir / "gcc", capture=False)
+    run(check_fortran_cmd(build_dir, worktree), cwd=ROOT, capture=False)
     baseline = current_fail_xpass(build_dir)
     write_json(
         cache_path,
@@ -1328,14 +1359,14 @@ def load_or_compute_full_suite_baseline(branch: str, worktree: Path, build_dir: 
     return baseline
 
 
-def run_full_suite(build_dir: Path, baseline: List[str]) -> Tuple[str, str]:
+def run_full_suite(build_dir: Path, gcc_src: Path, baseline: List[str]) -> Tuple[str, str]:
     reset_gfortran_results(build_dir)
-    run(["make", "-j32", "-k", "check-gfortran"], cwd=build_dir / "gcc", capture=False)
+    run(check_fortran_cmd(build_dir, gcc_src), cwd=ROOT, capture=False)
     baseline_set = set(baseline)
     extra = [line for line in current_fail_xpass(build_dir) if line not in baseline_set]
     if extra:
-        return "fail", "new FAIL/XPASS entries: " + " | ".join(extra[:10])
-    return "pass", "no new FAIL/XPASS entries versus cached branch baseline"
+        return "fail", "new failing DejaGnu entries: " + " | ".join(extra[:10])
+    return "pass", "no new failing DejaGnu entries versus cached branch baseline"
 
 
 def matches_expectation(proc: subprocess.CompletedProcess[str], expect: Dict[str, Any]) -> bool:
@@ -1527,7 +1558,9 @@ def branch_check(paths: List[Path], branches: List[str], full_suite: bool) -> No
                 )
                 branch_patch = sorted(patch_out.glob("0001-*.patch"))[0]
 
-                targeted_state, targeted_note = run_targeted_tests(build_dir, targeted_tests_for_meta(meta))
+                targeted_state, targeted_note = run_targeted_tests(
+                    build_dir, worktree, targeted_tests_for_meta(meta)
+                )
                 if targeted_state != "pass":
                     update_branch_state(
                         pr_dir,
@@ -1548,7 +1581,7 @@ def branch_check(paths: List[Path], branches: List[str], full_suite: bool) -> No
                 apply_mode = "validated-targeted"
                 if full_suite:
                     full_state, full_note = run_full_suite(
-                        build_dir, branch_context[branch]["baseline_fail_xpass"]
+                        build_dir, worktree, branch_context[branch]["baseline_fail_xpass"]
                     )
                     note = targeted_note + "; " + full_note
                     apply_mode = "ready" if full_state == "pass" else "fails-full-suite"
@@ -1662,7 +1695,7 @@ def parse_args() -> argparse.Namespace:
     p_branch.add_argument(
         "--no-full-suite",
         action="store_true",
-        help="Skip full check-gfortran on release branches",
+        help="Skip full Fortran frontend checks on release branches",
     )
 
     p_bz = sub.add_parser("submit-bugzilla", help="Submit a generated packet to Bugzilla")

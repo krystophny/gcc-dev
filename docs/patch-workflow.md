@@ -71,15 +71,15 @@ Proceed to the patch creation steps below.
 ### Step 4: Final validation (MANDATORY before posting)
 
 Every patch MUST pass ALL of the following test suites with zero new
-FAIL/XPASS entries compared to baseline:
+failing DejaGnu entries compared to baseline:
 
-1. `check-gfortran` — Fortran frontend + gomp/goacc/goacc-gomp directories
+1. `scripts/check-fortran.sh` — Fortran frontend + gomp/goacc/goacc-gomp directories
 2. `check-target-libgomp-fortran` — libgomp Fortran runtime harnesses
 
 ```bash
-cd gcc-build/gcc
-make -j32 -k check-gfortran > /tmp/check-gfortran.log 2>&1
-grep -cE "^FAIL|^XPASS" testsuite/gfortran/gfortran.sum  # must be 0 new
+scripts/check-fortran.sh > /tmp/check-fortran.log 2>&1
+grep -cE "^(FAIL|XPASS|UNRESOLVED|ERROR):" \
+  gcc-build/gcc/testsuite/gfortran/gfortran.sum  # must be 0
 
 cd gcc-build
 make -j32 check-target-libgomp-fortran > /tmp/libgomp-fortran.log 2>&1
@@ -113,7 +113,8 @@ git -C gcc checkout -b pr<number>-fix
 
 # 2. Make changes, rebuild, test
 cd gcc-build/gcc && make -j32
-make check-gfortran RUNTESTFLAGS="dg.exp=pr<number>.f90"
+../../scripts/check-fortran.sh dg.exp=pr<number>.f90
+# The script creates the required no-space GFORTRAN_UNDER_TEST wrapper.
 
 # 3. Stage changes
 git -C gcc add gcc/fortran/changed-file.cc
@@ -121,8 +122,9 @@ git -C gcc add gcc/fortran/changed-file.cc
 # 4. Commit using gcc-commit-mklog (MANDATORY - auto-generates ChangeLog)
 #    Write the commit message to a file first, then commit with -F.
 #    The prepare-commit-msg hook appends the ChangeLog automatically.
-#    Always include an Assisted-by: trailer naming the model used
-#    (e.g. "Assisted-by: Claude (Anthropic)" or "Assisted-by: GPT-5 (OpenAI)").
+#    The Assisted-by: line goes in the body, immediately above the
+#    `\tPR <component>/<n>` line that begins the ChangeLog area.  See
+#    "Assisted-by placement" below for why this position is mandatory.
 cat > /tmp/gcc-commit-msg.txt <<'EOF'
 fortran: Short summary [PR<number>]
 
@@ -136,10 +138,11 @@ cd gcc && GCC_FORCE_MKLOG=1 GCC_MKLOG_ARGS='["-b", "fortran/<number>"]' \
 # 5. Verify commit passes GCC checks (MANDATORY before push)
 git gcc-verify HEAD
 
-# 5b. gcc-verify does NOT check trailers.  Check the final commit message
-#     explicitly, especially after editor/template-based commits or any
-#     hook-driven message rewrite.  Both Signed-off-by and Assisted-by
-#     must be present.
+# 5b. Re-check both trailers explicitly.  gcc-verify accepts the
+#     Assisted-by: line because it sits in the body above the ChangeLog
+#     area (see below), but it does not enforce its presence.  An
+#     editor/template-based commit or a hook-driven message rewrite can
+#     silently drop either trailer.
 msg=$(git log -1 --format=%B)
 echo "$msg" | grep -q '^Signed-off-by: ' \
   || { echo "ERROR: missing Signed-off-by trailer in commit"; exit 1; }
@@ -184,6 +187,13 @@ fork, so there's nothing to push there.
 
 ## Commit rules (HARD RULES)
 
+- **Every patch is exactly one commit.** Squash any work-in-progress or
+  staged sub-commits before `git format-patch`.  No multi-commit
+  patches in `pr/<number>/`, no `0001-..., 0002-..., 0003-...` series
+  for a single PR.  If two changes are genuinely independent, they get
+  two PRs and two `pr/<number>/` directories — one commit each.  This
+  is the rule going forward; older `pr/<n>/0001..0003*.patch` triples
+  are legacy and get squashed when revisited.
 - **Always use `gcc-commit-mklog`** or the `GCC_FORCE_MKLOG=1` env var
   with the prepare-commit-msg hook. Never hand-write ChangeLog entries.
 - **Always run `git gcc-verify HEAD`** before pushing. It checks
@@ -201,6 +211,45 @@ fork, so there's nothing to push there.
   either trailer.
 - **Branches go off `upstream/master`**, not off other fix branches.
 - **One fix per branch** (e.g., `pr123949-init-se-fix`), not stacked.
+
+### Assisted-by placement
+
+`Assisted-by:` goes in the **body**, on its own line separated by blank
+lines, immediately above the `\tPR <component>/<n>` line that begins
+the ChangeLog area:
+
+```
+fortran: Short summary [PR<number>]
+
+Description of the fix.
+
+Assisted-by: Claude (Anthropic)
+
+	PR fortran/<number>
+
+gcc/fortran/ChangeLog:
+
+	* file.cc (func): Change.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+```
+
+Why this position and not the end of the message:
+`gcc/contrib/gcc-changelog/git_commit.py` recognizes a fixed set of
+end-of-message trailer prefixes — `signed-off-by:`, `reviewed-by:`,
+`acked-by:`, `tested-by:`, `reported-by:`, `suggested-by:`,
+`reviewed-on:`, plus `co-authored-by:`.  `assisted-by:` is not in that
+set, so an end-of-message placement makes `git gcc-verify` fail with
+`line should start with a tab: "Assisted-by: ..."`.  Putting the
+trailer in the body, above the first `\tPR ...` line, leaves it in
+the part of the message the verifier treats as free description and
+matches what upstream commits already do for `Approved-by:`,
+`Message-ID:`, and similar informational lines.  We comply with the
+upstream verifier rather than fork it; if `assisted-by:` is added to
+GCC's `REVIEW_PREFIXES` upstream we move the trailer to the end then.
+
+`Signed-off-by:` continues to live at the very end as the only
+recognized end-of-message trailer for this patch.
 
 ## Fix development rules
 
