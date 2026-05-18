@@ -12,7 +12,8 @@ import shlex
 import subprocess
 import sys
 import textwrap
-import xmlrpc.client
+import urllib.parse
+import urllib.request
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
@@ -41,7 +42,7 @@ ACTIVE_BRANCHES: Dict[str, Dict[str, str]] = {
     },
 }
 
-BUGZILLA_XMLRPC = "https://gcc.gnu.org/bugzilla/xmlrpc.cgi"
+BUGZILLA_REST = "https://gcc.gnu.org/bugzilla/rest.cgi/bug"
 
 DEFAULT_BRANCH_STATE = {
     "reproduces": None,
@@ -384,8 +385,8 @@ def parse_title(readme: str, fallback: str) -> str:
 
 def parse_branch_name(readme: str) -> Optional[str]:
     patterns = [
-        r"Branch:\s*`([^`]+)`",
-        r"branch `([^`]+)`",
+        r"^-\s+\*\*Branch:\*\*\s*`([^`]+)`",
+        r"^Branch:\s*`([^`]+)`",
     ]
     for pattern in patterns:
         value = parse_first_match(pattern, readme)
@@ -504,9 +505,11 @@ def infer_fix_status(
     if bugzilla_info.get("status") == "RESOLVED":
         if bugzilla_info.get("resolution") == "WORKSFORME":
             return "worksforme"
+        if bugzilla_info.get("resolution") == "WONTFIX":
+            return "wontfix"
         if bugzilla_info.get("resolution") == "FIXED":
             return "merged"
-    if existing in {"open", "patch-ready", "merged", "worksforme"}:
+    if existing in {"open", "patch-ready", "merged", "worksforme", "wontfix"}:
         return existing
     return "patch-ready" if patch_files else "open"
 
@@ -534,6 +537,7 @@ def issue_status_summary(meta: Dict[str, Any]) -> str:
         "patch-ready": "patch ready",
         "merged": "merged upstream",
         "worksforme": "resolved worksforme",
+        "wontfix": "resolved wontfix",
     }
     return f"{state_map.get(meta['fix_status'], meta['fix_status'])}; Bugzilla {bugzilla_state}"
 
@@ -642,7 +646,7 @@ def sync_issue(meta: Dict[str, Any]) -> None:
             if remove:
                 cmd.extend(["--remove-label", ",".join(remove)])
             run(cmd, capture=False)
-        desired_closed = meta["fix_status"] in {"merged", "worksforme"}
+        desired_closed = meta["fix_status"] in {"merged", "worksforme", "wontfix"}
         current_closed = issue_info.get("state") == "CLOSED"
         if desired_closed and not current_closed:
             run(["gh", "issue", "close", str(issue_number), "--repo", GH_REPO], capture=False)
@@ -755,20 +759,28 @@ def _bugzilla_refresh_due(existing: Optional[Dict[str, Any]], force: bool) -> bo
 
 
 def bugzilla_lookup(pr: int) -> Dict[str, Any]:
-    server = xmlrpc.client.ServerProxy(BUGZILLA_XMLRPC)
-    response = server.Bug.get(
+    query = urllib.parse.urlencode(
         {
-            "ids": [pr],
-            "include_fields": [
-                "id",
-                "summary",
-                "status",
-                "resolution",
-                "keywords",
-            ],
+            "id": str(pr),
+            "include_fields": ",".join(
+                [
+                    "id",
+                    "summary",
+                    "status",
+                    "resolution",
+                    "keywords",
+                    "last_change_time",
+                ]
+            ),
         }
     )
-    bugs = response.get("bugs", [])
+    request = urllib.request.Request(
+        f"{BUGZILLA_REST}?{query}",
+        headers={"User-Agent": "gcc-dev-workflow/1.0"},
+    )
+    with urllib.request.urlopen(request, timeout=30) as response:
+        data = json.loads(response.read().decode("utf-8"))
+    bugs = data.get("bugs", [])
     if not bugs:
         return {}
     bug = bugs[0]
@@ -778,6 +790,7 @@ def bugzilla_lookup(pr: int) -> Dict[str, Any]:
         "status": bug.get("status"),
         "resolution": bug.get("resolution"),
         "keywords": bug.get("keywords", []),
+        "last_change_time": bug.get("last_change_time"),
         "refreshed_at": now,
         "last_synced_utc": now,
     }
@@ -815,8 +828,9 @@ def find_trunk_commit(pr: int) -> Optional[str]:
             capture_output=True,
             text=True,
             check=False,
+            timeout=20,
         )
-    except FileNotFoundError:
+    except (FileNotFoundError, subprocess.TimeoutExpired):
         return None
     if proc.returncode != 0:
         return None
@@ -862,7 +876,24 @@ def build_status(
     fix_status = infer_fix_status(existing.get("fix_status"), bugzilla_info, patch_files)
     severity = existing_classification.get("severity") or infer_severity(pr, readme)
     validation = existing.get("validation") or default_validation(pr, pr_dir)
+    generated_keys = {
+        "pr",
+        "title",
+        "bugzilla",
+        "github_issue",
+        "fix_status",
+        "submission_status",
+        "trunk",
+        "classification",
+        "validation",
+        "artifacts",
+        "backports",
+        "notes",
+        "updated_at",
+    }
+    preserved = {k: v for k, v in existing.items() if k not in generated_keys}
     metadata = {
+        **preserved,
         "pr": pr,
         "title": existing.get("title") or parse_title(readme, pr_dir.name),
         "bugzilla": {

@@ -2,19 +2,29 @@
 
 | PR | Regression | Fix status | Severity | gcc-15 | gcc-14 | gcc-13 |
 |----|------------|------------|----------|--------|--------|--------|
+| 79524 | yes | merged | other | unknown | unknown | unknown |
 | 82721 | yes | merged | ice-on-invalid | unknown | unknown | unknown |
 | 84245 | yes | merged | ice-on-invalid | unknown | unknown | unknown |
 | 84779 | yes | merged | ice-on-valid | unknown | unknown | unknown |
 | 85352 | yes | merged | rejects-valid | unknown | unknown | unknown |
+| 93554 | yes | merged | ice-on-valid | unknown | unknown | unknown |
+| 93715 | yes | merged | ice-on-valid | unknown | unknown | unknown |
+| 93814 | yes | merged | runtime-crash | unknown | unknown | unknown |
 | 94978 | yes | merged | diagnostic | unknown | unknown | unknown |
 | 95338 | yes | merged | ice-on-valid | unknown | unknown | unknown |
 | 95879 | yes | merged | ice-on-valid | unknown | unknown | unknown |
+| 96986 | yes | merged | other | unknown | unknown | unknown |
+| 100194 | yes | merged | runtime-crash | unknown | unknown | unknown |
+| 101760 | yes | merged | ice-on-valid | unknown | unknown | unknown |
 | 102430 | yes | merged | ice-on-valid | validated-targeted | validated-targeted | validated-targeted |
 | 102459 | yes | merged | ice-on-valid | unknown | unknown | unknown |
 | 102596 | yes | merged | ice-on-valid | unknown | unknown | unknown |
+| 103367 | yes | merged | ice-on-invalid | unknown | unknown | unknown |
 | 106946 | yes | merged | ice-on-invalid | not-affected | not-affected | not-affected |
+| 107425 | yes | merged | ice-on-valid | unknown | unknown | unknown |
 | 108382 | yes | merged | wrong-code | unknown | unknown | unknown |
 | 109788 | yes | merged | runtime-crash | unknown | unknown | unknown |
+| 110626 | yes | open | wrong-code | unknown | unknown | unknown |
 | 120286 | yes | merged | runtime-crash | unknown | unknown | unknown |
 | 120723 | yes | merged | ice-on-valid | unknown | unknown | unknown |
 | 122491 | yes | merged | ice-on-invalid | needs-special-env | needs-special-env | needs-special-env |
@@ -28,5 +38,7 @@
 | 124482 | yes | merged | runtime-crash | unknown | unknown | unknown |
 | 124512 | yes | merged | runtime-crash | unknown | unknown | unknown |
 | 124631 | yes | merged | runtime-crash | unknown | unknown | unknown |
-| 124661 | yes | patch-ready | runtime-crash | unknown | unknown | unknown |
-| 124666 | yes | patch-ready | runtime-crash | unknown | unknown | unknown |
+| 124661 | yes | merged | runtime-crash | unknown | unknown | unknown |
+| 124666 | yes | merged | runtime-crash | unknown | unknown | unknown |
+| 124751 | yes | merged | wrong-code | unknown | unknown | unknown |
+| 125113 | yes | open | runtime-crash | unknown | unknown | unknown |

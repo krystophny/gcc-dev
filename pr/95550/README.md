@@ -1,6 +1,7 @@
-# Bug 95550: ICE in expand_oacc_for — parallel create(A) + loop private(A)
+# Bug 95550: ICE in expand_oacc_for, parallel create(A) + loop private(A)
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95550
+- **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/137
 - **Status:** NEW on Bugzilla; resolved on trunk by the PR93554 fix
   (`r16-8571-g010618b8dcb`).  Proposed disposition: DUPLICATE of 93554
   once a reviewer agrees.
@@ -24,8 +25,8 @@ derived type with an allocatable component.
 
 ## Reproducers
 
-- `repro/parallel-create-private.f90` — Burnus's program verbatim.
-- `repro/parallel-loop-private.f90` — Gribov's simpler subroutine form.
+- `repro/parallel-create-private.f90`: Burnus's program verbatim.
+- `repro/parallel-loop-private.f90`: Gribov's simpler subroutine form.
 
 ## Before / after
 

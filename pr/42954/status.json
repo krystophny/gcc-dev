@@ -37,39 +37,39 @@
     }
   },
   "bugzilla": {
-    "id": 96080,
+    "id": 42954,
     "keywords": [
-      "openacc"
+      "patch"
     ],
-    "last_change_time": "2026-02-05T20:18:22Z",
-    "last_synced_utc": "2026-05-18T18:43:28Z",
-    "refreshed_at": "2026-05-18T18:43:28Z",
+    "last_change_time": "2026-04-16T17:50:16Z",
+    "last_synced_utc": "2026-05-18T18:42:07Z",
+    "refreshed_at": "2026-05-18T18:42:07Z",
     "resolution": "",
-    "status": "WAITING",
-    "summary": "OpenACC/Fortran runtime library routines vs. Fortran 'pointer'",
-    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96080"
+    "status": "NEW",
+    "summary": "TARGET_*_CPP_BUILTINS issues with gfortran / Target macros missing (C preprocessor)",
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=42954"
   },
   "classification": {
     "regression": false,
-    "severity": "runtime-crash",
+    "severity": "other",
     "validity_class": "valid-code"
   },
-  "fix_status": "open",
-  "github_issue": 13,
+  "fix_status": "patch-ready",
+  "github_issue": 52,
   "notes": "",
-  "pr": 96080,
+  "pr": 42954,
   "submission_status": {
     "on_bugzilla": false,
     "on_mailing_list": false,
     "sent": false
   },
-  "title": "OpenACC runtime library routines vs Fortran pointer semantics",
+  "title": "Target CPP builtins missing in gfortran -cpp",
   "trunk": {
     "branch": null,
     "commit": null,
-    "patch": null
+    "patch": "0001-fortran-Enable-target-preprocessor-macros-with-cpp-P.patch"
   },
-  "updated_at": "2026-05-18T18:43:39Z",
+  "updated_at": "2026-05-18T18:42:20Z",
   "validation": {
     "baseline": {
       "contains_any": [
@@ -84,7 +84,7 @@
       "-B",
       "gcc-build/gcc",
       "-c",
-      "pr/96080/reproducer.f90",
+      "pr/42954/reproducer.f90",
       "-o",
       "/dev/null"
     ],

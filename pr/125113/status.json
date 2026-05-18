@@ -37,39 +37,37 @@
     }
   },
   "bugzilla": {
-    "id": 96080,
-    "keywords": [
-      "openacc"
-    ],
-    "last_change_time": "2026-02-05T20:18:22Z",
-    "last_synced_utc": "2026-05-18T18:43:28Z",
-    "refreshed_at": "2026-05-18T18:43:28Z",
+    "id": 125113,
+    "keywords": [],
+    "last_change_time": "2026-05-17T15:22:19Z",
+    "last_synced_utc": "2026-05-18T18:41:53Z",
+    "refreshed_at": "2026-05-18T18:41:53Z",
     "resolution": "",
-    "status": "WAITING",
-    "summary": "OpenACC/Fortran runtime library routines vs. Fortran 'pointer'",
-    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96080"
+    "status": "NEW",
+    "summary": "[coarray] Segfault accessing remote image; regression from 13.3",
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=125113"
   },
   "classification": {
-    "regression": false,
+    "regression": true,
     "severity": "runtime-crash",
     "validity_class": "valid-code"
   },
   "fix_status": "open",
-  "github_issue": 13,
-  "notes": "",
-  "pr": 96080,
+  "github_issue": 168,
+  "notes": "Architectural shmem CAF issue: accessor evaluated on caller's process dereferences a pointer-component target that lives in the source image's private heap (non-coarray local data). Real fix is large (run accessor on source image's process). Triaged with analysis-only Bugzilla comment, no patch.",
+  "pr": 125113,
   "submission_status": {
     "on_bugzilla": false,
     "on_mailing_list": false,
     "sent": false
   },
-  "title": "OpenACC runtime library routines vs Fortran pointer semantics",
+  "title": "shmem CAF segfault on coindexed access through pointer component",
   "trunk": {
     "branch": null,
     "commit": null,
     "patch": null
   },
-  "updated_at": "2026-05-18T18:43:39Z",
+  "updated_at": "2026-05-18T18:42:06Z",
   "validation": {
     "baseline": {
       "contains_any": [
@@ -84,7 +82,7 @@
       "-B",
       "gcc-build/gcc",
       "-c",
-      "pr/96080/reproducer.f90",
+      "pr/125113/reproducer.f90",
       "-o",
       "/dev/null"
     ],

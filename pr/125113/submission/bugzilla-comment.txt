@@ -1,0 +1,106 @@
+Triage from a shmem CAF runtime read.
+
+Reduced reproducer (rewritten, two images):
+
+  program pr125113
+    type :: box
+      integer, pointer :: data(:) => null()
+    end type
+    integer, allocatable, target :: src(:)
+    integer :: dest(2), i, first_gid, last_gid
+    type(box), allocatable :: buffer[:]
+
+    if (this_image() == 1) then
+      src = [(i, i = 1, 2*num_images())]
+    else
+      allocate(src(0))
+    end if
+
+    first_gid = 1 + 2*(this_image() - 1)
+    last_gid  = 2*this_image()
+
+    allocate(buffer[*])
+    buffer%data => src
+    sync all
+    dest = buffer[1]%data(first_gid:last_gid)
+    if (any(dest /= [first_gid, last_gid])) error stop
+  end program
+
+Two images, libcaf_shmem: SIGSEGV in _caf_accessor_main_buffer_1 on the
+remote read.
+
+Diagnostic build that prints loc(buffer) and loc(buffer%data) per image:
+
+  img 1: loc(src)=        3B23E8A0 size=4
+  img 1: loc(buffer)=    7EF95E200EC0 loc(buffer%data)=        3B23E8A0
+  img 2: loc(src)=        2FDCD860 size=0
+  img 2: loc(buffer)=    7EF95E200F20 loc(buffer%data)=        2FDCD860
+  img 2 about to fetch from img 1
+  SIGSEGV
+
+loc(buffer) on the two images differs by sizeof(box) and both lie in the
+shared-memory mmap range. loc(buffer%data) on image 1 is image 1's
+private heap (the malloc result for src). When image 2 invokes the
+accessor, _gfortran_caf_get_from_remote (libgfortran/caf/shmem.c, around
+line 1088) sets
+
+  src_ptr = shmem_token->base + remote_image_index * shmem_token->image_size
+
+and calls the accessor directly in the *caller's* process. The accessor
+body (gcc/fortran/coarray.cc, create_get_callback) compiles to roughly
+
+  D.4782 = (integer(kind=4)[0:] *) buffer->data.data;          /* shmem read */
+  ... = *((integer(kind=4) *) D.4782 + ((S * stride + off) * span)); /* deref */
+
+The first line reads the descriptor's data field out of image 1's slot
+in shmem (fine). The second dereferences that pointer in image 2's
+address space. The pointer holds image 1's private-heap address, which
+is not mapped in image 2 -> SIGSEGV.
+
+This looks like an interaction between two design choices in the shmem
+runtime: (a) the shared region is mmaped at the same virtual address in
+every image (shared_memory.c stashes the base in GFORTRAN_SHMEM_BASE
+and other images mmap with that as addr hint); (b) coindexed read
+accessors are evaluated directly in the caller's process. Combined,
+they require that anything reachable from the remote slot lives inside
+shmem. That holds for the coarray itself, for allocatable components
+(routed through the shmem allocator since the parent is a shmem
+coarray), and for pointer components targeting other coarrays. It does
+not hold when a pointer component is `=>`-assigned to a non-coarray
+local target the way `buffer%data => src` does here, where src is a
+plain allocatable on each image.
+
+Why opencoarrays does not show this: its caf_get path RPCs the accessor
+to the source image's process, where that image's local pointer is
+naturally valid. The shmem implementation traded that RPC for a
+same-process accessor and, with it, picked up the implicit invariant.
+
+I do not see an obvious small front-end fix:
+
+* Rewriting `=>` to copy src into shmem changes pointer semantics
+  (mutations to src would no longer be visible through buffer%data).
+* The bytes are simply not reachable from the caller's process, so
+  there is nothing to translate at accessor time.
+* `=>` targets are dynamic in general, so a purely static diagnostic
+  cannot catch all instances.
+* A runtime range-check in the accessor (verify buffer->data.data lies
+  inside the shmem region before dereferencing) would convert SIGSEGV
+  into a clean caf_runtime_error but does not make any program work
+  that did not work before.
+
+The complete fix path looks architectural: have the shmem runtime
+evaluate accessors in the source image's process when the post-coarray
+expression may dereference a pointer component (fork-on-demand or a
+long-lived worker per image plus a request channel via
+shmem/supervisor.c). Smaller intermediate steps would be a runtime
+range-check + caf_runtime_error and a manual entry stating that
+pointer components in shmem-CAF derived types must target
+coarray-allocated memory if read remotely.
+
+Test gap that let this through: gfortran.dg/coarray/ptr_comp_2/3 use
+pointer-to-coarray targets (in shmem) and ptr_comp_4/5/6 do not
+coindex; no existing case combines coindexed read with a pointer
+component whose target is non-coarray local data.
+
+Posting this in case Andre, Jerry, or anyone else iterating on the shmem
+runtime wants the reduced failure mode and runtime-path analysis.

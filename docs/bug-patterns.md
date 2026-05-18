@@ -257,3 +257,71 @@ code that frees them must check for shared references first.  Valgrind on
 x86_64 catches these even when the crash only manifests on other platforms.
 
 **Evidence:** PR124482 (regression against PR106946 fix).
+
+## Pattern 15: ix86_expand_movmem `min_size == 4 * MOVE_MAX` Off-by-One
+
+**Symptom:** At `-O0`, runtime `memcpy(dst, src, n)` where the front-end can
+prove `min_size(n) == 64` silently copies zero bytes on x86-64.  In Fortran
+this shows up as a `character(len=:), allocatable` LHS assigned from a
+fixed-length 64-byte RHS coming out all blanks while `len(lhs)` is the
+correct 64.  Any `-O1+` masks it because later passes propagate the literal
+contents into store-immediates and the broken short-copy branch becomes
+unreachable.
+
+**Reproducer (gh167 / upstream `gfortran.dg/pr125117.f90`):** a
+`character(len=64)` actual argument assigned to a `character(:), allocatable`
+result, or equivalently a chained `//` concatenation of parameter strings
+summing to exactly 64 bytes.  Reduction below 63 bytes does not trigger;
+`repeat('A', 62)` does not trigger; the trigger is `min_size == 4 * MOVE_MAX`
+in `ix86_expand_movmem`.
+
+**Root cause:** `gcc/config/i386/i386-expand.cc:ix86_expand_movmem` had
+
+    rtx_code_label *last_4x_vec_label = nullptr;
+    if (min_size == 0 || min_size < 4 * move_max)
+      last_4x_vec_label = gen_label_rtx ();
+
+    if (last_4x_vec_label)
+      emit_cmp_and_jump_insns (count_exp, GEN_INT (4 * move_max), LTU,
+                               nullptr, count_mode, 1, last_4x_vec_label);
+
+The block at `last_4x_vec_label` emits the short-copy code for sizes in
+`(2*MOVE_MAX, 4*MOVE_MAX]`.  With `MOVE_MAX == 16` (x86-64 baseline SSE)
+and `min_size == 64`, the strict `<` makes the condition false, the label
+is never generated, the entire short-copy block is never emitted, and the
+RTL falls through the length-test branches into an empty stub.
+
+The reproducer's character assignment lowers to a 3-way branch (len<=0
+skip; len<=64 short; else 64-byte literal init + space pad) followed by a
+call into `ix86_expand_movmem` to emit the short-copy code -- which is
+empty in the buggy compiler.  Resulting asm:
+
+    cmpq  $64, %rdx ; jle .Lshort
+    [movabsq * 8 stores of the 64-byte literal]
+    ...
+    .Lshort:
+        movq %rdx, %rax
+        cmpl $32, %eax     # stub, falls into end label without copying
+    .Lend: [print]
+
+**Fix path:** Upstream PR target/125117, fixed by
+`6e2a2d445b15de103c966863183a326600475b20` on master and cherry-picked to
+`releases/gcc-16` as `acd75137fef033768b77b2f2a39c41da22257231` on
+2026-05-01.  Patch is one line: `<` -> `<=` and `LTU` -> `LEU`.  Test:
+`gfortran.dg/pr125117.f90`, `gcc.dg/pr125117.c`.
+
+**Why fortplot saw it:** Arch / CachyOS `gcc-fortran
+16.1.1+r12+g301eb08fa2c5-2` was packaged from `releases/gcc-16` commit
+`301eb08fa2c5` dated 2026-04-30 -- one day before the cherry-pick.  A
+locally rebuilt `releases/gcc-16` tip at `25fe4e719d0` (2026-05-15) has the
+fix and stops reproducing.  No self-host miscompile, no CFLAGS interaction;
+just a stale distro snapshot.
+
+**Workaround (already shipped in fortplot `a93ee49`) can be removed once
+the system gfortran is updated past `acd75137fef`.**  The workaround
+routes the literal header through a `len=*` formal in `spec_to_json`, which
+keeps the LHS non-deferred at the call site and bypasses the bad
+`ix86_expand_movmem` path.
+
+**Evidence:** gh167 (krystophny/gcc-dev), upstream PR target/125117.  No
+new Bugzilla report needed.

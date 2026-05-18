@@ -41,7 +41,9 @@
     "keywords": [
       "build"
     ],
-    "refreshed_at": "2026-04-14T07:52:42Z",
+    "last_change_time": "2026-03-22T09:36:13Z",
+    "last_synced_utc": "2026-05-18T18:41:39Z",
+    "refreshed_at": "2026-05-18T18:41:39Z",
     "resolution": "",
     "status": "UNCONFIRMED",
     "summary": "aarch64-netbsd native build misses driver-aarch64.o for host_detect_local_cpu",
@@ -67,7 +69,7 @@
     "commit": null,
     "patch": "0001-aarch64-Add-aarch64-netbsd-to-host_detect_local_cpu.patch"
   },
-  "updated_at": "2026-04-14T07:52:42Z",
+  "updated_at": "2026-05-18T18:41:52Z",
   "validation": {
     "baseline": {
       "contains_any": [

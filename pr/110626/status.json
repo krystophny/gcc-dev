@@ -37,39 +37,39 @@
     }
   },
   "bugzilla": {
-    "id": 96080,
+    "id": 110626,
     "keywords": [
-      "openacc"
+      "wrong-code"
     ],
-    "last_change_time": "2026-02-05T20:18:22Z",
-    "last_synced_utc": "2026-05-18T18:43:28Z",
-    "refreshed_at": "2026-05-18T18:43:28Z",
+    "last_change_time": "2026-04-22T14:32:55Z",
+    "last_synced_utc": "2026-05-18T18:45:06Z",
+    "refreshed_at": "2026-05-18T18:45:06Z",
     "resolution": "",
-    "status": "WAITING",
-    "summary": "OpenACC/Fortran runtime library routines vs. Fortran 'pointer'",
-    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96080"
+    "status": "NEW",
+    "summary": "[13/14/15/16/17 regression] Duplicated finalization in derived",
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=110626"
   },
   "classification": {
-    "regression": false,
-    "severity": "runtime-crash",
+    "regression": true,
+    "severity": "wrong-code",
     "validity_class": "valid-code"
   },
   "fix_status": "open",
-  "github_issue": 13,
+  "github_issue": 92,
   "notes": "",
-  "pr": 96080,
+  "pr": 110626,
   "submission_status": {
     "on_bugzilla": false,
     "on_mailing_list": false,
     "sent": false
   },
-  "title": "OpenACC runtime library routines vs Fortran pointer semantics",
+  "title": "duplicated finalization in derived assignment",
   "trunk": {
     "branch": null,
     "commit": null,
     "patch": null
   },
-  "updated_at": "2026-05-18T18:43:39Z",
+  "updated_at": "2026-05-18T18:45:18Z",
   "validation": {
     "baseline": {
       "contains_any": [
@@ -84,7 +84,7 @@
       "-B",
       "gcc-build/gcc",
       "-c",
-      "pr/96080/reproducer.f90",
+      "pr/110626/reproducer.f90",
       "-o",
       "/dev/null"
     ],

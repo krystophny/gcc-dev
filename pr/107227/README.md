@@ -1,6 +1,7 @@
-# Bug 107227: ICE in expand_oacc_for — private whole allocatable array
+# Bug 107227: ICE in expand_oacc_for, private whole allocatable array
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=107227
+- **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/138
 - **Status:** NEW on Bugzilla; resolved on trunk by the PR93554 fix
   (`r16-8571-g010618b8dcb`).  Proposed disposition: DUPLICATE of 93554
   once a reviewer agrees.  Thomas Schwinge already noted this as a
@@ -24,12 +25,12 @@ end
 ```
 
 Back-trace ends at `expand_oacc_for`: same assertion, same emission
-pattern as PR93554 and PR95550 — Fortran finalisation for the private
+pattern as PR93554 and PR95550. Fortran finalisation for the private
 allocatable array inserts basic blocks between `cont_bb` and `exit_bb`.
 
 ## Reproducer
 
-`repro/parallel-loop-private.f90` — Bryngelson's program verbatim.
+`repro/parallel-loop-private.f90`: Bryngelson's program verbatim.
 
 ## Before / after
 

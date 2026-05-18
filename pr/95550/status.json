@@ -37,17 +37,18 @@
     }
   },
   "bugzilla": {
-    "id": 96080,
+    "id": 95550,
     "keywords": [
+      "ice-on-valid-code",
       "openacc"
     ],
-    "last_change_time": "2026-02-05T20:18:22Z",
-    "last_synced_utc": "2026-05-18T18:43:28Z",
-    "refreshed_at": "2026-05-18T18:43:28Z",
+    "last_change_time": "2026-04-21T08:45:18Z",
+    "last_synced_utc": "2026-05-18T18:42:36Z",
+    "refreshed_at": "2026-05-18T18:42:36Z",
     "resolution": "",
-    "status": "WAITING",
-    "summary": "OpenACC/Fortran runtime library routines vs. Fortran 'pointer'",
-    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96080"
+    "status": "NEW",
+    "summary": "[OpenACC] ICE in expand_oacc_for, at omp-expand.c:6075",
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95550"
   },
   "classification": {
     "regression": false,
@@ -55,21 +56,21 @@
     "validity_class": "valid-code"
   },
   "fix_status": "open",
-  "github_issue": 13,
+  "github_issue": 137,
   "notes": "",
-  "pr": 96080,
+  "pr": 95550,
   "submission_status": {
     "on_bugzilla": false,
     "on_mailing_list": false,
     "sent": false
   },
-  "title": "OpenACC runtime library routines vs Fortran pointer semantics",
+  "title": "ICE in expand_oacc_for \u2014 parallel create(A) + loop private(A)",
   "trunk": {
     "branch": null,
     "commit": null,
     "patch": null
   },
-  "updated_at": "2026-05-18T18:43:39Z",
+  "updated_at": "2026-05-18T18:42:49Z",
   "validation": {
     "baseline": {
       "contains_any": [
@@ -84,7 +85,7 @@
       "-B",
       "gcc-build/gcc",
       "-c",
-      "pr/96080/reproducer.f90",
+      "pr/95550/reproducer.f90",
       "-o",
       "/dev/null"
     ],

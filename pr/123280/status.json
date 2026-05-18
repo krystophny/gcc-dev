@@ -41,7 +41,9 @@
     "keywords": [
       "openacc"
     ],
-    "refreshed_at": "2026-04-14T07:52:30Z",
+    "last_change_time": "2026-02-05T20:18:22Z",
+    "last_synced_utc": "2026-05-18T18:41:12Z",
+    "refreshed_at": "2026-05-18T18:41:12Z",
     "resolution": "",
     "status": "WAITING",
     "summary": "OpenACC/Fortran runtime library routines vs. Fortran 'pointer'",
@@ -67,7 +69,7 @@
     "commit": null,
     "patch": "0001-libgomp-Remove-contiguous-from-assumed-rank-array_h-.patch"
   },
-  "updated_at": "2026-04-14T07:52:30Z",
+  "updated_at": "2026-05-18T18:41:24Z",
   "validation": {
     "baseline": {
       "contains_any": [

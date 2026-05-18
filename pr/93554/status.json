@@ -42,10 +42,12 @@
       "ice-on-valid-code",
       "openacc"
     ],
-    "refreshed_at": "2026-04-14T07:52:57Z",
+    "last_change_time": "2026-04-22T14:25:45Z",
+    "last_synced_utc": "2026-05-18T18:44:00Z",
+    "refreshed_at": "2026-05-18T18:44:00Z",
     "resolution": "",
     "status": "NEW",
-    "summary": "[13/14/15/16 Regression] ICE in expand_oacc_for, at omp-expand.c:6035 since r6-4364-ge4834818d22f5c66",
+    "summary": "[13/14/15/16/17 Regression] ICE in expand_oacc_for, at omp-expand.c:6035 since r6-4364-ge4834818d22f5c66",
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=93554"
   },
   "classification": {
@@ -57,21 +59,22 @@
   "github_issue": 62,
   "notes": "",
   "pr": 93554,
+  "submission_drafts": {
+    "bugzilla_new_pr_worker_vector": "submission/bugzilla-new-pr-worker-vector.md",
+    "bugzilla_pr107227": "submission/bugzilla-pr107227.md",
+    "bugzilla_pr93554": "submission/bugzilla-pr93554.md",
+    "bugzilla_pr95550": "submission/bugzilla-pr95550.md",
+    "mailing_list_reply": "submission/mailing-list-reply.md"
+  },
   "submission_status": {
     "on_bugzilla": false,
     "on_mailing_list": false,
     "sent": false
   },
-  "title": "ICE in expand_oacc_for with private derived type",
-  "trunk": {
-    "branch": null,
-    "commit": "010618b8dcb",
-    "patch": "0001-fortran-Fix-ICE-in-expand_oacc_for-with-private-deri.patch"
-  },
   "tests_patch": {
+    "based_on": "origin/master 90fb3a5ec4a (post-FF to upstream/master 2026-04-21)",
     "branch": "pr93554-tests",
     "commit": "e4272e6f37ddf022152f90212dd89764761c9d3f",
-    "patch": "0002-libgomp-testsuite-OpenACC-Fortran-private-allocatabl.patch",
     "files": [
       "libgomp/testsuite/libgomp.oacc-fortran/pr93554-1.f90",
       "libgomp/testsuite/libgomp.oacc-fortran/pr93554-2.f90",
@@ -79,20 +82,22 @@
       "libgomp/testsuite/libgomp.oacc-fortran/pr95550-1.f90",
       "libgomp/testsuite/libgomp.oacc-fortran/pr107227-1.f90"
     ],
-    "trailers": ["Signed-off-by", "Assisted-by"],
     "gcc_verify": "OK",
-    "based_on": "origin/master 90fb3a5ec4a (post-FF to upstream/master 2026-04-21)",
+    "patch": "0002-libgomp-testsuite-OpenACC-Fortran-private-allocatabl.patch",
     "patrick_review": "addressed B1 (dg-prune-output), B2 (pin pr93554-2 gang-only), M1 (sentinel check), M3 (subject), M4 (per-PR verdict), M5 (formula comment); bundle trimmed",
-    "submitted": false
+    "submitted": false,
+    "trailers": [
+      "Signed-off-by",
+      "Assisted-by"
+    ]
   },
-  "submission_drafts": {
-    "mailing_list_reply": "submission/mailing-list-reply.md",
-    "bugzilla_pr93554": "submission/bugzilla-pr93554.md",
-    "bugzilla_pr95550": "submission/bugzilla-pr95550.md",
-    "bugzilla_pr107227": "submission/bugzilla-pr107227.md",
-    "bugzilla_new_pr_worker_vector": "submission/bugzilla-new-pr-worker-vector.md"
+  "title": "ICE in expand_oacc_for with private derived type",
+  "trunk": {
+    "branch": null,
+    "commit": "010618b8dcb73220790f8f82cf76e8a2aacc2122",
+    "patch": "0001-fortran-Fix-ICE-in-expand_oacc_for-with-private-deri.patch"
   },
-  "updated_at": "2026-04-21T08:30:00Z",
+  "updated_at": "2026-05-18T18:44:01Z",
   "validation": {
     "baseline": {
       "contains_any": [

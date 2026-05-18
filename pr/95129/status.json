@@ -37,17 +37,15 @@
     }
   },
   "bugzilla": {
-    "id": 96080,
-    "keywords": [
-      "openacc"
-    ],
-    "last_change_time": "2026-02-05T20:18:22Z",
-    "last_synced_utc": "2026-05-18T18:43:28Z",
-    "refreshed_at": "2026-05-18T18:43:28Z",
+    "id": 95129,
+    "keywords": [],
+    "last_change_time": "2026-03-19T00:48:19Z",
+    "last_synced_utc": "2026-05-18T18:45:20Z",
+    "refreshed_at": "2026-05-18T18:45:20Z",
     "resolution": "",
-    "status": "WAITING",
-    "summary": "OpenACC/Fortran runtime library routines vs. Fortran 'pointer'",
-    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96080"
+    "status": "NEW",
+    "summary": "aarch64: make outline-atomics work on non-gnu targets",
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95129"
   },
   "classification": {
     "regression": false,
@@ -55,21 +53,21 @@
     "validity_class": "valid-code"
   },
   "fix_status": "open",
-  "github_issue": 13,
+  "github_issue": 105,
   "notes": "",
-  "pr": 96080,
+  "pr": 95129,
   "submission_status": {
     "on_bugzilla": false,
     "on_mailing_list": false,
     "sent": false
   },
-  "title": "OpenACC runtime library routines vs Fortran pointer semantics",
+  "title": "aarch64 outline atomics on non-GNU targets",
   "trunk": {
     "branch": null,
     "commit": null,
     "patch": null
   },
-  "updated_at": "2026-05-18T18:43:39Z",
+  "updated_at": "2026-05-18T18:45:33Z",
   "validation": {
     "baseline": {
       "contains_any": [
@@ -84,7 +82,7 @@
       "-B",
       "gcc-build/gcc",
       "-c",
-      "pr/96080/reproducer.f90",
+      "pr/95129/reproducer.f90",
       "-o",
       "/dev/null"
     ],

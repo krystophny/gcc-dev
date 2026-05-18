@@ -9,7 +9,7 @@
     "pr": {"type": "integer", "minimum": 1},
     "title": {"type": "string", "minLength": 1},
     "github_issue": {"type": ["integer", "null"]},
-    "fix_status": {"enum": ["open", "patch-ready", "merged", "worksforme"]},
+    "fix_status": {"enum": ["open", "patch-ready", "merged", "worksforme", "wontfix"]},
     "notes": {"type": "string"},
     "updated_at": {"type": "string", "format": "date-time"},
     "bugzilla": {
