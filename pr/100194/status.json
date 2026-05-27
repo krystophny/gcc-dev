@@ -39,7 +39,9 @@
   "bugzilla": {
     "id": 100194,
     "keywords": [],
-    "refreshed_at": "2026-04-14T07:52:03Z",
+    "last_change_time": "2026-04-14T04:37:19Z",
+    "last_synced_utc": "2026-05-27T18:12:30Z",
+    "refreshed_at": "2026-05-27T18:12:30Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "[13/14/ Regression] ICE in gfc_trans_create_temp_array, at fortran/trans-array.c:1351",
@@ -65,7 +67,7 @@
     "commit": "b807851428512039bf827426e2143cc80d7c2463",
     "patch": "0001-fortran-Fix-ICE-in-gfc_trans_create_temp_array-for-a.patch"
   },
-  "updated_at": "2026-04-25T12:30:57Z",
+  "updated_at": "2026-05-27T18:12:30Z",
   "validation": {
     "baseline": {
       "contains_any": [

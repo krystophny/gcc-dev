@@ -41,7 +41,9 @@
     "keywords": [
       "diagnostic"
     ],
-    "refreshed_at": "2026-04-14T07:52:48Z",
+    "last_change_time": "2026-04-01T18:28:12Z",
+    "last_synced_utc": "2026-05-27T18:16:32Z",
+    "refreshed_at": "2026-05-27T18:16:32Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "Better error message for specification statement in executable section",
@@ -64,10 +66,10 @@
   "title": "GCC Bug 32365 - Better error message for specification statement in executable section",
   "trunk": {
     "branch": null,
-    "commit": "7db49bf4be2",
+    "commit": "0ec9191dae0ea4b1316d4969bd16df55b299331c",
     "patch": "0001-fortran-enforce-spec-statements-ordering.patch"
   },
-  "updated_at": "2026-04-14T07:52:48Z",
+  "updated_at": "2026-05-27T18:16:33Z",
   "validation": {
     "baseline": {
       "contains_any": [

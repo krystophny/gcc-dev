@@ -41,7 +41,9 @@
     "keywords": [
       "build"
     ],
-    "refreshed_at": "2026-04-14T07:52:41Z",
+    "last_change_time": "2026-03-23T11:12:13Z",
+    "last_synced_utc": "2026-05-27T18:15:39Z",
+    "refreshed_at": "2026-05-27T18:15:39Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "[16 Regression] libgfortran shmem caf: NetBSD has no pthread_condattr_setpshared",
@@ -67,7 +69,7 @@
     "commit": "f57bcde85984d2751f7bc5fd8e3de11f5dc1255",
     "patch": "0001-libgfortran-Disable-caf_shmem-without-usable-process.patch"
   },
-  "updated_at": "2026-04-14T07:52:41Z",
+  "updated_at": "2026-05-27T18:15:52Z",
   "validation": {
     "baseline": {
       "contains_any": [

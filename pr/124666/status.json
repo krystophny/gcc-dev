@@ -39,7 +39,9 @@
   "bugzilla": {
     "id": 124666,
     "keywords": [],
-    "refreshed_at": "2026-04-14T07:52:46Z",
+    "last_change_time": "2026-04-01T01:58:54Z",
+    "last_synced_utc": "2026-05-27T18:16:09Z",
+    "refreshed_at": "2026-05-27T18:16:09Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "[16 Regression] [UBSAN] io.cc:290:27: runtime error:",
@@ -62,10 +64,10 @@
   "title": "[UBSAN] io.cc:290:27 runtime error",
   "trunk": {
     "branch": "pr124666-fix",
-    "commit": "b6951283208",
+    "commit": "a42fa88db5458f2ee76234d0a535e40afc32e4e2",
     "patch": "0001-fortran-Fix-signed-overflow-in-format_lex-digit-pars.patch"
   },
-  "updated_at": "2026-04-14T07:52:46Z",
+  "updated_at": "2026-05-27T18:16:09Z",
   "validation": {
     "baseline": {
       "contains_any": [

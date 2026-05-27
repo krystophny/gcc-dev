@@ -39,9 +39,11 @@
   "bugzilla": {
     "id": 79524,
     "keywords": [],
-    "refreshed_at": "2026-04-14T07:52:49Z",
-    "resolution": "",
-    "status": "NEW",
+    "last_change_time": "2026-05-09T06:17:15Z",
+    "last_synced_utc": "2026-05-27T18:16:47Z",
+    "refreshed_at": "2026-05-27T18:16:47Z",
+    "resolution": "FIXED",
+    "status": "RESOLVED",
     "summary": "[13/14/15 Regression] valgrind error for gcc/testsuite/gfortran.dg/fimplicit_none_2.f90",
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=79524"
   },
@@ -62,10 +64,10 @@
   "title": "stale charlen after rejected parameter array declaration",
   "trunk": {
     "branch": null,
-    "commit": "7660e306748115857c7aee783e3ca2381f1a7cad",
+    "commit": "7660e3067481159acc3ad76cfae22f71606670c7",
     "patch": "0001-fortran-Clean-up-charlens-after-rejected-parameter-a.patch"
   },
-  "updated_at": "2026-04-14T07:52:49Z",
+  "updated_at": "2026-05-27T18:16:47Z",
   "validation": {
     "baseline": {
       "contains_any": [

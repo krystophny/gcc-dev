@@ -43,8 +43,8 @@
       "openacc"
     ],
     "last_change_time": "2026-04-22T14:25:45Z",
-    "last_synced_utc": "2026-05-18T18:44:00Z",
-    "refreshed_at": "2026-05-18T18:44:00Z",
+    "last_synced_utc": "2026-05-27T18:16:56Z",
+    "refreshed_at": "2026-05-27T18:16:56Z",
     "resolution": "",
     "status": "NEW",
     "summary": "[13/14/15/16/17 Regression] ICE in expand_oacc_for, at omp-expand.c:6035 since r6-4364-ge4834818d22f5c66",
@@ -97,7 +97,7 @@
     "commit": "010618b8dcb73220790f8f82cf76e8a2aacc2122",
     "patch": "0001-fortran-Fix-ICE-in-expand_oacc_for-with-private-deri.patch"
   },
-  "updated_at": "2026-05-18T18:44:01Z",
+  "updated_at": "2026-05-27T18:16:56Z",
   "validation": {
     "baseline": {
       "contains_any": [

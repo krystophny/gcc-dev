@@ -39,7 +39,9 @@
   "bugzilla": {
     "id": 121475,
     "keywords": [],
-    "refreshed_at": "2026-04-14T07:52:23Z",
+    "last_change_time": "2026-01-08T00:15:04Z",
+    "last_synced_utc": "2026-05-27T18:13:58Z",
+    "refreshed_at": "2026-05-27T18:13:58Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "Missed finalization",
@@ -62,10 +64,10 @@
   "title": "Missed finalization",
   "trunk": {
     "branch": null,
-    "commit": "a30b5f23b58",
+    "commit": "a30b5f23b58b236207e59635cf7e9504c603f376",
     "patch": "0001-fortran-Finalize-function-result-in-defined-assignme.patch"
   },
-  "updated_at": "2026-04-14T07:52:23Z",
+  "updated_at": "2026-05-27T18:13:59Z",
   "validation": {
     "baseline": {
       "contains_any": [

@@ -41,7 +41,9 @@
     "keywords": [
       "ice-on-valid-code"
     ],
-    "refreshed_at": "2026-04-14T07:52:38Z",
+    "last_change_time": "2026-02-25T23:23:14Z",
+    "last_synced_utc": "2026-05-27T18:15:37Z",
+    "refreshed_at": "2026-05-27T18:15:37Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "[16 Regression] ICE in ALLOCATE of sub-objects",
@@ -64,10 +66,10 @@
   "title": "ICE in ALLOCATE of sub-objects with recursive types",
   "trunk": {
     "branch": null,
-    "commit": "e0b70284cfa",
+    "commit": "83ef3db4b388e705281f82757c81e8c6746b41d0",
     "patch": "0001-fortran-Fix-ICE-in-ALLOCATE-of-sub-objects-with-recu.patch"
   },
-  "updated_at": "2026-04-14T07:52:38Z",
+  "updated_at": "2026-05-27T18:15:37Z",
   "validation": {
     "baseline": {
       "contains_any": [

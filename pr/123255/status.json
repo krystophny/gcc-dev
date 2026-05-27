@@ -39,7 +39,9 @@
   "bugzilla": {
     "id": 123255,
     "keywords": [],
-    "refreshed_at": "2026-04-14T07:52:29Z",
+    "last_change_time": "2025-12-22T11:49:13Z",
+    "last_synced_utc": "2026-05-27T18:14:40Z",
+    "refreshed_at": "2026-05-27T18:14:40Z",
     "resolution": "WORKSFORME",
     "status": "RESOLVED",
     "summary": "OpenACC: copyin of allocatable array component computes wrong size",
@@ -65,7 +67,7 @@
     "commit": "42475cae6d7cce30aabfac660a55c2d9e5b38e68",
     "patch": null
   },
-  "updated_at": "2026-04-14T07:52:29Z",
+  "updated_at": "2026-05-27T18:14:52Z",
   "validation": {
     "kind": "special-env",
     "reason": "requires NVPTX OpenACC runtime/offload execution to reproduce the size bug"

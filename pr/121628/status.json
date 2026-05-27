@@ -41,7 +41,9 @@
     "keywords": [
       "wrong-code"
     ],
-    "refreshed_at": "2026-04-14T07:52:24Z",
+    "last_change_time": "2026-01-30T22:06:48Z",
+    "last_synced_utc": "2026-05-27T18:14:00Z",
+    "refreshed_at": "2026-05-27T18:14:00Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "Use-after-free in compiler-generated assignment operators",
@@ -67,7 +69,7 @@
     "commit": "e0b70284cfac5b7a96f42e340b4c287fba7f8734",
     "patch": "0001-fortran-Fix-deep-copy-of-recursive-allocatable-compo.patch"
   },
-  "updated_at": "2026-04-25T12:29:47Z",
+  "updated_at": "2026-05-27T18:14:00Z",
   "validation": {
     "baseline": {
       "contains_any": [

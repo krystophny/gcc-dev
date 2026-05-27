@@ -41,9 +41,11 @@
     "keywords": [
       "ice-on-valid-code"
     ],
-    "refreshed_at": "2026-04-14T07:52:58Z",
-    "resolution": "",
-    "status": "NEW",
+    "last_change_time": "2026-05-13T09:31:42Z",
+    "last_synced_utc": "2026-05-27T18:16:57Z",
+    "refreshed_at": "2026-05-27T18:16:57Z",
+    "resolution": "FIXED",
+    "status": "RESOLVED",
     "summary": "[13/14/15 Regression] ICE in gfc_trans_auto_array_allocation, at fortran/trans-array.c:6320",
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=93715"
   },
@@ -64,10 +66,10 @@
   "title": "ICE in gfc_trans_auto_array_allocation with scalar coarray",
   "trunk": {
     "branch": null,
-    "commit": "2b0a29a94c9",
+    "commit": "2b0a29a94c9946e32cf76f4f65da368b4f005566",
     "patch": "0001-fortran-Fix-ICE-in-gfc_trans_auto_array_allocation-w.patch"
   },
-  "updated_at": "2026-04-14T07:52:58Z",
+  "updated_at": "2026-05-27T18:16:58Z",
   "validation": {
     "baseline": {
       "contains_any": [

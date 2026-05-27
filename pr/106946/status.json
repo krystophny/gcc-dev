@@ -41,7 +41,9 @@
     "keywords": [
       "ice-on-invalid-code"
     ],
-    "refreshed_at": "2026-04-14T07:52:12Z",
+    "last_change_time": "2026-04-19T06:25:14Z",
+    "last_synced_utc": "2026-05-27T18:12:55Z",
+    "refreshed_at": "2026-05-27T18:12:55Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "[13/14/15/16 Regression] ICE in resolve_component, at fortran/resolve.cc:14726",
@@ -67,7 +69,7 @@
     "commit": "d8b00bf2e1514cd132a9febaa9849ab46cd316f5",
     "patch": "0001-fortran-Fix-ICE-on-invalid-CLASS-component-in-derive.patch"
   },
-  "updated_at": "2026-04-25T12:29:46Z",
+  "updated_at": "2026-05-27T18:12:56Z",
   "validation": {
     "baseline": {
       "contains_any": [

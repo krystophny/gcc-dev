@@ -42,7 +42,9 @@
       "error-recovery",
       "ice-on-invalid-code"
     ],
-    "refreshed_at": "2026-04-14T07:52:52Z",
+    "last_change_time": "2026-03-28T16:14:40Z",
+    "last_synced_utc": "2026-05-27T18:16:50Z",
+    "refreshed_at": "2026-05-27T18:16:50Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "[13/14/15/16 Regression] ICE in delete_root, at fortran/bbt.c:150",
@@ -65,10 +67,10 @@
   "title": "ICE in `delete_root` during invalid `SELECT TYPE`",
   "trunk": {
     "branch": null,
-    "commit": "486169386603627f0cf2a5f12ea4f73a20d6df20",
+    "commit": "48616938660a9fe64824826ab9172a197631476d",
     "patch": "0001-fortran-Avoid-rollback-ICE-after-invalid-SELECT-TYPE.patch"
   },
-  "updated_at": "2026-04-14T07:52:52Z",
+  "updated_at": "2026-05-27T18:16:50Z",
   "validation": {
     "baseline": {
       "contains_any": [

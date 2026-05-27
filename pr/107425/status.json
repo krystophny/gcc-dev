@@ -41,9 +41,11 @@
     "keywords": [
       "openmp"
     ],
-    "refreshed_at": "2026-04-14T07:52:14Z",
-    "resolution": "",
-    "status": "NEW",
+    "last_change_time": "2026-05-09T07:05:27Z",
+    "last_synced_utc": "2026-05-27T18:13:23Z",
+    "refreshed_at": "2026-05-27T18:13:23Z",
+    "resolution": "FIXED",
+    "status": "RESOLVED",
     "summary": "[13/14/15 Regression] ICE in gimplify_var_or_parm_decl, at gimplify.cc:3060 since r12-6780-gd2ad748eeef0dd26",
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=107425"
   },
@@ -64,10 +66,10 @@
   "title": "ICE in gimplify_var_or_parm_decl with implicit var in iterator depend clause",
   "trunk": {
     "branch": null,
-    "commit": "d26055fec8e",
+    "commit": "d26055fec8ef07d9b998ec3217b25507ad080fcf",
     "patch": "0001-fortran-Fix-ICE-with-implicit-variable-in-iterator-d.patch"
   },
-  "updated_at": "2026-04-14T07:52:14Z",
+  "updated_at": "2026-05-27T18:13:23Z",
   "validation": {
     "baseline": {
       "contains_any": [

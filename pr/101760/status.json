@@ -42,10 +42,12 @@
       "ice-on-valid-code",
       "openmp"
     ],
-    "refreshed_at": "2026-04-14T07:52:04Z",
-    "resolution": "",
-    "status": "NEW",
-    "summary": "[13/14/15/16 Regression] ICE in make_ssa_name_fn, at tree-ssanames.c:290 since r12-1319-gd4d38135b3137f1d",
+    "last_change_time": "2026-05-12T17:26:53Z",
+    "last_synced_utc": "2026-05-27T18:12:31Z",
+    "refreshed_at": "2026-05-27T18:12:31Z",
+    "resolution": "FIXED",
+    "status": "RESOLVED",
+    "summary": "[13/14/15 Regression] ICE in make_ssa_name_fn, at tree-ssanames.c:290 since r12-1319-gd4d38135b3137f1d",
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=101760"
   },
   "classification": {
@@ -65,10 +67,10 @@
   "title": "ICE in make_ssa_name_fn with deferred-length character in OMP target",
   "trunk": {
     "branch": null,
-    "commit": "e41fd0a99ae",
+    "commit": "e41fd0a99aee94734537c067f96e3502628125c6",
     "patch": "0001-fortran-Fix-ICE-in-remap_type-with-deferred-length-c.patch"
   },
-  "updated_at": "2026-04-14T07:52:04Z",
+  "updated_at": "2026-05-27T18:12:31Z",
   "validation": {
     "baseline": {
       "contains_any": [

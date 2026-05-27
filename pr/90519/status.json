@@ -39,7 +39,9 @@
   "bugzilla": {
     "id": 90519,
     "keywords": [],
-    "refreshed_at": "2026-04-14T07:52:55Z",
+    "last_change_time": "2025-11-11T21:06:10Z",
+    "last_synced_utc": "2026-05-27T18:16:53Z",
+    "refreshed_at": "2026-05-27T18:16:53Z",
     "resolution": "",
     "status": "NEW",
     "summary": "ICE (segfault) on derived type which has a recursive allocatable component of the same type, and a static component of another type which has a \"final\" attribute",
@@ -62,10 +64,10 @@
   "title": "GCC PR90519 \u2013 FINAL + recursive allocatable ICE",
   "trunk": {
     "branch": null,
-    "commit": "1eb696fc092",
+    "commit": "1eb696fc092ac39cdb55933b20ee25a99d63b907",
     "patch": "0001-fortran-Fix-ICE-and-self-assignment-bugs-with-recurs.patch"
   },
-  "updated_at": "2026-04-14T07:52:55Z",
+  "updated_at": "2026-05-27T18:16:54Z",
   "validation": {
     "baseline": {
       "contains_any": [
