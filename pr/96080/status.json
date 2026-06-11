@@ -42,8 +42,8 @@
       "openacc"
     ],
     "last_change_time": "2026-02-05T20:18:22Z",
-    "last_synced_utc": "2026-05-27T18:17:43Z",
-    "refreshed_at": "2026-05-27T18:17:43Z",
+    "last_synced_utc": "2026-06-11T21:27:41Z",
+    "refreshed_at": "2026-06-11T21:27:41Z",
     "resolution": "",
     "status": "WAITING",
     "summary": "OpenACC/Fortran runtime library routines vs. Fortran 'pointer'",
@@ -69,7 +69,7 @@
     "commit": null,
     "patch": null
   },
-  "updated_at": "2026-05-27T18:17:55Z",
+  "updated_at": "2026-06-11T21:27:53Z",
   "validation": {
     "baseline": {
       "contains_any": [

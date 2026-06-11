@@ -42,8 +42,8 @@
       "patch"
     ],
     "last_change_time": "2026-04-16T17:50:16Z",
-    "last_synced_utc": "2026-05-27T18:16:34Z",
-    "refreshed_at": "2026-05-27T18:16:34Z",
+    "last_synced_utc": "2026-06-11T21:26:31Z",
+    "refreshed_at": "2026-06-11T21:26:31Z",
     "resolution": "",
     "status": "NEW",
     "summary": "TARGET_*_CPP_BUILTINS issues with gfortran / Target macros missing (C preprocessor)",
@@ -69,7 +69,7 @@
     "commit": null,
     "patch": "0001-fortran-Enable-target-preprocessor-macros-with-cpp-P.patch"
   },
-  "updated_at": "2026-05-27T18:16:46Z",
+  "updated_at": "2026-06-11T21:26:43Z",
   "validation": {
     "baseline": {
       "contains_any": [

@@ -40,8 +40,8 @@
     "id": 96255,
     "keywords": [],
     "last_change_time": "2026-02-23T16:52:23Z",
-    "last_synced_utc": "2026-05-27T18:17:56Z",
-    "refreshed_at": "2026-05-27T18:17:56Z",
+    "last_synced_utc": "2026-06-11T21:27:54Z",
+    "refreshed_at": "2026-06-11T21:27:54Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "[F2018] Implement optional type spec for index in DO CONCURRENT",
@@ -67,7 +67,7 @@
     "commit": "5e62a23cc3a64fa0312ffa414fcd1aaba18baa02",
     "patch": "0001-fortran-Mark-type-spec-iterators-referenced.patch"
   },
-  "updated_at": "2026-05-27T18:17:57Z",
+  "updated_at": "2026-06-11T21:27:55Z",
   "validation": {
     "baseline": {
       "contains_any": [

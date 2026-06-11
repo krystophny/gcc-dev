@@ -40,8 +40,8 @@
     "id": 124631,
     "keywords": [],
     "last_change_time": "2026-03-31T06:00:42Z",
-    "last_synced_utc": "2026-05-27T18:16:06Z",
-    "refreshed_at": "2026-05-27T18:16:06Z",
+    "last_synced_utc": "2026-06-11T21:26:11Z",
+    "refreshed_at": "2026-06-11T21:26:11Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "[16 Regression] [UBSAN] simplify.cc:3088:12: runtime error:",
@@ -67,7 +67,7 @@
     "commit": "73933cdc44dea4b1bd5e1a2ef04d1df6edeb27c6",
     "patch": "0001-fortran-Initialize-rank-1-EOSHIFT-stride-PR124631.patch"
   },
-  "updated_at": "2026-05-27T18:16:06Z",
+  "updated_at": "2026-06-11T21:26:11Z",
   "validation": {
     "baseline": {
       "contains_any": [

@@ -42,8 +42,8 @@
       "ice-on-valid-code"
     ],
     "last_change_time": "2026-05-13T09:31:42Z",
-    "last_synced_utc": "2026-05-27T18:16:57Z",
-    "refreshed_at": "2026-05-27T18:16:57Z",
+    "last_synced_utc": "2026-06-11T21:26:55Z",
+    "refreshed_at": "2026-06-11T21:26:55Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "[13/14/15 Regression] ICE in gfc_trans_auto_array_allocation, at fortran/trans-array.c:6320",
@@ -69,7 +69,7 @@
     "commit": "2b0a29a94c9946e32cf76f4f65da368b4f005566",
     "patch": "0001-fortran-Fix-ICE-in-gfc_trans_auto_array_allocation-w.patch"
   },
-  "updated_at": "2026-05-27T18:16:58Z",
+  "updated_at": "2026-06-11T21:26:55Z",
   "validation": {
     "baseline": {
       "contains_any": [

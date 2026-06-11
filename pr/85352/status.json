@@ -42,8 +42,8 @@
       "rejects-valid"
     ],
     "last_change_time": "2026-05-12T07:13:51Z",
-    "last_synced_utc": "2026-05-27T18:16:52Z",
-    "refreshed_at": "2026-05-27T18:16:52Z",
+    "last_synced_utc": "2026-06-11T21:26:49Z",
+    "refreshed_at": "2026-06-11T21:26:49Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "[13/14/15 Regression] Incorrect error diagnosed for dummy argument used in specification expression to subprogram with ENTRY",
@@ -69,7 +69,7 @@
     "commit": "bd0134b028968788165c515196dd8b179a889879",
     "patch": "0001-fortran-Accept-valid-ENTRY-specification-expressions.patch"
   },
-  "updated_at": "2026-05-27T18:16:52Z",
+  "updated_at": "2026-06-11T21:26:50Z",
   "validation": {
     "baseline": {
       "contains_any": [

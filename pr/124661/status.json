@@ -42,8 +42,8 @@
       "wrong-code"
     ],
     "last_change_time": "2026-05-20T18:49:14Z",
-    "last_synced_utc": "2026-05-27T18:16:07Z",
-    "refreshed_at": "2026-05-27T18:16:07Z",
+    "last_synced_utc": "2026-06-11T21:26:12Z",
+    "refreshed_at": "2026-06-11T21:26:12Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "[16 Regression] SIGSEGV with -fcheck=bounds from type-bound procedure",
@@ -69,7 +69,7 @@
     "commit": "1c795ee4bc6b08f16cf1ad43acac47dc7c4b6b94",
     "patch": "0001-fortran-Fix-factored-descriptors-for-bounds-checked-.patch"
   },
-  "updated_at": "2026-05-27T18:16:07Z",
+  "updated_at": "2026-06-11T21:26:13Z",
   "validation": {
     "baseline": {
       "contains_any": [

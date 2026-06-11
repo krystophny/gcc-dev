@@ -42,8 +42,8 @@
       "diagnostic"
     ],
     "last_change_time": "2026-04-01T18:28:12Z",
-    "last_synced_utc": "2026-05-27T18:16:32Z",
-    "refreshed_at": "2026-05-27T18:16:32Z",
+    "last_synced_utc": "2026-06-11T21:26:29Z",
+    "refreshed_at": "2026-06-11T21:26:29Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "Better error message for specification statement in executable section",
@@ -69,7 +69,7 @@
     "commit": "0ec9191dae0ea4b1316d4969bd16df55b299331c",
     "patch": "0001-fortran-enforce-spec-statements-ordering.patch"
   },
-  "updated_at": "2026-05-27T18:16:33Z",
+  "updated_at": "2026-06-11T21:26:30Z",
   "validation": {
     "baseline": {
       "contains_any": [

@@ -43,8 +43,8 @@
       "needs-reduction"
     ],
     "last_change_time": "2026-02-26T19:57:08Z",
-    "last_synced_utc": "2026-05-27T18:15:22Z",
-    "refreshed_at": "2026-05-27T18:15:22Z",
+    "last_synced_utc": "2026-06-11T21:25:27Z",
+    "refreshed_at": "2026-06-11T21:25:27Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "[16 regression] [PDT] ice in gfc_match_decl_type_spec, at fortran/decl.cc:4782",
@@ -70,7 +70,7 @@
     "commit": "33b945b4e637f4e46e0c3bc42bded2949124c940",
     "patch": "0001-fortran-Initialize-gfc_se-in-PDT-component-allocatio.patch"
   },
-  "updated_at": "2026-05-27T18:15:23Z",
+  "updated_at": "2026-06-11T21:25:27Z",
   "validation": {
     "baseline": {
       "contains_any": [

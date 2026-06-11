@@ -40,8 +40,8 @@
     "id": 110877,
     "keywords": [],
     "last_change_time": "2026-04-15T13:49:23Z",
-    "last_synced_utc": "2026-05-27T18:13:53Z",
-    "refreshed_at": "2026-05-27T18:13:53Z",
+    "last_synced_utc": "2026-06-11T21:23:53Z",
+    "refreshed_at": "2026-06-11T21:23:53Z",
     "resolution": "",
     "status": "UNCONFIRMED",
     "summary": "Incorrect copy of allocatable component in polymorphic assignment from array dummy argument",
@@ -67,7 +67,7 @@
     "commit": "b018656f8c016d1880d57ee79266cdecf98f41fa",
     "patch": "0001-fortran-Fix-class-dummy-array-assignment-deep-copy-P.patch"
   },
-  "updated_at": "2026-05-27T18:13:53Z",
+  "updated_at": "2026-06-11T21:23:54Z",
   "validation": {
     "compile": [
       "gcc-build/gcc/gfortran",

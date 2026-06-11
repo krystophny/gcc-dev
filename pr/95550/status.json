@@ -43,8 +43,8 @@
       "openacc"
     ],
     "last_change_time": "2026-04-21T08:45:18Z",
-    "last_synced_utc": "2026-05-27T18:17:28Z",
-    "refreshed_at": "2026-05-27T18:17:28Z",
+    "last_synced_utc": "2026-06-11T21:27:26Z",
+    "refreshed_at": "2026-06-11T21:27:26Z",
     "resolution": "",
     "status": "NEW",
     "summary": "[OpenACC] ICE in expand_oacc_for, at omp-expand.c:6075",
@@ -70,7 +70,7 @@
     "commit": null,
     "patch": null
   },
-  "updated_at": "2026-05-27T18:17:40Z",
+  "updated_at": "2026-06-11T21:27:39Z",
   "validation": {
     "baseline": {
       "contains_any": [

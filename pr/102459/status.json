@@ -42,8 +42,8 @@
       "openmp"
     ],
     "last_change_time": "2026-03-29T21:07:37Z",
-    "last_synced_utc": "2026-05-27T18:12:35Z",
-    "refreshed_at": "2026-05-27T18:12:35Z",
+    "last_synced_utc": "2026-06-11T21:22:34Z",
+    "refreshed_at": "2026-06-11T21:22:34Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "[13/14/15/16 Regression] ICE in gfc_conv_scalarized_array_ref, at fortran/trans-array.c:3549 since r12-1108-g9a5de4d5af1c10a8",
@@ -69,7 +69,7 @@
     "commit": "d2ab04fbba7b97d17e4f9e0885d71a4e1faafc96",
     "patch": "0001-fortran-Fix-OpenMP-iterator-depend-lowering-for-comp.patch"
   },
-  "updated_at": "2026-05-27T18:12:36Z",
+  "updated_at": "2026-06-11T21:22:34Z",
   "validation": {
     "baseline": {
       "contains_any": [

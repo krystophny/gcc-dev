@@ -42,8 +42,8 @@
       "ice-on-valid-code"
     ],
     "last_change_time": "2026-03-29T10:19:36Z",
-    "last_synced_utc": "2026-05-27T18:16:51Z",
-    "refreshed_at": "2026-05-27T18:16:51Z",
+    "last_synced_utc": "2026-06-11T21:26:48Z",
+    "refreshed_at": "2026-06-11T21:26:48Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "[13/14/15/16 Regression] Compiling gfortran.fortran-torture/execute/entry_4.f90 with -O1 or -Os and -fdefault-integer-8 gives an ICE",
@@ -69,7 +69,7 @@
     "commit": "d0128de52fc637efd768d28dbd4edb7bc680a97b",
     "patch": null
   },
-  "updated_at": "2026-05-27T18:16:51Z",
+  "updated_at": "2026-06-11T21:26:48Z",
   "validation": {
     "baseline": {
       "contains_any": [
