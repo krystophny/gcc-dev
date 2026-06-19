@@ -20,16 +20,30 @@
 #   gcc-bugzilla.sh login                                     # Login to GCC Bugzilla
 #   gcc-bugzilla.sh submit <pr-number> [branch] [--execute]   # Submit generated packet
 #
-# Requires: python-bugzilla (pip install python-bugzilla)
+# Requires: python-bugzilla, importable by python3 or runnable via uv.
 
 set -euo pipefail
 
 BUGZILLA_URL="https://gcc.gnu.org/bugzilla/xmlrpc.cgi"
-BZ="bugzilla --bugzilla=$BUGZILLA_URL"
+
+# python-bugzilla is used both as the "bugzilla" CLI and as an importable
+# module for the inline scripts below.  Use whatever already provides it;
+# otherwise let uv supply it on demand so no global install is required.
+if python3 -c 'import bugzilla' 2>/dev/null; then
+    PYBZ="python3"
+    BZ="bugzilla --bugzilla=$BUGZILLA_URL"
+elif command -v uv >/dev/null 2>&1; then
+    PYBZ="uv run --quiet --with python-bugzilla python3"
+    BZ="uv run --quiet --with python-bugzilla bugzilla --bugzilla=$BUGZILLA_URL"
+else
+    echo "error: python-bugzilla is not importable and uv is not installed." >&2
+    echo "Install with: uv tool install python-bugzilla" >&2
+    exit 1
+fi
 AUTO_CC_DEFAULT="${GCC_BUGZILLA_AUTO_CC:-albert@tugraz.at,jvdelisle@gcc.gnu.org}"
 
 default_new_version() {
-    python3 - <<'PYEOF'
+    $PYBZ - <<'PYEOF'
 import re, bugzilla
 bz = bugzilla.Bugzilla("https://gcc.gnu.org/bugzilla/xmlrpc.cgi")
 prod = bz._proxy.Product.get({"names": ["gcc"]})["products"][0]
@@ -158,7 +172,7 @@ Depends:   %{depends_on}"
 
 cmd_comments() {
     local pr="$1"
-    python3 - "$pr" <<'PYEOF'
+    $PYBZ - "$pr" <<'PYEOF'
 import sys, bugzilla
 pr = sys.argv[1]
 bz = bugzilla.Bugzilla("https://gcc.gnu.org/bugzilla/xmlrpc.cgi")
@@ -176,7 +190,7 @@ PYEOF
 
 cmd_attachments() {
     local pr="$1"
-    python3 - "$pr" <<'PYEOF'
+    $PYBZ - "$pr" <<'PYEOF'
 import sys, bugzilla
 pr = sys.argv[1]
 bz = bugzilla.Bugzilla("https://gcc.gnu.org/bugzilla/xmlrpc.cgi")
@@ -205,7 +219,7 @@ cmd_download() {
     local pr="$1"
     local outdir="${2:-pr/$pr/upstream-patches}"
     mkdir -p "$outdir"
-    python3 - "$pr" "$outdir" <<'PYEOF'
+    $PYBZ - "$pr" "$outdir" <<'PYEOF'
 import sys, os, base64, bugzilla
 pr, outdir = sys.argv[1], sys.argv[2]
 bz = bugzilla.Bugzilla("https://gcc.gnu.org/bugzilla/xmlrpc.cgi")
@@ -302,7 +316,7 @@ cmd_comment() {
     echo ""
     confirm_bugzilla_write "post comment to bug $pr"
 
-    python3 - "$pr" "$text" "$auto_cc" <<'PYEOF'
+    $PYBZ - "$pr" "$text" "$auto_cc" <<'PYEOF'
 import sys, bugzilla
 pr, text, auto_cc = sys.argv[1], sys.argv[2], sys.argv[3]
 bz = bugzilla.Bugzilla("https://gcc.gnu.org/bugzilla/xmlrpc.cgi")
@@ -331,7 +345,7 @@ cmd_reply() {
 
     # Build the full reply text: quote header + quoted comment + reply
     local full_text
-    full_text=$(python3 - "$pr" "$comment_num" "$text" <<'PYEOF'
+    full_text=$($PYBZ - "$pr" "$comment_num" "$text" <<'PYEOF'
 import sys, bugzilla
 pr, cnum, reply = sys.argv[1], int(sys.argv[2]), sys.argv[3]
 bz = bugzilla.Bugzilla("https://gcc.gnu.org/bugzilla/xmlrpc.cgi")
@@ -359,7 +373,7 @@ PYEOF
     echo ""
     confirm_bugzilla_write "post reply to bug $pr"
 
-    python3 - "$pr" "$full_text" "$auto_cc" <<'PYEOF'
+    $PYBZ - "$pr" "$full_text" "$auto_cc" <<'PYEOF'
 import sys, bugzilla
 pr, text, auto_cc = sys.argv[1], sys.argv[2], sys.argv[3]
 bz = bugzilla.Bugzilla("https://gcc.gnu.org/bugzilla/xmlrpc.cgi")
@@ -434,7 +448,7 @@ cmd_attach() {
     echo ""
     confirm_bugzilla_write "attach file to bug $pr"
 
-    python3 - "$pr" "$file" "$desc" "$comment" "$auto_cc" "$obsolete_ids" <<'PYEOF'
+    $PYBZ - "$pr" "$file" "$desc" "$comment" "$auto_cc" "$obsolete_ids" <<'PYEOF'
 import sys, bugzilla
 pr, path, desc, comment, auto_cc, obsolete_ids = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6]
 bz = bugzilla.Bugzilla("https://gcc.gnu.org/bugzilla/xmlrpc.cgi")
@@ -466,7 +480,7 @@ cmd_ensure_cc() {
     echo ""
     confirm_bugzilla_write "update CC on bug $pr"
 
-    python3 - "$pr" "$cc_list" <<'PYEOF'
+    $PYBZ - "$pr" "$cc_list" <<'PYEOF'
 import sys, bugzilla
 pr, cc_list = sys.argv[1], sys.argv[2]
 bz = bugzilla.Bugzilla("https://gcc.gnu.org/bugzilla/xmlrpc.cgi")
