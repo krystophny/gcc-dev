@@ -43,8 +43,8 @@
       "ice-on-invalid-code"
     ],
     "last_change_time": "2026-03-29T16:41:43Z",
-    "last_synced_utc": "2026-06-11T21:26:45Z",
-    "refreshed_at": "2026-06-11T21:26:45Z",
+    "last_synced_utc": "2026-06-19T12:47:29Z",
+    "refreshed_at": "2026-06-19T12:47:29Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "[13/14/15/16 Regression] Error message with corrupted text, sometimes ICE",
@@ -70,7 +70,7 @@
     "commit": "5cfaad50af7dc25f6174044cdc05ebd56b6c4e3c",
     "patch": "0001-fortran-Fix-ICE-after-rejected-CHARACTER-duplicate-d.patch"
   },
-  "updated_at": "2026-06-11T21:26:46Z",
+  "updated_at": "2026-06-19T12:47:29Z",
   "validation": {
     "baseline": {
       "contains_any": [

@@ -43,8 +43,8 @@
       "wrong-code"
     ],
     "last_change_time": "2025-12-25T10:01:34Z",
-    "last_synced_utc": "2026-06-11T21:24:16Z",
-    "refreshed_at": "2026-06-11T21:24:16Z",
+    "last_synced_utc": "2026-06-19T12:42:39Z",
+    "refreshed_at": "2026-06-19T12:42:39Z",
     "resolution": "",
     "status": "UNCONFIRMED",
     "summary": "OpenACC: derived-type scalar component has wrong value in device kernel when only array component is mapped",
@@ -70,7 +70,7 @@
     "commit": null,
     "patch": "0001-fortran-Map-scalar-fields-on-enter-exit-data-for-com.patch"
   },
-  "updated_at": "2026-06-11T21:24:28Z",
+  "updated_at": "2026-06-19T12:42:59Z",
   "validation": {
     "baseline": {
       "contains_any": [

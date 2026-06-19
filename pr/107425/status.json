@@ -42,8 +42,8 @@
       "openmp"
     ],
     "last_change_time": "2026-05-09T07:05:27Z",
-    "last_synced_utc": "2026-06-11T21:23:22Z",
-    "refreshed_at": "2026-06-11T21:23:22Z",
+    "last_synced_utc": "2026-06-19T12:41:21Z",
+    "refreshed_at": "2026-06-19T12:41:21Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "[13/14/15 Regression] ICE in gimplify_var_or_parm_decl, at gimplify.cc:3060 since r12-6780-gd2ad748eeef0dd26",
@@ -69,7 +69,7 @@
     "commit": "d26055fec8ef07d9b998ec3217b25507ad080fcf",
     "patch": "0001-fortran-Fix-ICE-with-implicit-variable-in-iterator-d.patch"
   },
-  "updated_at": "2026-06-11T21:23:22Z",
+  "updated_at": "2026-06-19T12:41:22Z",
   "validation": {
     "baseline": {
       "contains_any": [

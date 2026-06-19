@@ -43,8 +43,8 @@
       "testsuite-fail"
     ],
     "last_change_time": "2026-03-15T23:49:51Z",
-    "last_synced_utc": "2026-06-11T21:25:43Z",
-    "refreshed_at": "2026-06-11T21:25:43Z",
+    "last_synced_utc": "2026-06-19T12:45:53Z",
+    "refreshed_at": "2026-06-19T12:45:53Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "[16 Regression] SEGV in resolve_cyclic_derived_type",
@@ -70,7 +70,7 @@
     "commit": "d8b00bf2e1514cd132a9febaa9849ab46cd316f5",
     "patch": "0001-fortran-Fix-use-after-free-in-CLASS-component-error-.patch"
   },
-  "updated_at": "2026-06-11T21:25:43Z",
+  "updated_at": "2026-06-19T12:45:54Z",
   "validation": {
     "baseline": {
       "contains_any": [

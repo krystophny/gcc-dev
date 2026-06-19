@@ -43,8 +43,8 @@
       "ice-on-invalid-code"
     ],
     "last_change_time": "2026-02-27T02:35:54Z",
-    "last_synced_utc": "2026-06-11T21:25:26Z",
-    "refreshed_at": "2026-06-11T21:25:26Z",
+    "last_synced_utc": "2026-06-19T12:45:27Z",
+    "refreshed_at": "2026-06-19T12:45:27Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "[16 regression] crash in gfc_build_addr_expr at trans.cc:350",
@@ -70,7 +70,7 @@
     "commit": "83ef3db4b388e705281f82757c81e8c6746b41d0",
     "patch": "0001-fortran-Fix-recursive-deep-copy-helper-generation-PR.patch"
   },
-  "updated_at": "2026-06-11T21:25:26Z",
+  "updated_at": "2026-06-19T12:45:28Z",
   "validation": {
     "baseline": {
       "contains_any": [

@@ -40,8 +40,8 @@
     "id": 124666,
     "keywords": [],
     "last_change_time": "2026-04-01T01:58:54Z",
-    "last_synced_utc": "2026-06-11T21:26:14Z",
-    "refreshed_at": "2026-06-11T21:26:14Z",
+    "last_synced_utc": "2026-06-19T12:46:40Z",
+    "refreshed_at": "2026-06-19T12:46:40Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "[16 Regression] [UBSAN] io.cc:290:27: runtime error:",
@@ -67,7 +67,7 @@
     "commit": "a42fa88db5458f2ee76234d0a535e40afc32e4e2",
     "patch": "0001-fortran-Fix-signed-overflow-in-format_lex-digit-pars.patch"
   },
-  "updated_at": "2026-06-11T21:26:14Z",
+  "updated_at": "2026-06-19T12:46:41Z",
   "validation": {
     "baseline": {
       "contains_any": [

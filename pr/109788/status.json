@@ -40,8 +40,8 @@
     "id": 109788,
     "keywords": [],
     "last_change_time": "2026-05-06T07:42:26Z",
-    "last_synced_utc": "2026-06-11T21:23:39Z",
-    "refreshed_at": "2026-06-11T21:23:39Z",
+    "last_synced_utc": "2026-06-19T12:41:46Z",
+    "refreshed_at": "2026-06-19T12:41:46Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "[14/15 Regression] gcc/hwint.h:293:61: runtime error: shift exponent 64 is too large for 64-bit type 'long unsigned int since r14-377-gc92b8be9b52b7e",
@@ -67,7 +67,7 @@
     "commit": "ebc8ed3246ff5949c2e4cf8af6726c5111ef381f",
     "patch": "0001-fortran-Fix-character-SPREAD-intrinsic-lowering-PR10.patch"
   },
-  "updated_at": "2026-06-11T21:23:39Z",
+  "updated_at": "2026-06-19T12:41:46Z",
   "validation": {
     "baseline": {
       "contains_any": [

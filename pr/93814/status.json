@@ -40,8 +40,8 @@
     "id": 93814,
     "keywords": [],
     "last_change_time": "2026-05-13T10:34:09Z",
-    "last_synced_utc": "2026-06-11T21:26:56Z",
-    "refreshed_at": "2026-06-11T21:26:56Z",
+    "last_synced_utc": "2026-06-19T12:47:41Z",
+    "refreshed_at": "2026-06-19T12:47:41Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "[13/14/15 Regression] ICE in build_entry_thunks, at fortran/trans-decl.c:2898",
@@ -67,7 +67,7 @@
     "commit": "0ea3035ffbf1bfbc0274673fce367e9f6c6bc8e7",
     "patch": "0001-fortran-Fix-ICE-in-build_entry_thunks-with-CHARACTER.patch"
   },
-  "updated_at": "2026-06-11T21:26:57Z",
+  "updated_at": "2026-06-19T12:47:42Z",
   "validation": {
     "baseline": {
       "contains_any": [

@@ -40,8 +40,8 @@
     "id": 121475,
     "keywords": [],
     "last_change_time": "2026-01-08T00:15:04Z",
-    "last_synced_utc": "2026-06-11T21:23:59Z",
-    "refreshed_at": "2026-06-11T21:23:59Z",
+    "last_synced_utc": "2026-06-19T12:42:15Z",
+    "refreshed_at": "2026-06-19T12:42:15Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "Missed finalization",
@@ -67,7 +67,7 @@
     "commit": "a30b5f23b58b236207e59635cf7e9504c603f376",
     "patch": "0001-fortran-Finalize-function-result-in-defined-assignme.patch"
   },
-  "updated_at": "2026-06-11T21:23:59Z",
+  "updated_at": "2026-06-19T12:42:15Z",
   "validation": {
     "baseline": {
       "contains_any": [

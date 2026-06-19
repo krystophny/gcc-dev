@@ -42,8 +42,8 @@
       "diagnostic"
     ],
     "last_change_time": "2026-05-14T10:08:43Z",
-    "last_synced_utc": "2026-06-11T21:27:56Z",
-    "refreshed_at": "2026-06-11T21:27:56Z",
+    "last_synced_utc": "2026-06-19T12:49:14Z",
+    "refreshed_at": "2026-06-19T12:49:14Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "[13/14/15 Regression] Explicit interface required: volatile argument for ENTRY subroutine",
@@ -69,7 +69,7 @@
     "commit": "6be9db000810a44c5b6b5af320723b3af175bb8a",
     "patch": "0001-fortran-Fix-false-explicit-interface-required-for-EN.patch"
   },
-  "updated_at": "2026-06-11T21:27:56Z",
+  "updated_at": "2026-06-19T12:49:15Z",
   "validation": {
     "baseline": {
       "contains_any": [

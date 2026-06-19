@@ -43,8 +43,8 @@
       "openmp"
     ],
     "last_change_time": "2026-05-12T17:26:53Z",
-    "last_synced_utc": "2026-06-11T21:22:30Z",
-    "refreshed_at": "2026-06-11T21:22:30Z",
+    "last_synced_utc": "2026-06-19T12:40:06Z",
+    "refreshed_at": "2026-06-19T12:40:06Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "[13/14/15 Regression] ICE in make_ssa_name_fn, at tree-ssanames.c:290 since r12-1319-gd4d38135b3137f1d",
@@ -70,7 +70,7 @@
     "commit": "e41fd0a99aee94734537c067f96e3502628125c6",
     "patch": "0001-fortran-Fix-ICE-in-remap_type-with-deferred-length-c.patch"
   },
-  "updated_at": "2026-06-11T21:22:30Z",
+  "updated_at": "2026-06-19T12:40:07Z",
   "validation": {
     "baseline": {
       "contains_any": [

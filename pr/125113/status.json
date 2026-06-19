@@ -40,8 +40,8 @@
     "id": 125113,
     "keywords": [],
     "last_change_time": "2026-05-17T15:22:19Z",
-    "last_synced_utc": "2026-06-11T21:26:16Z",
-    "refreshed_at": "2026-06-11T21:26:16Z",
+    "last_synced_utc": "2026-06-19T12:46:43Z",
+    "refreshed_at": "2026-06-19T12:46:43Z",
     "resolution": "",
     "status": "NEW",
     "summary": "[coarray] Segfault accessing remote image; regression from 13.3",
@@ -67,7 +67,7 @@
     "commit": null,
     "patch": null
   },
-  "updated_at": "2026-06-11T21:26:28Z",
+  "updated_at": "2026-06-19T12:47:03Z",
   "validation": {
     "baseline": {
       "contains_any": [

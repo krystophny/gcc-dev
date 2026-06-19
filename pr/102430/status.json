@@ -43,8 +43,8 @@
       "openmp"
     ],
     "last_change_time": "2026-05-06T06:34:28Z",
-    "last_synced_utc": "2026-06-11T21:22:33Z",
-    "refreshed_at": "2026-06-11T21:22:33Z",
+    "last_synced_utc": "2026-06-19T12:40:09Z",
+    "refreshed_at": "2026-06-19T12:40:09Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "[13/14/15 Regression] ICE in fold_convert_loc, at fold-const.c:2554 since r7-4447-gb4c3a85be9658537",
@@ -70,7 +70,7 @@
     "commit": "4f40d3a5b0db1041f79b375cafb92a029f6dd742",
     "patch": "0001-fortran-Reject-array-allocatable-LINEAR-on-DO-PR1024.patch"
   },
-  "updated_at": "2026-06-11T21:22:33Z",
+  "updated_at": "2026-06-19T12:40:10Z",
   "validation": {
     "baseline": {
       "contains_any": [

@@ -40,8 +40,8 @@
     "id": 121472,
     "keywords": [],
     "last_change_time": "2026-01-08T00:14:51Z",
-    "last_synced_utc": "2026-06-11T21:23:58Z",
-    "refreshed_at": "2026-06-11T21:23:58Z",
+    "last_synced_utc": "2026-06-19T12:42:13Z",
+    "refreshed_at": "2026-06-19T12:42:13Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "ICE in gimplify_expr",
@@ -67,7 +67,7 @@
     "commit": "5bb465a789600a46f3b53b236ba07b30cea6cbac",
     "patch": "0001-fortran-Finalize-function-results-per-F2003-4.5.5.2.patch"
   },
-  "updated_at": "2026-06-11T21:23:58Z",
+  "updated_at": "2026-06-19T12:42:14Z",
   "validation": {
     "baseline": {
       "contains_any": [

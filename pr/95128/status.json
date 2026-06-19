@@ -40,8 +40,8 @@
     "id": 95128,
     "keywords": [],
     "last_change_time": "2026-03-19T00:48:07Z",
-    "last_synced_utc": "2026-06-11T21:26:59Z",
-    "refreshed_at": "2026-06-11T21:26:59Z",
+    "last_synced_utc": "2026-06-19T12:47:44Z",
+    "refreshed_at": "2026-06-19T12:47:44Z",
     "resolution": "",
     "status": "NEW",
     "summary": "aarch64: configure option for outline-atomics",
@@ -67,7 +67,7 @@
     "commit": null,
     "patch": "0001-aarch64-Disable-outline-atomics-by-default-on-NetBSD.patch"
   },
-  "updated_at": "2026-06-11T21:27:11Z",
+  "updated_at": "2026-06-19T12:48:04Z",
   "validation": {
     "baseline": {
       "contains_any": [

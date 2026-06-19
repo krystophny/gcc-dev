@@ -43,8 +43,8 @@
       "openmp"
     ],
     "last_change_time": "2026-04-02T17:16:06Z",
-    "last_synced_utc": "2026-06-11T21:22:36Z",
-    "refreshed_at": "2026-06-11T21:22:36Z",
+    "last_synced_utc": "2026-06-19T12:40:13Z",
+    "refreshed_at": "2026-06-19T12:40:13Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "[13/14/15/16 Regression] ICE in gfc_omp_clause_default_ctor, at fortran/trans-openmp.c:713 since r11-4883-ge929ef532ad52cde",
@@ -70,7 +70,7 @@
     "commit": "e53a7510be51139ff4297e65e69895a6243caa9d",
     "patch": "0001-fortran-Allow-task-reduction-allocatable-scalars-wit.patch"
   },
-  "updated_at": "2026-06-11T21:22:36Z",
+  "updated_at": "2026-06-19T12:40:13Z",
   "validation": {
     "baseline": {
       "contains_any": [

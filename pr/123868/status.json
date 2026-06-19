@@ -40,8 +40,8 @@
     "id": 123868,
     "keywords": [],
     "last_change_time": "2026-03-05T19:41:57Z",
-    "last_synced_utc": "2026-06-11T21:25:23Z",
-    "refreshed_at": "2026-06-11T21:25:23Z",
+    "last_synced_utc": "2026-06-19T12:45:24Z",
+    "refreshed_at": "2026-06-19T12:45:24Z",
     "resolution": "FIXED",
     "status": "RESOLVED",
     "summary": "[16-regession] Memory leak on assignment",
@@ -67,7 +67,7 @@
     "commit": "ca448bc5e435a2076cb3683a9be823c08a14e69e",
     "patch": "0001-fortran-Fix-memory-leak-on-assignment-with-nested-al.patch"
   },
-  "updated_at": "2026-06-11T21:25:23Z",
+  "updated_at": "2026-06-19T12:45:25Z",
   "validation": {
     "kind": "special-env",
     "reason": "requires Valgrind or equivalent leak checking to validate the regression"
