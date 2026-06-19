@@ -67,9 +67,9 @@
   "trunk": {
     "branch": null,
     "commit": null,
-    "patch": null
+    "patch": "0001-fortran-Avoid-duplicate-finalization-in-derived-type.patch"
   },
-  "updated_at": "2026-06-19T12:42:07Z",
+  "updated_at": "2026-06-19T15:07:00Z",
   "validation": {
     "baseline": {
       "contains_any": [

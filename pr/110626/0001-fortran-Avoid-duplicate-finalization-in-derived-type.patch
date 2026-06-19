@@ -1,0 +1,207 @@
+From 56fbf8bf9cf21eea828451bf89936753f85b3072 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Fri, 19 Jun 2026 17:05:14 +0200
+Subject: [PATCH] fortran: Avoid duplicate finalization in derived-type
+ assignment [PR110626]
+
+When the left-hand side of a derived-type intrinsic assignment has a
+finalizable component with a defined assignment, the old value of that
+component was finalized twice.  generate_component_assignments emits a
+whole-derived-type finalization of the lhs and, for the component, an
+INTENT(OUT) defined-assignment call that finalizes the same old value
+through a temporary.  Both ran, so one assignment finalized the old
+component value twice and broke reference-counting code that expects a
+single finalization.
+
+Count the finalizable components and the ones finalized by their own
+INTENT(OUT) defined assignment.  When the lhs type has no finalizer of
+its own and every finalizable component is finalized that way, the
+whole-struct finalization only repeats the per-component finalizations,
+so drop it.
+
+finalize_46.f90 encoded the previous double count; its comments already
+described one finalization per assignment.
+
+Assisted-by: Claude (Anthropic)
+
+	PR fortran/110626
+
+gcc/fortran/ChangeLog:
+
+	* resolve.cc (generate_component_assignments): Count finalizable
+	components and those finalized by their own INTENT(OUT) defined
+	assignment.  Drop the whole-derived-type finalization of the lhs
+	when it has no finalizer of its own and every finalizable
+	component is finalized by such a defined assignment.
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/finalize_46.f90: Adjust expected finalization
+	counts to one call per assignment.
+	* gfortran.dg/finalize_62.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/resolve.cc                    | 18 +++++++
+ gcc/testsuite/gfortran.dg/finalize_46.f90 |  8 +--
+ gcc/testsuite/gfortran.dg/finalize_62.f90 | 61 +++++++++++++++++++++++
+ 3 files changed, 83 insertions(+), 4 deletions(-)
+ create mode 100644 gcc/testsuite/gfortran.dg/finalize_62.f90
+
+diff --git a/gcc/fortran/resolve.cc b/gcc/fortran/resolve.cc
+index d479b6a80e5..07386337d56 100644
+--- a/gcc/fortran/resolve.cc
++++ b/gcc/fortran/resolve.cc
+@@ -13781,6 +13781,8 @@ generate_component_assignments (gfc_code **code, gfc_namespace *ns)
+   gfc_expr *tmp_expr = NULL;
+   int error_count, depth;
+   bool finalizable_lhs;
++  gfc_code *intrinsic_code = NULL;
++  int n_final_comp = 0, n_final_self = 0;
+ 
+   gfc_get_errors (NULL, &error_count);
+ 
+@@ -13860,6 +13862,8 @@ generate_component_assignments (gfc_code **code, gfc_namespace *ns)
+       this_code = build_assignment (EXEC_ASSIGN,
+ 				    (*code)->expr1, (*code)->expr2,
+ 				    NULL, NULL, (*code)->loc);
++      if (finalizable_lhs)
++	intrinsic_code = this_code;
+       add_code_to_chain (&this_code, &head, &tail);
+     }
+ 
+@@ -13871,6 +13875,9 @@ generate_component_assignments (gfc_code **code, gfc_namespace *ns)
+       bool inout = false;
+       bool finalizable_out = false;
+ 
++      if (is_finalizable_type (comp1->ts))
++	n_final_comp++;
++
+       /* The intrinsic assignment does the right thing for pointers
+ 	 of all kinds and allocatable components.  */
+       if (!gfc_bt_struct (comp1->ts.type)
+@@ -13921,6 +13928,8 @@ generate_component_assignments (gfc_code **code, gfc_namespace *ns)
+ 			    && dummy_args->sym->attr.intent == INTENT_OUT;
+ 	  inout = dummy_args
+ 		  && dummy_args->sym->attr.intent == INTENT_INOUT;
++	  if (finalizable_out)
++	    n_final_self++;
+ 	  if ((inout || finalizable_out)
+ 	      && !comp1->attr.allocatable)
+ 	    {
+@@ -14033,6 +14042,15 @@ generate_component_assignments (gfc_code **code, gfc_namespace *ns)
+ 	}
+     }
+ 
++  /* When the lhs has no finalizer of its own and every finalizable component
++     is finalized by its own INTENT(OUT) defined assignment, the whole-derived
++     -type finalization of the lhs just repeats those finalizations.  Drop it.
++     PR fortran/110626.  */
++  if (intrinsic_code && n_final_comp > 0 && n_final_self == n_final_comp
++      && !((*code)->expr1->ts.u.derived->f2k_derived
++	   && (*code)->expr1->ts.u.derived->f2k_derived->finalizers))
++    intrinsic_code->expr1->must_finalize = 0;
++
+   /* Put the temporary assignments at the top of the generated code.  */
+   if (tmp_head && component_assignment_level == 1)
+     {
+diff --git a/gcc/testsuite/gfortran.dg/finalize_46.f90 b/gcc/testsuite/gfortran.dg/finalize_46.f90
+index cd1465e6abf..6e7b72b9085 100644
+--- a/gcc/testsuite/gfortran.dg/finalize_46.f90
++++ b/gcc/testsuite/gfortran.dg/finalize_46.f90
+@@ -64,7 +64,7 @@ program finalise_assign
+ 
+   b = a
+   if (assoc_in_final /= 0) stop 2  ! b%x%i not associated before finalization
+-  if (calls_to_final /= 2) stop 3  ! One finalization call
++  if (calls_to_final /= 1) stop 3  ! One finalization call
+   if (myname1 .ne. 'b') stop 4     ! Finalization before intent out become undefined
+   if (myname2 .ne. 'z') stop 5     ! Intent out now default initialized
+   if (.not.associated (b%x%i, a%x%i)) stop 6
+@@ -73,13 +73,13 @@ program finalise_assign
+   c%alloc = 'y'
+   c = a%x
+   if (assoc_in_final /= 1) stop 6  ! c%i is allocated prior to the assignment
+-  if (calls_to_final /= 3) stop 7  ! One finalization call for the assignment
++  if (calls_to_final /= 2) stop 7  ! One finalization call for the assignment
+   if (myname1 .ne. 'c') stop 8     ! Finalization before intent out become undefined
+   if (myname2 .ne. 'z') stop 9     ! Intent out now default initialized
+ 
+   b = a
+-  if (assoc_in_final /= 3) stop 10 ! b%i is associated by earlier assignment
+-  if (calls_to_final /= 5) stop 11 ! One finalization call for the assignment
++  if (assoc_in_final /= 2) stop 10 ! b%i is associated by earlier assignment
++  if (calls_to_final /= 3) stop 11 ! One finalization call for the assignment
+   if (myname1 .ne. 'z') stop 12    ! b%x%myname was default initialized in earlier assignment
+   if (myname2 .ne. 'z') stop 13    ! Intent out now default initialized
+   if (b%x%i .ne. 126) stop 14      ! Three assignments with self%x%i pointing to same target
+diff --git a/gcc/testsuite/gfortran.dg/finalize_62.f90 b/gcc/testsuite/gfortran.dg/finalize_62.f90
+new file mode 100644
+index 00000000000..389d77eca01
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/finalize_62.f90
+@@ -0,0 +1,61 @@
++! { dg-do run }
++!
++! PR fortran/110626 - a finalizable type with a defined assignment was
++! finalized twice when assigned as a component of an enclosing type: once by
++! the whole-derived-type finalization of the lhs and once by the component's
++! own INTENT(OUT) defined assignment.  The component case must finalize the
++! same number of times as a direct assignment of the same type.
++!
++module defasgn_m
++  implicit none
++
++  type :: inner_t
++     integer :: tag = 0
++   contains
++     final :: inner_final
++     procedure :: inner_copy
++     generic :: assignment(=) => inner_copy
++  end type
++
++  type :: outer_t
++     type(inner_t) :: part
++  end type
++
++  integer :: n_final = 0
++  integer :: n_copy = 0
++
++contains
++
++  subroutine inner_final (self)
++    type(inner_t), intent(inout) :: self
++    n_final = n_final + 1
++  end subroutine
++
++  subroutine inner_copy (lhs, rhs)
++    class(inner_t), intent(out) :: lhs
++    type(inner_t), intent(in) :: rhs
++    n_copy = n_copy + 1
++    lhs%tag = rhs%tag
++  end subroutine
++
++end module
++
++program defasgn_p
++  use defasgn_m
++  implicit none
++  type(inner_t) :: ai, bi
++  type(outer_t) :: ao, bo
++  integer :: f_direct, c_direct
++
++  ai%tag = 15
++  n_final = 0; n_copy = 0
++  bi = ai
++  f_direct = n_final; c_direct = n_copy
++
++  ao%part%tag = 15
++  n_final = 0; n_copy = 0
++  bo = ao
++
++  if (n_copy /= c_direct) stop 1
++  if (n_final /= f_direct) stop 2
++end program
+-- 
+2.54.0
+

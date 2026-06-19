@@ -1,0 +1,27 @@
+Paul,
+
+I looked into this following your comment #3. The double finalization comes
+from generate_component_assignments handling the same assignment two ways. It
+marks the whole-derived-type intrinsic assignment of the lhs as finalizable,
+which calls __final over every component, and for a component with a defined
+assignment it also builds the old-value temporary and calls that assignment
+with an INTENT(OUT) first argument, which finalizes the same old value again.
+
+The attached patch counts the finalizable components and the ones finalized by
+their own INTENT(OUT) defined assignment. When the lhs type has no FINAL of its
+own and every finalizable component is finalized that way, the whole-struct
+finalization only repeats those per-component calls, so it is dropped. Types
+with their own FINAL and mixed types keep the current behavior.
+
+One point for your judgment: this changes finalize_46.f90. That test asserted
+two finalizations for "b = a" where s holds the finalizable component t, but its
+own comments already say "One finalization call". The patch aligns the counts
+with the comments, one per assignment, and adds finalize_62.f90 comparing a
+direct assignment against the component case. You wrote both the test and the
+PR37336 finalization code, so please confirm the single-count semantics are
+what you intend before this goes in.
+
+Tested on x86_64-linux: no new failures in the gfortran.dg and libgomp.fortran
+testsuites.
+
+Chris
