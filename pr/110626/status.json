@@ -59,7 +59,7 @@
   "notes": "",
   "pr": 110626,
   "submission_status": {
-    "on_bugzilla": false,
+    "on_bugzilla": true,
     "on_mailing_list": false,
     "sent": false
   },
@@ -69,7 +69,7 @@
     "commit": null,
     "patch": "0001-fortran-Finalize-lhs-in-place-in-derived-type-define.patch"
   },
-  "updated_at": "2026-06-24T14:15:20Z",
+  "updated_at": "2026-06-24T14:18:55Z",
   "validation": {
     "baseline": {
       "contains_any": [
