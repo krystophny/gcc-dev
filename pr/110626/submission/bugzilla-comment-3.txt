@@ -1,0 +1,24 @@
+Patch attached. It follows Javier's first suggestion in comment #16: finalize
+the real lhs, not a temporary.
+
+generate_component_assignments turned the assignment into a whole-derived-type
+assignment, which finalizes the lhs, plus a defined-assignment call on a
+temporary copy of the old lhs. The temporary was copied trivially but finalized
+with user code, so the second finalization saw the stale old value.
+
+The patch marks the whole-derived-type assignment "finalize only": it runs the
+lhs finalization but skips the structure copy, and the components are copied one
+by one. A component with a defined assignment is then finalized in place by the
+INTENT(OUT) argument and sees the value left by the first finalization, as in
+ifx and flang. The two finalizations stay; only the value the second one sees
+is corrected.
+
+This is done only when the lhs type has no pointer or allocatable components, so
+the structure copy is not needed for them. The allocatable case from Tomáš's
+testcase (comment #12) is left for PR 57696.
+
+Tested on x86_64-linux: finalize_46.f90 is unchanged and passes; the new
+finalize_62.f90 passes here and on ifx and flang; no regressions in the
+gfortran.dg suite.
+
+Chris

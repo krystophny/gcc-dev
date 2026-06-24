@@ -41,9 +41,9 @@
     "keywords": [
       "wrong-code"
     ],
-    "last_change_time": "2026-04-22T14:32:55Z",
-    "last_synced_utc": "2026-06-19T12:41:47Z",
-    "refreshed_at": "2026-06-19T12:41:47Z",
+    "last_change_time": "2026-06-24T14:09:36Z",
+    "last_synced_utc": "2026-06-24T14:15:08Z",
+    "refreshed_at": "2026-06-24T14:15:08Z",
     "resolution": "",
     "status": "NEW",
     "summary": "[13/14/15/16/17 regression] Duplicated finalization in derived",
@@ -67,9 +67,9 @@
   "trunk": {
     "branch": null,
     "commit": null,
-    "patch": "0001-fortran-Avoid-duplicate-finalization-in-derived-type.patch"
+    "patch": "0001-fortran-Finalize-lhs-in-place-in-derived-type-define.patch"
   },
-  "updated_at": "2026-06-19T15:07:00Z",
+  "updated_at": "2026-06-24T14:15:20Z",
   "validation": {
     "baseline": {
       "contains_any": [

@@ -1,0 +1,39 @@
+fortran: Finalize lhs in place in derived-type defined assignment [PR110626]
+
+When a derived-type intrinsic assignment has a component with a defined
+assignment, generate_component_assignments emitted a whole-derived-type
+assignment, which finalizes the lhs, and a defined-assignment call on a
+temporary copy of the old lhs.  The temporary was copied trivially but
+finalized through the user-defined final subroutine, so the second
+finalization of the component saw the stale value of the old lhs instead
+of the value left by the first finalization, unlike ifx and flang.
+
+Mark the whole-derived-type assignment as finalize_only when the lhs type
+has no pointer or allocatable components: it finalizes the lhs but does not
+copy the structure, and the components are assigned one by one.  A component
+with a defined assignment is then finalized in place by the INTENT(OUT)
+argument of that assignment and sees the value left by the lhs finalization.
+Both finalizations remain; only the value the second one observes changes.
+
+The allocatable-component case is left for PR fortran/57696.
+
+Assisted-by: Claude (Anthropic)
+
+	PR fortran/110626
+
+gcc/fortran/ChangeLog:
+
+	* gfortran.h (struct gfc_expr): Add finalize_only bitfield.
+	* resolve.cc (generate_component_assignments): Compute
+	use_finalize_only.  Mark the whole-derived-type assignment
+	finalize_only and assign the components individually so that a
+	component with a defined assignment keeps its post-finalization
+	value for its INTENT(OUT) finalization.
+	* trans-expr.cc (gfc_trans_assignment_1): Skip the structure copy
+	for a finalize_only assignment.
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/finalize_62.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>

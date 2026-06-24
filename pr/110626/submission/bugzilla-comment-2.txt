@@ -1,0 +1,82 @@
+Paul,
+
+You are right about ifx and flang. I checked here: ifx 2026.0 and flang 22
+both finalize the old component twice in this case and pass finalize_46.f90
+unmodified. Trunk gfortran agrees with them. My patch makes gfortran the only
+one that finalizes once, which is exactly why finalize_46.f90 has to change.
+
+So this is not a gfortran bug in isolation. The real question is whether one or
+two finalizations is correct, and that is genuinely unsettled.
+
+Where the second finalization comes from
+
+A finalizable component with a FINAL but no defined assignment is finalized
+once by every compiler, both as a direct assignment and as a component of an
+enclosing type. The doubling appears only when the component has both a FINAL
+and a defined assignment. Then two separate rules fire on the same old value:
+
+  - 7.5.6.3: the variable of an intrinsic assignment "is finalized ... before
+    the definition of the variable", and 7.5.6.2(2) finalizes every
+    nonallocatable finalizable component. The old component is finalized here.
+
+  - 10.2.1.3 performs the assignment "as if each component ... using defined
+    assignment for each nonpointer nonallocatable component of a type that has
+    a type-bound defined assignment consistent with the component". 7.5.6.3
+    then finalizes that defined assignment's INTENT(OUT) first argument, which
+    is the same old component, a second time.
+
+flang does this on purpose. AssignTicket::Begin finalizes the whole LHS
+(BeginFinalize), and the component-wise pass afterwards runs the defined
+assignment whose INTENT(OUT) finalizes the component again. ifx matches. So the
+double finalization is a deliberate literal reading shared by three front ends.
+
+  https://github.com/llvm/llvm-project/blob/main/flang-rt/lib/runtime/assign.cpp
+
+Letter against intent
+
+By the letter, two is defensible. Nothing in the text suppresses the whole-LHS
+finalization for a component that the defined assignment is also going to
+finalize.
+
+By intent, one is right. The note after 7.5.6.3 says finalization for storage
+management "often needs to be combined with defined assignment", which is the
+pattern in comment #0; two finalizations turn it into a double free. The second
+finalization also runs on an already-finalized value: 7.5.6.3 finalizes the
+component, then the defined assignment receives it as an INTENT(OUT) actual and
+finalizes it once more. Thomas Koenig read a related defined-assignment case
+the same way on comp.lang.fortran: defined assignment is not in the 7.5.6.3
+list, so the cleanup should run once.
+
+  https://groups.google.com/g/comp.lang.fortran/c/7bB13FEa10w/m/KlCYf_JOAgAJ
+
+The discussion on Fortran Discourse settles only the easier half, that the
+component's defined assignment is invoked at all; it does not address the count.
+
+  https://fortran-lang.discourse.group/t/intrinsic-assigment-of-derived-types-containing-components-with-user-defined-assignment/2595
+
+Where I land
+
+I think this is a defect, not a call for one front end to make alone. The text
+says two, the documented purpose of the feature needs one, and no
+interpretation resolves it. I would rather raise it with J3 as an
+interpretation request than ship gfortran diverging from ifx and flang and
+rewriting your test on my reading alone.
+
+One limitation of the patch
+
+The patch as attached is also incomplete. It drops the whole-struct
+finalization only when the LHS has no FINAL of its own and every finalizable
+component is finalized by its own INTENT(OUT) defined assignment. A type with
+its own FINAL, or a mix of defined-assignment and plain finalizable components,
+still finalizes the defined-assignment component twice. The complete
+single-finalization fix is the component-by-component path you described in
+comment #3: the whole-LHS finalization has to skip the components handled by
+defined assignment, not be dropped as a block.
+
+How would you like to proceed? I can draft the interpretation request, or
+prototype the component-selective finalization so we can see how invasive it
+is. I will hold the patch and the finalize_46.f90 change until you decide.
+
+Clause numbers are F2023; the same numbering holds in F2018.
+
+Chris
