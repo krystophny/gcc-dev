@@ -25,10 +25,16 @@ EXECUTE="${3:-}"
 
 COMMENT_FILE="$(mktemp)"
 trap 'rm -f "$COMMENT_FILE"' EXIT
+STATE="${BZ_NOTIFY_STATE:-merged}"
+if [[ "$STATE" == "open" ]]; then
+    LEAD="A fix for this is under review in the Lazy Fortran GCC fork: $URL"
+else
+    LEAD="This is fixed in the Lazy Fortran GCC fork: $URL"
+fi
 cat > "$COMMENT_FILE" <<EOF
-This is fixed in the Lazy Fortran GCC fork: $URL
-(single squashed commit, testcase, and review log). AI-assisted work,
-linked for reference only — not submitted for inclusion, per
+$LEAD
+(single commit, testcase, and review log). AI-assisted work, linked for
+reference only — not submitted for inclusion, per
 https://gcc.gnu.org/ai-policy.html.
 EOF
 
