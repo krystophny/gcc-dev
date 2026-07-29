@@ -217,10 +217,9 @@ git commit -m "pr<number>: add patch"
 git push origin main
 
 # 7b. Notify Bugzilla (standing authorization, see
-#     docs/upstream-submission.md). Hand-write the body. Open PR lead:
-#     "A fix for this is open for review: <URL> — comments welcome."
-#     Merged: "This is fixed in the Lazy Fortran GCC fork: <URL>."
-#     Then: what the patch changes, what was tested, relation to prior
+#     docs/upstream-submission.md). Hand-write the body. Lead:
+#     "Open for review: <URL>" (merged: "Fixed in the Lazy Fortran
+#     GCC fork: <URL>"). Then: what the patch changes, what was tested, relation to prior
 #     patches on the bug. No AI disclaimer. Max ~15 lines.
 cat > /tmp/bz-<number>.txt <<'EOF'
 <2-6 lines of real content + PR URL>
