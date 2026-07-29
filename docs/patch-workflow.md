@@ -180,6 +180,27 @@ official GCC master plus squash-merged Lazy Fortran fixes, one commit per
 Bugzilla PR. The former personal mirror `krystophny/gcc` is retired.
 Patch bodies additionally live as `.patch` files in `pr/<number>/`.
 
+### PR lifecycle
+
+- **Default: merge on green.** Squash-merge as soon as both testsuites
+  pass and the machine review has run with confirmed findings addressed.
+  Do not hold PRs open waiting for hypothetical discussion — follow-up
+  discussion happens on the linked issue, and reverting one squash
+  commit is cheap.
+- **Deliberate exceptions stay open**: architecturally uncertain or
+  risky wrong-code fixes that warrant human eyes are marked as **draft**
+  with a `needs-discussion` label; `main` moves on without them.
+- **Avoid stacking.** Fast merge cadence means "merge A, then start B"
+  almost always works. For a genuine dependency, branch B off A's
+  branch and open PR B with base `fix/prA-<slug>` (so it shows only B's
+  delta). After A squash-merges, A's commits are not on `main`, so
+  rebase with `--onto` and force-push; GitHub retargets PR B to `main`:
+
+  ```bash
+  git rebase --onto origin/main fix/prA-<slug> fix/prB-<slug>
+  git push -f origin fix/prB-<slug>
+  ```
+
 **If `gcc-verify` rejects an incomplete hook-generated ChangeLog skeleton:**
 - Keep the mklog hook enabled, but switch from plain `git commit -F ...` to an
   editor-driven commit (`git commit -e` with a template/editor script).
