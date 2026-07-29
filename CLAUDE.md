@@ -42,6 +42,15 @@ squash-merged Lazy Fortran fixes. GCC's own git branch is named `master`
 ("trunk" is only the colloquial SVN-era name), so keeping `master`
 pristine preserves a clean upstream reference for merges and diffs.
 
+`darwin` is the Apple Silicon macOS branch: Iain Sandoe's Darwin
+integration tree (remote `iains` = github.com/iains/gcc-darwin-arm64,
+currently branch `master-wip-apple-si-r17-*`) plus the same Lazy Fortran
+fixes. Never merge the whole Darwin tree into `main`; treat Iain's branch
+as the Darwin upstream base and refresh `darwin` from it. All Darwin
+work — checkout, bootstrap, testing — runs on the Apple Silicon machine
+`faepmac1` (`ssh faepmac1`, repo at `~/code/gcc-dev`, checkout in
+`~/code/gcc-dev/gcc`).
+
 **Primary mode of operation:** every fix is developed on a branch
 `fix/pr<N>-<slug>` off `origin/main` (official GCC master + Lazy Fortran
 fixes), pushed to `lazy-fortran/gcc`, and opened as a pull request titled
