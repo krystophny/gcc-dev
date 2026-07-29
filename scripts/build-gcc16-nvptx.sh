@@ -5,7 +5,7 @@ root_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 
 prefix="${root_dir}/gcc-offload-build/install"
 build_root="${root_dir}/gcc-offload-build"
-gcc_src="${root_dir}/gcc"
+gcc_src="${GCC_OFFLOAD_SRC:-${root_dir}/gcc}"
 
 newlib_repo="${root_dir}/third_party/newlib-cygwin"
 nvptx_tools_repo="${root_dir}/third_party/nvptx-tools"
@@ -116,7 +116,7 @@ fi
 mkdir -p "${accel_build}" "${host_build}"
 
 (cd "${accel_build}" && log gcc16_accel_nvptx_configure \
-  ../../gcc/configure \
+  "${gcc_src}/configure" \
     --target=nvptx-none \
     --prefix="${prefix}" \
     --enable-as-accelerator-for=x86_64-pc-linux-gnu \
@@ -136,7 +136,7 @@ mkdir -p "${accel_build}" "${host_build}"
 (cd "${accel_build}" && log gcc16_accel_nvptx_install make install)
 
 (cd "${host_build}" && log gcc16_host_configure \
-  ../../gcc/configure \
+  "${gcc_src}/configure" \
     --prefix="${prefix}" \
     --enable-languages=c,c++,fortran,lto \
     --disable-multilib \
