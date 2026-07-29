@@ -23,7 +23,8 @@ All commits below predate the GCC steering committee's AI contributions
 policy (2026), which now declines legally significant LLM-derived code
 contributions. New fixes therefore land on the downstream fork
 [lazy-fortran/gcc](https://github.com/lazy-fortran/gcc) instead of upstream
-GCC, under a repository-level AI policy without per-commit trailers.
+GCC, under a repository-level AI policy plus `Assisted-by:` lines on the
+squashed fix commits.
 Existing upstream commits are preserved verbatim and not rewritten.
 
 Where an upstream commit also carries `Co-authored-by:` or `Suggested-by:`

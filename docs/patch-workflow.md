@@ -124,11 +124,16 @@ git -C gcc add gcc/fortran/changed-file.cc
 # 4. Commit using gcc-commit-mklog (MANDATORY - auto-generates ChangeLog)
 #    Write the commit message to a file first, then commit with -F.
 #    The prepare-commit-msg hook appends the ChangeLog automatically.
-#    No per-commit AI attribution — see "AI policy" below.
+#    The Assisted-by: line goes in the body, immediately above the
+#    `\tPR <component>/<n>` line that begins the ChangeLog area —
+#    gcc/contrib/gcc-changelog/git_commit.py rejects it as an
+#    end-of-message trailer, so gcc-verify fails if it sits at the end.
 cat > /tmp/gcc-commit-msg.txt <<'EOF'
 fortran: Short summary [PR<number>]
 
 Description of the fix.
+
+Assisted-by: Claude (Anthropic)
 EOF
 cd gcc && GCC_FORCE_MKLOG=1 GCC_MKLOG_ARGS='["-b", "fortran/<number>"]' \
   git commit -s -F /tmp/gcc-commit-msg.txt
@@ -202,9 +207,13 @@ Patch bodies additionally live as `.patch` files in `pr/<number>/`.
 - **Always use `-s`** (Signed-off-by) on commits, and verify it survives in
   both the final commit message and the exported patch — `git gcc-verify`
   does not check it.
-- **No per-commit AI attribution.** Do not add `Assisted-by:` or similar
-  trailers. AI use is declared repo-wide (see "AI policy" below).
-  Voluntary attribution is permitted, never required.
+- **`Assisted-by:` on the final squashed commit only.** The squash-merge
+  commit (equivalently the exported patch) carries an `Assisted-by:` line
+  naming the model, in the body above the `\tPR ...` line. WIP commits on
+  the PR branch need no tag. This is forward-compatibility: if GCC
+  loosens its AI policy, every exported patch already satisfies the
+  upstream "clearly marked" requirement. The repo-wide AI policy (below)
+  remains the governing declaration.
 - **Branches go off `origin/main`** (lazy-fortran/gcc), not off other fix
   branches.
 - **One fix per branch** (e.g., `fix/pr123949-init-se`), not stacked.
@@ -214,8 +223,10 @@ Patch bodies additionally live as `.patch` files in `pr/<number>/`.
 
 ### AI policy
 
-The `lazy-fortran/gcc` fork carries a repository-level AI policy instead of
-per-commit markers:
+The `lazy-fortran/gcc` fork carries a repository-level AI policy as the
+governing declaration (per-commit `Assisted-by:` lines on squashed fix
+commits are additional attribution, kept for upstream forward
+compatibility):
 
 - AI tools are permitted for research, analysis, bug discovery,
   implementation, testing, review, documentation, and maintenance.

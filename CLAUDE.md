@@ -122,10 +122,13 @@ Every squashed fix commit requires:
   stays dissectable and reapplicable later)
 - Signed-off-by re-verified in the exported patch
 
-**No per-commit AI attribution.** There are no `Assisted-by:` trailers.
-AI use is declared once, repo-wide, in the `lazy-fortran/gcc` AI policy
-(see `docs/patch-workflow.md` "AI policy"). Voluntary attribution is
-permitted, never required.
+**AI attribution:** the repo-level AI policy on `lazy-fortran/gcc` is the
+governing declaration (see `docs/patch-workflow.md` "AI policy"). In
+addition, the **final squashed fix commit** carries an `Assisted-by:`
+line naming the model, placed in the body immediately above the
+`	PR <component>/<n>` line (gcc-verify rejects it as an end trailer).
+This keeps every exported patch upstream-submission-ready should GCC
+loosen its AI policy. WIP commits on PR branches need no tag.
 
 Full procedure and the `GCC_FORCE_MKLOG=1` commit recipe are in
 `docs/patch-workflow.md`.
