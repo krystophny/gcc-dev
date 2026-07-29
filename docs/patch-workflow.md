@@ -216,11 +216,10 @@ git add pr/<number>/
 git commit -m "pr<number>: add patch"
 git push origin main
 
-# 7b. Notify Bugzilla with a short SUBSTANTIVE comment linking the PR
-#     (standing authorization, see docs/upstream-submission.md). Write
-#     the body yourself: what the patch changes, what was verified, and
-#     how it relates to existing patches/discussion on the bug. No
-#     boilerplate, no AI disclaimer, max ~15 lines, must contain the URL.
+# 7b. Notify Bugzilla (standing authorization, see
+#     docs/upstream-submission.md). Hand-write the body: what the patch
+#     changes, what was tested, relation to prior patches on the bug.
+#     No AI disclaimer. Max ~15 lines, must contain the PR URL.
 cat > /tmp/bz-<number>.txt <<'EOF'
 <2-6 lines of real content + PR URL>
 EOF
@@ -256,9 +255,8 @@ Patch bodies additionally live as `.patch` files in `pr/<number>/`.
   evidence. A reader decides in ten seconds whether to look deeper.
 - **`Fixes #<issue>` in the message body** links and auto-closes the
   fork issue when the squash lands on `main`.
-- **When the PR is finished (opened for review, and again if reworked
-  before merge)**, post the short substantive Bugzilla comment (step
-  7b, `scripts/bugzilla-pr-notify.sh`): what the patch changes, test
+- **When the PR is finished** (opened for review; again if reworked),
+  post the Bugzilla comment (step 7b): what the patch changes, test
   evidence, relation to prior patches on the bug. No disclaimers.
 - **Avoid stacking.** Prefer "merge A, then start B". For a genuine
   dependency, branch B off A's branch and open PR B with base

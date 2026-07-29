@@ -47,16 +47,15 @@ Consequences for this workflow, whose fixes are LLM-derived:
   user permission and manual confirmation
 
 **Single standing exception (user authorization 2026-07-29, revised
-2026-07-30):** `scripts/bugzilla-pr-notify.sh` may post a short,
-substantive comment linking a lazy-fortran/gcc PR (open-for-review or
-merged). The comment must say what the patch IS: what it changes and
-why, what was verified (test evidence), and how it relates to existing
-patches and discussion on the bug (confirms, extends, corrects, or
-supersedes whose approach). No boilerplate, no AI disclaimer — the
-fork's repo-level AI policy is the governing declaration. Max ~15
-lines; write the body to a file, run the dry run, read it, then
-`--execute`. Anything outside this shape is an ordinary Bugzilla write
-and needs explicit permission again.
+2026-07-30):** `scripts/bugzilla-pr-notify.sh` may post a short
+comment linking a lazy-fortran/gcc PR. The body must carry real
+content: what the patch changes, what was tested, and how it relates
+to prior patches and discussion on the bug. No AI disclaimer, no
+boilerplate, no filler phrases. Write like a GCC contributor: plain
+sentences, concrete facts, nothing a maintainer would skim past.
+Max ~15 lines. Write the body to a file, check the dry run, then
+`--execute`. Anything else is an ordinary Bugzilla write and needs
+explicit permission.
 
 **Brevity rule for everything public-facing:** Bugzilla comments and PR
 descriptions must be short and targeted — a handful of lines a

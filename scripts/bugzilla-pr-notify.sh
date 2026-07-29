@@ -3,11 +3,10 @@
 # a lazy-fortran/gcc PR (open-for-review or merged).
 #
 # Standing user authorization (2026-07-29, revised 2026-07-30, see
-# docs/upstream-submission.md): the comment must be a real description of
-# what the PR's patch IS — what it changes, what was verified, and how it
-# relates to existing patches and discussion on the bug. No boilerplate,
-# no AI disclaimer. Any Bugzilla write outside this shape still requires
-# explicit per-message user permission.
+# docs/upstream-submission.md): the body states what the patch changes,
+# what was tested, and how it relates to prior patches on the bug.
+# Plain sentences, no filler, no AI disclaimer. Any other Bugzilla
+# write requires explicit per-message user permission.
 #
 # Usage:
 #   bugzilla-pr-notify.sh <bugzilla-pr> <github-pr-url> <body-file>            dry run
