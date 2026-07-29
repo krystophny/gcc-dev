@@ -22,7 +22,9 @@ ROOT = Path(__file__).resolve().parent.parent
 PR_ROOT = ROOT / "pr"
 GCC_DIR = ROOT / "gcc"
 WORKTREE_ROOT = ROOT / "gcc-worktrees"
-GH_REPO = "krystophny/gcc-dev"
+# Meta-repo (hosts pr/<n>/ artifacts); issues live on the downstream fork.
+GH_META_REPO = os.environ.get("GH_META_REPO", "krystophny/gcc-dev")
+GH_ISSUE_REPO = os.environ.get("GH_ISSUE_REPO", "lazy-fortran/gcc")
 
 ACTIVE_BRANCHES: Dict[str, Dict[str, str]] = {
     "gcc-15": {
@@ -581,7 +583,7 @@ def render_issue_body(meta: Dict[str, Any], readme: str) -> str:
         f"# PR{meta['pr']}: {meta['title']}",
         "",
         f"- **Bugzilla:** {meta['bugzilla']['url']}",
-        f"- **PR README:** https://github.com/{GH_REPO}/blob/main/pr/{meta['pr']}/README.md",
+        f"- **PR README:** https://github.com/{GH_META_REPO}/blob/main/pr/{meta['pr']}/README.md",
         f"- **Current status:** {issue_status_summary(meta)}",
         f"- **Regression:** {'yes' if meta['classification']['regression'] else 'no'}",
         f"- **Trunk commit:** `{meta['trunk']['commit']}`" if meta["trunk"].get("commit") else "- **Trunk commit:** n/a",
@@ -608,7 +610,7 @@ def sync_issue(meta: Dict[str, Any]) -> None:
                 "view",
                 str(issue_number),
                 "--repo",
-                GH_REPO,
+                GH_ISSUE_REPO,
                 "--json",
                 "state,labels",
             ]
@@ -626,7 +628,7 @@ def sync_issue(meta: Dict[str, Any]) -> None:
                 "edit",
                 str(issue_number),
                 "--repo",
-                GH_REPO,
+                GH_ISSUE_REPO,
                 "--title",
                 f"PR{meta['pr']}: {meta['title']}",
                 "--body-file",
@@ -640,7 +642,7 @@ def sync_issue(meta: Dict[str, Any]) -> None:
         add = sorted(desired_process - current_process)
         remove = sorted(current_process - desired_process)
         if add or remove:
-            cmd = ["gh", "issue", "edit", str(issue_number), "--repo", GH_REPO]
+            cmd = ["gh", "issue", "edit", str(issue_number), "--repo", GH_ISSUE_REPO]
             if add:
                 cmd.extend(["--add-label", ",".join(add)])
             if remove:
@@ -649,9 +651,9 @@ def sync_issue(meta: Dict[str, Any]) -> None:
         desired_closed = meta["fix_status"] in {"merged", "worksforme", "wontfix"}
         current_closed = issue_info.get("state") == "CLOSED"
         if desired_closed and not current_closed:
-            run(["gh", "issue", "close", str(issue_number), "--repo", GH_REPO], capture=False)
+            run(["gh", "issue", "close", str(issue_number), "--repo", GH_ISSUE_REPO], capture=False)
         elif not desired_closed and current_closed:
-            run(["gh", "issue", "reopen", str(issue_number), "--repo", GH_REPO], capture=False)
+            run(["gh", "issue", "reopen", str(issue_number), "--repo", GH_ISSUE_REPO], capture=False)
     finally:
         if tmp.exists():
             tmp.unlink()
@@ -974,7 +976,7 @@ def maintainer_summary(meta: Dict[str, Any]) -> str:
         f"- **Bugzilla:** {meta['bugzilla']['url']}",
         f"- **GitHub issue:** "
         + (
-            f"https://github.com/krystophny/gcc-dev/issues/{meta['github_issue']}"
+            f"https://github.com/{GH_ISSUE_REPO}/issues/{meta['github_issue']}"
             if meta.get("github_issue")
             else "n/a"
         ),

@@ -23,7 +23,7 @@ If a count N is given, pick top N. If nothing is given, pick 1.
 
 Use:
 ```bash
-gh issue list --state open --limit 500 --json number,title,labels \
+gh issue list --repo lazy-fortran/gcc --state open --limit 500 --json number,title,labels \
   | python3 -c "
 import json, re, sys
 issues = json.load(sys.stdin)

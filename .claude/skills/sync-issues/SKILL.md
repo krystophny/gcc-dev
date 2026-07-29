@@ -17,7 +17,7 @@ After running, interpret the output and:
 1. **Report untracked regressions** - List any Bugzilla regressions not yet
    tracked as GitHub issues. If the user asks, create issues for them using:
    ```bash
-   gh issue create --title "PR<number>: <summary>" --body "<bugzilla link>"
+   gh issue create --repo lazy-fortran/gcc --title "PR<number>: <summary>" --body "<bugzilla link>"
    ```
 2. **Report Bugzilla status changes** - Flag any issues where Bugzilla shows
    RESOLVED/FIXED but the GitHub issue is still open.

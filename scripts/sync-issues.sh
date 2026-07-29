@@ -17,6 +17,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 GCC_DIR="$REPO_ROOT/gcc"
 BUGZILLA="$SCRIPT_DIR/gcc-bugzilla.sh"
+# Issues live on the downstream fork, not the meta-repo.
+GH_ISSUE_REPO="${GH_ISSUE_REPO:-lazy-fortran/gcc}"
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 
@@ -45,7 +47,7 @@ list_open_issues() {
         return
     fi
     OPEN_ISSUES_CACHE="$(mktemp /tmp/sync-issues-cache.XXXXXX)"
-    retry_once gh issue list --state open --limit 500 --json number,title \
+    retry_once gh issue list --repo "$GH_ISSUE_REPO" --state open --limit 500 --json number,title \
         | python3 -c "
 import json, re, sys
 issues = json.load(sys.stdin)
@@ -292,7 +294,7 @@ cmd_close_merged() {
         comment="Merged upstream: ${descr}
 https://gcc.gnu.org/git/?p=gcc.git;a=commit;h=${hash}"
         echo "Closing #${issue_num} (PR${pr})..."
-        retry_once gh issue close "$issue_num" --comment "$comment"
+        retry_once gh issue close "$issue_num" --repo "$GH_ISSUE_REPO" --comment "$comment"
     done <<< "$to_close"
 
     echo "Closed $count issue(s)."

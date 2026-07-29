@@ -29,14 +29,26 @@ gcc-dev/                    # META-REPO (GitHub: krystophny/gcc-dev)
 ```
 
 **Git remotes in gcc/:**
-- `origin` = github.com/krystophny/gcc (fork, safe to push)
-- `upstream` = gcc.gnu.org/git/gcc.git (NEVER push, use git send-email)
+- `origin` = github.com/lazy-fortran/gcc (public downstream fork — **primary
+  target for all fixes and issues**)
+- `upstream` = gcc.gnu.org/git/gcc.git (NEVER push)
 
-The fork carries only `origin/master` tracking upstream. All patch work is
-stored as exported `.patch` files under `pr/<number>/` in this meta-repo;
-there are no persistent `pr*-fix` branches on the fork. Create a local
-branch off `upstream/master` for each fix, commit, export, and delete the
-branch once the patch file is in `pr/<number>/`.
+The former personal mirror `github.com/krystophny/gcc` is retired; do not
+push there.
+
+**Primary mode of operation:** every fix is developed on a branch
+`fix/pr<N>-<slug>` off `origin/main` (official GCC master + Lazy Fortran
+fixes), pushed to `lazy-fortran/gcc`, and opened as a pull request titled
+`PR<N>: <summary>` where `<N>` is the upstream Bugzilla PR number. The PR
+gets a machine review (`/code-review` or the review workflow) before merge
+and is then **squash-merged**, so `main` carries exactly one upstream-shaped
+commit per Bugzilla PR. That one-commit-per-fix discipline is what keeps
+each fix dissectable, reviewable, and independently reimplementable for
+upstream GCC later. User-facing bug tracking lives in `lazy-fortran/gcc`
+issues (one issue per Bugzilla PR, same `PR<N>:` title convention).
+Exported `.patch` files and reproducers are still tracked under
+`pr/<number>/` in this meta-repo, which remains the private tooling,
+build-script, and provenance layer — not a user-facing tracker.
 
 ```bash
 git -C gcc format-patch -1 HEAD -o ../pr/<number>/       # export patch
@@ -66,29 +78,38 @@ Both suites must pass with zero new FAIL/XPASS before posting any patch. See
 `docs/build-and-test.md` for coverage details, OpenACC caveats, DejaGnu
 conventions, and OpenMP testcase placement rules.
 
-## Patch Submission Ground Rules
+## Fix Submission Ground Rules
 
-Never invoke `git send-email`, `scripts/gcc-send-patch.sh`, or any Bugzilla
-write operation without explicit user permission. Fork pushes, patch export,
-and all read-only Bugzilla queries are fine. See
-`docs/upstream-submission.md` for the full list of tools and confirmation
-requirements.
+**Downstream fork first.** Fixes land as pull requests on
+`lazy-fortran/gcc`, one PR per upstream Bugzilla PR number, machine-reviewed
+and squash-merged. Fork pushes, PR creation, patch export, and all read-only
+Bugzilla queries are fine without asking.
 
-Every patch is **exactly one commit**.  Squash any work-in-progress or
-staged sub-commits before `git format-patch`; no `0001-..., 0002-...,
-0003-...` series for a single PR.  Two genuinely independent changes
-are two PRs and two `pr/<number>/` directories — one commit each.
+**Upstream GCC is off-limits for our code patches.** Under the GCC steering
+committee's AI contributions policy (2026), legally significant
+contributions (≈15+ lines) that include or are derived from LLM-generated
+content are declined. Patches from this workflow are LLM-derived, so: never
+attach a patch to Bugzilla, never invoke `git send-email` or
+`scripts/gcc-send-patch.sh`. What remains welcome upstream — and still
+requires explicit user permission per message — is bug reports, analysis,
+and reduced reproducers on Bugzilla, plus testcases at maintainer
+discretion (the policy's explicit carve-out), always with honest disclosure
+of AI involvement. See `docs/upstream-submission.md`.
 
-Every commit on a patch branch requires:
+The squashed merge commit on `lazy/main` (equivalently the exported patch)
+is **exactly one commit** per Bugzilla PR. Two genuinely independent
+changes are two PRs and two `pr/<number>/` directories — one commit each.
+
+Every squashed fix commit requires:
 - `-s` (Signed-off-by) at the very end of the message
-- `Assisted-by:` trailer naming the model used, placed in the body
-  immediately above the `	PR <component>/<n>` line — **not** at the
-  end of the message.  GCC's `gcc/contrib/gcc-changelog/git_commit.py`
-  does not recognize `assisted-by:` as an end-trailer, so end placement
-  fails `git gcc-verify`.  See `docs/patch-workflow.md` "Assisted-by
-  placement" for the full layout and rationale.
-- `git gcc-verify HEAD` passing
-- both trailers re-verified in the exported patch
+- `git gcc-verify HEAD` passing (upstream-shaped ChangeLog, so the fix
+  stays dissectable and reapplicable later)
+- Signed-off-by re-verified in the exported patch
+
+**No per-commit AI attribution.** There are no `Assisted-by:` trailers.
+AI use is declared once, repo-wide, in the `lazy-fortran/gcc` AI policy
+(see `docs/patch-workflow.md` "AI policy"). Voluntary attribution is
+permitted, never required.
 
 Full procedure and the `GCC_FORCE_MKLOG=1` commit recipe are in
 `docs/patch-workflow.md`.
@@ -223,7 +244,7 @@ report what was checked — no shortcuts:
    push without explicit user authorization for that specific push.
 
 Apply the same checklist to the embedded `gcc/` worktree before any
-fork push to `github.com/krystophny/gcc`.
+fork push to `github.com/lazy-fortran/gcc`.
 
 ## Patch status — sources of truth
 

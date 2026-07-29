@@ -1,5 +1,29 @@
 # Upstream Submission
 
+## GCC upstream AI policy (2026) — read first
+
+The GCC steering committee declines legally significant contributions
+(≈15+ lines of code and/or text) that include **or are derived from**
+LLM-generated content (see the policy announcement,
+https://lwn.net/Articles/1086041/). LLM use for research, analysis, bug
+discovery and reporting, and patch review remains allowed as long as the
+output is not included in contributions; maintainers may accept
+LLM-generated testcases at their discretion.
+
+Consequences for this workflow, whose fixes are LLM-derived:
+
+- **Code patches are never offered to upstream GCC** — no patch
+  attachments on Bugzilla, no gcc-patches@ submissions. Fixes land on
+  the downstream fork `lazy-fortran/gcc` instead.
+- **Bug reports, root-cause analysis, and reduced reproducers on
+  Bugzilla remain welcome** and are the main way this work still helps
+  upstream. Always disclose AI involvement honestly.
+- **Testcases** may be offered upstream only with explicit disclosure
+  that they are LLM-generated, invoking the policy's carve-out, and only
+  with explicit user permission per submission.
+- Never present LLM-derived work upstream as if it were unassisted
+  human work — that, not the fork, is what would actually damage GCC.
+
 **ABSOLUTELY FORBIDDEN without explicit user permission:**
 - `git send-email` to gcc-patches@gcc.gnu.org
 - Posting to any GCC mailing list
@@ -7,11 +31,13 @@
   user permission and manual confirmation
 
 **NEVER use git send-email or gcc-send-patch.sh without the user explicitly
-requesting it - this is a HARD RULE.**
+requesting it - this is a HARD RULE.** (With the AI policy above, these
+tools are effectively legacy: even with permission, only non-code
+content — reports, analysis, disclosed testcases — is eligible.)
 
 Permitted without approval:
 - Prepare patches, run tests, document readiness
-- Push to origin (krystophny/gcc fork)
+- Push fix branches to origin (lazy-fortran/gcc fork)
 - Create PRs in the fork
 - Export patches with `git format-patch`
 - All Bugzilla operations: `info`, `comments`, `attachments`, `download`,

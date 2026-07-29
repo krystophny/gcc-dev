@@ -17,7 +17,7 @@ the embedded `gcc/` git repo (separate history).
 
 | Path | Contents |
 |------|----------|
-| `gcc/` | Upstream GCC source (separate repo, mirror at [krystophny/gcc](https://github.com/krystophny/gcc)) |
+| `gcc/` | GCC source (separate repo, downstream fork at [lazy-fortran/gcc](https://github.com/lazy-fortran/gcc)) |
 | `gcc-build/` | Local development build (untracked) |
 | `pr/<number>/` | Reproducer, exported patch(es), README, machine-readable `status.json` |
 | `scripts/` | Build helpers, workflow automation, provenance scanners |
@@ -98,5 +98,4 @@ Manifest entries in `.provenance/testsuites.toml` mark reviewed files as
 
 - [GCC Bugzilla](https://gcc.gnu.org/bugzilla/)
 - [GCC Fortran mailing list](https://gcc.gnu.org/mailman/listinfo/fortran)
-- [GitHub issues](https://github.com/krystophny/gcc-dev/issues)
-- [krystophny/gcc mirror](https://github.com/krystophny/gcc)
+- [lazy-fortran/gcc fork and issues](https://github.com/lazy-fortran/gcc)
