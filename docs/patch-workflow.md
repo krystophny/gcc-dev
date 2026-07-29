@@ -216,11 +216,16 @@ git add pr/<number>/
 git commit -m "pr<number>: add patch"
 git push origin main
 
-# 7b. Notify Bugzilla with a short pointer to the finished PR.  This
-#     templated post carries standing user authorization (see
-#     docs/upstream-submission.md); review the dry-run output, then:
-scripts/bugzilla-pr-notify.sh <number> https://github.com/lazy-fortran/gcc/pull/<N>            # dry run
-scripts/bugzilla-pr-notify.sh <number> https://github.com/lazy-fortran/gcc/pull/<N> --execute  # post
+# 7b. Notify Bugzilla with a short SUBSTANTIVE comment linking the PR
+#     (standing authorization, see docs/upstream-submission.md). Write
+#     the body yourself: what the patch changes, what was verified, and
+#     how it relates to existing patches/discussion on the bug. No
+#     boilerplate, no AI disclaimer, max ~15 lines, must contain the URL.
+cat > /tmp/bz-<number>.txt <<'EOF'
+<2-6 lines of real content + PR URL>
+EOF
+scripts/bugzilla-pr-notify.sh <number> https://github.com/lazy-fortran/gcc/pull/<N> /tmp/bz-<number>.txt            # dry run
+scripts/bugzilla-pr-notify.sh <number> https://github.com/lazy-fortran/gcc/pull/<N> /tmp/bz-<number>.txt --execute  # post
 
 # 8. Delete the local fix branch once merged and exported
 git -C gcc checkout master
@@ -251,8 +256,10 @@ Patch bodies additionally live as `.patch` files in `pr/<number>/`.
   evidence. A reader decides in ten seconds whether to look deeper.
 - **`Fixes #<issue>` in the message body** links and auto-closes the
   fork issue when the squash lands on `main`.
-- **After the squash-merge**, post the short Bugzilla notification
-  (step 7b, `scripts/bugzilla-pr-notify.sh`).
+- **When the PR is finished (opened for review, and again if reworked
+  before merge)**, post the short substantive Bugzilla comment (step
+  7b, `scripts/bugzilla-pr-notify.sh`): what the patch changes, test
+  evidence, relation to prior patches on the bug. No disclaimers.
 - **Avoid stacking.** Prefer "merge A, then start B". For a genuine
   dependency, branch B off A's branch and open PR B with base
   `fix/prA-<slug>` (so it shows only B's delta). After A squash-merges,

@@ -65,8 +65,10 @@ satisfied or the user declares them OK** — only then squash-merged, so
 `main` carries exactly one upstream-shaped commit per Bugzilla PR and
 the linked fork issue auto-closes. Every fix starts from full
 Bugzilla context (`docs/patch-workflow.md` Step 0), and each merged fix
-is announced on Bugzilla with the short pre-authorized template
-(`scripts/bugzilla-pr-notify.sh`). All public-facing text — PR
+is announced on Bugzilla with a short substantive pre-authorized
+comment (`scripts/bugzilla-pr-notify.sh`): what the patch changes,
+what was verified, relation to prior patches on the bug — no
+boilerplate, no AI disclaimer. All public-facing text — PR
 descriptions, Bugzilla comments — stays short and targeted. That one-commit-per-fix discipline is what keeps
 each fix dissectable, reviewable, and independently reimplementable for
 upstream GCC later. User-facing bug tracking lives in `lazy-fortran/gcc`

@@ -155,11 +155,12 @@ gh pr comment <pr-url> --repo lazy-fortran/gcc --body \
 ### Phase 6: Stop — the PR stays open
 
 Do NOT merge. The PR stays open until reviewers are satisfied or the
-user declares it OK. Do NOT post anything to Bugzilla at this stage —
-patch attachments to Bugzilla are forbidden (GCC AI policy), and the
-notification comment comes only after the squash-merge
-(`scripts/bugzilla-pr-notify.sh`, run in the post-merge flow of
-docs/patch-workflow.md).
+user declares it OK. Patch attachments to Bugzilla are forbidden (GCC
+AI policy). The only Bugzilla write is the short substantive PR-link
+comment via `scripts/bugzilla-pr-notify.sh` (see docs/patch-workflow.md
+step 7b): hand-written body describing what the patch changes, test
+evidence, and relation to prior patches on the bug — no boilerplate,
+no AI disclaimer.
 
 ### Phase 7: Update Meta-Repo
 
@@ -172,10 +173,9 @@ docs/patch-workflow.md).
 ## Important Rules
 
 - Never skip the full test suite. Partial passes = failure.
-- NEVER attach patches to Bugzilla or post Bugzilla comments from this
-  pipeline. The only permitted Bugzilla write is the post-merge
-  `bugzilla-pr-notify.sh` template, and merging is not this pipeline's
-  decision.
+- NEVER attach patches to Bugzilla. The only permitted Bugzilla write
+  is the `bugzilla-pr-notify.sh` substantive PR-link comment (body
+  rules in docs/upstream-submission.md).
 - One fix per branch (`fix/pr<number>-<slug>` off origin/main), never
   stacked, never drafts.
 - Use gcc-commit-mklog for commit messages (never hand-write ChangeLog).
