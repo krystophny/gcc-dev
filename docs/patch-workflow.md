@@ -227,11 +227,13 @@ per-commit markers:
   regardless of whether an AI tool was involved (see "Provenance review").
 - Because the repo-level policy declares AI use globally, **fixes from this
   workflow must be treated as LLM-derived for upstream purposes**: under
-  the GCC steering committee's AI contributions policy (2026), they cannot
-  be offered to upstream GCC as code contributions. Anyone wanting a fix
-  upstream must reimplement it independently; the one-commit-per-PR layout,
-  the upstream-shaped ChangeLog, and the Bugzilla-numbered PR titles exist
-  precisely to make that dissection and independent review easy.
+  GCC's AI policy (https://gcc.gnu.org/ai-policy.html, 2026), legally
+  significant ones (≈15+ lines) cannot be offered to upstream GCC as code
+  contributions; sub-threshold fixes and testcases can, if clearly marked
+  `Assisted-by:` (see `docs/upstream-submission.md`). The
+  one-commit-per-PR layout, the upstream-shaped ChangeLog, and the
+  Bugzilla-numbered PR titles exist precisely to keep every fix
+  dissectable and independently reviewable.
 
 ## Fix development rules
 

@@ -2,25 +2,41 @@
 
 ## GCC upstream AI policy (2026) — read first
 
-The GCC steering committee declines legally significant contributions
-(≈15+ lines of code and/or text) that include **or are derived from**
-LLM-generated content (see the policy announcement,
-https://lwn.net/Articles/1086041/). LLM use for research, analysis, bug
-discovery and reporting, and patch review remains allowed as long as the
-output is not included in contributions; maintainers may accept
-LLM-generated testcases at their discretion.
+Canonical text: https://gcc.gnu.org/ai-policy.html (CC0; announced
+2026-07-28 by the steering committee, authored via the AI policy working
+group led by Jonathan Wakely; review promised by start of 2027).
+Summary of its operative rules:
+
+- GCC **declines legally significant contributions** (GNU threshold:
+  "around 15 lines of code and/or text") **which include LLM-generated
+  content or are derived from LLM-generated content**. "Derived from"
+  is not further defined.
+- **Legally insignificant LLM-generated contributions are acceptable**
+  if they meet the usual prerequisites and are **clearly marked**.
+- **Test cases generated in whole or in part by an LLM are acceptable
+  at any size** (explicit exception), at maintainer discretion.
+- Any contribution of LLM-generated content **must carry an
+  `Assisted-by:` tag**; a human must sign off (DCO), understand the
+  change, and be able to answer questions.
+- LLM use for research, analysis, bug discovery and reporting, patch
+  review, and debugging is fine as long as the output is not included
+  in the contribution; "output should not be sent verbatim without due
+  consideration".
 
 Consequences for this workflow, whose fixes are LLM-derived:
 
-- **Code patches are never offered to upstream GCC** — no patch
-  attachments on Bugzilla, no gcc-patches@ submissions. Fixes land on
-  the downstream fork `lazy-fortran/gcc` instead.
+- **Legally significant code patches (≈15+ changed lines) are never
+  offered to upstream GCC** — no patch attachments on Bugzilla, no
+  gcc-patches@ submissions. They land on `lazy-fortran/gcc` instead.
+- **Small fixes below the legal-significance threshold and testcases of
+  any size MAY be offered upstream**, with an `Assisted-by:` tag naming
+  the model, the user's Signed-off-by, and explicit user permission per
+  submission. When in doubt whether a fix is "legally significant",
+  keep it fork-only.
 - **Bug reports, root-cause analysis, and reduced reproducers on
-  Bugzilla remain welcome** and are the main way this work still helps
-  upstream. Always disclose AI involvement honestly.
-- **Testcases** may be offered upstream only with explicit disclosure
-  that they are LLM-generated, invoking the policy's carve-out, and only
-  with explicit user permission per submission.
+  Bugzilla remain welcome** and are the main way this work helps
+  upstream. Write them deliberately, never paste raw model output, and
+  disclose AI involvement honestly.
 - Never present LLM-derived work upstream as if it were unassisted
   human work — that, not the fork, is what would actually damage GCC.
 

@@ -100,16 +100,17 @@ conventions, and OpenMP testcase placement rules.
 and squash-merged. Fork pushes, PR creation, patch export, and all read-only
 Bugzilla queries are fine without asking.
 
-**Upstream GCC is off-limits for our code patches.** Under the GCC steering
-committee's AI contributions policy (2026), legally significant
-contributions (≈15+ lines) that include or are derived from LLM-generated
-content are declined. Patches from this workflow are LLM-derived, so: never
-attach a patch to Bugzilla, never invoke `git send-email` or
-`scripts/gcc-send-patch.sh`. What remains welcome upstream — and still
-requires explicit user permission per message — is bug reports, analysis,
-and reduced reproducers on Bugzilla, plus testcases at maintainer
-discretion (the policy's explicit carve-out), always with honest disclosure
-of AI involvement. See `docs/upstream-submission.md`.
+**Upstream GCC is off-limits for legally significant code patches.** Under
+GCC's AI policy (https://gcc.gnu.org/ai-policy.html, 2026), legally
+significant contributions (≈15+ lines) that include or are derived from
+LLM-generated content are declined. Patches from this workflow are
+LLM-derived, so significant fixes are fork-only: never attach them to
+Bugzilla, never invoke `git send-email` or `scripts/gcc-send-patch.sh` for
+them. Still eligible upstream — each requiring explicit user permission —
+are: legally *insignificant* fixes (<~15 lines) and testcases of any size,
+both clearly marked with an `Assisted-by:` tag; and bug reports, analysis,
+and reduced reproducers on Bugzilla with honest AI disclosure. See
+`docs/upstream-submission.md`.
 
 The squashed merge commit on `lazy/main` (equivalently the exported patch)
 is **exactly one commit** per Bugzilla PR. Two genuinely independent
