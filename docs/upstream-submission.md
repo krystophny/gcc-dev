@@ -46,6 +46,20 @@ Consequences for this workflow, whose fixes are LLM-derived:
 - Creating or modifying GCC Bugzilla bugs/comments/attachments without explicit
   user permission and manual confirmation
 
+**Single standing exception (user authorization 2026-07-29):**
+`scripts/bugzilla-pr-notify.sh` may post its fixed template — a short
+comment linking a squash-merged lazy-fortran/gcc PR, disclosing AI
+assistance and reference-only status — after a fix lands on `main`.
+Run the dry run first, read it, then `--execute`. Any deviation from
+the template is an ordinary Bugzilla write and needs explicit
+permission again.
+
+**Brevity rule for everything public-facing:** Bugzilla comments and PR
+descriptions must be short and targeted — a handful of lines a
+maintainer can read in ten seconds. State the fact, the link, the
+disclosure; no narrative, no process detail, no restating what the bug
+tracker already says.
+
 **NEVER use git send-email or gcc-send-patch.sh without the user explicitly
 requesting it - this is a HARD RULE.** (With the AI policy above, these
 tools are effectively legacy: even with permission, only non-code

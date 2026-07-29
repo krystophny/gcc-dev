@@ -54,10 +54,15 @@ work — checkout, bootstrap, testing — runs on the Apple Silicon machine
 **Primary mode of operation:** every fix is developed on a branch
 `fix/pr<N>-<slug>` off `origin/main` (official GCC master + Lazy Fortran
 fixes), pushed to `lazy-fortran/gcc`, and opened as a pull request titled
-`PR<N>: <summary>` where `<N>` is the upstream Bugzilla PR number. The PR
-gets a machine review (`/code-review` or the review workflow) before merge
-and is then **squash-merged**, so `main` carries exactly one upstream-shaped
-commit per Bugzilla PR. That one-commit-per-fix discipline is what keeps
+`PR<N>: <summary>` where `<N>` is the upstream Bugzilla PR number. PRs are
+always real (never drafts), opened immediately, machine-reviewed right
+away, and **stay open until reviewers are satisfied or the user declares
+them OK** — only then squash-merged, so `main` carries exactly one
+upstream-shaped commit per Bugzilla PR. Every fix starts from full
+Bugzilla context (`docs/patch-workflow.md` Step 0), and each merged fix
+is announced on Bugzilla with the short pre-authorized template
+(`scripts/bugzilla-pr-notify.sh`). All public-facing text — PR
+descriptions, Bugzilla comments — stays short and targeted. That one-commit-per-fix discipline is what keeps
 each fix dissectable, reviewable, and independently reimplementable for
 upstream GCC later. User-facing bug tracking lives in `lazy-fortran/gcc`
 issues (one issue per Bugzilla PR, same `PR<N>:` title convention).

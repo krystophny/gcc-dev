@@ -56,11 +56,15 @@ Use TaskCreate to track progress. Create a plan first with EnterPlanMode.
 ### Phase 1: Reproduce and Understand
 
 1. Read `pr/<number>/README.md` if it exists for prior analysis
-2. Get the reproducer from Bugzilla:
+2. Pull FULL Bugzilla context (mandatory, never the summary alone):
    ```bash
+   scripts/gcc-bugzilla.sh info <number>
    scripts/gcc-bugzilla.sh comments <number>
+   scripts/gcc-bugzilla.sh attachments <number>
    ```
-3. Extract or write `pr/<number>/reproducer.f90`
+   Distill root-cause hints, duplicates, and failed prior approaches into
+   a few lines of `pr/<number>/README.md`; never paste Bugzilla verbatim.
+3. Extract or write `pr/<number>/reproducer.f90` (provenance rules apply)
 4. Verify it fails on current trunk:
    ```bash
    gcc-build/gcc/gfortran -B gcc-build/gcc reproducer.f90 -o /tmp/test-pr<number> 2>&1
@@ -69,10 +73,10 @@ Use TaskCreate to track progress. Create a plan first with EnterPlanMode.
 
 ### Phase 2: Fix
 
-1. Create a local branch in gcc/ off upstream/master:
+1. Create a local branch in gcc/ off origin/main (lazy-fortran/gcc):
    ```bash
-   git -C gcc fetch upstream master
-   git -C gcc checkout -b pr<number>-fix upstream/master
+   git -C gcc fetch origin
+   git -C gcc checkout -b fix/pr<number>-<slug> origin/main
    ```
 2. Implement the minimal fix
 3. Rebuild:
@@ -114,46 +118,61 @@ grep -cE "^FAIL|^XPASS" gcc-build/gcc/testsuite/gfortran/gfortran.sum
 
 If ANY new failures: fix them. Re-run. Repeat until zero new FAIL/XPASS.
 
-### Phase 5: Commit and Export Patch
+### Phase 5: Commit and Open the PR
 
-Follow GCC commit rules from CLAUDE.md exactly:
+Follow GCC commit rules from CLAUDE.md exactly (Assisted-by in the body
+above the PR line; Signed-off-by last):
 ```bash
 cat > /tmp/gcc-commit-msg.txt <<'MSGEOF'
 fortran: Short summary [PR<number>]
 
 Description of the fix.
+
+Assisted-by: Claude (Anthropic)
 MSGEOF
 cd gcc && GCC_FORCE_MKLOG=1 GCC_MKLOG_ARGS='["-b", "fortran/<number>"]' \
   git commit -s -F /tmp/gcc-commit-msg.txt
 git gcc-verify HEAD
 git log -1 --format=%B | grep -q '^Signed-off-by: ' || echo "ERROR: missing Signed-off-by"
-git format-patch -1 HEAD -o ../pr/<number>/
-git checkout master
-git branch -D pr<number>-fix
 ```
 
-Patch work is stored as exported `.patch` files under `pr/<number>/`; no
-persistent `pr*-fix` branches on the fork.
-
-### Phase 6: Post to Bugzilla
-
-Post the patch and a comment describing the fix:
+Push and open a REAL PR immediately (never a draft), with the short
+4-line body template from docs/patch-workflow.md "PR lifecycle":
 ```bash
-scripts/gcc-bugzilla.sh attach <number> pr/<number>/0001-*.patch "Patch: <summary>"
-scripts/gcc-bugzilla.sh comment <number> "Patch posted. <brief description of the fix and test results.>"
+git -C gcc push origin fix/pr<number>-<slug>
+gh pr create --repo lazy-fortran/gcc --base main \
+  --head fix/pr<number>-<slug> --title "PR<number>: <summary>" \
+  --body-file /tmp/pr-body.txt
 ```
+
+### Phase 6: Stop — the PR stays open
+
+Do NOT merge. The PR stays open until reviewers are satisfied or the
+user declares it OK. Do NOT post anything to Bugzilla at this stage —
+patch attachments to Bugzilla are forbidden (GCC AI policy), and the
+notification comment comes only after the squash-merge
+(`scripts/bugzilla-pr-notify.sh`, run in the post-merge flow of
+docs/patch-workflow.md).
 
 ### Phase 7: Update Meta-Repo
 
-1. Update `pr/<number>/README.md` with status
-2. Add `patch-ready` and `on-bugzilla` labels to the GitHub issue
+1. Update `pr/<number>/README.md` with a short status note
+2. Add the `patch-ready` label to the lazy-fortran/gcc issue and comment
+   with the PR link (one line)
 3. Commit and push meta-repo changes
+4. Report the open PR(s) to the user for review/approval
 
 ## Important Rules
 
 - Never skip the full test suite. Partial passes = failure.
-- Bugzilla posts (patches, comments) are pre-approved and do not need user confirmation.
-- One fix per branch, branching off upstream/master.
+- NEVER attach patches to Bugzilla or post Bugzilla comments from this
+  pipeline. The only permitted Bugzilla write is the post-merge
+  `bugzilla-pr-notify.sh` template, and merging is not this pipeline's
+  decision.
+- One fix per branch (`fix/pr<number>-<slug>` off origin/main), never
+  stacked, never drafts.
 - Use gcc-commit-mklog for commit messages (never hand-write ChangeLog).
 - Always run gcc-verify before pushing.
-- If a bug is too complex or requires middle-end changes, report back to the user instead of attempting a fragile fix.
+- Keep PR descriptions and issue comments short and targeted.
+- If a bug is too complex or requires middle-end changes, report back to
+  the user instead of attempting a fragile fix.
