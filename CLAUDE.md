@@ -1,15 +1,15 @@
 # GCC Fortran Development Meta-Repository
 
 Details live in `docs/`:
-- `docs/build-and-test.md` — compilers, build configs, check-gfortran, OpenACC,
+- `docs/build-and-test.md`: compilers, build configs, check-gfortran, OpenACC,
   debugging, aarch64 VMs, key files by domain
-- `docs/patch-workflow.md` — triage, commit rules, provenance, PR layout,
+- `docs/patch-workflow.md`: triage, commit rules, provenance, PR layout,
   GitHub issue labeling, fix-development do/don't lists
-- `docs/upstream-submission.md` — Bugzilla CLI, mailing-list submission,
+- `docs/upstream-submission.md`: Bugzilla CLI, mailing-list submission,
   backport-aware workflow
-- `docs/bug-patterns.md` — catalogue of 14 recurring root-cause patterns
+- `docs/bug-patterns.md`: catalogue of 14 recurring root-cause patterns
   with symptom/cause/fix/evidence
-- `docs/provenance-research.md` — how to research a provenance finding end
+- `docs/provenance-research.md`: how to research a provenance finding end
   to end: scanner hit -> GCC and upstream introduction commits -> mailing
   list -> chain of custody -> correct fix that matches the subtree convention
 
@@ -29,7 +29,7 @@ gcc-dev/                    # META-REPO (GitHub: krystophny/gcc-dev)
 ```
 
 **Git remotes in gcc/:**
-- `origin` = github.com/lazy-fortran/gcc (public downstream fork — **primary
+- `origin` = github.com/lazy-fortran/gcc (public downstream fork, **primary
   target for all fixes and issues**)
 - `upstream` = gcc.gnu.org/git/gcc.git (NEVER push)
 
@@ -47,7 +47,7 @@ integration tree (remote `iains` = github.com/iains/gcc-darwin-arm64,
 currently branch `master-wip-apple-si-r17-*`) plus the same Lazy Fortran
 fixes. Never merge the whole Darwin tree into `main`; treat Iain's branch
 as the Darwin upstream base and refresh `darwin` from it. All Darwin
-work — checkout, bootstrap, testing — runs on the Apple Silicon machine
+work (checkout, bootstrap, testing) runs on the Apple Silicon machine
 `faepmac1` (`ssh faepmac1`, repo at `~/code/gcc-dev`, checkout in
 `~/code/gcc-dev/gcc`).
 
@@ -61,26 +61,26 @@ repo's squash setting ("pull request title and description") turns that
 into the merge commit verbatim. Issues keep the `PR<N>: <summary>` title
 convention. PRs are always real (never drafts), opened immediately,
 machine-reviewed right away, and **stay open until reviewers are
-satisfied or the user declares them OK** — only then squash-merged, so
+satisfied or the user declares them OK**, only then squash-merged, so
 `main` carries exactly one upstream-shaped commit per Bugzilla PR and
 the linked fork issue auto-closes. Every fix starts from full
 Bugzilla context (`docs/patch-workflow.md` Step 0), and each merged fix
 is announced on Bugzilla with a short pre-authorized comment
 (`scripts/bugzilla-pr-notify.sh`): what the patch changes, what was
 tested, relation to prior patches on the bug. No AI disclaimer.
+That one-commit-per-fix discipline is what keeps each fix dissectable,
+reviewable, and independently reimplementable for upstream GCC later.
 
-**Desloppification rule for ALL text** — Bugzilla comments, PR titles,
+**Desloppification rule for ALL text**: Bugzilla comments, PR titles,
 bodies, and comments, commit messages, issue comments, docs, code
-comments: write like a terse GCC contributor. Plain sentences, concrete
-facts. No filler ("comprehensive", "robust", "seamlessly"), no
-em-dash chains, no triad lists for rhythm, no restating the obvious,
-no process narration, no self-congratulation. That one-commit-per-fix discipline is what keeps
-each fix dissectable, reviewable, and independently reimplementable for
-upstream GCC later. User-facing bug tracking lives in `lazy-fortran/gcc`
+comments. Write like a terse GCC contributor. Plain sentences, concrete
+facts. No em dashes, ever. No filler ("comprehensive", "robust",
+"seamlessly"), no triad lists for rhythm, no restating the obvious,
+no process narration, no self-congratulation. User-facing bug tracking lives in `lazy-fortran/gcc`
 issues (one issue per Bugzilla PR, same `PR<N>:` title convention).
 Exported `.patch` files and reproducers are still tracked under
 `pr/<number>/` in this meta-repo, which remains the private tooling,
-build-script, and provenance layer — not a user-facing tracker.
+build-script, and provenance layer, not a user-facing tracker.
 
 ```bash
 git -C gcc format-patch -1 HEAD -o ../pr/<number>/       # export patch
@@ -123,7 +123,7 @@ significant contributions (≈15+ lines) that include or are derived from
 LLM-generated content are declined. Patches from this workflow are
 LLM-derived, so significant fixes are fork-only: never attach them to
 Bugzilla, never invoke `git send-email` or `scripts/gcc-send-patch.sh` for
-them. Still eligible upstream — each requiring explicit user permission —
+them. Still eligible upstream (each requiring explicit user permission)
 are: legally *insignificant* fixes (<~15 lines) and testcases of any size,
 both clearly marked with an `Assisted-by:` tag; and bug reports, analysis,
 and reduced reproducers on Bugzilla with honest AI disclosure. See
@@ -131,7 +131,7 @@ and reduced reproducers on Bugzilla with honest AI disclosure. See
 
 The squashed merge commit on `lazy/main` (equivalently the exported patch)
 is **exactly one commit** per Bugzilla PR. Two genuinely independent
-changes are two PRs and two `pr/<number>/` directories — one commit each.
+changes are two PRs and two `pr/<number>/` directories, one commit each.
 
 Every squashed fix commit requires:
 - `-s` (Signed-off-by) at the very end of the message
@@ -156,7 +156,7 @@ GCC lists (`gcc@gcc.gnu.org`, `gcc-patches@gcc.gnu.org`,
 `fortran@gcc.gnu.org`, `libstdc++@gcc.gnu.org`) want bottom-posted plain
 text: the **quoted thread comes first (top), the reply text goes
 underneath (below)**. Never top-post (reply on top, quote below) and
-never reply with only a trimmed snippet of the immediate parent — the
+never reply with only a trimmed snippet of the immediate parent: the
 **whole ancestor chain** must be visible above the new reply.
 
 Drafting procedure:
@@ -196,7 +196,7 @@ explicit user permission for that specific message.
 
 ## Provenance Ground Rules
 
-Never copy anything verbatim into `gcc/` — not code, not tests, not
+Never copy anything verbatim into `gcc/`: not code, not tests, not
 reproducers. Bugzilla reporters frequently paste third-party test-suite
 content (Fujitsu CTS, NAG, commercial benchmarks) directly into comments;
 public posting in a bug tracker is not a license grant. Before deriving
@@ -252,23 +252,23 @@ When in doubt, drop the file and keep only the user's own reduction.
 
 This repo is public on GitHub. Treat every push as final publication.
 Before `git push` (or `git push --force`), explicitly walk this list and
-report what was checked — no shortcuts:
+report what was checked, no shortcuts:
 
-1. `git diff --stat origin/main...HEAD` — review every path being added
+1. `git diff --stat origin/main...HEAD`: review every path being added
    or modified. For each file, confirm it is the user's own work, an
    allowed permissively-licensed derivative with proper provenance
    header, or a link/script to external content.
 2. `git diff origin/main...HEAD -- '*.txt' '*.md' '*.f90' '*.f' '*.for'
-   '*.c' '*.cc' '*.h' '*.patch'` — scan diffs for verbatim Bugzilla
+   '*.c' '*.cc' '*.h' '*.patch'`: scan diffs for verbatim Bugzilla
    page scrapes (the Bugzilla logged-in header text, `[reply] [-]Comment N`,
    `attachment-NNNNN`), verbatim mailing-list bodies, raw Bugzilla
    attachment filenames, or external testcases without a provenance
    header.
 3. `git ls-files | xargs grep -lE 'attachment-[0-9]+' && git ls-files |
-   xargs grep -l 'Log'' out '` — must return empty.
+   xargs grep -l 'Log'' out '`: must return empty.
 4. Secret scan: `git diff origin/main...HEAD | grep -iE
    '(api[_-]?key|api[_-]?token|secret[_-]?key|password|BEGIN (RSA|
-   OPENSSH|PGP|EC) PRIVATE|ghp_|glpat-|sk-)'` — must be empty.
+   OPENSSH|PGP|EC) PRIVATE|ghp_|glpat-|sk-)'`: must be empty.
 5. Personal-data scan: search the diff for non-user emails and decide
    per-occurrence whether the email is already public via GCC
    convention (`Contributed by <reporter>` lines, Signed-off-by
@@ -282,38 +282,38 @@ report what was checked — no shortcuts:
 Apply the same checklist to the embedded `gcc/` worktree before any
 fork push to `github.com/lazy-fortran/gcc`.
 
-## Patch status — sources of truth
+## Patch status: sources of truth
 
 Per-PR state lives next to each patch; do not duplicate it here.
 
-- `pr/<number>/status.json` — machine-readable: `fix_status`,
+- `pr/<number>/status.json`: machine-readable: `fix_status`,
   `bugzilla.{status,resolution,last_synced_utc}`, `trunk.commit`,
   backports. Schema in `pr/schema.json`. Written **exclusively** by
   `python3 scripts/gcc-workflow.py sync-metadata`; do not hand-edit.
   `--refresh-bugzilla` opts into a Bugzilla XML-RPC fetch, deduplicated
   to one call per PR per hour (override with `--force-bugzilla`).
-- `pr/<number>/README.md` — human summary; narrative only, no mirrored
+- `pr/<number>/README.md`: human summary; narrative only, no mirrored
   Bugzilla state.
-- `pr/backport-matrix.{md,json}` — generated by `gcc-workflow.py
+- `pr/backport-matrix.{md,json}`: generated by `gcc-workflow.py
   scan-regressions`.
-- `docs/upstream-master-commits.md` — commits on GCC trunk authored by
+- `docs/upstream-master-commits.md`: commits on GCC trunk authored by
   the user, with mirror links and AI-assistance attribution.
-- Upstream `gcc/` worktree (`upstream/master`) — authoritative for
+- Upstream `gcc/` worktree (`upstream/master`): authoritative for
   whether a patch landed; `gcc-workflow.py sync-metadata` queries it
   via `git log upstream/master -E --grep '\bPR<N>\b' -- gcc/fortran/
   gcc/testsuite/gfortran.dg/ libgomp/` to populate `trunk.commit`.
 
 ### Drift guards (run via `make check-meta`)
 
-- `gcc-workflow.py validate` — validates every `pr/<n>/status.json`
+- `gcc-workflow.py validate`: validates every `pr/<n>/status.json`
   against `pr/schema.json` and warns on `bugzilla.id != pr`,
   `fix_status=merged` without `trunk.commit`, and stale
   `bugzilla.last_synced_utc`. `--strict` promotes warnings to errors.
-- `scripts/check-status-docs.sh` — fails if a tracked `.md`/`.txt`
+- `scripts/check-status-docs.sh`: fails if a tracked `.md`/`.txt`
   outside the declared sources of truth carries status-shaped content
   (`RESOLVED FIXED`, `merged on trunk; BZ`, `Patch on Bugzilla`,
   `attachment-NN+`).
-- `scripts/check-snapshot-freshness.py` — warns when a `Generated:` or
+- `scripts/check-snapshot-freshness.py`: warns when a `Generated:` or
   `Snapshot date:` header in `docs/*.md` is older than `--warn-days`
   (default 30).
 

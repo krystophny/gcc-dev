@@ -7,7 +7,7 @@ Before writing any fix, verify the bug and record its status across branches.
 ### Step 0: Full Bugzilla context (MANDATORY)
 
 Never start a fix from the summary line alone. Pull the complete bug
-history first — reporters, maintainers, and prior patch attempts often
+history first: reporters, maintainers, and prior patch attempts often
 change the picture entirely:
 
 ```bash
@@ -33,7 +33,7 @@ gcc-build/gcc/gfortran -B gcc-build/gcc reproducer.f90 -o /tmp/test && /tmp/test
 If the bug **no longer reproduces on trunk**, the fix was silently merged.
 Proceed to Step 1b. Otherwise skip to Step 2.
 
-### Step 1b: Bug already fixed — bisect and add test coverage
+### Step 1b: Bug already fixed: bisect and add test coverage
 
 ```bash
 # Bisect the fixing commit
@@ -45,7 +45,7 @@ Record the fixing commit in `pr/<number>/README.md`. Then write a testcase
 (if none exists) to prevent regressions and submit it as a standalone patch:
 
 ```bash
-# Add testcase only — no code fix needed
+# Add testcase only, no code fix needed
 git checkout upstream/master && git checkout -b pr<number>-testcase
 cp reproducer.f90 gcc/testsuite/gfortran.dg/pr<number>.f90
 # Add DejaGnu directives, commit, verify, push
@@ -90,8 +90,8 @@ Every patch MUST pass ALL of the following test suites with zero failing
 DejaGnu entries, except the documented local `bessel_6.f90` expected
 failure in `docs/build-and-test.md`:
 
-1. `scripts/check-fortran.sh` — Fortran frontend tests
-2. `check-target-libgomp-fortran` — libgomp Fortran runtime harnesses
+1. `scripts/check-fortran.sh`: Fortran frontend tests
+2. `check-target-libgomp-fortran`: libgomp Fortran runtime harnesses
 
 ```bash
 scripts/check-fortran.sh > /tmp/check-fortran.log 2>&1
@@ -141,7 +141,7 @@ git -C gcc add gcc/fortran/changed-file.cc
 #    Write the commit message to a file first, then commit with -F.
 #    The prepare-commit-msg hook appends the ChangeLog automatically.
 #    The Assisted-by: line goes in the body, immediately above the
-#    `\tPR <component>/<n>` line that begins the ChangeLog area —
+#    `\tPR <component>/<n>` line that begins the ChangeLog area;
 #    gcc/contrib/gcc-changelog/git_commit.py rejects it as an
 #    end-of-message trailer, so gcc-verify fails if it sits at the end.
 cat > /tmp/gcc-commit-msg.txt <<'EOF'
@@ -172,7 +172,7 @@ echo "$msg" | grep -q '^Signed-off-by: ' \
   || { echo "ERROR: missing Signed-off-by trailer in commit"; exit 1; }
 
 # 6. Push the branch and open a real PR immediately (never a draft).
-#    PR title and body ARE the verified GCC commit message — the repo's
+#    PR title and body ARE the verified GCC commit message; the repo's
 #    squash setting ("pull request title and description") then produces
 #    the final commit verbatim.  Tabs in the ChangeLog survive the round
 #    trip; GitHub's " (#N)" subject suffix is accepted by
@@ -190,12 +190,12 @@ gh pr comment <pr-url> --repo lazy-fortran/gcc --body \
 
 # 6a. Run the machine review (/code-review or the review workflow) right
 #     away and fix confirmed findings on the branch.  The PR then STAYS
-#     OPEN until reviewers are satisfied or the user declares it OK —
-#     a clean machine review alone does not trigger the merge.
+#     OPEN until reviewers are satisfied or the user declares it OK.
+#     A clean machine review alone does not trigger the merge.
 
 # 6b. On approval, squash-merge.  The repo's squash setting ("pull
-#     request title and description") turns the PR title/body — i.e.
-#     the verified commit message — into the squash commit verbatim,
+#     request title and description") turns the PR title/body (the
+#     verified commit message) into the squash commit verbatim,
 #     with a " (#N)" subject suffix that doubles as the PR pointer.
 #     Precondition: the PR body still equals the verified message; if
 #     review changed the code, update commit message AND PR body
@@ -252,7 +252,7 @@ Patch bodies additionally live as `.patch` files in `pr/<number>/`.
   later if a fix is reworked for upstream). Always re-verify the merged
   commit (step 6c).
 - **The quick-read summary is the first PR comment**, short and
-  targeted — one line each for symptom, Bugzilla link, and test
+  targeted: one line each for symptom, Bugzilla link, and test
   evidence. A reader decides in ten seconds whether to look deeper.
 - **`Fixes #<issue>` in the message body** links and auto-closes the
   fork issue when the squash lands on `main`.
@@ -287,7 +287,7 @@ Patch bodies additionally live as `.patch` files in `pr/<number>/`.
   staged sub-commits before `git format-patch`.  No multi-commit
   patches in `pr/<number>/`, no `0001-..., 0002-..., 0003-...` series
   for a single PR.  If two changes are genuinely independent, they get
-  two PRs and two `pr/<number>/` directories — one commit each.  This
+  two PRs and two `pr/<number>/` directories, one commit each.  This
   is the rule going forward; older `pr/<n>/0001..0003*.patch` triples
   are legacy and get squashed when revisited.
 - **Always use `gcc-commit-mklog`** or the `GCC_FORCE_MKLOG=1` env var
@@ -295,7 +295,7 @@ Patch bodies additionally live as `.patch` files in `pr/<number>/`.
 - **Always run `git gcc-verify HEAD`** before pushing. It checks
   ChangeLog format, PR references, and other GCC conventions.
 - **Always use `-s`** (Signed-off-by) on commits, and verify it survives in
-  both the final commit message and the exported patch — `git gcc-verify`
+  both the final commit message and the exported patch; `git gcc-verify`
   does not check it.
 - **`Assisted-by:` on the final squashed commit only.** The squash-merge
   commit (equivalently the exported patch) carries an `Assisted-by:` line
@@ -321,7 +321,7 @@ compatibility):
 - AI tools are permitted for research, analysis, bug discovery,
   implementation, testing, review, documentation, and maintenance.
 - Contributions are judged on correctness, quality, licensing, provenance,
-  test coverage, and maintainability — not on whether AI was used.
+  test coverage, and maintainability, not on whether AI was used.
 - Every contribution has a human contributor who understands the change and
   accepts responsibility for its correctness, licensing, and maintenance.
 - Third-party material must be identified and licensed appropriately
@@ -382,7 +382,7 @@ compatibility):
   Apache-2.0, BSD, or proprietary reproducer does not become
   GPL-compatible just because someone pasted it into a public bug
   tracker. Attribution and license obligations stay with the
-  redistributor — us, if we ship the derivative.
+  redistributor (us, if we ship the derivative).
 - **If you cannot rewrite cleanly, drop the testcase.** A bug with a
   correct code fix and no regression test is acceptable. A fix plus a
   license-unclear test is not.

@@ -152,7 +152,7 @@ gh pr comment <pr-url> --repo lazy-fortran/gcc --body \
   "Fixes PR fortran/<number>: <one-line symptom>. Bugzilla: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=<number>. Tests: check-fortran + libgomp-fortran clean; new gfortran.dg/pr<number>.f90."
 ```
 
-### Phase 6: Stop — the PR stays open
+### Phase 6: Stop; the PR stays open
 
 Do NOT merge. The PR stays open until reviewers are satisfied or the
 user declares it OK. Patch attachments to Bugzilla are forbidden (GCC

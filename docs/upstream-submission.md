@@ -1,6 +1,6 @@
 # Upstream Submission
 
-## GCC upstream AI policy (2026) — read first
+## GCC upstream AI policy (2026), read first
 
 Canonical text: https://gcc.gnu.org/ai-policy.html (CC0; announced
 2026-07-28 by the steering committee, authored via the AI policy working
@@ -26,7 +26,7 @@ Summary of its operative rules:
 Consequences for this workflow, whose fixes are LLM-derived:
 
 - **Legally significant code patches (≈15+ changed lines) are never
-  offered to upstream GCC** — no patch attachments on Bugzilla, no
+  offered to upstream GCC**: no patch attachments on Bugzilla, no
   gcc-patches@ submissions. They land on `lazy-fortran/gcc` instead.
 - **Small fixes below the legal-significance threshold and testcases of
   any size MAY be offered upstream**, with an `Assisted-by:` tag naming
@@ -38,7 +38,7 @@ Consequences for this workflow, whose fixes are LLM-derived:
   upstream. Write them deliberately, never paste raw model output, and
   disclose AI involvement honestly.
 - Never present LLM-derived work upstream as if it were unassisted
-  human work — that, not the fork, is what would actually damage GCC.
+  human work; that, not the fork, is what would actually damage GCC.
 
 **ABSOLUTELY FORBIDDEN without explicit user permission:**
 - `git send-email` to gcc-patches@gcc.gnu.org
@@ -59,7 +59,7 @@ Max ~15 lines. Write the body to a file, check the dry run, then
 explicit permission.
 
 **Brevity rule for everything public-facing:** Bugzilla comments and PR
-descriptions must be short and targeted — a handful of lines a
+descriptions must be short and targeted: a handful of lines a
 maintainer can read in ten seconds. State the fact, the link, the
 disclosure; no narrative, no process detail, no restating what the bug
 tracker already says.
@@ -67,7 +67,7 @@ tracker already says.
 **NEVER use git send-email or gcc-send-patch.sh without the user explicitly
 requesting it - this is a HARD RULE.** (With the AI policy above, these
 tools are effectively legacy: even with permission, only non-code
-content — reports, analysis, disclosed testcases — is eligible.)
+content (reports, analysis, disclosed testcases) is eligible.)
 
 Permitted without approval:
 - Prepare patches, run tests, document readiness

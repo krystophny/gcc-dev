@@ -31,7 +31,7 @@ grep -qF "$URL" "$BODY" \
     || { echo "ERROR: body must contain the PR URL $URL" >&2; exit 1; }
 LINES=$(wc -l < "$BODY")
 (( LINES <= 15 )) \
-    || { echo "ERROR: body too long ($LINES lines, max 15) — keep it short and targeted" >&2; exit 1; }
+    || { echo "ERROR: body too long ($LINES lines, max 15); keep it short and targeted" >&2; exit 1; }
 grep -qiE 'ai-assisted|ai-policy|not submitted for inclusion|disclaimer' "$BODY" \
     && { echo "ERROR: drop the AI-disclaimer boilerplate; describe the fix instead" >&2; exit 1; }
 
