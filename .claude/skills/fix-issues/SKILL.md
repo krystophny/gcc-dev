@@ -128,6 +128,8 @@ fortran: Short summary [PR<number>]
 
 Description of the fix.
 
+Fixes #<fork-issue-number>
+
 Assisted-by: Claude (Anthropic)
 MSGEOF
 cd gcc && GCC_FORCE_MKLOG=1 GCC_MKLOG_ARGS='["-b", "fortran/<number>"]' \
@@ -136,13 +138,18 @@ git gcc-verify HEAD
 git log -1 --format=%B | grep -q '^Signed-off-by: ' || echo "ERROR: missing Signed-off-by"
 ```
 
-Push and open a REAL PR immediately (never a draft), with the short
-4-line body template from docs/patch-workflow.md "PR lifecycle":
+Push and open a REAL PR immediately (never a draft). PR title and body
+ARE the verified commit message (the repo squash setting reproduces
+them as the merge commit); the quick-read summary goes in the first PR
+comment:
 ```bash
 git -C gcc push origin fix/pr<number>-<slug>
 gh pr create --repo lazy-fortran/gcc --base main \
-  --head fix/pr<number>-<slug> --title "PR<number>: <summary>" \
-  --body-file /tmp/pr-body.txt
+  --head fix/pr<number>-<slug> \
+  --title "$(git -C gcc log -1 --format=%s)" \
+  --body "$(git -C gcc log -1 --format=%b)"
+gh pr comment <pr-url> --repo lazy-fortran/gcc --body \
+  "Fixes PR fortran/<number>: <one-line symptom>. Bugzilla: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=<number>. Tests: check-fortran + libgomp-fortran clean; new gfortran.dg/pr<number>.f90."
 ```
 
 ### Phase 6: Stop — the PR stays open

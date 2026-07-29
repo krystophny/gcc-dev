@@ -53,12 +53,17 @@ work — checkout, bootstrap, testing — runs on the Apple Silicon machine
 
 **Primary mode of operation:** every fix is developed on a branch
 `fix/pr<N>-<slug>` off `origin/main` (official GCC master + Lazy Fortran
-fixes), pushed to `lazy-fortran/gcc`, and opened as a pull request titled
-`PR<N>: <summary>` where `<N>` is the upstream Bugzilla PR number. PRs are
-always real (never drafts), opened immediately, machine-reviewed right
-away, and **stay open until reviewers are satisfied or the user declares
-them OK** — only then squash-merged, so `main` carries exactly one
-upstream-shaped commit per Bugzilla PR. Every fix starts from full
+fixes) and pushed to `lazy-fortran/gcc` as a pull request whose **title
+and body are the verified GCC-format commit message** (subject
+`fortran: <summary> [PR<N>]` with the upstream Bugzilla number; body with
+ChangeLog, `Fixes #<fork-issue>`, `Assisted-by:`, `Signed-off-by:`). The
+repo's squash setting ("pull request title and description") turns that
+into the merge commit verbatim. Issues keep the `PR<N>: <summary>` title
+convention. PRs are always real (never drafts), opened immediately,
+machine-reviewed right away, and **stay open until reviewers are
+satisfied or the user declares them OK** — only then squash-merged, so
+`main` carries exactly one upstream-shaped commit per Bugzilla PR and
+the linked fork issue auto-closes. Every fix starts from full
 Bugzilla context (`docs/patch-workflow.md` Step 0), and each merged fix
 is announced on Bugzilla with the short pre-authorized template
 (`scripts/bugzilla-pr-notify.sh`). All public-facing text — PR
