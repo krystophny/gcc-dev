@@ -33,8 +33,14 @@ gcc-dev/                    # META-REPO (GitHub: krystophny/gcc-dev)
   target for all fixes and issues**)
 - `upstream` = gcc.gnu.org/git/gcc.git (NEVER push)
 
-The former personal mirror `github.com/krystophny/gcc` is retired; do not
+The former personal mirror `github.com/krystophny/gcc` is archived; do not
 push there.
+
+Branch roles on `lazy-fortran/gcc`: `master` tracks upstream GCC verbatim
+(fast-forward only, never commit); `main` (default) is `master` plus
+squash-merged Lazy Fortran fixes. GCC's own git branch is named `master`
+("trunk" is only the colloquial SVN-era name), so keeping `master`
+pristine preserves a clean upstream reference for merges and diffs.
 
 **Primary mode of operation:** every fix is developed on a branch
 `fix/pr<N>-<slug>` off `origin/main` (official GCC master + Lazy Fortran
