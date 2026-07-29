@@ -48,11 +48,13 @@ Consequences for this workflow, whose fixes are LLM-derived:
 
 **Single standing exception (user authorization 2026-07-29, revised
 2026-07-30):** `scripts/bugzilla-pr-notify.sh` may post a short
-comment linking a lazy-fortran/gcc PR. The body must carry real
-content: what the patch changes, what was tested, and how it relates
-to prior patches and discussion on the bug. No AI disclaimer, no
-boilerplate, no filler phrases. Write like a GCC contributor: plain
-sentences, concrete facts, nothing a maintainer would skim past.
+comment linking a lazy-fortran/gcc PR. Lead with an invitation, not a
+status note: "A fix for this is open for review: <URL> — comments
+welcome." (merged PRs: "This is fixed in the Lazy Fortran GCC fork:
+<URL>."). Then the content: what the patch changes, what was tested,
+and how it relates to prior patches and discussion on the bug. No AI
+disclaimer, no boilerplate, no filler phrases. Write like a GCC
+contributor: plain sentences, concrete facts.
 Max ~15 lines. Write the body to a file, check the dry run, then
 `--execute`. Anything else is an ordinary Bugzilla write and needs
 explicit permission.
