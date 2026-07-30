@@ -37,39 +37,39 @@
     }
   },
   "bugzilla": {
-    "id": 124586,
+    "id": 125383,
     "keywords": [
-      "build"
+      "wrong-code"
     ],
-    "last_change_time": "2026-07-30T18:13:13Z",
-    "last_synced_utc": "2026-07-30T18:17:49Z",
-    "refreshed_at": "2026-07-30T18:17:49Z",
+    "last_change_time": "2026-07-30T18:13:16Z",
+    "last_synced_utc": "2026-07-30T18:17:50Z",
+    "refreshed_at": "2026-07-30T18:17:50Z",
     "resolution": "",
-    "status": "UNCONFIRMED",
-    "summary": "aarch64-netbsd native build misses driver-aarch64.o for host_detect_local_cpu",
-    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124586"
+    "status": "NEW",
+    "summary": "[14/15/16/17 Regression] Optional dummy procedure called from contained subprogram results in linking error since r16-3178 / r14-12039",
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=125383"
   },
   "classification": {
-    "regression": false,
+    "regression": true,
     "severity": "other",
     "validity_class": "valid-code"
   },
   "fix_status": "patch-ready",
-  "github_issue": 11,
+  "github_issue": 24,
   "notes": "",
-  "pr": 124586,
+  "pr": 125383,
   "submission_status": {
     "on_bugzilla": true,
     "on_mailing_list": false,
     "sent": false
   },
-  "title": "aarch64-netbsd native build misses driver-aarch64.o for host_detect_local_cpu",
+  "title": "optional dummy procedure loses host association",
   "trunk": {
     "branch": null,
     "commit": null,
-    "patch": "0001-aarch64-Add-NetBSD-host-CPU-detection-PR124586.patch"
+    "patch": "0001-fortran-Preserve-host-association-for-dummy-procedur.patch"
   },
-  "updated_at": "2026-07-30T18:34:37Z",
+  "updated_at": "2026-07-30T18:17:50Z",
   "validation": {
     "baseline": {
       "contains_any": [
@@ -84,7 +84,7 @@
       "-B",
       "gcc-build/gcc",
       "-c",
-      "pr/124586/reproducer.f90",
+      "pr/125383/reproducer.f90",
       "-o",
       "/dev/null"
     ],

@@ -39,9 +39,9 @@
   "bugzilla": {
     "id": 95128,
     "keywords": [],
-    "last_change_time": "2026-03-19T00:48:07Z",
-    "last_synced_utc": "2026-06-19T12:47:44Z",
-    "refreshed_at": "2026-06-19T12:47:44Z",
+    "last_change_time": "2026-07-30T18:13:28Z",
+    "last_synced_utc": "2026-07-30T18:17:54Z",
+    "refreshed_at": "2026-07-30T18:17:54Z",
     "resolution": "",
     "status": "NEW",
     "summary": "aarch64: configure option for outline-atomics",
@@ -53,11 +53,11 @@
     "validity_class": "valid-code"
   },
   "fix_status": "patch-ready",
-  "github_issue": 106,
+  "github_issue": 10,
   "notes": "",
   "pr": 95128,
   "submission_status": {
-    "on_bugzilla": false,
+    "on_bugzilla": true,
     "on_mailing_list": false,
     "sent": false
   },
@@ -67,7 +67,7 @@
     "commit": null,
     "patch": "0001-aarch64-Disable-outline-atomics-by-default-on-NetBSD.patch"
   },
-  "updated_at": "2026-06-19T12:48:04Z",
+  "updated_at": "2026-07-30T18:17:54Z",
   "validation": {
     "baseline": {
       "contains_any": [

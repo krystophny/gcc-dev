@@ -37,39 +37,39 @@
     }
   },
   "bugzilla": {
-    "id": 124586,
+    "id": 126485,
     "keywords": [
-      "build"
+      "rejects-valid"
     ],
-    "last_change_time": "2026-07-30T18:13:13Z",
-    "last_synced_utc": "2026-07-30T18:17:49Z",
-    "refreshed_at": "2026-07-30T18:17:49Z",
+    "last_change_time": "2026-07-30T18:13:23Z",
+    "last_synced_utc": "2026-07-30T18:17:53Z",
+    "refreshed_at": "2026-07-30T18:17:53Z",
     "resolution": "",
     "status": "UNCONFIRMED",
-    "summary": "aarch64-netbsd native build misses driver-aarch64.o for host_detect_local_cpu",
-    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124586"
+    "summary": "[16/17 Regression] caused by r16-8455 / `64e03b96dfe`: Fortran: fix resolution of generic interface with TYPE(C_PTR) [PR66973]",
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=126485"
   },
   "classification": {
-    "regression": false,
+    "regression": true,
     "severity": "other",
     "validity_class": "valid-code"
   },
   "fix_status": "patch-ready",
-  "github_issue": 11,
+  "github_issue": 29,
   "notes": "",
-  "pr": 124586,
+  "pr": 126485,
   "submission_status": {
     "on_bugzilla": true,
     "on_mailing_list": false,
     "sent": false
   },
-  "title": "aarch64-netbsd native build misses driver-aarch64.o for host_detect_local_cpu",
+  "title": "C pointer check rejects an inferred interface",
   "trunk": {
     "branch": null,
     "commit": null,
-    "patch": "0001-aarch64-Add-NetBSD-host-CPU-detection-PR124586.patch"
+    "patch": "0001-fortran-Skip-artificial-dummies-in-C-pointer-checks-.patch"
   },
-  "updated_at": "2026-07-30T18:34:37Z",
+  "updated_at": "2026-07-30T18:17:53Z",
   "validation": {
     "baseline": {
       "contains_any": [
@@ -84,7 +84,7 @@
       "-B",
       "gcc-build/gcc",
       "-c",
-      "pr/124586/reproducer.f90",
+      "pr/126485/reproducer.f90",
       "-o",
       "/dev/null"
     ],

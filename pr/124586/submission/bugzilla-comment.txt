@@ -1,0 +1,4 @@
+Supersedes attachment 65179. The source change is unchanged; this version
+completes the ChangeLog entry. An aarch64--netbsd all-gcc build links the
+driver after the change; host and target case selection checks pass.
+check-fortran and the libgomp Fortran suites are clean.

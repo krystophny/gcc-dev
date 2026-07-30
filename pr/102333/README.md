@@ -1,7 +1,11 @@
 # Bug 102333: invalid `PROCEDURE` statement accepted
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102333
-- **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/78
+- **Attachment:** https://gcc.gnu.org/bugzilla/attachment.cgi?id=65178
+- **Submission comment:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=102333#c26
+- **GitHub issue:** https://github.com/lazy-fortran/gcc/issues/7
+- **Fork PR:** https://github.com/lazy-fortran/gcc/pull/37
+- **Branch commit:** `6aa15e2df832aab8d05b895b9709895cfdb38d78`
 
 ## Summary
 
@@ -24,3 +28,8 @@ change their behavior.
 Jerry DeLisle's comment 14, `Fixed on 13, 14, 15, and 16.`, does not match the
 current upstream branch heads as of 2026-03-29. Direct reruns show that the old
 ICE is still present on `gcc-13` and `gcc-14`.
+
+The current patch addresses the separate misleading diagnostic reported in
+comment 22. It checks the `PROCEDURE` and `ALLOCATABLE` conflict before the
+function result is redirected to a hidden procedure pointer result. The test
+is a local rewrite with different names and an added valid pointer case.
