@@ -1779,6 +1779,10 @@ def submit_bugzilla(
     expected_assistant: Optional[str] = None,
     obsolete: Optional[str] = None,
 ) -> None:
+    if not expected_assistant:
+        raise WorkflowError(
+            "--expected-assistant is required for Bugzilla patch submission"
+        )
     pr_dir = PR_ROOT / str(pr)
     meta = load_status(pr_dir)
     patch = selected_patch(meta, branch)
@@ -1885,6 +1889,7 @@ def parse_args() -> argparse.Namespace:
     p_bz.add_argument("--execute", action="store_true")
     p_bz.add_argument(
         "--expected-assistant",
+        required=True,
         help="Require this exact Assisted-by value in the patch",
     )
     p_bz.add_argument(

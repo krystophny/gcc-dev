@@ -94,6 +94,12 @@ class AiEligibilityTest(unittest.TestCase):
         self.assertFalse(result["eligible"])
         self.assertIn("exactly one commit, found 2", " ".join(result["reasons"]))
 
+    def test_submission_requires_expected_assistant(self):
+        with self.assertRaisesRegex(
+            WORKFLOW.WorkflowError, "--expected-assistant is required"
+        ):
+            WORKFLOW.submit_bugzilla(123, "trunk", False)
+
 
 class MetadataInferenceTest(unittest.TestCase):
     def test_open_status_advances_when_patch_exists(self):
