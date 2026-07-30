@@ -69,7 +69,7 @@
     "commit": null,
     "patch": "0001-aarch64-Add-NetBSD-host-CPU-detection-PR124586.patch"
   },
-  "updated_at": "2026-07-30T18:17:49Z",
+  "updated_at": "2026-07-30T18:34:37Z",
   "validation": {
     "baseline": {
       "contains_any": [
