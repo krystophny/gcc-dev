@@ -8,6 +8,7 @@ provenance-check-all:
 	@python3 scripts/check_testsuite_provenance.py --include-testsuites --scope all --top 50
 
 check-meta:
+	@python3 -m unittest scripts/tests/test_gcc_ai_eligibility.py
 	@python3 scripts/gcc-workflow.py validate
 	@bash scripts/check-status-docs.sh
 	@python3 scripts/check-snapshot-freshness.py

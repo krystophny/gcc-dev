@@ -1,0 +1,4 @@
+Skip the ISO_C_BINDING function check only for artificial dummies in inferred
+interfaces. Declared interfaces remain checked. Compared with attachment
+65169, this leaves the PR66973 check in place for real dummies. The new test
+and generic_36-2 pass; check-fortran and the libgomp Fortran suites are clean.

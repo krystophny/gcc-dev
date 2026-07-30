@@ -1,0 +1,5 @@
+Require a known procedure kind before a provisional subroutine attribute
+counts as a declaration. This preserves host association for the optional
+dummy procedure and avoids the undefined external symbol. A run test covers
+absent and present callbacks. check-fortran and the libgomp Fortran suites
+are clean.

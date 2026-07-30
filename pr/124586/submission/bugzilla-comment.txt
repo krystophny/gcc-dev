@@ -1,0 +1,4 @@
+Supersedes attachment 63983 with the same one-line config.host fix and the
+required Assisted-by attribution. An aarch64--netbsd all-gcc build links the
+driver after the change; host and target case selection checks pass.
+check-fortran and the libgomp Fortran suites are clean.

@@ -1,7 +1,11 @@
 # Bug 95128: aarch64: configure option for outline-atomics
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95128
-- **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/106
+- **Attachment:** https://gcc.gnu.org/bugzilla/attachment.cgi?id=65183
+- **Submission comment:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95128#c5
+- **GitHub issue:** https://github.com/lazy-fortran/gcc/issues/10
+- **Fork PR:** https://github.com/lazy-fortran/gcc/pull/35
+- **Branch commit:** `5cb3c70f5bf884d6dc83526ab3f38895b252a0a1`
 
 - **See also:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95129
 
@@ -30,4 +34,4 @@ User can still override with explicit `-moutline-atomics`.
 ## Test results
 
 - Linux x86_64 (local): build succeeds, no effect (x86_64 target)
-- cfarm428 (NetBSD 10.1 aarch64): check-gfortran pending (with PR124512)
+- aarch64--netbsd cross cc1: default and explicit override checks pass

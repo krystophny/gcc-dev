@@ -511,6 +511,8 @@ def infer_fix_status(
             return "wontfix"
         if bugzilla_info.get("resolution") == "FIXED":
             return "merged"
+    if existing == "open" and patch_files:
+        return "patch-ready"
     if existing in {"open", "patch-ready", "merged", "worksforme", "wontfix"}:
         return existing
     return "patch-ready" if patch_files else "open"
@@ -934,6 +936,7 @@ def sync_metadata(
     paths: List[Path],
     refresh_bugzilla: bool,
     force_bugzilla: bool = False,
+    mark_on_bugzilla: bool = False,
 ) -> None:
     for pr_dir in paths:
         readme = read_text(pr_dir / "README.md")
@@ -945,6 +948,8 @@ def sync_metadata(
         if status_path.exists():
             existing = json.loads(status_path.read_text(encoding="utf-8"))
         data = build_status(pr_dir, refresh_bugzilla, existing, force_bugzilla=force_bugzilla)
+        if mark_on_bugzilla:
+            data["submission_status"]["on_bugzilla"] = True
         write_json(status_path, data)
         print(f"updated {status_path.relative_to(ROOT)}")
 
@@ -1649,23 +1654,161 @@ def selected_patch(meta: Dict[str, Any], branch: str) -> Path:
     return pr_dir / branch_patch
 
 
-def submit_bugzilla(pr: int, branch: str, execute: bool) -> None:
+def ai_patch_eligibility(
+    patch: Path,
+    *,
+    max_non_test_lines: int = 14,
+    expected_assistant: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Audit an LLM-derived format-patch against GCC's current AI policy."""
+    text = read_text(patch)
+    reasons: List[str] = []
+    commit_markers = re.findall(
+        r"^From [0-9a-f]{40,64} Mon Sep 17 00:00:00 2001$", text, re.M
+    )
+    if len(commit_markers) != 1:
+        reasons.append(
+            f"format-patch must contain exactly one commit, found {len(commit_markers)}"
+        )
+
+    header = text.split("\ndiff --git ", 1)[0]
+    assistants = re.findall(r"^Assisted-by:\s*(\S.*)$", header, re.M)
+    signoffs = re.findall(r"^Signed-off-by:\s*(\S.*)$", header, re.M)
+    if not assistants:
+        reasons.append("missing Assisted-by tag")
+    if not signoffs:
+        reasons.append("missing Signed-off-by tag")
+    if expected_assistant and expected_assistant not in assistants:
+        reasons.append(f"missing expected assistant: {expected_assistant}")
+
+    files: Dict[str, Dict[str, Any]] = {}
+    numstat = subprocess.run(
+        ["git", "apply", "--numstat", "-z", str(patch)],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+    if numstat.returncode != 0:
+        reasons.append("git could not parse the patch for line counting")
+    else:
+        for record in numstat.stdout.split("\0"):
+            if not record:
+                continue
+            added, deleted, path = record.split("\t", 2)
+            if not added.isdigit() or not deleted.isdigit():
+                reasons.append(f"binary or uncountable diff: {path}")
+                continue
+            files[path] = {
+                "path": path,
+                "test": "testsuite" in Path(path).parts,
+                "added": int(added),
+                "deleted": int(deleted),
+            }
+    if not files:
+        reasons.append("patch has no parseable file diffs")
+
+    non_test_added = sum(item["added"] for item in files.values() if not item["test"])
+    non_test_deleted = sum(
+        item["deleted"] for item in files.values() if not item["test"]
+    )
+    test_added = sum(item["added"] for item in files.values() if item["test"])
+    test_deleted = sum(item["deleted"] for item in files.values() if item["test"])
+    non_test_changed = non_test_added + non_test_deleted
+    test_changed = test_added + test_deleted
+    if non_test_changed > max_non_test_lines:
+        reasons.append(
+            f"{non_test_changed} non-test changed lines exceed the "
+            f"{max_non_test_lines}-line gate"
+        )
+
+    return {
+        "eligible": not reasons,
+        "patch": str(patch),
+        "max_non_test_lines": max_non_test_lines,
+        "non_test": {
+            "added": non_test_added,
+            "deleted": non_test_deleted,
+            "changed": non_test_changed,
+        },
+        "tests": {
+            "added": test_added,
+            "deleted": test_deleted,
+            "changed": test_changed,
+        },
+        "assistants": assistants,
+        "signoffs": signoffs,
+        "files": list(files.values()),
+        "reasons": reasons,
+    }
+
+
+def print_ai_patch_eligibility(result: Dict[str, Any]) -> None:
+    state = "ELIGIBLE" if result["eligible"] else "BLOCKED"
+    print(f"AI eligibility: {state}")
+    print(f"Patch: {result['patch']}")
+    print(
+        "Non-test: "
+        f"{result['non_test']['added']} added + "
+        f"{result['non_test']['deleted']} deleted = "
+        f"{result['non_test']['changed']} changed "
+        f"(maximum {result['max_non_test_lines']})"
+    )
+    print(
+        "Tests: "
+        f"{result['tests']['added']} added + "
+        f"{result['tests']['deleted']} deleted = "
+        f"{result['tests']['changed']} changed (excluded)"
+    )
+    print("Assisted-by: " + (", ".join(result["assistants"]) or "missing"))
+    print("Signed-off-by: " + (", ".join(result["signoffs"]) or "missing"))
+    for item in result["files"]:
+        kind = "test" if item["test"] else "non-test"
+        print(
+            f"  {kind}: {item['path']}: "
+            f"+{item['added']} -{item['deleted']}"
+        )
+    for reason in result["reasons"]:
+        print(f"  BLOCK: {reason}")
+
+
+def submit_bugzilla(
+    pr: int,
+    branch: str,
+    execute: bool,
+    *,
+    expected_assistant: Optional[str] = None,
+    obsolete: Optional[str] = None,
+) -> None:
     pr_dir = PR_ROOT / str(pr)
     meta = load_status(pr_dir)
     patch = selected_patch(meta, branch)
     comment_path, comment = load_submission_text(
         pr_dir, meta, "bugzilla-comment.txt", "Bugzilla comment", branch
     )
+    eligibility = ai_patch_eligibility(
+        patch, expected_assistant=expected_assistant
+    )
+    print_ai_patch_eligibility(eligibility)
+    if not eligibility["eligible"]:
+        raise WorkflowError("Bugzilla submission blocked by AI eligibility gate")
     cmd = [
         str(ROOT / "scripts" / "gcc-bugzilla.sh"),
         "attach",
-        str(meta["bugzilla"]["id"]),
-        str(patch),
-        patch.name,
-        comment,
     ]
+    if obsolete:
+        cmd.extend(["--obsolete", obsolete])
+    cmd.extend(
+        [
+            "--comment-file",
+            str(comment_path),
+            str(meta["bugzilla"]["id"]),
+            str(patch),
+            patch.name,
+        ]
+    )
     if execute:
         run(cmd, capture=False, env={"GCC_BUGZILLA_ASSUME_YES": "1"})
+        sync_metadata([pr_dir], False, mark_on_bugzilla=True)
     else:
         print("dry-run:")
         print(" ".join(shlex.quote(x) for x in cmd))
@@ -1705,6 +1848,11 @@ def parse_args() -> argparse.Namespace:
             "(use sparingly; one XML-RPC call per PR)"
         ),
     )
+    p_sync.add_argument(
+        "--mark-on-bugzilla",
+        action="store_true",
+        help="Record that the selected PR patches were verified as uploaded",
+    )
 
     p_scan = sub.add_parser("scan-regressions", help="Write the top-level regression backport matrix")
     p_scan.add_argument("prs", nargs="*", help="Optional PR subset")
@@ -1735,6 +1883,25 @@ def parse_args() -> argparse.Namespace:
     p_bz.add_argument("pr", type=int)
     p_bz.add_argument("--branch", default="trunk")
     p_bz.add_argument("--execute", action="store_true")
+    p_bz.add_argument(
+        "--expected-assistant",
+        help="Require this exact Assisted-by value in the patch",
+    )
+    p_bz.add_argument(
+        "--obsolete",
+        help="Comma-separated Bugzilla attachment IDs to obsolete after upload",
+    )
+
+    p_ai = sub.add_parser(
+        "ai-eligibility",
+        help="Audit one LLM-derived format-patch for Bugzilla eligibility",
+    )
+    p_ai.add_argument("patch", type=Path)
+    p_ai.add_argument(
+        "--expected-assistant",
+        help="Require this exact Assisted-by value in the patch",
+    )
+    p_ai.add_argument("--json", action="store_true", help="Print JSON")
 
     p_mail = sub.add_parser("submit-mail", help="Submit a generated packet to gcc-patches")
     p_mail.add_argument("pr", type=int)
@@ -1762,7 +1929,12 @@ def main() -> int:
     args = parse_args()
     if args.cmd == "sync-metadata":
         paths = pr_dirs(None if args.all or not args.prs else args.prs)
-        sync_metadata(paths, args.refresh_bugzilla, force_bugzilla=args.force_bugzilla)
+        sync_metadata(
+            paths,
+            args.refresh_bugzilla,
+            force_bugzilla=args.force_bugzilla,
+            mark_on_bugzilla=args.mark_on_bugzilla,
+        )
         return 0
     if args.cmd == "scan-regressions":
         scan_regressions(status_pr_dirs(args.prs or None))
@@ -1783,8 +1955,23 @@ def main() -> int:
         branch_check(status_pr_dirs(args.prs or None), branches, full_suite=not args.no_full_suite)
         return 0
     if args.cmd == "submit-bugzilla":
-        submit_bugzilla(args.pr, args.branch, args.execute)
+        submit_bugzilla(
+            args.pr,
+            args.branch,
+            args.execute,
+            expected_assistant=args.expected_assistant,
+            obsolete=args.obsolete,
+        )
         return 0
+    if args.cmd == "ai-eligibility":
+        result = ai_patch_eligibility(
+            args.patch, expected_assistant=args.expected_assistant
+        )
+        if args.json:
+            print(json.dumps(result, indent=2, sort_keys=True))
+        else:
+            print_ai_patch_eligibility(result)
+        return 0 if result["eligible"] else 2
     if args.cmd == "submit-mail":
         submit_mail(args.pr, args.branch, args.execute)
         return 0
