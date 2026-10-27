@@ -1,0 +1,95 @@
+From b49e94c6a9589a7eef39b0291575c5054cc41649 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Thu, 30 Jul 2026 05:06:45 +0200
+Subject: [PATCH] fortran: Preserve host association for dummy procedures
+ [PR125383]
+
+A call statement marks an unresolved procedure as a subroutine before
+its procedure kind is known.  was_declared treated that provisional
+attribute as a declaration, so resolution did not find an optional
+dummy procedure in the host scope.  Require a known procedure kind
+before the subroutine attribute counts as a declaration.
+
+Fixes #24
+
+Assisted-by: GPT-5.6-sol (OpenAI)
+
+	PR fortran/125383
+
+gcc/fortran/ChangeLog:
+
+	* resolve.cc (was_declared): Require a known procedure kind for
+	subroutine declarations.
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/pr125383.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/resolve.cc                 |  3 +-
+ gcc/testsuite/gfortran.dg/pr125383.f90 | 38 ++++++++++++++++++++++++++
+ 2 files changed, 40 insertions(+), 1 deletion(-)
+ create mode 100644 gcc/testsuite/gfortran.dg/pr125383.f90
+
+diff --git a/gcc/fortran/resolve.cc b/gcc/fortran/resolve.cc
+index 036da9a939e..e8fcc6c4e27 100644
+--- a/gcc/fortran/resolve.cc
++++ b/gcc/fortran/resolve.cc
+@@ -1655,7 +1655,8 @@ was_declared (gfc_symbol *sym)
+   if (a.allocatable || a.dimension || a.dummy || a.external || a.intrinsic
+       || a.optional || a.pointer || a.save || a.target || a.volatile_
+       || a.value || a.access != ACCESS_UNKNOWN || a.intent != INTENT_UNKNOWN
+-      || a.asynchronous || a.codimension || a.subroutine || a.result)
++      || a.asynchronous || a.codimension
++      || (a.subroutine && a.proc != PROC_UNKNOWN) || a.result)
+     return 1;
+ 
+   return 0;
+diff --git a/gcc/testsuite/gfortran.dg/pr125383.f90 b/gcc/testsuite/gfortran.dg/pr125383.f90
+new file mode 100644
+index 00000000000..e4a579b56bf
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr125383.f90
+@@ -0,0 +1,38 @@
++! { dg-do run }
++
++module callback_box
++  implicit none
++  integer :: result = -1
++
++  abstract interface
++    subroutine action(value)
++      integer, intent(in) :: value
++    end subroutine action
++  end interface
++contains
++  subroutine invoke(maybe_action)
++    procedure(action), optional :: maybe_action
++
++    call nested_invoke
++  contains
++    subroutine nested_invoke
++      if (present(maybe_action)) call maybe_action(17)
++    end subroutine nested_invoke
++  end subroutine invoke
++
++  subroutine record_value(value)
++    integer, intent(in) :: value
++
++    result = value
++  end subroutine record_value
++end module callback_box
++
++program check_callback
++  use callback_box, only : invoke, record_value, result
++  implicit none
++
++  call invoke
++  if (result /= -1) error stop 1
++  call invoke(record_value)
++  if (result /= 17) error stop 2
++end program check_callback
+-- 
+2.55.0
+

@@ -227,6 +227,16 @@ EOF
 scripts/bugzilla-pr-notify.sh <number> https://github.com/lazy-fortran/gcc/pull/<N> /tmp/bz-<number>.txt            # dry run
 scripts/bugzilla-pr-notify.sh <number> https://github.com/lazy-fortran/gcc/pull/<N> /tmp/bz-<number>.txt --execute  # post
 
+# 7c. For an eligible Bugzilla patch attachment, audit the exact one-commit
+#     patch before the file-based dry run and upload. Add --obsolete <id> when
+#     replacing an earlier attachment.
+python3 scripts/gcc-workflow.py ai-eligibility \
+  pr/<number>/0001-*.patch --expected-assistant 'GPT-5.6-sol (OpenAI)'
+scripts/gcc-bugzilla.sh submit <number> \
+  --expected-assistant 'GPT-5.6-sol (OpenAI)'
+GCC_BUGZILLA_MANUAL_CONFIRM=1 scripts/gcc-bugzilla.sh submit <number> \
+  --expected-assistant 'GPT-5.6-sol (OpenAI)' --execute
+
 # 8. Delete the local fix branch once merged and exported
 git -C gcc checkout master
 git -C gcc branch -D fix/pr<number>-<slug>

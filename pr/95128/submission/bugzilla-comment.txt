@@ -1,0 +1,4 @@
+Supersedes attachment 63970 with the same NetBSD CC1_SPEC fix and the required
+Assisted-by attribution. Default aarch64--netbsd output no longer references
+the unavailable outline atomic helpers; an explicit -moutline-atomics still
+enables them. check-fortran and the libgomp Fortran suites are clean.

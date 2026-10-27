@@ -41,9 +41,9 @@
     "keywords": [
       "accepts-invalid"
     ],
-    "last_change_time": "2026-03-29T21:37:36Z",
-    "last_synced_utc": "2026-06-19T12:40:08Z",
-    "refreshed_at": "2026-06-19T12:40:08Z",
+    "last_change_time": "2026-07-30T18:13:07Z",
+    "last_synced_utc": "2026-07-30T18:17:48Z",
+    "refreshed_at": "2026-07-30T18:17:48Z",
     "resolution": "",
     "status": "REOPENED",
     "summary": "Invalid PROCEDURE statement accepted.",
@@ -54,8 +54,8 @@
     "severity": "accepts-invalid",
     "validity_class": "invalid-code"
   },
-  "fix_status": "open",
-  "github_issue": 78,
+  "fix_status": "patch-ready",
+  "github_issue": 7,
   "notes": "Rerunning the exact Bugzilla sources on upstream branch heads on 2026-03-29 shows a split state: gcc-13 and gcc-14 still ICE on comment 0 and both comment 2 variants, gcc-15 and trunk no longer ICE, comment 1 is rejected on gcc-14/gcc-15/trunk but still accepted on gcc-13. Attachment 64064 is too broad because it rejects valid pointer cases, and Paul Thomas's suggested decl.cc line is absent from all current upstream branches.",
   "pr": 102333,
   "submission_status": {
@@ -67,9 +67,9 @@
   "trunk": {
     "branch": null,
     "commit": "8a0a1a0c7b187415e34dcf7a5cbf5e314c9de78a",
-    "patch": "0001-fortran-Reject-invalid-host-result-PROCEDURE-interfa.patch"
+    "patch": "0001-fortran-Diagnose-allocatable-PROCEDURE-results-early.patch"
   },
-  "updated_at": "2026-06-19T12:40:08Z",
+  "updated_at": "2026-07-30T18:17:48Z",
   "validation": {
     "baseline": {
       "contains_any": [

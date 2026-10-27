@@ -172,6 +172,28 @@ reviewed files. `scripts/gcc-bugzilla.sh new` already takes a draft file, and
 `comment-file`, `reply-file`, and `attach --comment-file` provide the same
 file-first flow for other Bugzilla writes.
 
+LLM-derived patches must use `gcc-workflow.py submit-bugzilla`. Before the
+dry run or upload, it requires a one-commit format-patch with `Assisted-by:`
+and `Signed-off-by:` tags. It counts additions and deletions outside paths
+containing a `testsuite` component and blocks the submission at 15 changed
+non-test lines. Test cases are counted separately and do not affect
+eligibility. Ambiguous and binary diffs are blocked.
+
+```bash
+python3 scripts/gcc-workflow.py ai-eligibility \
+  pr/<number>/0001-*.patch --expected-assistant 'GPT-5.6-sol (OpenAI)'
+scripts/gcc-bugzilla.sh submit <number> \
+  --expected-assistant 'GPT-5.6-sol (OpenAI)'       # dry run
+GCC_BUGZILLA_MANUAL_CONFIRM=1 scripts/gcc-bugzilla.sh submit <number> \
+  --expected-assistant 'GPT-5.6-sol (OpenAI)' --execute
+```
+
+Use `--obsolete <attachment-id>` on `submit` when an attributed patch
+replaces an earlier attachment. A successful upload records
+`submission_status.on_bugzilla` through `sync-metadata`. If an upload
+succeeded before that local update, recover it with
+`sync-metadata <number> --mark-on-bugzilla` after verifying the attachment.
+
 Write operations are blocked unless `GCC_BUGZILLA_MANUAL_CONFIRM=1` is set
 after manual review and explicit user confirmation. They still default to an
 interactive `[y/N]` prompt. Use `GCC_BUGZILLA_ASSUME_YES=y` only after that

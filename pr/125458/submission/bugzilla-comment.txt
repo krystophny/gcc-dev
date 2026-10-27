@@ -1,0 +1,5 @@
+Emit range-checked overflow diagnostics immediately outside unsigned mode so
+a successful statement match cannot discard the error while retaining the
+invalid constant. This is narrower than deferring all matching arithmetic.
+A diagnostic test covers multiplication and addition. check-fortran and the
+libgomp Fortran suites are clean.

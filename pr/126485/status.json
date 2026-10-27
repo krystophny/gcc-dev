@@ -1,0 +1,102 @@
+{
+  "artifacts": {
+    "bugzilla_comment": "submission/bugzilla-comment.txt",
+    "mailing_list_cover": "submission/mailing-list-cover.txt",
+    "maintainer_summary": "submission/maintainer-summary.md"
+  },
+  "backports": {
+    "gcc-13": {
+      "apply_mode": "unknown",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    },
+    "gcc-14": {
+      "apply_mode": "unknown",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    },
+    "gcc-15": {
+      "apply_mode": "unknown",
+      "backport_candidate": null,
+      "branch_commit": null,
+      "branch_patch": null,
+      "full_suite": "not-run",
+      "notes": "",
+      "reproduces": null,
+      "targeted_tests": "not-run"
+    }
+  },
+  "bugzilla": {
+    "id": 126485,
+    "keywords": [
+      "rejects-valid"
+    ],
+    "last_change_time": "2026-07-30T18:13:23Z",
+    "last_synced_utc": "2026-07-30T18:17:53Z",
+    "refreshed_at": "2026-07-30T18:17:53Z",
+    "resolution": "",
+    "status": "UNCONFIRMED",
+    "summary": "[16/17 Regression] caused by r16-8455 / `64e03b96dfe`: Fortran: fix resolution of generic interface with TYPE(C_PTR) [PR66973]",
+    "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=126485"
+  },
+  "classification": {
+    "regression": true,
+    "severity": "other",
+    "validity_class": "valid-code"
+  },
+  "fix_status": "patch-ready",
+  "github_issue": 29,
+  "notes": "",
+  "pr": 126485,
+  "submission_status": {
+    "on_bugzilla": true,
+    "on_mailing_list": false,
+    "sent": false
+  },
+  "title": "C pointer check rejects an inferred interface",
+  "trunk": {
+    "branch": null,
+    "commit": null,
+    "patch": "0001-fortran-Skip-artificial-dummies-in-C-pointer-checks-.patch"
+  },
+  "updated_at": "2026-07-30T18:17:53Z",
+  "validation": {
+    "baseline": {
+      "contains_any": [
+        "internal compiler error",
+        "ICE in"
+      ],
+      "exit": "nonzero",
+      "not_contains": []
+    },
+    "compile": [
+      "gcc-build/gcc/gfortran",
+      "-B",
+      "gcc-build/gcc",
+      "-c",
+      "pr/126485/reproducer.f90",
+      "-o",
+      "/dev/null"
+    ],
+    "env": {},
+    "fixed": {
+      "contains_any": [],
+      "exit": "zero",
+      "not_contains": [
+        "internal compiler error"
+      ]
+    },
+    "kind": "compile",
+    "run": []
+  }
+}

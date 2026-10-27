@@ -1,0 +1,73 @@
+From 6a83c59d69d931703b6b1b47d374a70f4541e09d Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Thu, 30 Jul 2026 06:33:30 +0200
+Subject: [PATCH] fortran: Preserve overflow diagnostics during matching
+ [PR125458]
+
+PR84734 retains an out-of-range result after reporting overflow so that
+error recovery can continue.  A successful statement match can discard
+the buffered overflow diagnostic while retaining the invalid constant.
+
+Emit the diagnostic immediately when range checking is active outside
+unsigned mode.  This preserves the recovery result without losing the
+error.
+
+Fixes #27
+
+Assisted-by: GPT-5.6-sol (OpenAI)
+
+	PR fortran/125458
+
+gcc/fortran/ChangeLog:
+
+	* arith.cc (eval_intrinsic): Do not buffer range-checked overflow
+	errors outside unsigned mode.
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/pr125458.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/arith.cc                   | 8 +++++++-
+ gcc/testsuite/gfortran.dg/pr125458.f90 | 9 +++++++++
+ 2 files changed, 16 insertions(+), 1 deletion(-)
+ create mode 100644 gcc/testsuite/gfortran.dg/pr125458.f90
+
+diff --git a/gcc/fortran/arith.cc b/gcc/fortran/arith.cc
+index 28206bc64b9..892a48b4b60 100644
+--- a/gcc/fortran/arith.cc
++++ b/gcc/fortran/arith.cc
+@@ -1970,7 +1970,13 @@ eval_intrinsic (gfc_intrinsic_op op,
+ 
+   if (rc != ARITH_OK)
+     {
+-      gfc_error (gfc_arith_error (rc), &op1->where);
++      if (rc == ARITH_OVERFLOW
++	  && flag_range_check
++	  && !flag_unsigned
++	  && op1->ts.type != BT_UNSIGNED)
++	gfc_error_now (gfc_arith_error (rc), &op1->where);
++      else
++	gfc_error (gfc_arith_error (rc), &op1->where);
+       if (rc == ARITH_OVERFLOW)
+ 	goto done;
+ 
+diff --git a/gcc/testsuite/gfortran.dg/pr125458.f90 b/gcc/testsuite/gfortran.dg/pr125458.f90
+new file mode 100644
+index 00000000000..92c210ab590
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr125458.f90
+@@ -0,0 +1,9 @@
++! { dg-do compile }
++! { dg-options "-frange-check" }
++
++program constant_overflow
++  implicit none
++
++  print *, 50000 * 50000 - 1000000000 ! { dg-error "Arithmetic overflow" }
++  print *, 2000000000 + 2000000000 ! { dg-error "Arithmetic overflow" }
++end program constant_overflow
+-- 
+2.55.0
+

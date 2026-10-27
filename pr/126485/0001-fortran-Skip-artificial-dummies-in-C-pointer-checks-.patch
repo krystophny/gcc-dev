@@ -1,0 +1,94 @@
+From b8a9d0da35310a54050ba119418564ad9aba64a9 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Thu, 30 Jul 2026 06:50:05 +0200
+Subject: [PATCH] fortran: Skip artificial dummies in C pointer checks
+ [PR126485]
+
+Implicit procedure calls can acquire an inferred interface whose dummy
+arguments are artificial.  C_LOC has type BT_VOID until it is matched
+against a declared dummy, so the ISO_C_BINDING check added for PR66973
+rejects a later implicit call against this inferred interface.
+
+Do not apply this check to artificial dummies.  Declared interfaces
+remain checked.
+
+Fixes #29
+
+Assisted-by: GPT-5.6-sol (OpenAI)
+
+	PR fortran/126485
+
+gcc/fortran/ChangeLog:
+
+	* interface.cc (gfc_compare_actual_formal): Skip ISO_C_BINDING
+	function checks for artificial dummy arguments.
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/pr126485-1.f90: New test.
+	* gfortran.dg/pr126485.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/interface.cc                 |  1 +
+ gcc/testsuite/gfortran.dg/pr126485-1.f90 |  4 ++++
+ gcc/testsuite/gfortran.dg/pr126485.f90   | 24 ++++++++++++++++++++++++
+ 3 files changed, 29 insertions(+)
+ create mode 100644 gcc/testsuite/gfortran.dg/pr126485-1.f90
+ create mode 100644 gcc/testsuite/gfortran.dg/pr126485.f90
+
+diff --git a/gcc/fortran/interface.cc b/gcc/fortran/interface.cc
+index ccff784a2a5..5bd74207925 100644
+--- a/gcc/fortran/interface.cc
++++ b/gcc/fortran/interface.cc
+@@ -4170,6 +4170,7 @@ gfc_compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
+ 	  && a->expr->ts.type == BT_VOID
+ 	  && a->expr->symtree->n.sym
+ 	  && a->expr->symtree->n.sym->from_intmod == INTMOD_ISO_C_BINDING
++	  && !f->sym->attr.artificial
+ 	  && (f->sym->ts.type != BT_DERIVED
+ 	      || f->sym->ts.u.derived->from_intmod != INTMOD_ISO_C_BINDING
+ 	      || !((a->expr->symtree->n.sym->intmod_sym_id == ISOCBINDING_FUNLOC
+diff --git a/gcc/testsuite/gfortran.dg/pr126485-1.f90 b/gcc/testsuite/gfortran.dg/pr126485-1.f90
+new file mode 100644
+index 00000000000..2ddc7c33c10
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr126485-1.f90
+@@ -0,0 +1,4 @@
++module c_address_provider
++  use iso_c_binding, only : c_loc
++  implicit none
++end module c_address_provider
+diff --git a/gcc/testsuite/gfortran.dg/pr126485.f90 b/gcc/testsuite/gfortran.dg/pr126485.f90
+new file mode 100644
+index 00000000000..8fc47d099c6
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr126485.f90
+@@ -0,0 +1,24 @@
++! { dg-do compile }
++! { dg-compile-aux-modules "pr126485-1.f90" }
++!
++! PR fortran/126485
++!
++! The inferred interface for an external procedure has artificial dummies.
++
++subroutine pass_one(sample)
++  use c_address_provider, only : c_loc
++  implicit none
++  real, target :: sample
++
++  call accept_pointer(c_loc(sample))
++end subroutine pass_one
++
++subroutine pass_two(sample)
++  use c_address_provider, only : c_loc
++  implicit none
++  real, target :: sample
++
++  call accept_pointer(c_loc(sample))
++end subroutine pass_two
++
++! { dg-final { cleanup-modules "c_address_provider" } }
+-- 
+2.55.0
+

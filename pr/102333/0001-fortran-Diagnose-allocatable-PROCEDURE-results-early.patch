@@ -1,0 +1,73 @@
+From 6aa15e2df832aab8d05b895b9709895cfdb38d78 Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Thu, 30 Jul 2026 03:10:52 +0200
+Subject: [PATCH] fortran: Diagnose allocatable PROCEDURE results early
+ [PR102333]
+
+A function result declared by a PROCEDURE statement can be redirected
+to a hidden procedure pointer result before attribute conflicts are
+checked.  Check the PROCEDURE and ALLOCATABLE conflict before this
+redirection so the original attributes produce the correct diagnostic.
+
+Fixes #7
+
+Assisted-by: GPT-5.6-sol (OpenAI)
+
+	PR fortran/102333
+
+gcc/fortran/ChangeLog:
+
+	* decl.cc (match_procedure_decl): Diagnose the PROCEDURE and
+	ALLOCATABLE conflict before creating a hidden result.
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/pr102333_2.f90: New test.
+
+Signed-off-by: Christopher Albert <albert@tugraz.at>
+---
+ gcc/fortran/decl.cc                      |  7 +++++++
+ gcc/testsuite/gfortran.dg/pr102333_2.f90 | 13 +++++++++++++
+ 2 files changed, 20 insertions(+)
+ create mode 100644 gcc/testsuite/gfortran.dg/pr102333_2.f90
+
+diff --git a/gcc/fortran/decl.cc b/gcc/fortran/decl.cc
+index 6dad9d9791a..a09072cafbf 100644
+--- a/gcc/fortran/decl.cc
++++ b/gcc/fortran/decl.cc
+@@ -7879,6 +7879,13 @@ match_procedure_decl (void)
+   if (m == MATCH_ERROR)
+     return MATCH_ERROR;
+ 
++  if (current_attr.allocatable)
++    {
++      current_attr.procedure = 1;
++      gfc_check_conflict (&current_attr, NULL, &gfc_current_locus);
++      return MATCH_ERROR;
++    }
++
+   if (proc_if && proc_if->attr.is_bind_c && !current_attr.is_bind_c)
+     {
+       current_attr.is_bind_c = 1;
+diff --git a/gcc/testsuite/gfortran.dg/pr102333_2.f90 b/gcc/testsuite/gfortran.dg/pr102333_2.f90
+new file mode 100644
+index 00000000000..3b30d5971d1
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr102333_2.f90
+@@ -0,0 +1,13 @@
++! { dg-do compile }
++! PR fortran/102333
++
++function factory() result(payload)
++  class(*), allocatable :: payload
++contains
++  function pointer_callback()
++    procedure(factory), pointer :: pointer_callback
++  end function pointer_callback
++  function allocatable_callback()
++    procedure(factory), allocatable :: allocatable_callback ! { dg-error "PROCEDURE attribute conflicts with ALLOCATABLE" }
++  end function allocatable_callback
++end function factory
+-- 
+2.55.0
+

@@ -1,7 +1,11 @@
 # Bug 124586: aarch64-netbsd native build misses driver-aarch64.o for host_detect_local_cpu
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124586
-- **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/109
+- **Attachment:** https://gcc.gnu.org/bugzilla/attachment.cgi?id=65184
+- **Submission comment:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=124586#c5
+- **GitHub issue:** https://github.com/lazy-fortran/gcc/issues/11
+- **Fork PR:** https://github.com/lazy-fortran/gcc/pull/45
+- **Branch commit:** `f1b76698da3b13e40f657981018da9e3fa23b2c2`
 
 ## Summary
 
