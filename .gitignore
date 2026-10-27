@@ -49,3 +49,6 @@ __pycache__/
 *.profile_estimate
 .tabula/artifacts/
 gcc-offload-src/
+
+# Native CMake/CTest metadata-check build.
+/build/
