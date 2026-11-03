@@ -41,9 +41,9 @@
     "keywords": [
       "accepts-invalid"
     ],
-    "last_change_time": "2026-07-30T18:13:07Z",
-    "last_synced_utc": "2026-07-30T18:17:48Z",
-    "refreshed_at": "2026-07-30T18:17:48Z",
+    "last_change_time": "2026-08-10T09:43:32Z",
+    "last_synced_utc": "2026-11-03T08:10:37Z",
+    "refreshed_at": "2026-11-03T08:10:37Z",
     "resolution": "",
     "status": "REOPENED",
     "summary": "Invalid PROCEDURE statement accepted.",
@@ -66,10 +66,10 @@
   "title": "invalid PROCEDURE statement accepted",
   "trunk": {
     "branch": null,
-    "commit": "8a0a1a0c7b187415e34dcf7a5cbf5e314c9de78a",
+    "commit": "2a4f36222246480d3b66957be3582db084698a32",
     "patch": "0001-fortran-Diagnose-allocatable-PROCEDURE-results-early.patch"
   },
-  "updated_at": "2026-07-30T18:17:48Z",
+  "updated_at": "2026-11-03T08:10:37Z",
   "validation": {
     "baseline": {
       "contains_any": [

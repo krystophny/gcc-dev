@@ -41,11 +41,11 @@
     "keywords": [
       "ice-on-invalid-code"
     ],
-    "last_change_time": "2026-05-20T12:04:03Z",
-    "last_synced_utc": "2026-06-19T12:40:36Z",
-    "refreshed_at": "2026-06-19T12:40:36Z",
-    "resolution": "",
-    "status": "NEW",
+    "last_change_time": "2026-07-09T18:47:52Z",
+    "last_synced_utc": "2026-11-03T08:10:58Z",
+    "refreshed_at": "2026-11-03T08:10:58Z",
+    "resolution": "FIXED",
+    "status": "RESOLVED",
     "summary": "[13/14/15 Regression] ICE in gfc_conv_array_initializer, at fortran/trans-array.c:6377 since r12-4278-g74ccca380cde5e79",
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=103367"
   },
@@ -66,10 +66,10 @@
   "title": "ICE in gfc_conv_array_initializer with invalid index",
   "trunk": {
     "branch": null,
-    "commit": "326fe37d6981c189fb0f2a5a4ab7f7a5b95ecf89",
+    "commit": "b1eb6e08939a01a18724d35da3dd0098cb993ab9",
     "patch": "0001-fortran-Fix-ICE-in-gfc_conv_array_initializer-with-i.patch"
   },
-  "updated_at": "2026-06-19T12:40:36Z",
+  "updated_at": "2026-11-03T08:10:59Z",
   "validation": {
     "baseline": {
       "contains_any": [

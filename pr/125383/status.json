@@ -41,9 +41,9 @@
     "keywords": [
       "wrong-code"
     ],
-    "last_change_time": "2026-07-30T18:13:16Z",
-    "last_synced_utc": "2026-07-30T18:17:50Z",
-    "refreshed_at": "2026-07-30T18:17:50Z",
+    "last_change_time": "2026-08-08T09:58:23Z",
+    "last_synced_utc": "2026-11-03T08:14:34Z",
+    "refreshed_at": "2026-11-03T08:14:34Z",
     "resolution": "",
     "status": "NEW",
     "summary": "[14/15/16/17 Regression] Optional dummy procedure called from contained subprogram results in linking error since r16-3178 / r14-12039",
@@ -66,10 +66,10 @@
   "title": "optional dummy procedure loses host association",
   "trunk": {
     "branch": null,
-    "commit": null,
+    "commit": "1f5c34702948eb7591fa3076be3745bd0e0ddf9c",
     "patch": "0001-fortran-Preserve-host-association-for-dummy-procedur.patch"
   },
-  "updated_at": "2026-07-30T18:17:50Z",
+  "updated_at": "2026-11-03T08:14:34Z",
   "validation": {
     "baseline": {
       "contains_any": [
