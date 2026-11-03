@@ -42,9 +42,9 @@
       "openacc",
       "wrong-code"
     ],
-    "last_change_time": "2025-12-25T10:01:19Z",
-    "last_synced_utc": "2026-06-19T12:40:14Z",
-    "refreshed_at": "2026-06-19T12:40:14Z",
+    "last_change_time": "2026-07-29T22:15:11Z",
+    "last_synced_utc": "2026-11-03T08:10:44Z",
+    "refreshed_at": "2026-11-03T08:10:44Z",
     "resolution": "",
     "status": "UNCONFIRMED",
     "summary": "[openacc] Trying to map already mapped data",
@@ -70,7 +70,7 @@
     "commit": null,
     "patch": "0001-fortran-Skip-pointer-mapping-for-pass-by-ref-in-ENTE.patch"
   },
-  "updated_at": "2026-06-19T12:40:34Z",
+  "updated_at": "2026-11-03T08:10:57Z",
   "validation": {
     "baseline": {
       "contains_any": [

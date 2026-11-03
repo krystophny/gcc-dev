@@ -41,12 +41,12 @@
     "keywords": [
       "wrong-code"
     ],
-    "last_change_time": "2026-06-24T14:09:36Z",
-    "last_synced_utc": "2026-06-24T14:15:08Z",
-    "refreshed_at": "2026-06-24T14:15:08Z",
+    "last_change_time": "2026-09-11T10:46:42Z",
+    "last_synced_utc": "2026-11-03T08:11:46Z",
+    "refreshed_at": "2026-11-03T08:11:46Z",
     "resolution": "",
     "status": "NEW",
-    "summary": "[13/14/15/16/17 regression] Duplicated finalization in derived",
+    "summary": "[14/15/16/17 regression] Duplicated finalization in derived",
     "url": "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=110626"
   },
   "classification": {
@@ -54,7 +54,7 @@
     "severity": "wrong-code",
     "validity_class": "valid-code"
   },
-  "fix_status": "open",
+  "fix_status": "patch-ready",
   "github_issue": 92,
   "notes": "",
   "pr": 110626,
@@ -66,10 +66,10 @@
   "title": "duplicated finalization in derived assignment",
   "trunk": {
     "branch": null,
-    "commit": null,
+    "commit": "a03222414043b7155a76f7e564fb688ac5ac7bb6",
     "patch": "0001-fortran-Finalize-lhs-in-place-in-derived-type-define.patch"
   },
-  "updated_at": "2026-06-24T14:18:55Z",
+  "updated_at": "2026-11-03T08:11:46Z",
   "validation": {
     "baseline": {
       "contains_any": [
