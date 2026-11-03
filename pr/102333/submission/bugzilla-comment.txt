@@ -1,5 +1,0 @@
-Supersedes attachment 64075. This version uses gfc_check_conflict before
-add_hidden_procptr_result and carries the required Assisted-by attribution.
-The valid pointer form remains accepted and the allocatable form gets the
-PROCEDURE/ALLOCATABLE conflict diagnostic. check-fortran and the libgomp
-Fortran suites are clean.

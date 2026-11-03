@@ -5,8 +5,9 @@
 # Standing user authorization (2026-07-29, revised 2026-07-30, see
 # docs/upstream-submission.md): the body states what the patch changes,
 # what was tested, and how it relates to prior patches on the bug.
-# Plain sentences, no filler, no AI disclaimer. Any other Bugzilla
-# write requires explicit per-message user permission.
+# Plain sentences, no filler, and one plain line saying the work was
+# AI-assisted. Any other Bugzilla write requires explicit per-message
+# user permission.
 #
 # Usage:
 #   bugzilla-pr-notify.sh <bugzilla-pr> <github-pr-url> <body-file>            dry run
@@ -32,8 +33,8 @@ grep -qF "$URL" "$BODY" \
 LINES=$(wc -l < "$BODY")
 (( LINES <= 15 )) \
     || { echo "ERROR: body too long ($LINES lines, max 15); keep it short and targeted" >&2; exit 1; }
-grep -qiE 'ai-assisted|ai-policy|not submitted for inclusion|disclaimer' "$BODY" \
-    && { echo "ERROR: drop the AI-disclaimer boilerplate; describe the fix instead" >&2; exit 1; }
+grep -qE '\b(AI|LLM)\b|Assisted-by' "$BODY" \
+    || { echo "ERROR: body must say in one plain line that the work was AI-assisted" >&2; exit 1; }
 
 echo "--- comment for PR $PR ---"
 cat "$BODY"

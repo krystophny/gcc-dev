@@ -71,6 +71,11 @@ if [[ ! -d "$GCC_DIR/.git" ]]; then
     exit 1
 fi
 
+# GCC AI policy: only legally insignificant LLM-derived patches with
+# Assisted-by and the human's Signed-off-by may be sent.
+python3 "$(dirname "$(realpath "$0")")/gcc-workflow.py" ai-eligibility "$PATCH_FILE" \
+    || { echo "Refusing to send: AI eligibility gate failed." >&2; exit 2; }
+
 echo "=== Patch to send ==="
 head -20 "$PATCH_FILE"
 echo "..."

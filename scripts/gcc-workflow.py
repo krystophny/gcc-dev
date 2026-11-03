@@ -1827,6 +1827,10 @@ def submit_mail(pr: int, branch: str, execute: bool) -> None:
     cover_path, cover = load_submission_text(
         pr_dir, meta, "mailing-list-cover.txt", "mailing-list cover", branch
     )
+    eligibility = ai_patch_eligibility(patch)
+    print_ai_patch_eligibility(eligibility)
+    if not eligibility["eligible"]:
+        raise WorkflowError("mail submission blocked by AI eligibility gate")
     cmd = [str(ROOT / "scripts" / "gcc-send-patch.sh")]
     if not execute:
         cmd.append("--dry-run")

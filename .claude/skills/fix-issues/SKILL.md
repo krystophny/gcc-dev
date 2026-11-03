@@ -73,10 +73,11 @@ Use TaskCreate to track progress. Create a plan first with EnterPlanMode.
 
 ### Phase 2: Fix
 
-1. Create a local branch in gcc/ off origin/main (lazy-fortran/gcc):
+1. Create a local branch in gcc/ off origin/master (lazy-fortran/gcc,
+   a verbatim mirror of upstream):
    ```bash
    git -C gcc fetch origin
-   git -C gcc checkout -b fix/pr<number>-<slug> origin/main
+   git -C gcc checkout -b fix/pr<number>-<slug> origin/master
    ```
 2. Implement the minimal fix
 3. Rebuild:
@@ -90,17 +91,11 @@ Use TaskCreate to track progress. Create a plan first with EnterPlanMode.
    cd gcc-build/gcc && make check-gfortran RUNTESTFLAGS="dg.exp=pr<number>.f90"
    ```
 
-### Phase 3: Review (patrick-reviewer agent)
+### Phase 3: Review
 
-Spawn patrick-reviewer agent:
-```
-Review the fix for GCC Fortran PR<number> in the gcc/ repository.
-Branch: pr<number>-fix (diff against upstream/master).
-Check: correctness, minimal invasiveness, edge cases, GCC coding style.
-The fix must not introduce regressions.
-```
-
-If patrick finds issues, revise the fix and re-review until clean.
+Run `/code-review` on the fix branch (diff against `origin/master`):
+correctness, minimal invasiveness, edge cases, GCC coding style. Revise
+and re-review until clean.
 
 ### Phase 4: Full Test Suite
 
@@ -120,65 +115,65 @@ If ANY new failures: fix them. Re-run. Repeat until zero new FAIL/XPASS.
 
 ### Phase 5: Commit and Open the PR
 
-Follow GCC commit rules from CLAUDE.md exactly (Assisted-by in the body
-above the PR line; Signed-off-by last):
+Follow `docs/patch-workflow.md` "Creating patches" exactly. The commit
+carries `Assisted-by:` in the body above the PR line and **no
+`Signed-off-by:`** (only Chris certifies the DCO):
 ```bash
 cat > /tmp/gcc-commit-msg.txt <<'MSGEOF'
 fortran: Short summary [PR<number>]
 
 Description of the fix.
 
-Fixes #<fork-issue-number>
-
 Assisted-by: Claude (Anthropic)
 MSGEOF
 cd gcc && GCC_FORCE_MKLOG=1 GCC_MKLOG_ARGS='["-b", "fortran/<number>"]' \
-  git commit -s -F /tmp/gcc-commit-msg.txt
+  git commit -F /tmp/gcc-commit-msg.txt
 git gcc-verify HEAD
-git log -1 --format=%B | grep -q '^Signed-off-by: ' || echo "ERROR: missing Signed-off-by"
 ```
 
-Push and open a REAL PR immediately (never a draft). PR title and body
-ARE the verified commit message (the repo squash setting reproduces
-them as the merge commit); the quick-read summary goes in the first PR
-comment:
+Push and open a REAL PR against `master` immediately (never a draft).
+PR title and body are the verified commit message; the quick-read
+summary, with the fork issue link, goes in the first PR comment:
 ```bash
 git -C gcc push origin fix/pr<number>-<slug>
-gh pr create --repo lazy-fortran/gcc --base main \
+gh pr create --repo lazy-fortran/gcc --base master \
   --head fix/pr<number>-<slug> \
   --title "$(git -C gcc log -1 --format=%s)" \
   --body "$(git -C gcc log -1 --format=%b)"
 gh pr comment <pr-url> --repo lazy-fortran/gcc --body \
-  "Fixes PR fortran/<number>: <one-line symptom>. Bugzilla: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=<number>. Tests: check-fortran + libgomp-fortran clean; new gfortran.dg/pr<number>.f90."
+  "PR fortran/<number>: <one-line symptom>. Bugzilla: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=<number>. Issue: #<fork-issue>. Tests: check-fortran + libgomp-fortran clean; new gfortran.dg/pr<number>.f90."
 ```
 
 ### Phase 6: Stop; the PR stays open
 
-Do NOT merge. The PR stays open until reviewers are satisfied or the
-user declares it OK. Patch attachments to Bugzilla are forbidden (GCC
-AI policy). The only Bugzilla write is the PR-link comment via
-`scripts/bugzilla-pr-notify.sh` (docs/patch-workflow.md step 7b):
-hand-written, states what the patch changes, test evidence, relation
-to prior patches on the bug. No AI disclaimer.
+Never merge. The PR stays open until the fix is on upstream `master`,
+then it is closed together with its issue (`scripts/sync-issues.sh
+close-merged`). Bugzilla writes need Chris's permission, except the
+PR-link comment via `scripts/bugzilla-pr-notify.sh` (docs/patch-workflow.md
+step 7b): hand-written, what the patch changes, test evidence, relation
+to prior patches on the bug, and one line saying the work was
+AI-assisted. A patch attachment is possible only for an eligible patch
+(fewer than 15 changed non-testsuite lines) after the squash at export
+and Chris's own sign-off (docs/patch-workflow.md step 7).
 
 ### Phase 7: Update Meta-Repo
 
 1. Update `pr/<number>/README.md` with a short status note
 2. Add the `patch-ready` label to the lazy-fortran/gcc issue and comment
    with the PR link (one line)
-3. Commit and push meta-repo changes
-4. Report the open PR(s) to the user for review/approval
+3. Commit the meta-repo changes on a branch and open a PR there
+4. Report the open PR(s) to the user for review
 
 ## Important Rules
 
 - Never skip the full test suite. Partial passes = failure.
-- NEVER attach patches to Bugzilla. The only permitted Bugzilla write
-  is the `bugzilla-pr-notify.sh` PR-link comment (body rules in
-  docs/upstream-submission.md).
+- Never attach a patch to Bugzilla outside `gcc-workflow.py
+  submit-bugzilla`, which runs the AI-policy eligibility gate.
+- Never write a `Signed-off-by:` line; Chris adds his own.
 - All public text follows the desloppification rule in CLAUDE.md:
   plain sentences, concrete facts, no filler.
-- One fix per branch (`fix/pr<number>-<slug>` off origin/main), never
-  stacked, never drafts.
+- One fix per branch (`fix/pr<number>-<slug>` off origin/master), never
+  stacked, never drafts, never merged.
 - Use gcc-commit-mklog for commit messages (never hand-write ChangeLog).
 - Always run gcc-verify before pushing.
 - Keep PR descriptions and issue comments short and targeted.

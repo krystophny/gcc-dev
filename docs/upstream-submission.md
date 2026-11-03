@@ -48,12 +48,12 @@ Consequences for this workflow, whose fixes are LLM-derived:
 
 **Single standing exception (user authorization 2026-07-29, revised
 2026-07-30):** `scripts/bugzilla-pr-notify.sh` may post a short
-comment linking a lazy-fortran/gcc PR. Lead: "Open for review, comments welcome: <URL>"
-(merged PRs: "Fixed in the Lazy Fortran GCC fork: <URL>"). Then the
-content: what the patch changes, what was tested,
-and how it relates to prior patches and discussion on the bug. No AI
-disclaimer, no boilerplate, no filler phrases. Write like a GCC
-contributor: plain sentences, concrete facts.
+comment linking a lazy-fortran/gcc PR. Lead: "Open for review, comments welcome: <URL>".
+Then the content: what the patch changes, what was tested, and how it
+relates to prior patches and discussion on the bug, followed by one
+plain line saying the work was AI-assisted (the script refuses a body
+without it; decision of 2026-10-22). No boilerplate, no filler phrases.
+Write like a GCC contributor: plain sentences, concrete facts.
 Max ~15 lines. Write the body to a file, check the dry run, then
 `--execute`. Anything else is an ordinary Bugzilla write and needs
 explicit permission.
@@ -65,9 +65,17 @@ disclosure; no narrative, no process detail, no restating what the bug
 tracker already says.
 
 **NEVER use git send-email or gcc-send-patch.sh without the user explicitly
-requesting it - this is a HARD RULE.** (With the AI policy above, these
-tools are effectively legacy: even with permission, only non-code
-content (reports, analysis, disclosed testcases) is eligible.)
+requesting it - this is a HARD RULE.** Even with permission, only a patch
+that passes `gcc-workflow.py ai-eligibility` (small fixes, testcases),
+with `Assisted-by:` and Chris's own `Signed-off-by:`, is eligible.
+
+**Signed-off-by:** only Chris adds it, on the squashed export commit
+(`docs/patch-workflow.md` step 7). An agent never writes the line. The
+eligibility gate refuses a patch without it.
+
+**CC:** new bugs and every Bugzilla write from `scripts/gcc-bugzilla.sh`
+add `GCC_BUGZILLA_AUTO_CC` (default `albert@tugraz.at`,
+`jvdelisle@gcc.gnu.org`) to the CC list.
 
 Permitted without approval:
 - Prepare patches, run tests, document readiness
