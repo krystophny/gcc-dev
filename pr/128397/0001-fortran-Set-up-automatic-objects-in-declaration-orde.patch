@@ -1,0 +1,144 @@
+From d7cd6fe89bef62bf27571e9889c39e10f7fab5cf Mon Sep 17 00:00:00 2001
+From: Christopher Albert <albert@tugraz.at>
+Date: Tue, 3 Nov 2026 10:55:58 +0100
+Subject: [PATCH] fortran: Set up automatic objects in declaration order
+ [PR128397]
+
+A reference from a contained procedure can create the decl of an
+automatic object, and defer its setup, before the decl of another
+automatic object its bounds or length depend on.  gfc_defer_symbol_init
+kept non-dummy variables in creation order, so the extent was computed
+from a bound that was not yet set.  Keep automatic objects in reverse
+declaration order among themselves in the deferred-init chain; their
+setup code is prepended, so it then runs in declaration order.  Other
+variables keep their place, so the order of their cleanup code is
+unchanged.
+
+Assisted-by: Claude Opus 5.5 (Anthropic)
+
+	PR fortran/128397
+
+gcc/fortran/ChangeLog:
+
+	* trans-decl.cc (automatic_object_p): New function.
+	(gfc_defer_symbol_init): Keep automatic objects in reverse
+	declaration order.
+
+gcc/testsuite/ChangeLog:
+
+	* gfortran.dg/pr128397.f90: New test.
+---
+ gcc/fortran/trans-decl.cc              | 24 +++++++++++
+ gcc/testsuite/gfortran.dg/pr128397.f90 | 58 ++++++++++++++++++++++++++
+ 2 files changed, 82 insertions(+)
+ create mode 100644 gcc/testsuite/gfortran.dg/pr128397.f90
+
+diff --git a/gcc/fortran/trans-decl.cc b/gcc/fortran/trans-decl.cc
+index c8261d88b21..70a73d8c272 100644
+--- a/gcc/fortran/trans-decl.cc
++++ b/gcc/fortran/trans-decl.cc
+@@ -888,6 +888,19 @@ decl_order (gfc_symbol *sym1, gfc_symbol *sym2)
+ }
+ 
+ 
++/* Return true if SYM has non-constant bounds or character length.  */
++
++static bool
++automatic_object_p (gfc_symbol *sym)
++{
++  return ((sym->as && sym->as->type == AS_EXPLICIT
++	   && !gfc_is_compile_time_shape (sym->as))
++	  || (sym->ts.type == BT_CHARACTER && sym->ts.u.cl
++	      && sym->ts.u.cl->length
++	      && !gfc_is_constant_expr (sym->ts.u.cl->length)));
++}
++
++
+ /* Remember a symbol to generate initialization/cleanup code at function
+    entry/exit.  */
+ 
+@@ -934,6 +947,17 @@ gfc_defer_symbol_init (gfc_symbol * sym)
+ 	  p = p->tlink;
+ 	}
+     }
++  else if (automatic_object_p (sym))
++    {
++      /* Setup code is prepended, so keep automatic objects in reverse
++	 declaration order; their bounds may depend on earlier ones.  */
++      while (p && p != head && !p->attr.dummy
++	     && (!automatic_object_p (p) || decl_order (p, sym)))
++	{
++	  last = p;
++	  p = p->tlink;
++	}
++    }
+   /* Insert in between last and p.  */
+   last->tlink = sym;
+   sym->tlink = p;
+diff --git a/gcc/testsuite/gfortran.dg/pr128397.f90 b/gcc/testsuite/gfortran.dg/pr128397.f90
+new file mode 100644
+index 00000000000..ab3b00ec071
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr128397.f90
+@@ -0,0 +1,58 @@
++! { dg-do run }
++! PR fortran/128397
++!
++! Automatic objects whose bounds depend on other automatic arrays must be
++! set up in declaration order, also when a contained procedure references
++! the dependent object first.
++
++module m
++  implicit none
++contains
++  subroutine s (k)
++    integer, intent(in) :: k
++    integer :: w(2*k)
++    real :: x(size (w))
++    real :: y(ubound (x, 1) + 1)
++    character(len=size (y)) :: c
++    x = 0
++    y = 0
++    if (size (w) /= 2*k) stop 1
++    if (size (x) /= 2*k) stop 2
++    if (size (y) /= 2*k + 1) stop 3
++    if (len (c) /= 2*k + 1) stop 4
++    call fill ()
++    if (any (x /= 1.0)) stop 5
++    if (any (y /= 2.0)) stop 6
++    if (c /= repeat ('z', 2*k + 1)) stop 7
++  contains
++    subroutine fill ()
++      c = repeat ('z', len (c))
++      y = 2.0
++      x = 1.0
++    end subroutine
++  end subroutine
++
++  ! A fixed-shape array referenced from the contained procedure between
++  ! the dependent and the independent automatic object.
++  subroutine t (k)
++    integer, intent(in) :: k
++    real :: g(3)
++    integer :: v(k + 0*size (g))
++    logical :: l(size (v))
++    call touch ()
++    if (size (v) /= k) stop 8
++    if (size (l) /= k) stop 9
++    if (.not. all (l) .or. any (g /= 3.0)) stop 10
++  contains
++    subroutine touch ()
++      l = .true.
++      g = 3.0
++    end subroutine
++  end subroutine
++end module
++
++  use m
++  call s (4)
++  call s (1)
++  call t (5)
++end
+-- 
+2.56.0
+
