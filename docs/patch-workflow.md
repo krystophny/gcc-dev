@@ -123,11 +123,18 @@ pip install --user --break-system-packages unidiff GitPython
 
 ## Creating patches
 
+`lazy-fortran/gcc` (`origin`) is the public downstream fork. Its `master`
+is the default branch and a verbatim mirror of upstream GCC `master`:
+it is only ever fast-forwarded (`git push origin upstream/master:master`)
+and never receives a fix. Each fix lives on its own branch with an open
+pull request against `master`; that PR is the fix's review page and is
+never merged. The former personal mirror `krystophny/gcc` is retired.
+Exported patches live as `.patch` files in `pr/<number>/`.
+
 ```bash
-# 1. Create branch off origin/main in gcc/ (origin = lazy-fortran/gcc;
-#    falls back to upstream/master until the fork exists)
-git -C gcc fetch origin
-git -C gcc checkout -b fix/pr<number>-<slug> origin/main
+# 1. Create the fix branch off origin/master in gcc/ (origin = lazy-fortran/gcc)
+git -C gcc fetch origin upstream
+git -C gcc checkout -b fix/pr<number>-<slug> origin/master
 
 # 2. Make changes, rebuild, test
 cd gcc-build/gcc && make -j32
@@ -144,141 +151,97 @@ git -C gcc add gcc/fortran/changed-file.cc
 #    `\tPR <component>/<n>` line that begins the ChangeLog area;
 #    gcc/contrib/gcc-changelog/git_commit.py rejects it as an
 #    end-of-message trailer, so gcc-verify fails if it sits at the end.
-cat > /tmp/gcc-commit-msg.txt <<'EOF'
+#    No -s: an agent never adds Signed-off-by (step 7).
+cat > /tmp/gcc-commit-msg.txt <<'MSG'
 fortran: Short summary [PR<number>]
 
 Description of the fix.
 
-Fixes #<fork-issue-number>
-
 Assisted-by: Claude (Anthropic)
-EOF
-# `Fixes #<n>` names the lazy-fortran/gcc issue: GitHub auto-closes it
-# when the squash lands on main. Both it and the "(#N)" suffix are
-# GitHub-isms that can be stripped from an exported patch later if a
-# fix is ever reworked for upstream; git_check_commit.py accepts both
-# (verified).
+MSG
 cd gcc && GCC_FORCE_MKLOG=1 GCC_MKLOG_ARGS='["-b", "fortran/<number>"]' \
-  git commit -s -F /tmp/gcc-commit-msg.txt
+  git commit -F /tmp/gcc-commit-msg.txt
 
-# 5. Verify commit passes GCC checks (MANDATORY before push)
+# 5. Verify the commit passes GCC checks (MANDATORY before push)
 git gcc-verify HEAD
 
-# 5b. Re-check the Signed-off-by trailer explicitly.  gcc-verify does not
-#     enforce its presence, and an editor/template-based commit or a
-#     hook-driven message rewrite can silently drop it.
-msg=$(git log -1 --format=%B)
-echo "$msg" | grep -q '^Signed-off-by: ' \
-  || { echo "ERROR: missing Signed-off-by trailer in commit"; exit 1; }
-
-# 6. Push the branch and open a real PR immediately (never a draft).
-#    PR title and body ARE the verified GCC commit message; the repo's
-#    squash setting ("pull request title and description") then produces
-#    the final commit verbatim.  Tabs in the ChangeLog survive the round
-#    trip; GitHub's " (#N)" subject suffix is accepted by
-#    git_check_commit.py (verified).
+# 6. Push the branch and open a real PR against master immediately
+#    (never a draft). PR title and body are the verified GCC commit
+#    message; step 7 reuses them for the squashed export commit.
 git -C gcc push origin fix/pr<number>-<slug>
 gh pr create --repo lazy-fortran/gcc \
-  --base main --head fix/pr<number>-<slug> \
+  --base master --head fix/pr<number>-<slug> \
   --title "$(git -C gcc log -1 --format=%s fix/pr<number>-<slug>)" \
   --body "$(git -C gcc log -1 --format=%b fix/pr<number>-<slug>)"
 
-# 6a2. The quick-read summary goes in the FIRST PR COMMENT (short and
-#      targeted; the body stays pure commit message):
+# 6a. The quick-read summary goes in the FIRST PR COMMENT, which also
+#     links the fork issue (the body stays pure commit message):
 gh pr comment <pr-url> --repo lazy-fortran/gcc --body \
-  "Fixes PR fortran/<number>: <one-line symptom>. Bugzilla: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=<number>. Tests: check-fortran + libgomp-fortran clean; new gfortran.dg/pr<number>.f90."
+  "PR fortran/<number>: <one-line symptom>. Bugzilla: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=<number>. Issue: #<fork-issue>. Tests: check-fortran + libgomp-fortran clean; new gfortran.dg/pr<number>.f90."
 
-# 6a. Run the machine review (/code-review or the review workflow) right
-#     away and fix confirmed findings on the branch.  The PR then STAYS
-#     OPEN until reviewers are satisfied or the user declares it OK.
-#     A clean machine review alone does not trigger the merge.
+# 6b. Run the machine review (/code-review or the review workflow) right
+#     away. Confirmed findings become further commits on the branch; if
+#     the message changes, update the PR title/body to the new message.
 
-# 6b. On approval, squash-merge.  The repo's squash setting ("pull
-#     request title and description") turns the PR title/body (the
-#     verified commit message) into the squash commit verbatim,
-#     with a " (#N)" subject suffix that doubles as the PR pointer.
-#     Precondition: the PR body still equals the verified message; if
-#     review changed the code, update commit message AND PR body
-#     together.
-gh pr merge --repo lazy-fortran/gcc --squash <pr-url>
+# 7. Squash at export, before any Bugzilla submission. The branch keeps
+#    its history; the squash happens on a throwaway branch.
+git -C gcc fetch origin upstream
+git -C gcc checkout -b export/pr<number> upstream/master
+git -C gcc merge --squash fix/pr<number>-<slug>
+gh pr view <pr-url> --repo lazy-fortran/gcc --json title,body \
+  --jq '.title + "\n\n" + .body' > /tmp/gcc-commit-msg.txt
+git -C gcc commit -F /tmp/gcc-commit-msg.txt
+git -C gcc gcc-verify HEAD
+#    Chris adds his own DCO sign-off; an agent never writes this line:
+#      git -C gcc commit --amend -s --no-edit
+git -C gcc format-patch -1 HEAD -o ../pr/<number>/
+git -C gcc checkout master && git -C gcc branch -D export/pr<number>
 
-# 6c. Verify the MERGED commit still passes GCC checks before export.
-git -C gcc fetch origin
-git -C gcc gcc-verify origin/main
+# 7a. Eligibility (fewer than 15 changed non-testsuite lines, Assisted-by,
+#     Signed-off-by), then the file-based dry run and upload. Add
+#     --obsolete <id> when replacing an earlier attachment.
+python3 scripts/gcc-workflow.py ai-eligibility \
+  pr/<number>/0001-*.patch --expected-assistant 'Claude Opus 5.5 (Anthropic)'
+scripts/gcc-bugzilla.sh submit <number> \
+  --expected-assistant 'Claude Opus 5.5 (Anthropic)'
+GCC_BUGZILLA_MANUAL_CONFIRM=1 scripts/gcc-bugzilla.sh submit <number> \
+  --expected-assistant 'Claude Opus 5.5 (Anthropic)' --execute
 
-# 7. Export the squashed commit and track it in the meta-repo
-git -C gcc fetch origin
-git -C gcc format-patch -1 origin/main -o ../pr/<number>/
-patch=$(ls -t pr/<number>/0001-*.patch | head -n1)
-grep -q '^Signed-off-by: ' "$patch" \
-  || { echo "ERROR: exported patch missing Signed-off-by trailer"; exit 1; }
-git add pr/<number>/
-git commit -m "pr<number>: add patch"
-git push origin main
-
-# 7b. Notify Bugzilla (standing authorization, see
-#     docs/upstream-submission.md). Hand-write the body. Lead:
-#     "Open for review, comments welcome: <URL>" (merged: "Fixed in the Lazy Fortran
-#     GCC fork: <URL>"). Then: what the patch changes, what was tested, relation to prior
-#     patches on the bug. No AI disclaimer. Max ~15 lines.
-cat > /tmp/bz-<number>.txt <<'EOF'
-<2-6 lines of real content + PR URL>
-EOF
+# 7b. Fork-only fixes (not eligible) get the PR-link comment instead
+#     (standing authorization, see docs/upstream-submission.md). Lead:
+#     "Open for review, comments welcome: <URL>". Then what the patch
+#     changes, what was tested, relation to prior patches on the bug, and
+#     one plain line saying the work was AI-assisted. Max ~15 lines.
 scripts/bugzilla-pr-notify.sh <number> https://github.com/lazy-fortran/gcc/pull/<N> /tmp/bz-<number>.txt            # dry run
 scripts/bugzilla-pr-notify.sh <number> https://github.com/lazy-fortran/gcc/pull/<N> /tmp/bz-<number>.txt --execute  # post
 
-# 7c. For an eligible Bugzilla patch attachment, audit the exact one-commit
-#     patch before the file-based dry run and upload. Add --obsolete <id> when
-#     replacing an earlier attachment.
-python3 scripts/gcc-workflow.py ai-eligibility \
-  pr/<number>/0001-*.patch --expected-assistant 'GPT-5.6-sol (OpenAI)'
-scripts/gcc-bugzilla.sh submit <number> \
-  --expected-assistant 'GPT-5.6-sol (OpenAI)'
-GCC_BUGZILLA_MANUAL_CONFIRM=1 scripts/gcc-bugzilla.sh submit <number> \
-  --expected-assistant 'GPT-5.6-sol (OpenAI)' --execute
-
-# 8. Delete the local fix branch once merged and exported
-git -C gcc checkout master
-git -C gcc branch -D fix/pr<number>-<slug>
+# 8. Track the patch in the meta-repo (branch + PR, as for any meta change)
+git add pr/<number>/
+git commit -m "pr<number>: add patch"
 ```
-
-`lazy-fortran/gcc` (`origin`) is the public downstream fork; its `main` is
-official GCC master plus squash-merged Lazy Fortran fixes, one commit per
-Bugzilla PR. The former personal mirror `krystophny/gcc` is retired.
-Patch bodies additionally live as `.patch` files in `pr/<number>/`.
 
 ### PR lifecycle
 
-- **One real PR per fix, opened immediately.** Never draft PRs.
-- **PRs stay open for review.** Merge only when reviewers are satisfied
-  or the user explicitly declares the PR OK. Machine review runs right
-  after opening; its confirmed findings get fixed on the branch, but a
-  clean machine review alone does NOT trigger the merge.
-- **PR title and body ARE the verified GCC commit message** (single
-  source of truth; reviewers review the ChangeLog too). The repo squash
-  setting "pull request title and description" reproduces it verbatim
-  as the merge commit; git_check_commit.py accepts the " (#N)" subject
-  suffix and the `Fixes #<issue>` line (both verified, both strippable
-  later if a fix is reworked for upstream). Always re-verify the merged
-  commit (step 6c).
+- **One real PR per fix, opened immediately, against `master`.** Never
+  draft PRs, never merged.
+- **Machine review runs right after opening**; confirmed findings become
+  further commits on the fix branch.
+- **PR title and body are the verified GCC commit message**, the single
+  source for the squashed export commit (step 7). Keep them in sync
+  with the code.
 - **The quick-read summary is the first PR comment**, short and
-  targeted: one line each for symptom, Bugzilla link, and test
-  evidence. A reader decides in ten seconds whether to look deeper.
-- **`Fixes #<issue>` in the message body** links and auto-closes the
-  fork issue when the squash lands on `main`.
-- **When the PR is finished** (opened for review; again if reworked),
-  post the Bugzilla comment (step 7b): what the patch changes, test
-  evidence, relation to prior patches on the bug. No disclaimers.
-- **Avoid stacking.** Prefer "merge A, then start B". For a genuine
-  dependency, branch B off A's branch and open PR B with base
-  `fix/prA-<slug>` (so it shows only B's delta). After A squash-merges,
-  A's commits are not on `main`, so rebase with `--onto` and force-push;
-  GitHub retargets PR B to `main`:
-
-  ```bash
-  git rebase --onto origin/main fix/prA-<slug> fix/prB-<slug>
-  git push -f origin fix/prB-<slug>
-  ```
+  targeted: symptom, Bugzilla link, fork issue, test evidence.
+- **The PR stays open until the fix is on upstream `master`**, whether
+  our patch or another one. Then close the PR (not merge) and the fork
+  issue, each with a comment naming the upstream commit, e.g.
+  `r17-1234-gabcdef01234`.
+- **Refreshing a branch onto newer upstream** is a rebase plus
+  force-push of the fix branch and needs Chris's OK for that push
+  (CLAUDE.md pre-push checklist, item 7). Usually unnecessary: the
+  export (step 7) applies the branch's squashed diff onto current
+  `upstream/master` and shows any conflict there.
+- **Avoid stacking.** For a genuine dependency, branch B off A's branch
+  and open PR B with base `fix/prA-<slug>` so it shows only B's delta.
 
 **If `gcc-verify` rejects an incomplete hook-generated ChangeLog skeleton:**
 - Keep the mklog hook enabled, but switch from plain `git commit -F ...` to an
@@ -287,46 +250,36 @@ Patch bodies additionally live as `.patch` files in `pr/<number>/`.
   ChangeLog text before the commit is finalized.
 - Re-run `git gcc-verify HEAD` immediately.  Repeating `git commit -F ...`
   with a fully written ChangeLog can otherwise lead to duplicated hook output.
-- After any editor/template-based commit, explicitly re-check that the
-  `Signed-off-by:` trailer is still present.  A full-message replacement can
-  silently drop the `-s` trailer even when `git commit -s` was used.
 
 ## Commit rules (HARD RULES)
 
-- **Every patch is exactly one commit.** Squash any work-in-progress or
-  staged sub-commits before `git format-patch`.  No multi-commit
-  patches in `pr/<number>/`, no `0001-..., 0002-..., 0003-...` series
-  for a single PR.  If two changes are genuinely independent, they get
-  two PRs and two `pr/<number>/` directories, one commit each.  This
-  is the rule going forward; older `pr/<n>/0001..0003*.patch` triples
-  are legacy and get squashed when revisited.
+- **Every exported patch is exactly one commit**, squashed at export
+  (step 7). Fix branches may carry several commits. No multi-commit
+  patches in `pr/<number>/`; older `pr/<n>/0001..0003*.patch` triples
+  are legacy and get squashed when revisited. Two genuinely independent
+  changes get two branches, two PRs and two `pr/<number>/` directories.
 - **Always use `gcc-commit-mklog`** or the `GCC_FORCE_MKLOG=1` env var
   with the prepare-commit-msg hook. Never hand-write ChangeLog entries.
-- **Always run `git gcc-verify HEAD`** before pushing. It checks
-  ChangeLog format, PR references, and other GCC conventions.
-- **Always use `-s`** (Signed-off-by) on commits, and verify it survives in
-  both the final commit message and the exported patch; `git gcc-verify`
-  does not check it.
-- **`Assisted-by:` on the final squashed commit only.** The squash-merge
-  commit (equivalently the exported patch) carries an `Assisted-by:` line
-  naming the model, in the body above the `\tPR ...` line. WIP commits on
-  the PR branch need no tag. This is forward-compatibility: if GCC
-  loosens its AI policy, every exported patch already satisfies the
-  upstream "clearly marked" requirement. The repo-wide AI policy (below)
-  remains the governing declaration.
-- **Branches go off `origin/main`** (lazy-fortran/gcc), not off other fix
-  branches.
+- **Always run `git gcc-verify`** on the branch head before pushing and on
+  the squashed export commit before export.
+- **Never add `Signed-off-by:` as an agent** (no `git commit -s`, no
+  trailer in a PR body). GCC accepts the DCO only from a human; Chris
+  signs the export commit himself, and `gcc-workflow.py ai-eligibility`
+  refuses a patch without a sign-off.
+- **`Assisted-by:` on the export commit.** The PR message, and therefore
+  the squashed export commit, carries an `Assisted-by:` line naming the
+  model, in the body above the `\tPR ...` line. That is GCC's "clearly
+  marked" requirement for LLM-generated content. WIP commits need no tag.
+- **Branches go off `origin/master`** (lazy-fortran/gcc, equal to
+  upstream), not off other fix branches.
 - **One fix per branch** (e.g., `fix/pr123949-init-se`), not stacked.
-- **Squash-merge PRs on lazy-fortran/gcc** so `main` gets exactly one
-  upstream-shaped commit per Bugzilla PR, and only after a machine review
-  of the PR.
+- **Nothing is ever merged into the fork's `master`.**
 
 ### AI policy
 
 The `lazy-fortran/gcc` fork carries a repository-level AI policy as the
-governing declaration (per-commit `Assisted-by:` lines on squashed fix
-commits are additional attribution, kept for upstream forward
-compatibility):
+governing declaration (the `Assisted-by:` line on each exported patch is
+the per-contribution marking GCC's AI policy requires):
 
 - AI tools are permitted for research, analysis, bug discovery,
   implementation, testing, review, documentation, and maintenance.
@@ -342,7 +295,7 @@ compatibility):
   significant ones (≈15+ lines) cannot be offered to upstream GCC as code
   contributions; sub-threshold fixes and testcases can, if clearly marked
   `Assisted-by:` (see `docs/upstream-submission.md`). The
-  one-commit-per-PR layout, the upstream-shaped ChangeLog, and the
+  one-patch-per-PR layout, the upstream-shaped ChangeLog, and the
   Bugzilla-numbered PR titles exist precisely to keep every fix
   dissectable and independently reviewable.
 
@@ -442,8 +395,8 @@ README.md header format:
 # Bug 123280: Short description
 
 - **Bugzilla:** https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123280
-- **GitHub issue:** https://github.com/krystophny/gcc-dev/issues/12
-- **Status:** PENDING (patch on fork) | MERGED (gcc commit abc123)
+- **Issue:** https://github.com/lazy-fortran/gcc/issues/<n>
+- **Fix PR:** https://github.com/lazy-fortran/gcc/pull/<n>
 
 ## Affected Versions
 | Branch | Reproduces? | Notes |
@@ -458,26 +411,21 @@ README.md header format:
 
 User-facing bug tracking lives in `lazy-fortran/gcc` issues. Each tracked
 GCC Bugzilla PR has one issue titled `PR<N>: <summary>` linking the
-Bugzilla bug. Issues previously lived in `krystophny/gcc-dev`; migrate any
-remainder with `scripts/migrate-issues.sh` (creates the issue in the fork
-with labels, cross-links both, and closes the source issue).
+Bugzilla bug and, once it exists, the fix PR.
 
 Issues use additive labels to track progress:
 
 | Label | Meaning |
 |-------|---------|
-| `patch-ready` | Working fix branch / open PR on the fork |
-| `analysis-on-bugzilla` | Bug report/analysis posted to GCC Bugzilla |
-| (closed) | Fix squash-merged into `main`, or fixed upstream |
+| `on-bugzilla` | The bug has a GCC Bugzilla report |
+| `patch-wip` | Work-in-progress patch, not yet validated |
+| `patch-ready` | Validated fix branch with an open PR on the fork |
+| `has-upstream-patch` | The patch is attached on Bugzilla |
+| `regression`, `wrong-code` | Classification, as on Bugzilla |
+| (closed) | Fixed on upstream `master` |
 
-### When adding labels, always include a comment with links:
-
-- **analysis-on-bugzilla**: link to the Bugzilla bug
-  `https://gcc.gnu.org/bugzilla/show_bug.cgi?id=<number>`
-
-### When closing issues, always include:
-
-- The squash-merge commit on `main` (fixed downstream), and/or
-- the upstream commit and revision tag if GCC fixed it independently:
-  `https://gcc.gnu.org/git/?p=gcc.git;a=commit;h=<hash>` (e.g.,
-  `r16-7700-ge0b70284cfa`)
+An issue, like its fix PR, stays open until the fix is on upstream
+`master`. Close both then, with a comment naming the upstream commit and
+revision tag: `https://gcc.gnu.org/git/?p=gcc.git;a=commit;h=<hash>`
+(e.g. `r16-7700-ge0b70284cfa`). If Bugzilla is reopened after that,
+reopen the issue.

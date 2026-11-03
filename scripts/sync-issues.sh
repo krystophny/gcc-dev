@@ -6,7 +6,7 @@
 #   sync-issues.sh check-merged [--pr NUMBER]  Find PRs merged on upstream/master
 #   sync-issues.sh bugzilla-status [--pr N]    Query Bugzilla status for open issues
 #   sync-issues.sh regressions                 Find untracked Bugzilla regressions
-#   sync-issues.sh close-merged [--dry-run] [--yes]  Close merged issues
+#   sync-issues.sh close-merged [--dry-run] [--yes]  Close issues and fix PRs fixed upstream
 #   sync-issues.sh full [--yes]                Run all subcommands with summary
 #
 # Requires: gh, git, jq, python3, scripts/gcc-bugzilla.sh
@@ -295,9 +295,17 @@ cmd_close_merged() {
 https://gcc.gnu.org/git/?p=gcc.git;a=commit;h=${hash}"
         echo "Closing #${issue_num} (PR${pr})..."
         retry_once gh issue close "$issue_num" --repo "$GH_ISSUE_REPO" --comment "$comment"
+        # Fix PRs are never merged; they close once upstream has the fix.
+        local fix_pr
+        for fix_pr in $(gh pr list --repo "$GH_ISSUE_REPO" --state open --limit 200 \
+                --json number,headRefName \
+                --jq ".[] | select(.headRefName | startswith(\"fix/pr${pr}-\")) | .number"); do
+            echo "Closing fix PR #${fix_pr} (PR${pr})..."
+            retry_once gh pr close "$fix_pr" --repo "$GH_ISSUE_REPO" --comment "$comment"
+        done
     done <<< "$to_close"
 
-    echo "Closed $count issue(s)."
+    echo "Closed $count issue(s) and their open fix PRs."
 }
 
 cmd_full() {
@@ -348,7 +356,7 @@ Commands:
   check-merged [--pr NUMBER]   Find PRs with upstream commits
   bugzilla-status [--pr N]     Query Bugzilla status for open issues
   regressions                  Find untracked Bugzilla regressions
-  close-merged [--dry-run] [--yes]  Close GitHub issues for merged PRs
+  close-merged [--dry-run] [--yes]  Close issues and fix PRs fixed upstream
   full [--yes]                 Run all subcommands with summary report
 
 Options:

@@ -36,40 +36,46 @@ gcc-dev/                    # META-REPO (GitHub: krystophny/gcc-dev)
 The former personal mirror `github.com/krystophny/gcc` is archived; do not
 push there.
 
-Branch roles on `lazy-fortran/gcc`: `master` tracks upstream GCC verbatim
-(fast-forward only, never commit); `main` (default) is `master` plus
-squash-merged Lazy Fortran fixes. GCC's own git branch is named `master`
-("trunk" is only the colloquial SVN-era name), so keeping `master`
-pristine preserves a clean upstream reference for merges and diffs.
+Branch roles on `lazy-fortran/gcc`: `master` is the default branch and a
+verbatim mirror of upstream GCC `master` (fast-forward only, nothing is
+ever committed or merged into it). There is no integration branch. Every
+fix lives on its own branch `fix/pr<N>-<slug>` off `origin/master`, with
+an open pull request against `master` as its review page. Fix PRs are
+never merged: they stay open until the fix (ours or another one) is on
+upstream `master`, and are then closed together with their fork issue.
 
 `darwin` is the Apple Silicon macOS branch: Iain Sandoe's Darwin
 integration tree (remote `iains` = github.com/iains/gcc-darwin-arm64,
 currently branch `master-wip-apple-si-r17-*`) plus the same Lazy Fortran
-fixes. Never merge the whole Darwin tree into `main`; treat Iain's branch
+fixes. Never merge the whole Darwin tree into `master`; treat Iain's branch
 as the Darwin upstream base and refresh `darwin` from it. All Darwin
 work (checkout, bootstrap, testing) runs on the Apple Silicon machine
 `faepmac1` (`ssh faepmac1`, repo at `~/code/gcc-dev`, checkout in
 `~/code/gcc-dev/gcc`).
 
 **Primary mode of operation:** every fix is developed on a branch
-`fix/pr<N>-<slug>` off `origin/main` (official GCC master + Lazy Fortran
-fixes) and pushed to `lazy-fortran/gcc` as a pull request whose **title
-and body are the verified GCC-format commit message** (subject
-`fortran: <summary> [PR<N>]` with the upstream Bugzilla number; body with
-ChangeLog, `Fixes #<fork-issue>`, `Assisted-by:`, `Signed-off-by:`). The
-repo's squash setting ("pull request title and description") turns that
-into the merge commit verbatim. Issues keep the `PR<N>: <summary>` title
-convention. PRs are always real (never drafts), opened immediately,
-machine-reviewed right away, and **stay open until reviewers are
-satisfied or the user declares them OK**, only then squash-merged, so
-`main` carries exactly one upstream-shaped commit per Bugzilla PR and
-the linked fork issue auto-closes. Every fix starts from full
-Bugzilla context (`docs/patch-workflow.md` Step 0), and each merged fix
-is announced on Bugzilla with a short pre-authorized comment
+`fix/pr<N>-<slug>` off `origin/master` and pushed to `lazy-fortran/gcc`
+with a pull request against `master`. The PR is real (never a draft),
+opened immediately and machine-reviewed right away; review fixes are
+further commits on the branch. Its **title and body are the verified
+GCC-format commit message** (subject `fortran: <summary> [PR<N>]` with
+the upstream Bugzilla number; body with ChangeLog and `Assisted-by:`),
+so the exported patch can be checked against it. The fork issue
+(`PR<N>: <summary>`) links the PR. Every fix starts from full Bugzilla
+context (`docs/patch-workflow.md` Step 0). The PR and its issue stay
+open until the fix is on upstream `master`; then both are closed, never
+merged.
+
+**Squash at export.** Before a patch goes to Bugzilla, the branch is
+squashed into exactly one upstream-shaped commit (`git merge --squash`
+onto `origin/master` in a throwaway branch, committed with the PR's
+message) and exported as `pr/<N>/0001-*.patch`. Two genuinely
+independent changes are two branches, two PRs and two patches.
+
+A fix PR is announced on Bugzilla with a short pre-authorized comment
 (`scripts/bugzilla-pr-notify.sh`): what the patch changes, what was
-tested, relation to prior patches on the bug. No AI disclaimer.
-That one-commit-per-fix discipline is what keeps each fix dissectable,
-reviewable, and independently reimplementable for upstream GCC later.
+tested, relation to prior patches on the bug, and one plain line saying
+the work was AI-assisted.
 
 **Desloppification rule for ALL text**: Bugzilla comments, PR titles,
 bodies, and comments, commit messages, issue comments, docs, code
@@ -112,10 +118,10 @@ conventions, and OpenMP testcase placement rules.
 
 ## Fix Submission Ground Rules
 
-**Downstream fork first.** Fixes land as pull requests on
+**Downstream fork first.** Fixes are published as open pull requests on
 `lazy-fortran/gcc`, one PR per upstream Bugzilla PR number, machine-reviewed
-and squash-merged. Fork pushes, PR creation, patch export, and all read-only
-Bugzilla queries are fine without asking.
+and never merged. Fork pushes to fix branches, PR creation, patch export,
+and all read-only Bugzilla queries are fine without asking.
 
 **Upstream GCC is off-limits for legally significant code patches.** Under
 GCC's AI policy (https://gcc.gnu.org/ai-policy.html, 2026), legally
@@ -129,23 +135,22 @@ both clearly marked with an `Assisted-by:` tag; and bug reports, analysis,
 and reduced reproducers on Bugzilla with honest AI disclosure. See
 `docs/upstream-submission.md`.
 
-The squashed merge commit on `lazy/main` (equivalently the exported patch)
-is **exactly one commit** per Bugzilla PR. Two genuinely independent
-changes are two PRs and two `pr/<number>/` directories, one commit each.
+The exported patch is **exactly one commit** per Bugzilla PR and
+requires `git gcc-verify` passing (upstream-shaped ChangeLog, so the fix
+stays dissectable and reapplicable).
 
-Every squashed fix commit requires:
-- `-s` (Signed-off-by) at the very end of the message
-- `git gcc-verify HEAD` passing (upstream-shaped ChangeLog, so the fix
-  stays dissectable and reapplicable later)
-- Signed-off-by re-verified in the exported patch
+**Signed-off-by is Chris's alone.** GCC accepts the DCO certification only
+from a human, so an agent never writes a `Signed-off-by:` line, neither by
+`git commit -s` nor in a PR body. Chris adds it himself to the squashed
+export commit (`git commit --amend -s --no-edit`) before the patch is
+attached; `gcc-workflow.py ai-eligibility` refuses a patch without it.
 
 **AI attribution:** the repo-level AI policy on `lazy-fortran/gcc` is the
-governing declaration (see `docs/patch-workflow.md` "AI policy"). In
-addition, the **final squashed fix commit** carries an `Assisted-by:`
-line naming the model, placed in the body immediately above the
-`	PR <component>/<n>` line (gcc-verify rejects it as an end trailer).
-This keeps every exported patch upstream-submission-ready should GCC
-loosen its AI policy. WIP commits on PR branches need no tag.
+governing declaration (see `docs/patch-workflow.md` "AI policy"). The
+squashed export commit carries an `Assisted-by:` line naming the model,
+placed in the body immediately above the `	PR <component>/<n>` line
+(gcc-verify rejects it as an end trailer). That is the "clearly marked"
+requirement of GCC's AI policy. WIP commits on fix branches need no tag.
 
 Full procedure and the `GCC_FORCE_MKLOG=1` commit recipe are in
 `docs/patch-workflow.md`.
@@ -280,7 +285,8 @@ report what was checked, no shortcuts:
    push without explicit user authorization for that specific push.
 
 Apply the same checklist to the embedded `gcc/` worktree before any
-fork push to `github.com/lazy-fortran/gcc`.
+fork push to `github.com/lazy-fortran/gcc`, with `origin/master...HEAD`
+in place of `origin/main...HEAD`.
 
 ## Patch status: sources of truth
 

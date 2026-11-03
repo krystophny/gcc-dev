@@ -2,7 +2,7 @@
 
 This page lists every commit signed off by Christopher Albert
 (`albert@tugraz.at`) that is currently merged on `master` of the upstream
-GCC repository. Snapshot date: 2026-06-11. Total: 46 commits.
+GCC repository. Snapshot date: 2026-11-03. Total: 49 commits.
 
 Commit hashes link to the [gcc-mirror/gcc](https://github.com/gcc-mirror/gcc)
 GitHub mirror, which tracks `git://gcc.gnu.org/git/gcc.git` 1:1. Bugzilla
@@ -19,12 +19,14 @@ and GPT-5 for review, alternative diagnostics and adversarial cross-checks.
 Final patches, ChangeLog entries and Bugzilla / mailing-list submissions
 were authored, edited and validated by me.
 
-All commits below predate the GCC steering committee's AI contributions
-policy (2026), which now declines legally significant LLM-derived code
-contributions. New fixes therefore land on the downstream fork
-[lazy-fortran/gcc](https://github.com/lazy-fortran/gcc) instead of upstream
-GCC, under a repository-level AI policy plus `Assisted-by:` lines on the
-squashed fix commits.
+All commits below from before 2026-07-30 predate the GCC steering
+committee's AI contributions policy (2026), which declines legally
+significant LLM-derived code contributions. The three later commits carry
+their `Assisted-by:` lines, and their model attribution below is taken from
+those lines. Larger fixes are published as open pull requests on the
+downstream fork [lazy-fortran/gcc](https://github.com/lazy-fortran/gcc)
+instead, under a repository-level AI policy plus `Assisted-by:` lines on
+the exported patches.
 Existing upstream commits are preserved verbatim and not rewritten.
 
 Where an upstream commit also carries `Co-authored-by:` or `Suggested-by:`
@@ -32,6 +34,9 @@ trailers (a few have one), those are reproduced below for completeness.
 
 ## Commits, newest first
 
+- 2026-08-16 — [`a0322241`](https://github.com/gcc-mirror/gcc/commit/a03222414043b7155a76f7e564fb688ac5ac7bb6) — Fortran: [13-17 regression] Fix duplicated finalization [PR110626] — *GPT-5.6-sol and Claude*
+- 2026-08-10 — [`2a4f3622`](https://github.com/gcc-mirror/gcc/commit/2a4f36222246480d3b66957be3582db084698a32) — fortran: Diagnose allocatable PROCEDURE results early [PR102333] — *GPT-5.6-sol*
+- 2026-07-30 — [`1f5c3470`](https://github.com/gcc-mirror/gcc/commit/1f5c34702948eb7591fa3076be3745bd0e0ddf9c) — fortran: Preserve host association for dummy procedures [PR125383] — *GPT-5.6-sol*
 - 2026-04-11 — [`e41fd0a9`](https://github.com/gcc-mirror/gcc/commit/e41fd0a99aee94734537c067f96e3502628125c6) — fortran: Fix ICE in remap_type with deferred-length character in OMP target [PR101760, PR102314] — *Claude and GPT*
 - 2026-04-08 — [`326fe37d`](https://github.com/gcc-mirror/gcc/commit/326fe37d6981c189fb0f2a5a4ab7f7a5b95ecf89) — fortran: Diagnose invalid array initializer after parameter substitution [PR103367] — *Claude and GPT*
 - 2026-04-03 — [`010618b8`](https://github.com/gcc-mirror/gcc/commit/010618b8dcb73220790f8f82cf76e8a2aacc2122) — fortran: Fix ICE in expand_oacc_for with private derived type [PR93554] — *Claude and GPT*
@@ -84,7 +89,7 @@ trailers (a few have one), those are reproduced below for completeness.
 ```bash
 # inside gcc-dev/gcc
 git fetch upstream master
-git log master --grep='Signed-off-by: Christopher Albert' \
+git log upstream/master --grep='Signed-off-by: Christopher Albert' \
     --pretty='%H %ai %s'
 ```
 

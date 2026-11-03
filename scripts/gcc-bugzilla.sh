@@ -292,11 +292,18 @@ cmd_new() {
     echo "  Version:   $version"
     echo "  Summary:   $summary"
     echo "  Comment:   $comment_file"
+    echo "  CC:        $AUTO_CC_DEFAULT"
     echo ""
     confirm_bugzilla_write "create new bug '$summary'"
 
     local bug_id
-    bug_id="$($BZ new -p gcc -v "$version" -c "$component" -t "$summary" -l "$comment" -i)"
+    local cc_args=()
+    local email
+    IFS=',' read -ra emails <<< "$AUTO_CC_DEFAULT"
+    for email in "${emails[@]}"; do
+        [[ -n "$email" ]] && cc_args+=(--cc "$email")
+    done
+    bug_id="$($BZ new -p gcc -v "$version" -c "$component" -t "$summary" -l "$comment" "${cc_args[@]}" -i)"
     echo "Created bug $bug_id"
     echo "https://gcc.gnu.org/bugzilla/show_bug.cgi?id=$bug_id"
 }
@@ -437,6 +444,13 @@ cmd_attach() {
     fi
 
     file="$(realpath "$file")"
+
+    # GCC AI policy: an LLM-derived code patch must be legally insignificant
+    # and carry Assisted-by and the human's Signed-off-by.
+    if grep -q '^diff --git ' "$file"; then
+        python3 "$(dirname "$(realpath "$0")")/gcc-workflow.py" ai-eligibility "$file" \
+            || { echo "Refusing to attach: AI eligibility gate failed." >&2; exit 2; }
+    fi
 
     echo "Attaching '$file' to bug $pr..."
     echo ""

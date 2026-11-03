@@ -24,7 +24,7 @@
 | 107425 | yes | merged | ice-on-valid | unknown | unknown | unknown |
 | 108382 | yes | merged | wrong-code | unknown | unknown | unknown |
 | 109788 | yes | merged | runtime-crash | unknown | unknown | unknown |
-| 110626 | yes | open | wrong-code | unknown | unknown | unknown |
+| 110626 | yes | patch-ready | wrong-code | unknown | unknown | unknown |
 | 120286 | yes | merged | runtime-crash | unknown | unknown | unknown |
 | 120723 | yes | merged | ice-on-valid | unknown | unknown | unknown |
 | 122491 | yes | merged | ice-on-invalid | needs-special-env | needs-special-env | needs-special-env |
@@ -42,3 +42,6 @@
 | 124666 | yes | merged | runtime-crash | unknown | unknown | unknown |
 | 124751 | yes | merged | wrong-code | unknown | unknown | unknown |
 | 125113 | yes | open | runtime-crash | unknown | unknown | unknown |
+| 125383 | yes | patch-ready | other | unknown | unknown | unknown |
+| 125458 | yes | patch-ready | other | unknown | unknown | unknown |
+| 126485 | yes | patch-ready | other | unknown | unknown | unknown |
